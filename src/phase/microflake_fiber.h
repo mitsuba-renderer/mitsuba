@@ -45,7 +45,7 @@ FINLINE Float mts_erf(Float arg) {
  * Each row of this table table stores an expansion of \sigma_t in terms of
  * successive powers of sin(theta), where theta denotes the angle between the
  * fiber axis and the incident direction. The standard deviation of the
- * underlying distribution increases from row to row using a nonlinear 
+ * underlying distribution increases from row to row using a nonlinear
  * mapping to capture the `interesting' parts more efficiently (see
  * \ref sigmaT_fiberSigmaT())
  *
@@ -192,7 +192,7 @@ static StatsCounter avgBrentFunEvals("Micro-flake model",
  *
  * This class implements the Gaussian flake distribution proposed in
  *
- * "Building Volumetric Appearance Models of Fabric using 
+ * "Building Volumetric Appearance Models of Fabric using
  * Micro CT Imaging" by Shuang Zhao, Wenzel Jakob, Steve Marschner,
  * and Kavita Bala, ACM SIGGRAPH 2011
  *
@@ -203,7 +203,7 @@ public:
 	inline GaussianFiberDistribution() {}
 
 	inline GaussianFiberDistribution(Float stddev) : m_stddev(stddev) {
-		m_normalization = 1/(std::pow(2*M_PI, (Float) 3 / (Float) 2) * m_stddev * 
+		m_normalization = 1/(std::pow(2*M_PI, (Float) 3 / (Float) 2) * m_stddev *
 				mts_erf(1/(SQRT_TWO * m_stddev)));
 		m_c1 = 1.0f/mts_erf(1/(SQRT_TWO * m_stddev));
 
@@ -212,7 +212,7 @@ public:
 				"be in [%f, %f])!", FIBERDIST_STDDEV_MIN, FIBERDIST_STDDEV_MAX);
 
 		/* Determine expansion coefficients of sigma_t for a fixed stddev */
-		Float pos = std::pow(stddev / FIBERDIST_STDDEV_MAX, (Float) 0.25) * 
+		Float pos = std::pow(stddev / FIBERDIST_STDDEV_MAX, (Float) 0.25) *
 			FIBERDIST_SIGMA_T_ELEMENTS - 1;
 
 		pos = std::min(std::max((Float) 0, pos), (Float) (FIBERDIST_SIGMA_T_ELEMENTS-1));
@@ -242,7 +242,7 @@ public:
 
 	/// Evaluate the density as a function of \cos\theta
 	inline Float pdfCosTheta(Float cosTheta) const {
-		return math::fastexp(-cosTheta*cosTheta 
+		return math::fastexp(-cosTheta*cosTheta
 			/ (2*m_stddev*m_stddev)) * m_normalization;
 	}
 
@@ -253,13 +253,13 @@ public:
 	}
 
 	/**
-	 * \brief Apply the inversion method to sample \cos\theta given 
+	 * \brief Apply the inversion method to sample \cos\theta given
 	 * a uniformly distributed r.v. \xi on [0, 1]
 	 */
 	Vector sample(const Point2 &sample) const {
 		BrentSolver brentSolver(100, 1e-6f);
 		BrentSolver::Result result = brentSolver.solve(
-			boost::bind(&GaussianFiberDistribution::cdfFunctor, 
+			boost::bind(&GaussianFiberDistribution::cdfFunctor,
 				this, sample.x, _1), -1, 1);
 		SAssert(result.success);
 
@@ -267,7 +267,7 @@ public:
 			avgBrentFunEvals.incrementBase();
 		#endif
 
-		Float cosTheta = result.x, 
+		Float cosTheta = result.x,
 			  sinTheta = std::sqrt(std::max((Float) 0, 1-cosTheta*cosTheta)),
 			  phi = 2 * M_PI * sample.y,
 			  sinPhi = std::sin(phi), cosPhi = std::cos(phi);
@@ -286,7 +286,7 @@ public:
 protected:
 	/// Evaluate the longitudinal CDF as a function of \cos\theta
 	inline Float cdf(Float cosTheta) const {
-		return 0.5f * (1.0f - 
+		return 0.5f * (1.0f -
 			mts_erf(cosTheta / (SQRT_TWO * m_stddev)) * m_c1);
 	}
 

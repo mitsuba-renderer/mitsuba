@@ -93,7 +93,7 @@ public:
 					}
 					break;
 
-				case 'g': 
+				case 'g':
 					gamma = (Float) strtod(optarg, &end_ptr);
 					if (*end_ptr != '\0')
 						SLog(EError, "Could not parse the gamma value!");
@@ -114,7 +114,7 @@ public:
 					}
 					break;
 
-				case 'm': 
+				case 'm':
 					multiplier = (Float) strtod(optarg, &end_ptr);
 					if (*end_ptr != '\0')
 						SLog(EError, "Could not parse the multiplier!");
@@ -188,7 +188,7 @@ public:
 					}
 					break;
 
-				case 'o': 
+				case 'o':
 					outputFilename = optarg;
 					break;
 
@@ -243,8 +243,8 @@ public:
 				if (crop[2] != -1 && crop[3] != -1)
 					input = input->crop(Point2i(crop[0], crop[1]), Vector2i(crop[2], crop[3]));
 
-				if (resize[0] != -1) 
-					input = input->resample(rfilter, ReconstructionFilter::EClamp, 
+				if (resize[0] != -1)
+					input = input->resample(rfilter, ReconstructionFilter::EClamp,
 							ReconstructionFilter::EClamp, Vector2i(resize[0], resize[1]));
 
 				if (cbal[0] != 1 || cbal[1] != 1 || cbal[2] != 1)
@@ -253,17 +253,17 @@ public:
 				if (tonemapper[0] != -1) {
 					Float logAvgLuminance = 0, maxLuminance = 0;
 					input->tonemapReinhard(logAvgLuminance, maxLuminance, tonemapper[0], tonemapper[1]);
-					Log(EInfo, "Tonemapper reports: log-average luminance = %f, max. luminance = %f", 
+					Log(EInfo, "Tonemapper reports: log-average luminance = %f, max. luminance = %f",
 						logAvgLuminance, maxLuminance);
 				}
 
 				ref<Bitmap> output = input->convert(pixelFormat, Bitmap::EUInt8, gamma, multiplier);
-	
+
 				for (size_t i=0; i<rects.size(); ++i) {
 					int *r = rects[i].r;
 					output->drawRect(Point2i(r[0], r[1]), Vector2i(r[2], r[3]), Spectrum(r[4]/255.0f));
 				}
-	
+
 				fs::path outputFile = inputFile;
 				if (format == Bitmap::EPNG)
 					outputFile.replace_extension(".png");
@@ -271,9 +271,9 @@ public:
 					outputFile.replace_extension(".jpg");
 				else
 					Log(EError, "Unknown target format!");
-						
+
 				Log(EInfo, "Writing tonemapped image to \"%s\" ..", outputFile.string().c_str());
-	
+
 				ref<FileStream> os = new FileStream(outputFile, FileStream::ETruncReadWrite);
 				output->write(format, os);
 			}
@@ -288,8 +288,8 @@ public:
 				if (crop[2] != -1 && crop[3] != -1)
 					input = input->crop(Point2i(crop[0], crop[1]), Vector2i(crop[2], crop[3]));
 
-				if (resize[0] != -1) 
-					input = input->resample(rfilter, ReconstructionFilter::EClamp, 
+				if (resize[0] != -1)
+					input = input->resample(rfilter, ReconstructionFilter::EClamp,
 					ReconstructionFilter::EClamp, Vector2i(resize[0], resize[1]));
 
 				if (cbal[0] != 1 || cbal[1] != 1 || cbal[2] != 1)
@@ -297,21 +297,21 @@ public:
 
 				if (tonemapper[0] != -1) {
 					input->tonemapReinhard(logAvgLuminance, maxLuminance, tonemapper[0], tonemapper[1]);
-					Log(EInfo, "Tonemapper reports: log-average luminance = %f, max. luminance = %f", 
+					Log(EInfo, "Tonemapper reports: log-average luminance = %f, max. luminance = %f",
 						logAvgLuminance, maxLuminance);
 					if (!temporalCoherence) {
 						logAvgLuminance = 0;
 						maxLuminance = 0;
 					}
 				}
-	
+
 				ref<Bitmap> output = input->convert(pixelFormat, Bitmap::EUInt8, gamma, multiplier);
-	
+
 				for (size_t i=0; i<rects.size(); ++i) {
 					int *r = rects[i].r;
 					output->drawRect(Point2i(r[0], r[1]), Vector2i(r[2], r[3]), Spectrum(r[4]/255.0f));
 				}
-	
+
 				fs::path outputFile = inputFile;
 				if (outputFilename == "") {
 					if (format == Bitmap::EPNG)
@@ -323,9 +323,9 @@ public:
 				} else {
 					outputFile = outputFilename;
 				}
-						
+
 				Log(EInfo, "Writing tonemapped image to \"%s\" ..", outputFile.string().c_str());
-	
+
 				ref<FileStream> os = new FileStream(outputFile, FileStream::ETruncReadWrite);
 				output->write(format, os);
 			}

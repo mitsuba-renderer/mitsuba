@@ -26,8 +26,8 @@ MTS_NAMESPACE_BEGIN
 
 /** \brief Implementation of the photon map data structure
  *
- * Based on Henrik Wann Jensen's book "Realistic Image Synthesis 
- * Using Photon Mapping". 
+ * Based on Henrik Wann Jensen's book "Realistic Image Synthesis
+ * Using Photon Mapping".
  *
  * \ingroup librender
  */
@@ -42,7 +42,7 @@ public:
     /* ===================================================================== */
 
 	/**
-	 * \brief Create an empty photon map and reserve memory 
+	 * \brief Create an empty photon map and reserve memory
 	 * for a specified number of photons.
 	 */
 	PhotonMap(size_t photonCount = 0);
@@ -80,7 +80,7 @@ public:
 
 	/**
 	 * \brief Estimate the irradiance at a given surface position
-	 * 
+	 *
 	 * Uses a Simpson filter to smooth the data.
 	 *
 	 * \param p
@@ -96,13 +96,13 @@ public:
 	 * 		How many photon should (at most) be used in the estimate?
 	 */
 	Spectrum estimateIrradiance(
-		const Point &p, const Normal &n, 
+		const Point &p, const Normal &n,
 		Float searchRadius, int maxDepth,
 		size_t maxPhotons) const;
 
 	/**
 	 * \brief Estimate the radiance received from an intersected surface
-	 * 
+	 *
 	 * Uses a Simpson filter to smooth the data.
 	 *
 	 * \param p
@@ -119,12 +119,12 @@ public:
 
 	/**
 	 * \brief Compute scattered contributions from all photons within
-	 * the specified radius. 
+	 * the specified radius.
 	 *
-	 * Does no weighting/filtering/dynamic search radius reduction 
-	 * and simply sums over all photons. Only considers photons with 
-	 * a depth value less than or equal to the \c maxDepth parameter. 
-	 * This function is meant to be used with progressive photon mapping. 
+	 * Does no weighting/filtering/dynamic search radius reduction
+	 * and simply sums over all photons. Only considers photons with
+	 * a depth value less than or equal to the \c maxDepth parameter.
+	 * This function is meant to be used with progressive photon mapping.
 	 */
 	size_t estimateRadianceRaw(const Intersection &its,
 		Float searchRadius, Spectrum &result, int maxDepth) const;
@@ -136,7 +136,7 @@ public:
 	}
 
 	/// Perform a nearest-neighbor query, see \ref PointKDTree for details
-	inline size_t nnSearch(const Point &p, 
+	inline size_t nnSearch(const Point &p,
 		size_t k, SearchResult *results) const {
 		return m_kdtree.nnSearch(p, k, results);
 	}
@@ -165,9 +165,9 @@ public:
 	inline Float getScaleFactor() const { return m_scale; }
 
 	/**
-	 * \brief Build a photon map over the supplied photons. 
+	 * \brief Build a photon map over the supplied photons.
 	 *
-	 * This has to be done once after all photons have been stored, 
+	 * This has to be done once after all photons have been stored,
 	 * but prior to executing any queries.
 	 */
 	inline void build(bool recomputeAABB = false) { m_kdtree.build(recomputeAABB); }

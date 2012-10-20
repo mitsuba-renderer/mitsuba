@@ -28,7 +28,7 @@ MTS_NAMESPACE_BEGIN
 static const uint32_t KNoTriangleFlag = 0xFFFFFFFF;
 
 /**
- * \brief Pre-computed triangle representation based on Ingo Wald's TriAccel layout. 
+ * \brief Pre-computed triangle representation based on Ingo Wald's TriAccel layout.
  *
  * Fits into three 16-byte cache lines if single precision floats are used.
  * The k parameter is also used for classification during kd-tree construction.

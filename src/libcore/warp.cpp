@@ -92,7 +92,7 @@ Point2 Warp::squareToUniformDiskConcentric(const Point2 &sample) {
 	} else { /* Regions 3/4 */
 		if (r1<r2)
 			coords = Point2(-r1, (M_PI/4.0f) * (4.0f + r2/r1));
-		else 
+		else
 			coords = Point2(-r2, (M_PI/4.0f) * (6.0f - r1/r2));
 	}
 
@@ -100,7 +100,7 @@ Point2 Warp::squareToUniformDiskConcentric(const Point2 &sample) {
 	math::sincos(coords.y, &result.y, &result.x);
 	return result*coords.x;
 }
-	
+
 Point2 Warp::uniformDiskToSquareConcentric(const Point2 &p) {
 	Float r   = std::sqrt(p.x * p.x + p.y * p.y),
 		  phi = std::atan2(p.y, p.x),
@@ -135,7 +135,7 @@ Point2 Warp::squareToStdNormal(const Point2 &sample) {
 	math::sincos(phi, &result.y, &result.x);
 	return result * r;
 }
-	
+
 Float Warp::squareToStdNormalPdf(const Point2 &pos) {
 	return INV_TWOPI * std::exp(-(pos.x*pos.x + pos.y*pos.y)/2.0f);
 }

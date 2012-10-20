@@ -59,7 +59,7 @@ inline void enable_fpexcept_sse() {
 		~(_MM_MASK_INVALID | _MM_MASK_DIV_ZERO));
 }
 inline unsigned int query_fpexcept_sse() {
-	return (~_MM_GET_EXCEPTION_MASK() & 
+	return (~_MM_GET_EXCEPTION_MASK() &
 		(_MM_MASK_INVALID | _MM_MASK_DIV_ZERO));
 }
 inline void disable_fpexcept_sse() {
@@ -91,11 +91,11 @@ std::vector<std::string> tokenize(const std::string &string, const std::string &
 }
 
 std::string trim(const std::string& str) {
-	std::string::size_type 
+	std::string::size_type
 		start = str.find_first_not_of(" \t\r\n"),
 		end = str.find_last_not_of(" \t\r\n");
 
-	return str.substr(start == std::string::npos ? 0 : start, 
+	return str.substr(start == std::string::npos ? 0 : start,
 			end == std::string::npos ? str.length() - 1 : end - start + 1);
 }
 
@@ -173,7 +173,7 @@ int getCoreCount() {
 std::string lastErrorText() {
 	DWORD errCode = GetLastError();
 	char *errorText = NULL;
-	if (!FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER 
+	if (!FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER
 		| FORMAT_MESSAGE_FROM_SYSTEM
 		| FORMAT_MESSAGE_IGNORE_INSERTS,
 		NULL,
@@ -201,7 +201,7 @@ bool enableFPExceptions() {
 #elif defined(__OSX__)
 	exceptionsWereEnabled = query_fpexcept_sse() != 0;
 #else
-	exceptionsWereEnabled = 
+	exceptionsWereEnabled =
 		fegetexcept() & (FE_INVALID|FE_DIVBYZERO|FE_OVERFLOW);
 	feenableexcept(FE_INVALID|FE_DIVBYZERO|FE_OVERFLOW);
 #endif
@@ -220,7 +220,7 @@ bool disableFPExceptions() {
 #elif defined(__OSX__)
 	exceptionsWereEnabled = query_fpexcept_sse() != 0;
 #else
-	exceptionsWereEnabled = 
+	exceptionsWereEnabled =
 		fegetexcept() & (FE_INVALID|FE_DIVBYZERO|FE_OVERFLOW);
 	fedisableexcept(FE_INVALID|FE_DIVBYZERO|FE_OVERFLOW);
 #endif
@@ -276,7 +276,7 @@ std::string getFQDN() {
 	}
 
 	char fqdn[NI_MAXHOST];
-	retVal = getnameinfo(addrInfo->ai_addr, sizeof(struct sockaddr_in), 
+	retVal = getnameinfo(addrInfo->ai_addr, sizeof(struct sockaddr_in),
 		fqdn, NI_MAXHOST, NULL, 0, 0);
 	if (retVal != 0) {
 		freeaddrinfo(addrInfo);
@@ -289,7 +289,7 @@ std::string getFQDN() {
 #endif
 		return getHostName();
 	}
-		
+
 	freeaddrinfo(addrInfo);
 
 	return fqdn;
@@ -477,11 +477,11 @@ Float interpCubic1D(Float x, const Float *data, Float min, Float max, size_t siz
 	/* Transform 'x' so that knots lie at integer positions */
 	Float t = ((x - min) * (size - 1)) / (max - min);
 
-	/* Find the index of the left knot in the queried subinterval, be 
+	/* Find the index of the left knot in the queried subinterval, be
 	   robust to cases where 't' lies exactly on the right endpoint */
 	size_t k = std::max((size_t) 0, std::min((size_t) t, size - 2));
 
-	Float f0  = data[k], 
+	Float f0  = data[k],
 		  f1  = data[k+1],
 		  d0, d1;
 
@@ -501,7 +501,7 @@ Float interpCubic1D(Float x, const Float *data, Float min, Float max, size_t siz
 
 	Float t2 = t*t, t3 = t2*t;
 
-	return 
+	return
 		( 2*t3 - 3*t2 + 1) * f0 +
 		(-2*t3 + 3*t2)     * f1 +
 		(   t3 - 2*t2 + t) * d0 +
@@ -516,7 +516,7 @@ Float interpCubic1DIrregular(Float x, const Float *nodes, const Float *data, siz
 	size_t k = (size_t) std::max((ptrdiff_t) 0, std::min((ptrdiff_t) size - 2,
 				std::lower_bound(nodes, nodes + size, x) - nodes - 1));
 
-	Float f0       = data[k], 
+	Float f0       = data[k],
 		  f1       = data[k+1],
 		  width    = nodes[k+1] - nodes[k],
 		  invWidth = 1.0f / width,
@@ -536,7 +536,7 @@ Float interpCubic1DIrregular(Float x, const Float *nodes, const Float *data, siz
 	Float t = (x - nodes[k]) * invWidth;
 	Float t2 = t*t, t3 = t2*t;
 
-	return 
+	return
 	    ( 2*t3 - 3*t2 + 1) * f0 +
 	    (-2*t3 + 3*t2)     * f1 +
 	   ((   t3 - 2*t2 + t) * d0 +
@@ -544,7 +544,7 @@ Float interpCubic1DIrregular(Float x, const Float *nodes, const Float *data, siz
 }
 
 
-Float interpCubic2D(const Point2 &p, const Float *data, 
+Float interpCubic2D(const Point2 &p, const Float *data,
 		const Point2 &min, const Point2 &max, const Size2 &size) {
 	Float knotWeights[2][4];
 	Size2 knot;
@@ -560,7 +560,7 @@ Float interpCubic2D(const Point2 &p, const Float *data,
 		Float t = ((p[dim] - min[dim]) * (size[dim] - 1))
 			/ (max[dim]-min[dim]);
 
-		/* Find the index of the left knot in the queried subinterval, be 
+		/* Find the index of the left knot in the queried subinterval, be
 		   robust to cases where 't' lies exactly on the right endpoint */
 		knot[dim] = std::min((size_t) t, size[dim] - 2);
 
@@ -614,7 +614,7 @@ Float interpCubic2D(const Point2 &p, const Float *data,
 	return result;
 }
 
-Float interpCubic2DIrregular(const Point2 &p, const Float **nodes_, 
+Float interpCubic2DIrregular(const Point2 &p, const Float **nodes_,
 			const Float *data, const Size2 &size) {
 	Float knotWeights[2][4];
 	Size2 knot;
@@ -628,12 +628,12 @@ Float interpCubic2DIrregular(const Point2 &p, const Float **nodes_,
 		if (!(p[dim] >= nodes[0] && p[dim] <= nodes[size[dim]-1]))
 			return 0.0f;
 
-		/* Find the index of the left knot in the queried subinterval, be 
+		/* Find the index of the left knot in the queried subinterval, be
 		   robust to cases where 't' lies exactly on the right endpoint */
 		size_t k = (size_t) std::max((ptrdiff_t) 0, std::min((ptrdiff_t) size[dim] - 2,
 			std::lower_bound(nodes, nodes + size[dim], p[dim]) - nodes - 1));
 		knot[dim] = k;
- 
+
 		Float width = nodes[k+1] - nodes[k], invWidth = 1 / width;
 
 		/* Compute the relative position within the interval */
@@ -688,7 +688,7 @@ Float interpCubic2DIrregular(const Point2 &p, const Float **nodes_,
 	return result;
 }
 
-Float interpCubic3D(const Point3 &p, const Float *data, 
+Float interpCubic3D(const Point3 &p, const Float *data,
 		const Point3 &min, const Point3 &max, const Size3 &size) {
 	Float knotWeights[3][4];
 	Size3 knot;
@@ -704,7 +704,7 @@ Float interpCubic3D(const Point3 &p, const Float *data,
 		Float t = ((p[dim] - min[dim]) * (size[dim] - 1))
 			/ (max[dim]-min[dim]);
 
-		/* Find the index of the left knot in the queried subinterval, be 
+		/* Find the index of the left knot in the queried subinterval, be
 		   robust to cases where 't' lies exactly on the right endpoint */
 		knot[dim] = std::min((size_t) t, size[dim] - 2);
 
@@ -762,7 +762,7 @@ Float interpCubic3D(const Point3 &p, const Float *data,
 	return result;
 }
 
-Float interpCubic3DIrregular(const Point3 &p, const Float **nodes_, 
+Float interpCubic3DIrregular(const Point3 &p, const Float **nodes_,
 			const Float *data, const Size3 &size) {
 	Float knotWeights[3][4];
 	Size3 knot;
@@ -776,12 +776,12 @@ Float interpCubic3DIrregular(const Point3 &p, const Float **nodes_,
 		if (!(p[dim] >= nodes[0] && p[dim] <= nodes[size[dim]-1]))
 			return 0.0f;
 
-		/* Find the index of the left knot in the queried subinterval, be 
+		/* Find the index of the left knot in the queried subinterval, be
 		   robust to cases where 't' lies exactly on the right endpoint */
 		size_t k = (size_t) std::max((ptrdiff_t) 0, std::min((ptrdiff_t) size[dim] - 2,
 			std::lower_bound(nodes, nodes + size[dim], p[dim]) - nodes - 1));
 		knot[dim] = k;
- 
+
 		Float width = nodes[k+1] - nodes[k], invWidth = 1 / width;
 
 		/* Compute the relative position within the interval */
@@ -997,7 +997,7 @@ Vector refract(const Vector &wi, const Normal &n, Float eta) {
 	/* Check for total internal reflection */
 	if (cosThetaTSqr <= 0.0f)
 		return Vector(0.0f);
-	
+
 	return n * (cosThetaI * eta - math::signum(cosThetaI)
 		* std::sqrt(cosThetaTSqr)) - wi * eta;
 }
@@ -1025,7 +1025,7 @@ namespace {
 Float fresnelDiffuseReflectance(Float eta, bool fast) {
 	if (fast) {
 		/* Fast mode: the following code approximates the
-		 * diffuse Frensel reflectance for the eta<1 and 
+		 * diffuse Frensel reflectance for the eta<1 and
 		 * eta>1 cases. An evalution of the accuracy led
 		 * to the following scheme, which cherry-picks
 		 * fits from two papers where they are best.
@@ -1033,19 +1033,19 @@ Float fresnelDiffuseReflectance(Float eta, bool fast) {
 		if (eta < 1) {
 			/* Fit by Egan and Hilgeman (1973). Works
 			   reasonably well for "normal" IOR values (<2).
-	
+
 			   Max rel. error in 1.0 - 1.5 : 0.1%
 			   Max rel. error in 1.5 - 2   : 0.6%
 			   Max rel. error in 2.0 - 5   : 9.5%
 			*/
-			return -1.4399f * (eta * eta) 
-				  + 0.7099f * eta 
-				  + 0.6681f 
+			return -1.4399f * (eta * eta)
+				  + 0.7099f * eta
+				  + 0.6681f
 				  + 0.0636f / eta;
 		} else {
 			/* Fit by d'Eon and Irving (2011)
 			 *
-			 * Maintains a good accuracy even for 
+			 * Maintains a good accuracy even for
 			 * unrealistic IOR values.
 			 *
 			 * Max rel. error in 1.0 - 2.0   : 0.1%
@@ -1057,10 +1057,10 @@ Float fresnelDiffuseReflectance(Float eta, bool fast) {
 				  invEta4 = invEta3*invEta,
 				  invEta5 = invEta4*invEta;
 
-			return 0.919317f - 3.4793f * invEta 
+			return 0.919317f - 3.4793f * invEta
 				 + 6.75335f * invEta2
-				 - 7.80989f * invEta3 
-				 + 4.98554f * invEta4 
+				 - 7.80989f * invEta3
+				 + 4.98554f * invEta4
 				 - 1.36881f * invEta5;
 		}
 	} else {

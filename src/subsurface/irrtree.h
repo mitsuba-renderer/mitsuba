@@ -36,7 +36,7 @@ public:
 
 	/// Serialize an octree to a binary data stream
 	void serialize(Stream *stream, InstanceManager *manager) const;
-	
+
 	/// Query the octree using a customizable functor, while representatives for distant nodes
 	template <typename QueryType> inline void performQuery(QueryType &query) const {
 		performQuery(m_aabb, m_root, query);
@@ -64,7 +64,7 @@ protected:
 				for (int i=0; i<8; i++) {
 					if (!node->children[i])
 						continue;
-	
+
 					AABB childAABB = childBounds(i, aabb, center);
 					performQuery(childAABB, node->children[i], query);
 				}

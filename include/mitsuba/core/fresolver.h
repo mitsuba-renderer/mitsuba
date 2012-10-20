@@ -29,10 +29,10 @@ MTS_NAMESPACE_BEGIN
 
 /**
  * \brief File resolution helper
- * 
- * FileResolver is a convenience class that allows searching for files 
+ *
+ * FileResolver is a convenience class that allows searching for files
  * within a set of specifiable search paths in a cross-platform
- * compatible manner (similar to the $PATH variable on various 
+ * compatible manner (similar to the $PATH variable on various
  * operating systems).
  *
  * \ingroup libcore
@@ -43,15 +43,15 @@ public:
 	/**
 	 * \brief Create a new file resolver with the default settings
 	 *
-	 * Create a new file resolver containing the current working 
+	 * Create a new file resolver containing the current working
 	 * directory as the initial search path.
 	 */
 	FileResolver();
 
 	/**
 	 * \brief Resolve a file using the stored list of search paths
-	 * 
-	 * Go through the list of search paths and try to resolve the 
+	 *
+	 * Go through the list of search paths and try to resolve the
 	 * supplied path with respect to each one. If everything fails,
 	 * the path is returned as-is.
 	 */
@@ -59,7 +59,7 @@ public:
 
 	/**
 	 * \brief Resolve a file using the stored list of search paths
-	 * 
+	 *
 	 * In comparison to \ref resolve(), this funtion returns all
 	 * matches instead of only the first one.
 	 *

@@ -165,7 +165,7 @@ void Stream::writeUChar(unsigned char value) {
 
 void Stream::writeHalf(half halfValue) {
 	short value = halfValue.bits();
-	if (m_byteOrder != m_hostByteOrder) 
+	if (m_byteOrder != m_hostByteOrder)
 		value = endianness_swap(value);
 	write(&value, sizeof(short));
 }
@@ -174,7 +174,7 @@ void Stream::writeHalfArray(const half *data, size_t size) {
 	BOOST_STATIC_ASSERT(sizeof(half) == 2);
 	if (m_byteOrder != m_hostByteOrder) {
 		short *temp = new short[size];
-		for (size_t i=0; i<size; ++i) 
+		for (size_t i=0; i<size; ++i)
 			temp[i] = endianness_swap(data[i].bits());
 		write(temp, sizeof(short)*size);
 		delete[] temp;
@@ -184,7 +184,7 @@ void Stream::writeHalfArray(const half *data, size_t size) {
 }
 
 void Stream::writeSingle(float value) {
-	if (m_byteOrder != m_hostByteOrder) 
+	if (m_byteOrder != m_hostByteOrder)
 		value = endianness_swap(value);
 	write(&value, sizeof(float));
 }
@@ -376,7 +376,7 @@ void Stream::readSingleArray(float *data, size_t size) {
 double Stream::readDouble() {
 	double value;
 	read(&value, sizeof(double));
-	if (m_byteOrder != m_hostByteOrder) 
+	if (m_byteOrder != m_hostByteOrder)
 		value = endianness_swap(value);
 	return value;
 }
@@ -393,7 +393,7 @@ std::string Stream::readLine() {
 	std::string retval;
 	char data;
 	bool nl = false;
-	
+
 	do {
 		try {
 			read(&data, sizeof(char));
@@ -433,7 +433,7 @@ void Stream::copyTo(Stream *stream, int64_t numBytes) {
 	size_t amount = (numBytes == -1) ? (getSize() - getPos()) : (size_t) numBytes;
 	for (size_t i=0; i<amount; i+=block_size) {
 		size_t blockSize = (i + block_size) <= amount ? block_size : amount-i;
-	
+
 		read(data, blockSize);
 		copied += blockSize;
 		stream->write(data, blockSize);

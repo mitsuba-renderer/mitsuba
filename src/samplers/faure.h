@@ -22,7 +22,7 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * \brief Stores scrambling permutations for Van Der Corput-type 
+ * \brief Stores scrambling permutations for Van Der Corput-type
  * sequences with prime bases.
  */
 class PermutationStorage : public Object {
@@ -30,7 +30,7 @@ public:
 	/**
 	 * \brief Create new permutations
 	 * \param scramble
-	 *    Selects the desired permutation type, where <tt>-1</tt> denotes the 
+	 *    Selects the desired permutation type, where <tt>-1</tt> denotes the
 	 *    Faure permutations; any other number causes a pseudorandom permutation
 	 *    to be built seeded by the value of \c scramble.
 	 */
@@ -60,7 +60,7 @@ private:
 
 	/// Randomly permute an array using the TEA pseudorandom generator
 	inline void shuffle(uint16_t *it1, uint16_t *it2) {
-		for (uint16_t * it = it2 - 1; it > it1; --it) 
+		for (uint16_t * it = it2 - 1; it > it1; --it)
 			std::iter_swap(it, it1 + sampleUInt((uint32_t) (it-it1)));
 	}
 
@@ -86,7 +86,7 @@ private:
 	MTS_DECLARE_CLASS()
 protected:
 	virtual ~PermutationStorage();
-	
+
 private:
 	uint16_t *m_storage, *m_invStorage;
 	uint16_t **m_permutations;

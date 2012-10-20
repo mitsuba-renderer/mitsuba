@@ -22,17 +22,17 @@ MTS_NAMESPACE_BEGIN
 
 /**
  * Special version of the Mitchell-Netravali filter with constants B and C configured
- * to match the Catmull-Rom spline. It usually does a better job at at preserving sharp 
+ * to match the Catmull-Rom spline. It usually does a better job at at preserving sharp
  * features at the cost of more ringing.
  */
 class CatmullRomFilter : public ReconstructionFilter {
 public:
-	CatmullRomFilter(const Properties &props) 
+	CatmullRomFilter(const Properties &props)
 		: ReconstructionFilter(props) {
 		m_radius = 2.0f;
 	}
 
-	CatmullRomFilter(Stream *stream, InstanceManager *manager) 
+	CatmullRomFilter(Stream *stream, InstanceManager *manager)
 		: ReconstructionFilter(stream, manager) {
 		configure();
 	}
@@ -44,7 +44,7 @@ public:
 		Float B = 0.0f, C = 0.5f;
 
 		if (x < 1) {
-			return 1.0f/6.0f * ((12-9*B-6*C)*x3 
+			return 1.0f/6.0f * ((12-9*B-6*C)*x3
 					+ (-18+12*B+6*C) * x2 + (6-2*B));
 		} else if (x < 2) {
 			return 1.0f/6.0f * ((-B-6*C)*x3 + (6*B+30*C) * x2

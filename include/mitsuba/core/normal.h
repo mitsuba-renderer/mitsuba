@@ -28,9 +28,9 @@ MTS_NAMESPACE_BEGIN
  * \headerfile mitsuba/core/normal.h mitsuba/mitsuba.h
  * \brief Three-dimensional normal data structure
  *
- * Internally represented using floating point numbers of the chosen 
+ * Internally represented using floating point numbers of the chosen
  * compile-time precision. The main difference of this data structure
- * when compared to \ref TVector3<Float> is in how instances of 
+ * when compared to \ref TVector3<Float> is in how instances of
  * \ref Normal are treated by linear transformations.
  *
  * \ingroup libcore
@@ -38,7 +38,7 @@ MTS_NAMESPACE_BEGIN
  */
 struct Normal : public TVector3<Float> {
 	/** \brief Construct a new normal without initializing it.
-	 * 
+	 *
 	 * This construtor is useful when the normal will either not
 	 * be used at all (it might be part of a larger data structure)
 	 * or initialized at a later point in time. Always make sure

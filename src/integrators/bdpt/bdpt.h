@@ -24,7 +24,7 @@
 /**
  * When the following is set to "1", the Bidirectional Path Tracer
  * will generate a series of debugging images that split up the final
- * rendering into the weighted contributions of the individual sampling 
+ * rendering into the weighted contributions of the individual sampling
  * strategies.
  */
 //#define BDPT_DEBUG 1
@@ -75,7 +75,7 @@ struct BDPTConfiguration {
 	void dump() const {
 		SLog(EDebug, "Bidirectional path tracer configuration:");
 		SLog(EDebug, "   Maximum path depth          : %i", maxDepth);
-		SLog(EDebug, "   Image size                  : %ix%i", 
+		SLog(EDebug, "   Image size                  : %ix%i",
 			cropSize.x, cropSize.y);
 		SLog(EDebug, "   Direct sampling strategies  : %s",
 			sampleDirect ? "yes" : "no");

@@ -28,8 +28,8 @@
 # define SUNSKY_PIXELFORMAT Bitmap::ESpectrum
 #endif
 
-/* Apparent radius of the sun as seen from the earth (in degrees). 
-   This is an approximation--the actual value is somewhere between 
+/* Apparent radius of the sun as seen from the earth (in degrees).
+   This is an approximation--the actual value is somewhere between
    0.526 and 0.545 depending on the time of year */
 #define SUN_APP_RADIUS 0.5358
 
@@ -40,24 +40,24 @@ MTS_NAMESPACE_BEGIN
  * \order{8}
  * \parameters{
  *     \parameter{turbidity}{\Float}{
- *         This parameter determines the amount of aerosol present in the atmosphere. 
+ *         This parameter determines the amount of aerosol present in the atmosphere.
  *         Valid range: 1-10. \default{3, corresponding to a clear sky in a temperate climate}
  *     }
  *     \parameter{albedo}{\Spectrum}{Specifies the ground albedo \default{0.15}}
  *     \parameter{year, month, day}{\Integer}{Denote the date of the
  *      observation \default{2010, 07, 10}}
- *     \parameter{hour,minute,\showbreak second}{\Float}{Local time 
+ *     \parameter{hour,minute,\showbreak second}{\Float}{Local time
  *       at the location of the observer in 24-hour format\default{15, 00, 00,
  *       i.e. 3PM}}
  *     \parameter{latitude, longitude, timezone}{\Float}{
- *       These three parameters specify the oberver's latitude and longitude 
- *       in degrees, and the local timezone offset in hours, which are required 
+ *       These three parameters specify the oberver's latitude and longitude
+ *       in degrees, and the local timezone offset in hours, which are required
  *       to compute the sun's position. \default{35.6894, 139.6917, 9 --- Tokyo, Japan}
  *     }
- *     \parameter{sunDirection}{\Vector}{Allows to manually 
+ *     \parameter{sunDirection}{\Vector}{Allows to manually
  *       override the sun direction in world space. When this value
- *       is provided, parameters pertaining to the computation 
- *       of the sun direction (\code{year, hour, latitude,} etc. 
+ *       is provided, parameters pertaining to the computation
+ *       of the sun direction (\code{year, hour, latitude,} etc.
  *       are unnecessary. \default{none}
  *     }
  *     \parameter{stretch}{\Float}{
@@ -84,7 +84,7 @@ MTS_NAMESPACE_BEGIN
  *   provided daylight illumination models}
  * }
  * \vspace{5mm}
- * This convenience plugin has the sole purpose of instantiating 
+ * This convenience plugin has the sole purpose of instantiating
  * \pluginref{sun} and \pluginref{sky} and merging them into a joint
  * environment map. Please refer to these plugins individually for more
  * details.
@@ -113,7 +113,7 @@ public:
 		props.markQueried("albedo");
 
 		int resolution = props.getInteger("resolution", 512);
-		ref<Bitmap> bitmap = new Bitmap(SUNSKY_PIXELFORMAT, Bitmap::EFloat, 
+		ref<Bitmap> bitmap = new Bitmap(SUNSKY_PIXELFORMAT, Bitmap::EFloat,
 			Vector2i(resolution, resolution/2));
 
 		Point2 factor((2*M_PI) / bitmap->getWidth(),
@@ -122,12 +122,12 @@ public:
 		ref<Timer> timer = new Timer();
 		Log(EDebug, "Rasterizing sun & skylight emitter to an %ix%i environment map ..",
 				resolution, resolution/2);
-			
+
 		Spectrum *data = (Spectrum *) bitmap->getFloatData();
 
 		/* First, rasterize the sky */
 		#if defined(MTS_OPENMP)
-			#pragma omp parallel for 
+			#pragma omp parallel for
 		#endif
 		for (int y=0; y<bitmap->getHeight(); ++y) {
 			Float theta = (y+.5f) * factor.y;
@@ -138,14 +138,14 @@ public:
 
 				RayDifferential ray(Point(0.0f),
 					toSphere(SphericalCoordinates(theta, phi)), 0.0f);
-				
+
 				*target++ = sky->evalEnvironment(ray);
 			}
 		}
 
 		/* Rasterizing the sphere to an environment map and checking the
-		   individual pixels for coverage (which is what Mitsuba 0.3.0 did) 
-		   was slow and not very effective; for instance the power varied 
+		   individual pixels for coverage (which is what Mitsuba 0.3.0 did)
+		   was slow and not very effective; for instance the power varied
 		   dramatically with resolution changes. Since the sphere generally
 		   just covers a few pixels, the code below rasterizes it much more
 		   efficiently by generating a few thousand QMC samples.
@@ -155,7 +155,7 @@ public:
 		   by the sun */
 
 		SphericalCoordinates sun = computeSunCoordinates(props);
-		Spectrum sunRadiance = computeSunRadiance(sun.elevation, 
+		Spectrum sunRadiance = computeSunRadiance(sun.elevation,
 			props.getFloat("turbidity", 3.0f)) * sunScale;
 		sun.elevation *= props.getFloat("stretch", 1.0f);
 		Frame sunFrame = Frame(toSphere(sun));
@@ -167,7 +167,7 @@ public:
 		/* Ratio of the sphere that is covered by the sun */
 		Float coveredPortion = 0.5f * (1 - cosTheta);
 
-		/* Approx. number of samples that need to be generated, 
+		/* Approx. number of samples that need to be generated,
 		   be very conservative */
 		size_t nSamples = (size_t) std::max((Float) 100,
 			(pixelCount * coveredPortion * 1000));
@@ -175,9 +175,9 @@ public:
 		factor = Point2(bitmap->getWidth() / (2*M_PI),
 			bitmap->getHeight() / M_PI);
 
-		Spectrum value = 
+		Spectrum value =
 			sunRadiance * (2 * M_PI * (1-std::cos(theta))) *
-			(bitmap->getWidth() * bitmap->getHeight()) 
+			(bitmap->getWidth() * bitmap->getHeight())
 			/ (2.0f * M_PI * M_PI * (Float) nSamples);
 
 		for (size_t i=0; i<nSamples; ++i) {

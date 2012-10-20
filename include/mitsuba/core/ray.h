@@ -38,7 +38,7 @@ template <typename _PointType, typename _VectorType> struct TRay {
 	typedef _VectorType                 VectorType;
 	typedef typename PointType::Scalar  Scalar;
 
-	/* The somewhat peculiar ordering of the attributes is for 
+	/* The somewhat peculiar ordering of the attributes is for
 	   alignment purposes in the 3D case and should not be changed. */
 
 	PointType o;     ///< Ray origin
@@ -49,28 +49,28 @@ template <typename _PointType, typename _VectorType> struct TRay {
 	Float time;  ///< Time value associated with this ray
 
 	/// Construct a new ray
-	inline TRay() : mint(Epsilon), 
+	inline TRay() : mint(Epsilon),
 		maxt(std::numeric_limits<Scalar>::infinity()), time(0) {
 	}
 
 	/// Copy constructor (1)
-	inline TRay(const TRay &ray) 
-	 : o(ray.o), mint(ray.mint), d(ray.d), maxt(ray.maxt), 
+	inline TRay(const TRay &ray)
+	 : o(ray.o), mint(ray.mint), d(ray.d), maxt(ray.maxt),
 	   dRcp(ray.dRcp), time(ray.time) {
 	}
 
 	/// Copy constructor (2)
-	inline TRay(const TRay &ray, Scalar mint, Scalar maxt) 
-	 : o(ray.o), mint(mint), d(ray.d), maxt(maxt), 
+	inline TRay(const TRay &ray, Scalar mint, Scalar maxt)
+	 : o(ray.o), mint(mint), d(ray.d), maxt(maxt),
 	   dRcp(ray.dRcp), time(ray.time) { }
 
 	/// Construct a new ray, while not specifying a direction yet
-	inline TRay(const PointType &o, Scalar time) : o(o), mint(Epsilon), 
+	inline TRay(const PointType &o, Scalar time) : o(o), mint(Epsilon),
 	  maxt(std::numeric_limits<Scalar>::infinity()), time(time) { }
 
 	/// Construct a new ray
 	inline TRay(const PointType &o, const VectorType &d, Scalar time)
-		: o(o), mint(Epsilon),  d(d), 
+		: o(o), mint(Epsilon),  d(d),
 		  maxt(std::numeric_limits<Scalar>::infinity()), time(time) {
 #ifdef MTS_DEBUG_FP
 		bool state = disableFPExceptions();
@@ -100,7 +100,7 @@ template <typename _PointType, typename _VectorType> struct TRay {
 
 	/// Set the origin
 	inline void setTime(Scalar tval) { time = tval; }
-	
+
 	/// Set the direction and update the reciprocal
 	inline void setDirection(const VectorType &dir) {
 		d = dir;
@@ -117,8 +117,8 @@ template <typename _PointType, typename _VectorType> struct TRay {
 	/**
 	 * \brief Return the position of a point along the ray
 	 *
-	 * \remark In the Python bindings, this operator is 
-	 * exposed as a function named \c eval -- i.e. 
+	 * \remark In the Python bindings, this operator is
+	 * exposed as a function named \c eval -- i.e.
 	 * position lookups should be written as \c ray.eval(t)
 	 */
 	inline PointType operator() (Scalar t) const { return o + t * d; }
@@ -126,14 +126,14 @@ template <typename _PointType, typename _VectorType> struct TRay {
 	/// Return a string representation of this ray
 	inline std::string toString() const {
 		std::ostringstream oss;
-		oss << "Ray[origin=" << o.toString() << ", direction=" 
-			<< d.toString() << ", mint=" << mint 
+		oss << "Ray[origin=" << o.toString() << ", direction="
+			<< d.toString() << ", mint=" << mint
 			<< ", maxt=" << maxt << ", time=" << time << "]";
 		return oss.str();
 	}
 };
 
-/** \brief %Ray differential -- enhances the basic ray class with 
+/** \brief %Ray differential -- enhances the basic ray class with
    information about the rays of adjacent pixels on the view plane
    \ingroup libcore
 */
@@ -142,24 +142,24 @@ struct RayDifferential : public Ray {
 	Vector rxDirection, ryDirection;
 	bool hasDifferentials;
 
-	inline RayDifferential() 
+	inline RayDifferential()
 		: hasDifferentials(false) {
 	}
 
-	inline RayDifferential(const Point &p, const Vector &d, Float time) 
+	inline RayDifferential(const Point &p, const Vector &d, Float time)
 		: Ray(p, d, time), hasDifferentials(false) {
 	}
 
-	inline explicit RayDifferential(const Ray &ray) 
+	inline explicit RayDifferential(const Ray &ray)
 		: Ray(ray), hasDifferentials(false) {
 	}
 
-	inline RayDifferential(const RayDifferential &ray) 
+	inline RayDifferential(const RayDifferential &ray)
 		: Ray(ray), rxOrigin(ray.rxOrigin), ryOrigin(ray.ryOrigin),
 		  rxDirection(ray.rxDirection), ryDirection(ray.ryDirection),
 		  hasDifferentials(ray.hasDifferentials) {
 	}
-    
+
 	void scaleDifferential(Float amount) {
 		rxOrigin = o + (rxOrigin - o) * amount;
 		ryOrigin = o + (ryOrigin - o) * amount;

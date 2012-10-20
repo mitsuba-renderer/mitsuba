@@ -28,13 +28,13 @@ MTS_NAMESPACE_BEGIN
 /**
  * \brief Simple kd-tree node for use with \ref PointKDTree.
  *
- * This class is an example of how one might write a space-efficient kd-tree 
- * node that is compatible with the \ref PointKDTree class. The implementation 
- * supports associating a custom data record with each node and works up to 
+ * This class is an example of how one might write a space-efficient kd-tree
+ * node that is compatible with the \ref PointKDTree class. The implementation
+ * supports associating a custom data record with each node and works up to
  * 16 dimensions.
  *
  * \tparam _PointType Underlying point data type (e.g. \ref TPoint3<float>)
- * \tparam _DataRecord Custom storage that should be associated with each 
+ * \tparam _DataRecord Custom storage that should be associated with each
  *  tree node
  *
  * \ingroup libcore
@@ -51,7 +51,7 @@ template <typename _PointType, typename _DataRecord> struct SimpleKDNode {
 		ELeafFlag  =  0x10,
 		EAxisMask  =  0x0F
 	};
-	
+
 	static const bool leftBalancedLayout = false;
 
 	PointType position;
@@ -60,18 +60,18 @@ template <typename _PointType, typename _DataRecord> struct SimpleKDNode {
 	uint8_t flags;
 
 	/// Initialize a KD-tree node
-	inline SimpleKDNode() : position((Scalar) 0), 
+	inline SimpleKDNode() : position((Scalar) 0),
 		right(0), data(), flags(0) { }
 	/// Initialize a KD-tree node with the given data record
-	inline SimpleKDNode(const DataRecord &data) : position((Scalar) 0), 
+	inline SimpleKDNode(const DataRecord &data) : position((Scalar) 0),
 		right(0), data(data), flags(0) { }
 
-	/// Given the current node's index, return the index of the right child 
+	/// Given the current node's index, return the index of the right child
 		inline IndexType getRightIndex(IndexType self) const { return right; }
 	/// Given the current node's index, set the right child index
 	inline void setRightIndex(IndexType self, IndexType value) { right = value; }
 
-	/// Given the current node's index, return the index of the left child 
+	/// Given the current node's index, return the index of the left child
 	inline IndexType getLeftIndex(IndexType self) const { return self + 1; }
 	/// Given the current node's index, set the left child index
 	inline void setLeftIndex(IndexType self, IndexType value) {
@@ -84,10 +84,10 @@ template <typename _PointType, typename _DataRecord> struct SimpleKDNode {
 	/// Check whether this is a leaf node
 	inline bool isLeaf() const { return flags & (uint8_t) ELeafFlag; }
 	/// Specify whether this is a leaf node
-	inline void setLeaf(bool value) { 
-		if (value) 
-			flags |= (uint8_t) ELeafFlag; 
-		else 
+	inline void setLeaf(bool value) {
+		if (value)
+			flags |= (uint8_t) ELeafFlag;
+		else
 			flags &= (uint8_t) ~ELeafFlag;
 	}
 
@@ -118,7 +118,7 @@ template <typename _PointType, typename _DataRecord> struct SimpleKDNode {
  * that there is no need to store node pointers within nodes.
  *
  * \tparam _PointType Underlying point data type (e.g. \ref TPoint3<float>)
- * \tparam _DataRecord Custom storage that should be associated with each 
+ * \tparam _DataRecord Custom storage that should be associated with each
  *  tree node
  *
  * \ingroup libcore
@@ -145,10 +145,10 @@ template <typename _PointType, typename _DataRecord> struct LeftBalancedKDNode {
 	/// Initialize a KD-tree node
 	inline LeftBalancedKDNode() : position((Scalar) 0), data(), flags(0) { }
 	/// Initialize a KD-tree node with the given data record
-	inline LeftBalancedKDNode(const DataRecord &data) : position((Scalar) 0), 
+	inline LeftBalancedKDNode(const DataRecord &data) : position((Scalar) 0),
 		data(data), flags(0) { }
 
-	/// Given the current node's index, return the index of the left child 
+	/// Given the current node's index, return the index of the left child
 	inline IndexType getLeftIndex(IndexType self) const { return 2 * self + 1; }
 	/// Given the current node's index, set the left child index
 	inline void setLeftIndex(IndexType self, IndexType value) {
@@ -158,7 +158,7 @@ template <typename _PointType, typename _DataRecord> struct LeftBalancedKDNode {
 		#endif
 	}
 
-	/// Given the current node's index, return the index of the right child 
+	/// Given the current node's index, return the index of the right child
 	inline IndexType getRightIndex(IndexType self) const { return 2 * self + 2; }
 	/// Given the current node's index, set the right child index
 	inline void setRightIndex(IndexType self, IndexType value) {
@@ -171,10 +171,10 @@ template <typename _PointType, typename _DataRecord> struct LeftBalancedKDNode {
 	/// Check whether this is a leaf node
 	inline bool isLeaf() const { return flags & (uint8_t) ELeafFlag; }
 	/// Specify whether this is a leaf node
-	inline void setLeaf(bool value) { 
-		if (value) 
-			flags |= (uint8_t) ELeafFlag; 
-		else 
+	inline void setLeaf(bool value) {
+		if (value)
+			flags |= (uint8_t) ELeafFlag;
+		else
 			flags &= (uint8_t) ~ELeafFlag;
 	}
 
@@ -205,7 +205,7 @@ template <typename _PointType, typename _DataRecord> struct LeftBalancedKDNode {
  * data layout of the nodes themselves.
  *
  * Note that this class is meant for point data only --- for things that
- * have some kind of spatial extent, the classes \ref GenericKDTree and 
+ * have some kind of spatial extent, the classes \ref GenericKDTree and
  * \ref ShapeKDTree will be more appropriate.
  *
  * \tparam _NodeType Underlying node data structure. See \ref SimpleKDNode as
@@ -227,22 +227,22 @@ public:
 	enum EHeuristic {
 		/// Create a balanced tree by splitting along the median
 		EBalanced = 0,
-		
+
 		/// Create a left-balanced tree
 		ELeftBalanced,
 
 		/**
-		 * \brief Use the sliding midpoint tree construction rule. This 
+		 * \brief Use the sliding midpoint tree construction rule. This
 		 * ensures that cells do not become overly elongated.
 		 */
 		ESlidingMidpoint,
 
 		/**
 		 * \brief Choose the split plane by optimizing a cost heuristic
-		 * based on the ratio of voxel volumes. 
+		 * based on the ratio of voxel volumes.
 		 *
-		 * Note that Mitsuba's implementation of this heuristic is not 
-		 * particularly optimized --- the tree construction construction 
+		 * Note that Mitsuba's implementation of this heuristic is not
+		 * particularly optimized --- the tree construction construction
 		 * runs time O(n (log n)^2) instead of O(n log n).
 		 */
 		EVoxelVolume
@@ -260,7 +260,7 @@ public:
 
 		std::string toString() const {
 			std::ostringstream oss;
-			oss << "SearchResult[distance=" << std::sqrt(distSquared) 
+			oss << "SearchResult[distance=" << std::sqrt(distSquared)
 				<< ", index=" << index << "]";
 			return oss.str();
 		}
@@ -272,7 +272,7 @@ public:
 	};
 
 	/// Comparison functor for nearest-neighbor search queries
-	struct SearchResultComparator : public 
+	struct SearchResultComparator : public
 		std::binary_function<SearchResult, SearchResult, bool> {
 	public:
 		inline bool operator()(const SearchResult &a, const SearchResult &b) const {
@@ -281,7 +281,7 @@ public:
 	};
 
 public:
-	/** 
+	/**
 	 * \brief Create an empty KD-tree that can hold the specified
 	 * number of points
 	 */
@@ -344,8 +344,8 @@ public:
 		timer->reset();
 
 		/* Instead of shuffling around the node data itself, only modify
-		   an indirection table initially. Once the tree construction 
-		   is done, this table will contain a indirection that can then 
+		   an indirection table initially. Once the tree construction
+		   is done, this table will contain a indirection that can then
 		   be applied to the data in one pass */
 		std::vector<IndexType> indirection(m_nodes.size());
 		for (size_t i=0; i<m_nodes.size(); ++i)
@@ -355,7 +355,7 @@ public:
 		int constructionTime;
 		if (NodeType::leftBalancedLayout) {
 			std::vector<IndexType> permutation(m_nodes.size());
-			buildLB(0, 1, indirection.begin(), indirection.begin(), 
+			buildLB(0, 1, indirection.begin(), indirection.begin(),
 				indirection.end(), permutation);
 			constructionTime = timer->getMilliseconds();
 			timer->reset();
@@ -381,16 +381,16 @@ public:
 	 * \brief Run a k-nearest-neighbor search query
 	 *
 	 * \param p Search position
-	 * \param sqrSearchRadius 
-	 *      Specifies the squared maximum search radius. This parameter can be used 
+	 * \param sqrSearchRadius
+	 *      Specifies the squared maximum search radius. This parameter can be used
 	 *      to restrict the k-nn query to a subset of the data -- it that is not
 	 *      desired, simply set it to positive infinity. After the query
-	 *      finishes, the parameter value will correspond to the (potentially lower) 
-	 *      maximum query radius that was necessary to ensure that the number of 
+	 *      finishes, the parameter value will correspond to the (potentially lower)
+	 *      maximum query radius that was necessary to ensure that the number of
 	 *      results did not exceed \c k.
 	 * \param k Maximum number of search results
-	 * \param results Target array for search results. Must 
-	 *      contain storage for at least \c k+1 entries! 
+	 * \param results Target array for search results. Must
+	 *      contain storage for at least \c k+1 entries!
 	 *      (one extra entry is needed for shuffling data around)
 	 * \return The number of search results (equal to \c k or less)
 	 */
@@ -409,15 +409,15 @@ public:
 		while (stackPos > 0) {
 			const NodeType &node = m_nodes[index];
 			IndexType nextIndex;
-	
+
 			/* Recurse on inner nodes */
 			if (!node.isLeaf()) {
 				Float distToPlane = p[node.getAxis()] - node.getPosition()[node.getAxis()];
-	
+
 				bool searchBoth = distToPlane*distToPlane <= sqrSearchRadius;
 
 				if (distToPlane > 0) {
-					/* The search query is located on the right side of the split. 
+					/* The search query is located on the right side of the split.
 					   Search this side first. */
 					if (hasRightChild(index)) {
 						if (searchBoth)
@@ -429,7 +429,7 @@ public:
 						nextIndex = stack[--stackPos];
 					}
 				} else {
-					/* The search query is located on the left side of the split. 
+					/* The search query is located on the left side of the split.
 					   Search this side first. */
 					if (searchBoth && hasRightChild(index))
 						stack[stackPos++] = node.getRightIndex(index);
@@ -439,12 +439,12 @@ public:
 			} else {
 				nextIndex = stack[--stackPos];
 			}
-	
+
 			/* Check if the current point is within the query's search radius */
 			const Float pointDistSquared = (node.getPosition() - p).lengthSquared();
-	
+
 			if (pointDistSquared < sqrSearchRadius) {
-				/* Switch to a max-heap when the available search 
+				/* Switch to a max-heap when the available search
 				   result space is exhausted */
 				if (resultCount < k) {
 					/* There is still room, just add the point to
@@ -453,17 +453,17 @@ public:
 				} else {
 					if (!isHeap) {
 						/* Establish the max-heap property */
-						std::make_heap(results, results + resultCount, 
+						std::make_heap(results, results + resultCount,
 								SearchResultComparator());
 						isHeap = true;
 					}
 					SearchResult *end = results + resultCount + 1;
-	
+
 					/* Add the new point, remove the one that is farthest away */
 					results[resultCount] = SearchResult(pointDistSquared, index);
 					std::push_heap(results, end, SearchResultComparator());
 					std::pop_heap(results, end, SearchResultComparator());
-	
+
 					/* Reduce the search radius accordingly */
 					sqrSearchRadius = results[0].distSquared;
 				}
@@ -478,17 +478,17 @@ public:
 	 * \brief Run a k-nearest-neighbor search query and record statistics
 	 *
 	 * \param p Search position
-	 * \param sqrSearchRadius 
-	 *      Specifies the squared maximum search radius. This parameter can be used 
+	 * \param sqrSearchRadius
+	 *      Specifies the squared maximum search radius. This parameter can be used
 	 *      to restrict the k-nn query to a subset of the data -- it that is not
 	 *      desired, simply set it to positive infinity. After the query
-	 *      finishes, the parameter value will correspond to the (potentially lower) 
-	 *      maximum query radius that was necessary to ensure that the number of 
+	 *      finishes, the parameter value will correspond to the (potentially lower)
+	 *      maximum query radius that was necessary to ensure that the number of
 	 *      results did not exceed \c k.
 	 * \param k Maximum number of search results
 	 * \param results
-	 *      Target array for search results. Must contain 
-	 *      storage for at least \c k+1 entries! (one 
+	 *      Target array for search results. Must contain
+	 *      storage for at least \c k+1 entries! (one
 	 *      extra entry is needed for shuffling data around)
 	 * \return The number of used traversal steps
 	 */
@@ -509,15 +509,15 @@ public:
 			const NodeType &node = m_nodes[index];
 			++traversalSteps;
 			IndexType nextIndex;
-	
+
 			/* Recurse on inner nodes */
 			if (!node.isLeaf()) {
 				Float distToPlane = p[node.getAxis()] - node.getPosition()[node.getAxis()];
-	
+
 				bool searchBoth = distToPlane*distToPlane <= sqrSearchRadius;
 
 				if (distToPlane > 0) {
-					/* The search query is located on the right side of the split. 
+					/* The search query is located on the right side of the split.
 					   Search this side first. */
 					if (hasRightChild(index)) {
 						if (searchBoth)
@@ -529,7 +529,7 @@ public:
 						nextIndex = stack[--stackPos];
 					}
 				} else {
-					/* The search query is located on the left side of the split. 
+					/* The search query is located on the left side of the split.
 					   Search this side first. */
 					if (searchBoth && hasRightChild(index))
 						stack[stackPos++] = node.getRightIndex(index);
@@ -539,12 +539,12 @@ public:
 			} else {
 				nextIndex = stack[--stackPos];
 			}
-	
+
 			/* Check if the current point is within the query's search radius */
 			const Float pointDistSquared = (node.getPosition() - p).lengthSquared();
-	
+
 			if (pointDistSquared < sqrSearchRadius) {
-				/* Switch to a max-heap when the available search 
+				/* Switch to a max-heap when the available search
 				   result space is exhausted */
 				if (resultCount < k) {
 					/* There is still room, just add the point to
@@ -553,16 +553,16 @@ public:
 				} else {
 					if (!isHeap) {
 						/* Establish the max-heap property */
-						std::make_heap(results, results + resultCount, 
+						std::make_heap(results, results + resultCount,
 								SearchResultComparator());
 						isHeap = true;
 					}
-	
+
 					/* Add the new point, remove the one that is farthest away */
 					results[resultCount] = SearchResult(pointDistSquared, index);
 					std::push_heap(results, results + resultCount + 1, SearchResultComparator());
 					std::pop_heap(results, results + resultCount + 1, SearchResultComparator());
-	
+
 					/* Reduce the search radius accordingly */
 					sqrSearchRadius = results[0].distSquared;
 				}
@@ -579,13 +579,13 @@ public:
 	 * \param p Search position
 	 * \param k Maximum number of search results
 	 * \param results
-	 *      Target array for search results. Must contain 
-	 *      storage for at least \c k+1 entries! (one 
+	 *      Target array for search results. Must contain
+	 *      storage for at least \c k+1 entries! (one
 	 *      extra entry is needed for shuffling data around)
 	 * \return The number of used traversal steps
 	 */
 
-	inline size_t nnSearch(const PointType &p, size_t k, 
+	inline size_t nnSearch(const PointType &p, size_t k,
 			SearchResult *results) const {
 		Float searchRadiusSqr = std::numeric_limits<Float>::infinity();
 		return nnSearch(p, searchRadiusSqr, k, results);
@@ -600,7 +600,7 @@ public:
 	 *
 	 * \param p Search position
 	 * \param functor Functor to be called on each search result
-	 * \param searchRadius Search radius 
+	 * \param searchRadius Search radius
 	 * \return The number of functor invocations
 	 */
 	template <typename Functor> size_t executeModifier(const PointType &p,
@@ -616,16 +616,16 @@ public:
 		while (stackPos > 0) {
 			NodeType &node = m_nodes[index];
 			IndexType nextIndex;
-	
+
 			/* Recurse on inner nodes */
 			if (!node.isLeaf()) {
-				Float distToPlane = p[node.getAxis()] 
+				Float distToPlane = p[node.getAxis()]
 					- node.getPosition()[node.getAxis()];
-	
+
 				bool searchBoth = distToPlane*distToPlane <= distSquared;
 
 				if (distToPlane > 0) {
-					/* The search query is located on the right side of the split. 
+					/* The search query is located on the right side of the split.
 					   Search this side first. */
 					if (hasRightChild(index)) {
 						if (searchBoth)
@@ -637,7 +637,7 @@ public:
 						nextIndex = stack[--stackPos];
 					}
 				} else {
-					/* The search query is located on the left side of the split. 
+					/* The search query is located on the left side of the split.
 					   Search this side first. */
 					if (searchBoth && hasRightChild(index))
 						stack[stackPos++] = node.getRightIndex(index);
@@ -647,10 +647,10 @@ public:
 			} else {
 				nextIndex = stack[--stackPos];
 			}
-	
+
 			/* Check if the current point is within the query's search radius */
 			const Float pointDistSquared = (node.getPosition() - p).lengthSquared();
-	
+
 			if (pointDistSquared < distSquared) {
 				functor(node);
 				++found;
@@ -669,7 +669,7 @@ public:
 	 *
 	 * \param p Search position
 	 * \param functor Functor to be called on each search result
-	 * \param searchRadius  Search radius 
+	 * \param searchRadius  Search radius
 	 * \return The number of functor invocations
 	 */
 	template <typename Functor> size_t executeQuery(const PointType &p,
@@ -685,16 +685,16 @@ public:
 		while (stackPos > 0) {
 			const NodeType &node = m_nodes[index];
 			IndexType nextIndex;
-	
+
 			/* Recurse on inner nodes */
 			if (!node.isLeaf()) {
-				Float distToPlane = p[node.getAxis()] 
+				Float distToPlane = p[node.getAxis()]
 					- node.getPosition()[node.getAxis()];
-	
+
 				bool searchBoth = distToPlane*distToPlane <= distSquared;
 
 				if (distToPlane > 0) {
-					/* The search query is located on the right side of the split. 
+					/* The search query is located on the right side of the split.
 					   Search this side first. */
 					if (hasRightChild(index)) {
 						if (searchBoth)
@@ -706,7 +706,7 @@ public:
 						nextIndex = stack[--stackPos];
 					}
 				} else {
-					/* The search query is located on the left side of the split. 
+					/* The search query is located on the left side of the split.
 					   Search this side first. */
 					if (searchBoth && hasRightChild(index))
 						stack[stackPos++] = node.getRightIndex(index);
@@ -719,7 +719,7 @@ public:
 
 			/* Check if the current point is within the query's search radius */
 			const Float pointDistSquared = (node.getPosition() - p).lengthSquared();
-	
+
 			if (pointDistSquared < distSquared) {
 				++found;
 				functor(node);
@@ -736,7 +736,7 @@ public:
 	 *
 	 * \param p Search position
 	 * \param results Index list of search results
-	 * \param searchRadius  Search radius 
+	 * \param searchRadius  Search radius
 	 * \return The number of functor invocations
 	 */
 	size_t search(const PointType &p, Float searchRadius, std::vector<IndexType> &results) const {
@@ -751,16 +751,16 @@ public:
 		while (stackPos > 0) {
 			const NodeType &node = m_nodes[index];
 			IndexType nextIndex;
-	
+
 			/* Recurse on inner nodes */
 			if (!node.isLeaf()) {
 				Float distToPlane = p[node.getAxis()]
 					- node.getPosition()[node.getAxis()];
-	
+
 				bool searchBoth = distToPlane*distToPlane <= distSquared;
 
 				if (distToPlane > 0) {
-					/* The search query is located on the right side of the split. 
+					/* The search query is located on the right side of the split.
 					   Search this side first. */
 					if (hasRightChild(index)) {
 						if (searchBoth)
@@ -772,7 +772,7 @@ public:
 						nextIndex = stack[--stackPos];
 					}
 				} else {
-					/* The search query is located on the left side of the split. 
+					/* The search query is located on the left side of the split.
 					   Search this side first. */
 					if (searchBoth && hasRightChild(index))
 						stack[stackPos++] = node.getRightIndex(index);
@@ -782,11 +782,11 @@ public:
 			} else {
 				nextIndex = stack[--stackPos];
 			}
-	
+
 			/* Check if the current point is within the query's search radius */
 			const Float pointDistSquared = (node.getPosition() - p).lengthSquared();
-	
-			if (pointDistSquared < distSquared) { 
+
+			if (pointDistSquared < distSquared) {
 				++found;
 				results.push_back(index);
 			}
@@ -797,10 +797,10 @@ public:
 	}
 
 	/**
-	 * \brief Return whether or not the inner node of the 
+	 * \brief Return whether or not the inner node of the
 	 * specified index has a right child node.
 	 *
-	 * This function is available for convenience and abstracts away some 
+	 * This function is available for convenience and abstracts away some
 	 * details about the underlying node representation.
 	 */
 	inline bool hasRightChild(IndexType index) const {
@@ -813,7 +813,7 @@ public:
 protected:
 	struct CoordinateOrdering : public std::binary_function<IndexType, IndexType, bool> {
 	public:
-		inline CoordinateOrdering(const std::vector<NodeType> &nodes, int axis) 
+		inline CoordinateOrdering(const std::vector<NodeType> &nodes, int axis)
 			: m_nodes(nodes), m_axis(axis) { }
 		inline bool operator()(const IndexType &i1, const IndexType &i2) const {
 			return m_nodes[i1].getPosition()[m_axis] < m_nodes[i2].getPosition()[m_axis];
@@ -825,7 +825,7 @@ protected:
 
 	struct LessThanOrEqual : public std::unary_function<IndexType, bool> {
 	public:
-		inline LessThanOrEqual(const std::vector<NodeType> &nodes, int axis, Scalar value) 
+		inline LessThanOrEqual(const std::vector<NodeType> &nodes, int axis, Scalar value)
 			: m_nodes(nodes), m_axis(axis), m_value(value) { }
 		inline bool operator()(const IndexType &i) const {
 			return m_nodes[i].getPosition()[m_axis] <= m_value;
@@ -838,9 +838,9 @@ protected:
 
 	/**
 	 * Given a number of entries, this method calculates the number of nodes
-	 * nodes on the left subtree of a left-balanced tree. There are two main 
+	 * nodes on the left subtree of a left-balanced tree. There are two main
 	 * cases here:
-	 * 
+	 *
 	 * 1) It is possible to completely fill the left subtree
 	 * 2) It doesn't work - the last level contains too few nodes, e.g :
 	 *         O
@@ -848,21 +848,21 @@ protected:
 	 *       O   O
 	 *      /
 	 *     O
-	 * 
+	 *
 	 * The function assumes that "count" > 1.
 	 */
 	inline IndexType leftSubtreeSize(IndexType count) const {
 		/* Layer 0 contains one node */
 		IndexType p = 1;
-	
+
 		/* Traverse downwards until the first incompletely
 		   filled tree level is encountered */
 		while (2*p <= count)
 			p *= 2;
-	
+
 		/* Calculate the number of filled slots in the last level */
 		IndexType remaining = count - p + 1;
-	
+
 		if (2*remaining < p) {
 			/* Case 2: The last level contains too few nodes. Remove
 			   overestimate from the left subtree node count and add
@@ -876,7 +876,7 @@ protected:
 	/// Left-balanced tree construction routine
 	void buildLB(IndexType idx, size_t depth,
 			  typename std::vector<IndexType>::iterator base,
-			  typename std::vector<IndexType>::iterator rangeStart, 
+			  typename std::vector<IndexType>::iterator rangeStart,
 			  typename std::vector<IndexType>::iterator rangeEnd,
 			  typename std::vector<IndexType> &permutation) {
 		m_depth = std::max(depth, m_depth);
@@ -920,10 +920,10 @@ protected:
 	/// Default tree construction routine
 	void build(size_t depth,
 			  typename std::vector<IndexType>::iterator base,
-			  typename std::vector<IndexType>::iterator rangeStart, 
+			  typename std::vector<IndexType>::iterator rangeStart,
 			  typename std::vector<IndexType>::iterator rangeEnd) {
 		m_depth = std::max(depth, m_depth);
-		
+
 		IndexType count = (IndexType) (rangeEnd-rangeStart);
 		SAssert(count > 0);
 
@@ -940,7 +940,7 @@ protected:
 			case EBalanced: {
 					split = rangeStart + count/2;
 					axis = m_aabb.getLargestAxis();
-					std::nth_element(rangeStart, split, rangeEnd, 
+					std::nth_element(rangeStart, split, rangeEnd,
 						CoordinateOrdering(m_nodes, axis));
 				};
 				break;
@@ -957,7 +957,7 @@ protected:
 					/* Sliding midpoint rule: find a split that is close to the spatial median */
 					axis = m_aabb.getLargestAxis();
 
-					Scalar midpoint = (Scalar) 0.5f 
+					Scalar midpoint = (Scalar) 0.5f
 						* (m_aabb.max[axis]+m_aabb.min[axis]);
 
 					size_t nLT = std::count_if(rangeStart, rangeEnd,
@@ -975,18 +975,18 @@ protected:
 						CoordinateOrdering(m_nodes, axis));
 				};
 				break;
-	
+
 			case EVoxelVolume: {
 					Float bestCost = std::numeric_limits<Float>::infinity();
 
 					for (int dim=0; dim<PointType::dim; ++dim) {
-						std::sort(rangeStart, rangeEnd, 
+						std::sort(rangeStart, rangeEnd,
 							CoordinateOrdering(m_nodes, dim));
 
 						size_t numLeft = 1, numRight = count-2;
 						AABBType leftAABB(m_aabb), rightAABB(m_aabb);
 						Float invVolume = 1.0f / m_aabb.getVolume();
-						for (typename std::vector<IndexType>::iterator it = rangeStart+1; 
+						for (typename std::vector<IndexType>::iterator it = rangeStart+1;
 								it != rangeEnd; ++it) {
 							++numLeft; --numRight;
 							Float pos = m_nodes[*it].getPosition()[dim];
@@ -1011,10 +1011,10 @@ protected:
 		splitNode.setAxis(axis);
 		splitNode.setLeaf(false);
 
-		if (split+1 != rangeEnd) 
+		if (split+1 != rangeEnd)
 			splitNode.setRightIndex((IndexType) (rangeStart - base),
 					(IndexType) (split + 1 - base));
-		else 
+		else
 			splitNode.setRightIndex((IndexType) (rangeStart - base), 0);
 
 		splitNode.setLeftIndex((IndexType) (rangeStart - base),

@@ -25,7 +25,7 @@
 #include <set>
 
 MTS_NAMESPACE_BEGIN
-	
+
 /* Simple ordering for storing vectors in a set */
 struct VectorOrder {
 	inline int compare(const Vector &v1, const Vector &v2) const {
@@ -44,7 +44,7 @@ struct VectorOrder {
 };
 
 ChiSquare::ChiSquare(int thetaBins, int phiBins, int numTests,
-		size_t sampleCount) : m_logLevel(EInfo), m_thetaBins(thetaBins), 
+		size_t sampleCount) : m_logLevel(EInfo), m_thetaBins(thetaBins),
 		  m_phiBins(phiBins), m_numTests(numTests), m_sampleCount(sampleCount) {
 	if (m_phiBins == 0)
 		m_phiBins = 2*m_thetaBins;
@@ -114,7 +114,7 @@ void ChiSquare::fill(
 	}
 
 	if (discreteDirections.size() > 0) {
-		Log(EDebug, "Incorporating the disrete density over " 
+		Log(EDebug, "Incorporating the disrete density over "
 			SIZE_T_FMT " direction(s) into the contingency table", discreteDirections.size());
 		for (std::set<Vector, VectorOrder>::const_iterator it = discreteDirections.begin();
 			it != discreteDirections.end(); ++it) {
@@ -160,7 +160,7 @@ void ChiSquare::fill(
 		}
 	}
 
-	Log(m_logLevel, "Done, took %i ms (max error = %f, integral=%f).", 
+	Log(m_logLevel, "Done, took %i ms (max error = %f, integral=%f).",
 			timer->getMilliseconds(), maxError, integral);
 }
 
@@ -208,7 +208,7 @@ ChiSquare::ETestResult ChiSquare::runTest(Float pvalThresh) {
 			pooledRef += m_refTable[idx];
 			++pooledCells;
 		} else if (pooledRef > 0 && pooledRef < CHISQR_MIN_EXP_FREQUENCY) {
-			/* Pool more cells until the merged cell 
+			/* Pool more cells until the merged cell
 			   has a sufficiently high frequency */
 			pooledCounts += m_table[idx];
 			pooledRef += m_refTable[idx];
@@ -236,7 +236,7 @@ ChiSquare::ETestResult ChiSquare::runTest(Float pvalThresh) {
 	df -= 1;
 
 	Log(m_logLevel, "Chi-square statistic = %e (df=%i)", chsq, df);
-	
+
 	if (df <= 0) {
 		Log(m_logLevel, "The number of degrees of freedom (%i) is too low!", df);
 		return ELowDoF;

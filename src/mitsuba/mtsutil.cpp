@@ -160,7 +160,7 @@ int mtsutil(int argc, char **argv) {
 			switch (optchar) {
 				case 'a': {
 						std::vector<std::string> paths = tokenize(optarg, ";");
-						for (int i=(int) paths.size()-1; i>=0; --i) 
+						for (int i=(int) paths.size()-1; i>=0; --i)
 							fileResolver->prependPath(paths[i]);
 					}
 					break;
@@ -237,7 +237,7 @@ int mtsutil(int argc, char **argv) {
 			scheduler->registerWorker(new LocalWorker(formatString("wrk%i", i)));
 		std::vector<std::string> hosts = tokenize(networkHosts, ";");
 
-		/* Establish network connections to nested servers */ 
+		/* Establish network connections to nested servers */
 		for (size_t i=0; i<hosts.size(); ++i) {
 			const std::string &hostName = hosts[i];
 			ref<Stream> stream;
@@ -401,7 +401,7 @@ int mts_main(int argc, char **argv) {
 #if defined(__WINDOWS__)
 	/* Initialize WINSOCK2 */
 	WSADATA wsaData;
-	if (WSAStartup(MAKEWORD(2,2), &wsaData)) 
+	if (WSAStartup(MAKEWORD(2,2), &wsaData))
 		SLog(EError, "Could not initialize WinSock2!");
 	if (LOBYTE(wsaData.wVersion) != 2 || HIBYTE(wsaData.wVersion) != 2)
 		SLog(EError, "Could not find the required version of winsock.dll!");

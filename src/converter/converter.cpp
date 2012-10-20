@@ -99,8 +99,8 @@ void cleanup(DOMNode *node) {
 	}
 }
 
-void GeometryConverter::convert(const fs::path &inputFile, 
-	const fs::path &outputDirectory, 
+void GeometryConverter::convert(const fs::path &inputFile,
+	const fs::path &outputDirectory,
 	const fs::path &sceneName,
 	const fs::path &adjustmentFile) {
 
@@ -157,7 +157,7 @@ void GeometryConverter::convert(const fs::path &inputFile,
 		conf->setParameter(XMLUni::fgDOMErrorHandler, &errorHandler);
 
 		std::string xmlString = os.str();
-		MemBufInputSource* memBufIS = new MemBufInputSource((const XMLByte*) xmlString.c_str(), 
+		MemBufInputSource* memBufIS = new MemBufInputSource((const XMLByte*) xmlString.c_str(),
 			xmlString.length(), "bufID", false);
 		Wrapper4InputSource *wrapper = new Wrapper4InputSource(memBufIS, false);
 		XERCES_CPP_NAMESPACE_QUALIFIER DOMDocument *doc = parser->parse(wrapper);
@@ -214,10 +214,10 @@ void GeometryConverter::convert(const fs::path &inputFile,
 				if (id != "" && nodeMap.find(id) != nodeMap.end()) {
 					DOMNode *node = nodeMap[id], *parent = node->getParentNode();
 					if (nodeName == "append") {
-						for (DOMNode *child2 = child->getFirstChild(); child2 != 0; child2=child2->getNextSibling()) 
+						for (DOMNode *child2 = child->getFirstChild(); child2 != 0; child2=child2->getNextSibling())
 							node->insertBefore(doc->importNode(child2, true), NULL);
 					} else if (nodeName == "prepend") {
-						for (DOMNode *child2 = child->getFirstChild(); child2 != 0; child2=child2->getNextSibling()) 
+						for (DOMNode *child2 = child->getFirstChild(); child2 != 0; child2=child2->getNextSibling())
 							node->insertBefore(doc->importNode(child2, true), node->getFirstChild());
 					} else if (nodeName == "remove") {
 						parent->removeChild(node);
@@ -240,7 +240,7 @@ void GeometryConverter::convert(const fs::path &inputFile,
 		DOMLSSerializer *serializer = impl->createLSSerializer();
 		DOMConfiguration *serConf = serializer->getDomConfig();
 		serConf->setParameter(XMLUni::fgDOMErrorHandler, &errorHandler);
-		if (serConf->canSetParameter(XMLUni::fgDOMWRTFormatPrettyPrint, true)) 
+		if (serConf->canSetParameter(XMLUni::fgDOMWRTFormatPrettyPrint, true))
 			serConf->setParameter(XMLUni::fgDOMWRTFormatPrettyPrint, true);
 		DOMLSOutput *output = impl->createLSOutput();
 		MemBufFormatTarget *target = new MemBufFormatTarget();

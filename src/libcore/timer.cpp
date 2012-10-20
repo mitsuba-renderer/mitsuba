@@ -64,7 +64,7 @@ namespace {
 	static double timerResolution() {
 		#if defined(__WINDOWS__)
 		    LARGE_INTEGER freq;
-		    if (!QueryPerformanceFrequency(&freq)) 
+		    if (!QueryPerformanceFrequency(&freq))
 				SLog(EError, "Could not query the high performance counter: %s",
 					lastErrorText().c_str());
 			return 1.0 / static_cast<double>(freq.QuadPart) * 1e9;

@@ -21,12 +21,12 @@
 #include <mitsuba/core/qmc.h>
 #include "faure.h"
 
-/* This implementation limits the maximum pixel resolution and instead 
+/* This implementation limits the maximum pixel resolution and instead
    tiles a block of identical sequences across the screen. This is
    important to avoid running out of single precision bits very quickly ..
    The tile size should not be too small, or visible patterns will emerge */
 
-#define MAX_RESOLUTION 128 
+#define MAX_RESOLUTION 128
 
 MTS_NAMESPACE_BEGIN
 
@@ -42,7 +42,7 @@ MTS_NAMESPACE_BEGIN
  *        \item When set to \code{0}, the implementation will provide the standard Hammersley sequence.
  *
  *        \item When set to \code{-1}, the implementation will compute
- *        a scrambled variant of the Hammersley sequence based on permutations by 
+ *        a scrambled variant of the Hammersley sequence based on permutations by
  *        Faure \cite{Faure1992Good}, which has better equidistribution properties
  *        in high dimensions.
  *
@@ -50,8 +50,8 @@ MTS_NAMESPACE_BEGIN
  *        on this number. This is useful to break up temporally coherent noise when rendering
  *        the frames of an animation --- in this case, simply set the parameter to the current frame index.
  *        \end{enumerate}
- *        Default: \code{-1}, i.e. use the Faure permutations. Note that permutations rely on a 
- *        precomputed table that consumes approximately 7 MiB of additional memory at run time. 
+ *        Default: \code{-1}, i.e. use the Faure permutations. Note that permutations rely on a
+ *        precomputed table that consumes approximately 7 MiB of additional memory at run time.
  *     }
  * }
   * \renderings{
@@ -62,7 +62,7 @@ MTS_NAMESPACE_BEGIN
  * }
  * This plugin implements a Quasi-Monte Carlo (QMC) sample generator based on the
  * Hammersley sequence. QMC number sequences are designed to reduce sample clumping
- * across integration dimensions, which can lead to a higher order of 
+ * across integration dimensions, which can lead to a higher order of
  * convergence in renderings. Because of the deterministic character of the samples,
  * errors will manifest as grid or moir\'e patterns rather than random noise, but
  * these diminish as the number of samples is increased.
@@ -71,17 +71,17 @@ MTS_NAMESPACE_BEGIN
  * high quality point set that is slightly more regular (and has lower discrepancy),
  * especially in the first few dimensions. As is the case with the Halton sequence,
  * the points should be scrambled to reduce patterns that manifest due due to correlations
- * in higher dimensions. Please refer to the \pluginref{halton} page for more information 
+ * in higher dimensions. Please refer to the \pluginref{halton} page for more information
  * on how this works.
  *
- * Note that this sampler will cause odd-looking intermediate results when combined with rendering 
- * techniques that trace paths starting at light source (e.g. \pluginref{ptracer})---these vanish 
+ * Note that this sampler will cause odd-looking intermediate results when combined with rendering
+ * techniques that trace paths starting at light source (e.g. \pluginref{ptracer})---these vanish
  * by the time the rendering process finishes.
  *
  * \remarks{
- *   \item This sampler is incompatible with Metropolis Light Transport (all variants). 
- *   It interoperates poorly with Bidirectional Path Tracing and Energy Redistribution 
- *   Path Tracing, hence these should not be used together. The \pluginref{sobol} QMC 
+ *   \item This sampler is incompatible with Metropolis Light Transport (all variants).
+ *   It interoperates poorly with Bidirectional Path Tracing and Energy Redistribution
+ *   Path Tracing, hence these should not be used together. The \pluginref{sobol} QMC
  *   sequence is an alternative for the latter two cases, and \pluginref{ldsampler}
  *   works as well.
  * }
@@ -94,7 +94,7 @@ public:
 		/* Number of samples per pixel */
 		m_sampleCount = props.getSize("sampleCount", 4);
 
-		/* Scramble value, which can be used to break up temporally coherent 
+		/* Scramble value, which can be used to break up temporally coherent
 		   noise patterns when rendering the frames of an animation. */
 		m_scramble = props.getInteger("scramble", -1);
 
@@ -103,7 +103,7 @@ public:
 		m_arrayStartDim = m_arrayEndDim = 5;
 	}
 
-	HammersleySampler(Stream *stream, InstanceManager *manager) 
+	HammersleySampler(Stream *stream, InstanceManager *manager)
 	 : Sampler(stream, manager) {
 		m_arrayStartDim = stream->readUInt();
 		m_arrayEndDim = stream->readUInt();
@@ -154,10 +154,10 @@ public:
 	void configure() {
 		Sampler::configure();
 		if (m_scramble != 0) {
-			/* Only create one set of permutations per address space, since this is costly 
+			/* Only create one set of permutations per address space, since this is costly
 			   (taking about .5 sec and 7MB of memory on my machine) */
 			LockGuard guard(m_globalPermutationsMutex);
-			if (m_globalPermutations == NULL || m_globalPermutations->getScramble() != m_scramble) 
+			if (m_globalPermutations == NULL || m_globalPermutations->getScramble() != m_scramble)
 				m_globalPermutations = new PermutationStorage(m_scramble);
 			m_permutations = m_globalPermutations;
 		}
@@ -180,7 +180,7 @@ public:
 
 	void setFilmResolution(const Vector2i &res, bool blocked) {
 		if (blocked) {
-			/* Determine parameters of the space partition in the first two 
+			/* Determine parameters of the space partition in the first two
 			   dimensions. This is required to support blocked rendering. */
 			for (int i=0; i<2; ++i)
 				m_resolution[i] = std::min((uint32_t) MAX_RESOLUTION,
@@ -188,12 +188,12 @@ public:
 			m_logHeight = log2i((uint32_t) m_resolution.y);
 
 			m_samplesPerBatch = m_sampleCount;
-			m_factor = (Float) 1.0f / (m_sampleCount * 
+			m_factor = (Float) 1.0f / (m_sampleCount *
 				(size_t) m_resolution.x * (size_t) m_resolution.y);
 			m_offset = 0;
 			m_stride = m_resolution.y;
 		} else {
-			m_samplesPerBatch = m_sampleCount * 
+			m_samplesPerBatch = m_sampleCount *
 				(size_t) res.x * (size_t) res.y;
 			m_factor = (Float) 1.0f / m_samplesPerBatch;
 			m_resolution = Vector2i(1);
@@ -214,7 +214,7 @@ public:
 			m_pixelPosition.x %= MAX_RESOLUTION;
 			m_pixelPosition.y %= MAX_RESOLUTION;
 
-			m_offset = m_pixelPosition.x * m_resolution.y * m_sampleCount + 
+			m_offset = m_pixelPosition.x * m_resolution.y * m_sampleCount +
 				inverseScrambledRadicalInverse(2, m_pixelPosition.y, m_logHeight,
 				m_permutations.get() ? m_permutations->getInversePermutation(0) : NULL);
 		}
@@ -237,7 +237,7 @@ public:
 		if (dim == 0)
 			return idx * m_factor;
 		else if (m_permutations != NULL)
-			return scrambledRadicalInverseFast(dim-1, idx, 
+			return scrambledRadicalInverseFast(dim-1, idx,
 				m_permutations->getPermutation(dim-1));
 		else
 			return radicalInverseFast(dim-1, idx);
@@ -268,7 +268,7 @@ public:
 
 		uint64_t index = m_offset + m_stride * m_sampleIndex;
 
-		Float value1, value2; 
+		Float value1, value2;
 		if (m_dimension == 0) {
 			value1 = nextFloat(index) * m_resolution.x - m_pixelPosition.x;
 			value2 = nextFloat(index) * m_resolution.y - m_pixelPosition.y;
@@ -286,7 +286,7 @@ public:
 			<< "  sampleCount = " << m_sampleCount << "," << endl
 			<< "  sampleIndex = " << m_sampleIndex << "," << endl
 			<< "  scramble = " << m_scramble << endl
-			<< "]"; 
+			<< "]";
 		return oss.str();
 	}
 

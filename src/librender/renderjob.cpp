@@ -21,14 +21,14 @@
 #include <boost/filesystem.hpp>
 
 MTS_NAMESPACE_BEGIN
-	
-RenderJob::RenderJob(const std::string &threadName, 
-	Scene *scene, RenderQueue *queue, int sceneResID, int sensorResID, 
-	int samplerResID, bool threadIsCritical, bool interactive) 
+
+RenderJob::RenderJob(const std::string &threadName,
+	Scene *scene, RenderQueue *queue, int sceneResID, int sensorResID,
+	int samplerResID, bool threadIsCritical, bool interactive)
 	: Thread(threadName), m_scene(scene), m_queue(queue), m_interactive(interactive) {
 
 	/* Optional: bring the process down when this thread crashes */
-	setCritical(threadIsCritical); 
+	setCritical(threadIsCritical);
 
 	m_queue->addJob(this);
 	ref<Scheduler> sched = Scheduler::getInstance();
@@ -39,10 +39,10 @@ RenderJob::RenderJob(const std::string &threadName,
 	/* Register the scene with the scheduler if needed */
 	if (sceneResID == -1) {
 		m_sceneResID = sched->registerResource(m_scene);
-		m_ownsSceneResource = true; 
+		m_ownsSceneResource = true;
 	} else {
 		m_sceneResID = sceneResID;
-		m_ownsSceneResource = false; 
+		m_ownsSceneResource = false;
 	}
 
 	/* Register the sensor with the scheduler if needed */
@@ -63,7 +63,7 @@ RenderJob::RenderJob(const std::string &threadName,
 			clonedSampler->incRef();
 			samplers[i] = clonedSampler.get();
 		}
-		m_samplerResID = sched->registerMultiResource(samplers); 
+		m_samplerResID = sched->registerMultiResource(samplers);
 		for (size_t i=0; i<sched->getCoreCount(); ++i)
 			samplers[i]->decRef();
 		m_ownsSamplerResource = true;

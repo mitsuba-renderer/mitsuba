@@ -32,7 +32,7 @@ MTS_NAMESPACE_BEGIN
  * \brief Transparent compression/decompression stream based on \c zlib.
  *
  * This class transparently decompresses and compresses reads and writes
- * to a nested stream, respectively. 
+ * to a nested stream, respectively.
  *
  * \ingroup libcore
  */

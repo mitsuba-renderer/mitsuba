@@ -58,7 +58,7 @@ public:
 		m_lineWidth = props.getFloat("lineWidth", .01f);
 	}
 
-	GridTexture(Stream *stream, InstanceManager *manager) 
+	GridTexture(Stream *stream, InstanceManager *manager)
 	 : Texture2D(stream, manager) {
 		m_color0 = Spectrum(stream);
 		m_color1 = Spectrum(stream);
@@ -86,7 +86,7 @@ public:
 		else
 			return m_color0;
 	}
-	
+
 	Spectrum eval(const Point2 &uv,
 			const Vector2 &d0, const Vector2 &d1) const {
 		/* Filtering is currently not supported */
@@ -135,14 +135,14 @@ protected:
 	Float m_lineWidth;
 };
 
-// ================ Hardware shader implementation ================ 
+// ================ Hardware shader implementation ================
 
 class GridTextureShader : public Shader {
 public:
-	GridTextureShader(Renderer *renderer, const Spectrum &color0, 
+	GridTextureShader(Renderer *renderer, const Spectrum &color0,
 		const Spectrum &color1, Float lineWidth, const Point2 &uvOffset,
 		const Vector2 &uvScale) : Shader(renderer, ETextureShader),
-		m_color0(color0), m_color1(color1), 
+		m_color0(color0), m_color1(color1),
 		m_lineWidth(lineWidth), m_uvOffset(uvOffset), m_uvScale(uvScale) {
 	}
 
@@ -178,7 +178,7 @@ public:
 		parameterIDs.push_back(program->getParameterID(evalName + "_uvScale", false));
 	}
 
-	void bind(GPUProgram *program, const std::vector<int> &parameterIDs, 
+	void bind(GPUProgram *program, const std::vector<int> &parameterIDs,
 		int &textureUnitOffset) const {
 		program->setParameter(parameterIDs[0], m_color0);
 		program->setParameter(parameterIDs[1], m_color1);
@@ -197,10 +197,10 @@ private:
 };
 
 Shader *GridTexture::createShader(Renderer *renderer) const {
-	return new GridTextureShader(renderer, m_color0, m_color1, 
+	return new GridTextureShader(renderer, m_color0, m_color1,
 			m_lineWidth, m_uvOffset, m_uvScale);
 }
-	
+
 MTS_IMPLEMENT_CLASS(GridTextureShader, false, Shader)
 MTS_IMPLEMENT_CLASS_S(GridTexture, false, Texture2D)
 MTS_EXPORT_PLUGIN(GridTexture, "Grid texture");

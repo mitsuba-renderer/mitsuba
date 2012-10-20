@@ -26,15 +26,15 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{\Unnamed}{\Shape}{One or more shapes that should be
  *         made available for geometry instancing}
  * }
- * 
+ *
  * This plugin implements a container for shapes that should be
- * made available for geometry instancing. Any shapes placed in a 
+ * made available for geometry instancing. Any shapes placed in a
  * \pluginref{shapegroup} will not be visible on their own---instead, the
  * renderer will precompute ray intersection acceleration data structures
- * so that they can efficiently be referenced many times using the 
- * \pluginref{instance} plugin. This is useful for rendering things like 
+ * so that they can efficiently be referenced many times using the
+ * \pluginref{instance} plugin. This is useful for rendering things like
  * forests, where only a few distinct types of trees have to be kept
- * in memory. 
+ * in memory.
  *
 
  * \begin{xml}[caption={An example of geometry instancing}, label=lst:instancing]
@@ -83,7 +83,7 @@ ShapeGroup::ShapeGroup(const Properties &props) : Shape(props) {
 	m_name = props.getID();
 }
 
-ShapeGroup::ShapeGroup(Stream *stream, InstanceManager *manager) 
+ShapeGroup::ShapeGroup(Stream *stream, InstanceManager *manager)
 	: Shape(stream, manager) {
 	m_kdtree = new ShapeKDTree();
 	size_t shapeCount = stream->readSize();

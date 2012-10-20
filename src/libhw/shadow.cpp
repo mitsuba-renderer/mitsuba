@@ -37,7 +37,7 @@ ShadowMapGenerator::ShadowMapGenerator(Renderer *renderer) {
 
     if (renderer->getCapabilities()->isSupported(RendererCapabilities::EGeometryShaders)) {
 		/* Paraboloid shadow map generator based on "Fast Non-Linear Projections
-		   using Graphics Hardware" by Jean-Dominique Gascuel, Nicolas Holzschuch, 
+		   using Graphics Hardware" by Jean-Dominique Gascuel, Nicolas Holzschuch,
 		   Gabrier Fournier, and Bernhard Peroche (I3D, 2008) */
 		prog = renderer->createGPUProgram("Paraboloid shadow map generator");
 		prog->setSource(GPUProgram::EVertexProgram, sh_paraboloid_vert);
@@ -55,7 +55,7 @@ ShadowMapGenerator::ShadowMapGenerator(Renderer *renderer) {
 		prog->setSource(GPUProgram::EFragmentProgram, sh_cube_1pass_frag);
 		prog->setInputGeometryType(GPUProgram::ETriangles);
 		prog->setOutputGeometryType(GPUProgram::ETriangleStrips);
-		prog->setMaxVertices(6*3); /* One triangle per cube map face */ 
+		prog->setMaxVertices(6*3); /* One triangle per cube map face */
 		m_program[ECubeSinglePass] = prog;
 
 		/* Hemicube shadow map generator (single pass via a geometry shader) */
@@ -65,7 +65,7 @@ ShadowMapGenerator::ShadowMapGenerator(Renderer *renderer) {
 		prog->setSource(GPUProgram::EFragmentProgram, sh_hemicube_1pass_frag);
 		prog->setInputGeometryType(GPUProgram::ETriangles);
 		prog->setOutputGeometryType(GPUProgram::ETriangleStrips);
-		prog->setMaxVertices(5*3); /* One triangle per hemicube map face */ 
+		prog->setMaxVertices(5*3); /* One triangle per hemicube map face */
 		m_program[EHemicubeSinglePass] = prog;
 
 	}
@@ -74,7 +74,7 @@ ShadowMapGenerator::ShadowMapGenerator(Renderer *renderer) {
 	/* By default, assume that cube depth maps are supported by the driver */
 	m_cubeDepthMapsSupported = true;
 }
-	
+
 size_t ShadowMapGenerator::getShaderCount() const {
 	size_t result = 0;
 	for (int i=0; i<ETypeCount; ++i) {
@@ -186,7 +186,7 @@ retry:
 	return result;
 }
 
-void ShadowMapGenerator::render(Renderer *renderer, GPUTexture *shadowMap, 
+void ShadowMapGenerator::render(Renderer *renderer, GPUTexture *shadowMap,
 		EShadowMapType type, const Transform &trafo, Float minDepth, Float maxDepth,
 		const std::vector<Renderer::TransformedGPUGeometry> &geo) {
 	GPUProgram *prog = m_program[type];
@@ -245,7 +245,7 @@ void ShadowMapGenerator::render(Renderer *renderer, GPUTexture *shadowMap,
 					/* Need a left-handed view matrix to render the faces (see the ARB_texture_cube_map spec) */
 					viewTrafo = Transform::scale(Vector(1, -1, 1)) * viewTrafo.inverse() * trafo;
 					prog->setParameter(m_cubeTransform, projTrafo * viewTrafo);
-					prog->setParameter(m_cubeProjDir, 
+					prog->setParameter(m_cubeProjDir,
 						(-viewTrafo.getMatrix().row(2) - Vector4(0, 0, 0, minDepth)) * invDepthRange);
 					shadowMap->activateSide(i);
 					if (type == ECube || i != 4) {
@@ -284,7 +284,7 @@ void ShadowMapGenerator::render(Renderer *renderer, GPUTexture *shadowMap,
 					/* Need a left-handed view matrix to render the faces (see the ARB_texture_cube_map spec) */
 					viewTrafo = Transform::scale(Vector(1, -1, 1)) * viewTrafo.inverse() * trafo;
 					prog->setParameter(m_cubeSinglePassTransform[i], projTrafo * viewTrafo);
-					prog->setParameter(m_cubeSinglePassProjDir[i], 
+					prog->setParameter(m_cubeSinglePassProjDir[i],
 						(-viewTrafo.getMatrix().row(2) - Vector4(0, 0, 0, minDepth)) * invDepthRange);
 				}
 
@@ -326,7 +326,7 @@ void ShadowMapGenerator::render(Renderer *renderer, GPUTexture *shadowMap,
 					/* Need a left-handed view matrix to render the faces (see the ARB_texture_cube_map spec) */
 					viewTrafo = Transform::scale(Vector(1, -1, 1)) * viewTrafo.inverse() * trafo;
 					prog->setParameter(m_hemicubeSinglePassTransform[i], projTrafo * viewTrafo);
-					prog->setParameter(m_hemicubeSinglePassProjDir[i], 
+					prog->setParameter(m_hemicubeSinglePassProjDir[i],
 						(-viewTrafo.getMatrix().row(2) - Vector4(0, 0, 0, minDepth)) * invDepthRange);
 				}
 
@@ -356,7 +356,7 @@ Transform ShadowMapGenerator::directionalFindGoodFrame(const AABB &aabb, const V
 	for (int i=0; i<8; ++i)
 		samples[i] -= center;
 
-	/* Heuristic: do a 3x3 principal components analysis to try 
+	/* Heuristic: do a 3x3 principal components analysis to try
 	   to align the projection with the coordinate axis. This is to
 	   make best use of the shadow map resolution */
 	Matrix2x2 M;

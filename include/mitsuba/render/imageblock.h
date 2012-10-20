@@ -31,9 +31,9 @@ MTS_NAMESPACE_BEGIN
  *
  * This class is used by image-based parallel processes and encapsulates
  * computed rectangular regions of an image. This allows for easy and efficient
- * distributed rendering of large images. Image blocks usually also include a 
- * border region storing contribuctions that are slightly outside of the block, 
- * which is required to support image reconstruction filters. 
+ * distributed rendering of large images. Image blocks usually also include a
+ * border region storing contribuctions that are slightly outside of the block,
+ * which is required to support image reconstruction filters.
  *
  * \ingroup librender
  */
@@ -52,19 +52,19 @@ public:
 	 *    Specifies the number of output channels. This is only necessary
 	 *    when \ref Bitmap::EMultiChannel is chosen as the pixel format
 	 */
-	ImageBlock(Bitmap::EPixelFormat fmt, const Vector2i &size, 
+	ImageBlock(Bitmap::EPixelFormat fmt, const Vector2i &size,
 			const ReconstructionFilter *filter = NULL, int channels = -1);
 
 	/// Set the current block offset
 	inline void setOffset(const Point2i &offset) { m_offset = offset; }
-	
+
 	/// Return the current block offset
 	inline const Point2i &getOffset() const { return m_offset; }
 
-	/// Set the current block size 
+	/// Set the current block size
 	inline void setSize(const Vector2i &size) { m_size = size; }
 
-	/// Return the current block size 
+	/// Return the current block size
 	inline const Vector2i &getSize() const { return m_size; }
 
 	/// Return the bitmap's width in pixels
@@ -90,7 +90,7 @@ public:
 
 	/// Accumulate another image block into this one
 	inline void put(const ImageBlock *block) {
-		m_bitmap->accumulate(block->getBitmap(), 
+		m_bitmap->accumulate(block->getBitmap(),
 			Point2i(block->getOffset() - m_offset
 				- Vector2i(block->getBorderSize() - m_borderSize)));
 	}
@@ -135,7 +135,7 @@ public:
 
 		/* Check if all sample values are valid */
 		for (int i=0; i<channels; ++i) {
-			if (EXPECT_NOT_TAKEN(!std::isfinite(value[i]) || value[i] < 0)) 
+			if (EXPECT_NOT_TAKEN(!std::isfinite(value[i]) || value[i] < 0))
 				goto bad_sample;
 		}
 
@@ -163,18 +163,18 @@ public:
 			/* Rasterize the filtered sample into the framebuffer */
 			for (int y=min.y, yr=0; y<=max.y; ++y, ++yr) {
 				const Float weightY = m_weightsY[yr];
-				Float *dest = m_bitmap->getFloatData() 
+				Float *dest = m_bitmap->getFloatData()
 					+ (y * (size_t) size.x + min.x) * channels;
 
 				for (int x=min.x, xr=0; x<=max.x; ++x, ++xr) {
 					const Float weight = m_weightsX[xr] * weightY;
 
-					for (int k=0; k<channels; ++k) 
+					for (int k=0; k<channels; ++k)
 						*dest++ += weight * value[k];
 				}
 			}
 		}
-	
+
 		return true;
 
 		bad_sample:

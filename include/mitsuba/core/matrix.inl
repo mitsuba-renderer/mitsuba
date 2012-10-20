@@ -1,7 +1,7 @@
 MTS_NAMESPACE_BEGIN
 
 /* Implementations are based on the public domain JAMA library */
-	
+
 template <int M, int N, typename T> bool Matrix<M, N, T>::chol(Matrix &L) const {
 	BOOST_STATIC_ASSERT(M == N);
 
@@ -21,15 +21,15 @@ template <int M, int N, typename T> bool Matrix<M, N, T>::chol(Matrix &L) const 
 		if (d <= 0)
 			return false;
 		L.m[j][j] = std::sqrt(std::max(d, (T) 0));
-		for (int k = j+1; k < N; k++) 
+		for (int k = j+1; k < N; k++)
 			L.m[j][k] = 0;
 	}
 
 	return true;
 }
 
-template <int M, int N, typename T> template <int K> void Matrix<M, N, T>::cholSolve(const Matrix<M, K, T> &B, 
-			Matrix<M, K, T> &X) const { 
+template <int M, int N, typename T> template <int K> void Matrix<M, N, T>::cholSolve(const Matrix<M, K, T> &B,
+			Matrix<M, K, T> &X) const {
 	BOOST_STATIC_ASSERT(M == N);
 
 	memcpy(X.m, B.m, sizeof(T)*M*K);
@@ -67,12 +67,12 @@ template <int M, int N, typename T> bool Matrix<M, N, T>::lu(Matrix &LU,
 		// Find pivot.
 		int p = k;
 		for (int i = k+1; i < M; i++)
-            if (std::abs(LU.m[i][k]) > std::abs(LU.m[p][k])) 
+            if (std::abs(LU.m[i][k]) > std::abs(LU.m[p][k]))
                p = i;
 
          // Exchange if necessary.
 		if (p != k) {
-            for (int j = 0; j < N; j++) 
+            for (int j = 0; j < N; j++)
 				std::swap(LU.m[p][j], LU.m[k][j]);
 			std::swap(piv[p], piv[k]);
 			pivsign = -pivsign;
@@ -93,19 +93,19 @@ template <int M, int N, typename T> bool Matrix<M, N, T>::lu(Matrix &LU,
 	return true;
 }
 
-template <int M, int N, typename T> template <int K> void Matrix<M, N, T>::luSolve(const Matrix<M, K, T> &B, 
-			Matrix<M, K, T> &X, int piv[M]) const { 
+template <int M, int N, typename T> template <int K> void Matrix<M, N, T>::luSolve(const Matrix<M, K, T> &B,
+			Matrix<M, K, T> &X, int piv[M]) const {
 	BOOST_STATIC_ASSERT(M == N);
 
 	// Copy right hand side with pivoting
 	for (int i=0; i<M; ++i)
-		for (int j=0; j<K; ++j) 
+		for (int j=0; j<K; ++j)
 			X.m[i][j] = B.m[piv[i]][j];
 
 	// Solve L*Y = B(piv,:)
 	for (int k = 0; k < N; k++)
 		for (int i = k+1; i < N; i++)
-			for (int j = 0; j < K; j++) 
+			for (int j = 0; j < K; j++)
 				X.m[i][j] -= X.m[k][j]*m[i][k];
 
 	// Solve U*X = Y;
@@ -193,7 +193,7 @@ template <int M, int N, typename T> bool Matrix<M, N, T>::invert(Matrix &target)
 }
 
 // Symmetric Householder reduction to tridiagonal form.
-template <int M, int N, typename T> void 
+template <int M, int N, typename T> void
 	Matrix<M, N, T>::tred2(T V[M][N], T d[N], T e[N]) {
 	//  This is derived from the Algol procedures tred2 by
 	//  Bowdler, Martin, Reinsch, and Wilkinson, Handbook for
@@ -202,7 +202,7 @@ template <int M, int N, typename T> void
 
 	for (int j = 0; j < N; j++)
 		d[j] = V[N - 1][j];
-	
+
 	// Householder reduction to tridiagonal form.
 	for (int i = N - 1; i > 0; i--) {
 		// Scale to avoid under/overflow.
@@ -225,7 +225,7 @@ template <int M, int N, typename T> void
 				d[k] /= scale;
 				h += d[k] * d[k];
 			}
-			T f = d[i - 1], 
+			T f = d[i - 1],
 				  g = std::sqrt(h);
 
 			if (f > 0)
@@ -300,7 +300,7 @@ template <int M, int N, typename T> void
 }
 
 // Symmetric tridiagonal QL algorithm.
-template <int M, int N, typename T> void 
+template <int M, int N, typename T> void
 	Matrix<M, N, T>::tql2(T V[M][N], T d[N], T e[N]) {
 	//  This is derived from the Algol procedures tql2, by
 	//  Bowdler, Martin, Reinsch, and Wilkinson, Handbook for

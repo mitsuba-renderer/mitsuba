@@ -19,7 +19,7 @@
 #include "ptracer_proc.h"
 
 MTS_NAMESPACE_BEGIN
-	
+
 /* ==================================================================== */
 /*                           Work result impl.                          */
 /* ==================================================================== */
@@ -61,7 +61,7 @@ void CaptureParticleWorker::prepare() {
 }
 
 ref<WorkProcessor> CaptureParticleWorker::clone() const {
-	return new CaptureParticleWorker(m_maxDepth, 
+	return new CaptureParticleWorker(m_maxDepth,
 		m_maxPathDepth, m_rrDepth, m_bruteForce);
 }
 
@@ -70,7 +70,7 @@ ref<WorkResult> CaptureParticleWorker::createWorkResult() const {
 	return new CaptureParticleWorkResult(film->getCropSize(), m_rfilter.get());
 }
 
-void CaptureParticleWorker::process(const WorkUnit *workUnit, WorkResult *workResult, 
+void CaptureParticleWorker::process(const WorkUnit *workUnit, WorkResult *workResult,
 	const bool &stop) {
 	const RangeWorkUnit *range = static_cast<const RangeWorkUnit *>(workUnit);
 	m_workResult = static_cast<CaptureParticleWorkResult *>(workResult);
@@ -91,7 +91,7 @@ void CaptureParticleWorker::handleEmission(const PositionSamplingRecord &pRec,
 	Spectrum value = weight * m_scene->sampleAttenuatedSensorDirect(
 			dRec, medium, maxInteractions, m_sampler->next2D(), m_sampler);
 
-	if (value.isZero()) 
+	if (value.isZero())
 		return;
 
 	const Emitter *emitter = static_cast<const Emitter *>(pRec.object);
@@ -110,7 +110,7 @@ void CaptureParticleWorker::handleSurfaceInteraction(int depth,
 			return;
 
 		const Sensor *sensor = its.shape->getSensor();
-		if (sensor != m_sensor) 
+		if (sensor != m_sensor)
 			return;
 
 		Vector wi = its.toWorld(its.wi);
@@ -123,7 +123,7 @@ void CaptureParticleWorker::handleSurfaceInteraction(int depth,
 		return;
 	}
 
-	if (m_bruteForce || (depth >= m_maxPathDepth && m_maxPathDepth > 0)) 
+	if (m_bruteForce || (depth >= m_maxPathDepth && m_maxPathDepth > 0))
 		return;
 
 	int maxInteractions = m_maxPathDepth - depth - 1;
@@ -137,7 +137,7 @@ void CaptureParticleWorker::handleSurfaceInteraction(int depth,
 		return;
 
 	const BSDF *bsdf = its.getBSDF();
-	
+
 	Vector wo = dRec.d;
 	BSDFSamplingRecord bRec(its, its.toLocal(wo), EImportance);
 
@@ -145,7 +145,7 @@ void CaptureParticleWorker::handleSurfaceInteraction(int depth,
 	Vector wi = its.toWorld(its.wi);
 	Float wiDotGeoN = dot(its.geoFrame.n, wi),
 		  woDotGeoN = dot(its.geoFrame.n, wo);
-	if (wiDotGeoN * Frame::cosTheta(bRec.wi) <= 0 || 
+	if (wiDotGeoN * Frame::cosTheta(bRec.wi) <= 0 ||
 		woDotGeoN * Frame::cosTheta(bRec.wo) <= 0)
 		return;
 
@@ -160,14 +160,14 @@ void CaptureParticleWorker::handleSurfaceInteraction(int depth,
 }
 
 void CaptureParticleWorker::handleMediumInteraction(int depth, bool caustic,
-		const MediumSamplingRecord &mRec, const Medium *medium, const Vector &wi, 
+		const MediumSamplingRecord &mRec, const Medium *medium, const Vector &wi,
 		const Spectrum &weight) {
 
-	if (m_bruteForce || (depth >= m_maxPathDepth && m_maxPathDepth > 0)) 
+	if (m_bruteForce || (depth >= m_maxPathDepth && m_maxPathDepth > 0))
 		return;
 
 	DirectSamplingRecord dRec(mRec);
-	
+
 	int maxInteractions = m_maxPathDepth - depth - 1;
 
 	Spectrum value = weight * m_scene->sampleAttenuatedSensorDirect(
@@ -193,17 +193,17 @@ void CaptureParticleWorker::handleMediumInteraction(int depth, bool caustic,
 /* ==================================================================== */
 
 void CaptureParticleProcess::develop() {
-	Float weight = (m_accum->getWidth() * m_accum->getHeight()) 
+	Float weight = (m_accum->getWidth() * m_accum->getHeight())
 		/ (Float) m_receivedResultCount;
 	m_film->setBitmap(m_accum->getBitmap(), weight);
 	m_queue->signalRefresh(m_job);
 }
 
 void CaptureParticleProcess::processResult(const WorkResult *wr, bool cancelled) {
-	const CaptureParticleWorkResult *result 
+	const CaptureParticleWorkResult *result
 		= static_cast<const CaptureParticleWorkResult *>(wr);
 	const RangeWorkUnit *range = result->getRangeWorkUnit();
-	if (cancelled) 
+	if (cancelled)
 		return;
 
 	LockGuard lock(m_resultMutex);
@@ -224,7 +224,7 @@ void CaptureParticleProcess::bindResource(const std::string &name, int id) {
 }
 
 ref<WorkProcessor> CaptureParticleProcess::createWorkProcessor() const {
-	return new CaptureParticleWorker(m_maxDepth, m_maxPathDepth, 
+	return new CaptureParticleWorker(m_maxDepth, m_maxPathDepth,
 			m_rrDepth, m_bruteForce);
 }
 

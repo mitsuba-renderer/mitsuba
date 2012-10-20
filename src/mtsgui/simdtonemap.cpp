@@ -19,7 +19,7 @@
   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
   THE SOFTWARE.
- ----------------------------------------------------------------------------- 
+ -----------------------------------------------------------------------------
  Primary author:
      Edgar Velazquez-Armendariz <cs#cornell#edu - eva5>
 ============================================================================*/
@@ -125,7 +125,7 @@ inline mitsuba::math::SSEVector4f am_log(const mitsuba::math::SSEVector4f& x) {
 	// Extract the original exponent and undo the bias
 	const v4i biasedExponent = srl(castAsInt(x0), 23);
 	const v4f origExponent = toFloat(biasedExponent - const_127);
-	
+
 	v4f vFrac = v_min1 * rcp(v_plus1); // Is it worth it to use rcp_nr?
 	vFrac += vFrac;
 	const v4f vFracSqr = vFrac * vFrac;
@@ -159,7 +159,7 @@ MiniMaxApproximation[-(11/200) + (211 x^(5/12))/
 CForm[HornerForm[%[[2, 1]]]]
 -------------------------------------------------------------------------------
 Result:
-(-0.016036752726326525 + x*(23.24653363361083 + 
+(-0.016036752726326525 + x*(23.24653363361083 +
        x*(1832.6027368173256 + x*(10602.877994753313 + 2764.157524016198*x))))/
  (1. + x*(255.72605859770067 + x*(5415.6856291461045 + 9542.777488625074*x)))
 
@@ -373,7 +373,7 @@ bool tonemap(const mitsuba::Bitmap* source, mitsuba::Bitmap* target,
 		reinterpret_cast<const PixelRGBA32FGroup*>(sourceData);
 	const PixelRGBA32FGroup* end   = begin + (pixelCount / 4);
 	PixelRGBA8Group* dest = reinterpret_cast<PixelRGBA8Group*>(targetData);
-	
+
 	// Main processing
 	tonemap<luminanceMethod, displayMethod> (begin, end, dest, params);
 
@@ -500,7 +500,7 @@ bool luminance(const mitsuba::Bitmap* source, const float multiplier,
 	const PixelRGBA32FGroup* begin =
 		reinterpret_cast<const PixelRGBA32FGroup*>(sourceData);
 	const PixelRGBA32FGroup* end   = begin + (pixelCount / 4);
-	
+
 	// Main processing
 	LuminanceResult result = luminance(begin, end, multiplier);
 

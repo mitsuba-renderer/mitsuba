@@ -28,7 +28,7 @@ MTS_NAMESPACE_BEGIN
 
 //#define MTS_BD_DEBUG_HEAVY
 
-static StatsCounter statsAccepted("Path Space MLT", 
+static StatsCounter statsAccepted("Path Space MLT",
 		"Accepted mutations", EPercentage);
 static StatsCounter forcedAcceptance("Path Space MLT",
 		"Number of forced acceptances");
@@ -39,11 +39,11 @@ static StatsCounter forcedAcceptance("Path Space MLT",
 
 class MLTRenderer : public WorkProcessor {
 public:
-	MLTRenderer(const MLTConfiguration &conf) 
+	MLTRenderer(const MLTConfiguration &conf)
 		: m_config(conf) {
 	}
 
-	MLTRenderer(Stream *stream, InstanceManager *manager) 
+	MLTRenderer(Stream *stream, InstanceManager *manager)
 		: WorkProcessor(stream, manager) {
 		m_config = MLTConfiguration(stream);
 	}
@@ -78,7 +78,7 @@ public:
 		m_rplSampler = static_cast<ReplayableSampler*>(
 			static_cast<Sampler *>(getResource("rplSampler"))->clone().get());
 
-		m_pathSampler = new PathSampler(PathSampler::EBidirectional, m_scene, 
+		m_pathSampler = new PathSampler(PathSampler::EBidirectional, m_scene,
 			m_rplSampler, m_rplSampler, m_rplSampler, m_config.maxDepth, 10,
 			m_config.separateDirect, true);
 
@@ -86,7 +86,7 @@ public:
 
 		/* Jump sizes recommended by Eric Veach */
 		Float minJump = 0.1f, coveredArea = 0.05f;
-	
+
 		/* Register all available mutators */
 		if (m_config.bidirectionalMutation)
 			m_mutators.push_back(new BidirectionalMutator(m_scene, m_sampler,
@@ -125,14 +125,14 @@ public:
 		m_pathSampler->reconstructPath(wu->getSeed(), *current);
 		relWeight = current->getRelativeWeight();
 		BDAssert(!relWeight.isZero());
-		
+
 		DiscreteDistribution suitabilities(m_mutators.size());
 		MutationRecord muRec;
 		ref<Timer> timer = new Timer();
 
 		size_t consecRejections = 0;
 		Float accumulatedWeight = 0;
-		
+
 		#if defined(MTS_DEBUG_FP)
 			enableFPExceptions();
 		#endif
@@ -143,7 +143,7 @@ public:
 		#endif
 		for (size_t mutationCtr=0; mutationCtr < m_config.nMutations
 				&& !stop; ++mutationCtr) {
-			if (wu->getTimeout() > 0 && (mutationCtr % 8192) == 0 && 
+			if (wu->getTimeout() > 0 && (mutationCtr % 8192) == 0 &&
 					(int) timer->getMilliseconds() > wu->getTimeout())
 				break;
 
@@ -154,11 +154,11 @@ public:
 			#if defined(MTS_BD_DEBUG_HEAVY)
 				current->clone(backup, *m_pool);
 			#endif
-			
+
 			size_t mutatorIdx = 0;
 			bool success = false;
 			Mutator *mutator = NULL;
-			
+
 			if (suitabilities.normalize() == 0) {
 				/* No mutator can handle this path -- give up */
 				size_t skip = m_config.nMutations - mutationCtr;
@@ -189,7 +189,7 @@ public:
 							fail = true;
 					if (fail)
 						Log(EError, "Detected an unexpected path modification outside of the "
-							"specifed range after a mutation of type %s (k=%i)!", 
+							"specifed range after a mutation of type %s (k=%i)!",
 							muRec.toString().c_str(), current->length());
 				}
 				backup.release(*m_pool);
@@ -218,7 +218,7 @@ public:
 					Point2i propPosI(
 						std::min(std::max(0, (int) propPos.x), size.x-1),
 						std::min(std::max(0, (int) propPos.y), size.y-1));
-					
+
 					Float curValue = luminanceValues[curPosI.x + curPosI.y * size.x];
 					Float propValue = luminanceValues[propPosI.x + propPosI.y * size.x];
 
@@ -246,7 +246,7 @@ public:
 				}
 
 				accumulatedWeight += 1-a;
-				
+
 				/* Accept with probability 'a' */
 				if (a == 1 || m_sampler->next1D() < a) {
 					current->release(muRec.l, muRec.m+1, *m_pool);
@@ -289,7 +289,7 @@ public:
 		#if defined(MTS_DEBUG_FP)
 			disableFPExceptions();
 		#endif
-		
+
 		current->release(*m_pool);
 		delete current;
 		delete proposed;
@@ -318,9 +318,9 @@ private:
 /*                           Parallel process                           */
 /* ==================================================================== */
 
-MLTProcess::MLTProcess(const RenderJob *parent, RenderQueue *queue, 
+MLTProcess::MLTProcess(const RenderJob *parent, RenderQueue *queue,
 	const MLTConfiguration &conf, const Bitmap *directImage,
-	const std::vector<PathSeed> &seeds) : m_job(parent), m_queue(queue), 
+	const std::vector<PathSeed> &seeds) : m_job(parent), m_queue(queue),
 		m_config(conf), m_progress(NULL), m_seeds(seeds) {
 	m_directImage = directImage;
 	m_timeoutTimer = new Timer();
@@ -357,7 +357,7 @@ void MLTProcess::develop() {
 
 	avgLuminance /= (Float) pixelCount;
 	Float luminanceFactor = m_config.luminance / avgLuminance;
-	
+
 	for (size_t i=0; i<pixelCount; ++i) {
 		Float correction = luminanceFactor;
 		if (importanceMap)
@@ -380,7 +380,7 @@ void MLTProcess::processResult(const WorkResult *wr, bool cancelled) {
 	m_progress->update(++m_resultCounter);
 	m_refreshTimeout = std::min(2000U, m_refreshTimeout * 2);
 
-	/* Re-develop the entire image every two seconds if partial results are 
+	/* Re-develop the entire image every two seconds if partial results are
 	   visible (e.g. in a graphical user interface). Do it a bit more often
 	   at the beginning. */
 	if (m_job->isInteractive() && m_refreshTimer->getMilliseconds() > m_refreshTimeout)
@@ -405,7 +405,7 @@ ParallelProcess::EStatus MLTProcess::generateWork(WorkUnit *unit, int worker) {
 
 void MLTProcess::bindResource(const std::string &name, int id) {
 	ParallelProcess::bindResource(name, id);
-	if (name == "sensor") { 
+	if (name == "sensor") {
 		m_film = static_cast<Sensor *>(Scheduler::getInstance()->getResource(id))->getFilm();
 		if (m_progress)
 			delete m_progress;

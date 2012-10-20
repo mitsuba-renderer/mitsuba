@@ -69,7 +69,7 @@ Shader *Renderer::registerShaderForResource(const HWResource *resource) {
 	ShaderRecord sRec;
 	sRec.shader = resource->createShader(this);
 	if (sRec.shader == NULL) {
-		Log(EWarn, "Resource does not have a hardware shader implementation: %s", 
+		Log(EWarn, "Resource does not have a hardware shader implementation: %s",
 			dynamic_cast<const Object *>(resource)->toString().c_str());
 		return NULL;
 	}

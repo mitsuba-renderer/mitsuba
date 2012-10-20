@@ -22,14 +22,14 @@
 
 MTS_NAMESPACE_BEGIN
 
-static StatsCounter statsAccepted("Bidirectional mutation", 
+static StatsCounter statsAccepted("Bidirectional mutation",
 		"Acceptance rate", EPercentage);
-static StatsCounter statsGenerated("Bidirectional mutation", 
+static StatsCounter statsGenerated("Bidirectional mutation",
 		"Successful generation rate", EPercentage);
 
 BidirectionalMutator::BidirectionalMutator(const Scene *scene,
-	Sampler *sampler, MemoryPool &pool, int kmin, int kmax) : 
-	m_scene(scene), m_sampler(sampler), m_pool(pool), 
+	Sampler *sampler, MemoryPool &pool, int kmin, int kmax) :
+	m_scene(scene), m_sampler(sampler), m_pool(pool),
 	m_kmin(kmin), m_kmax(kmax) {
 }
 
@@ -38,7 +38,7 @@ BidirectionalMutator::~BidirectionalMutator() { }
 Mutator::EMutationType BidirectionalMutator::getType() const {
 	return EBidirectionalMutation;
 }
-	
+
 Float BidirectionalMutator::suitability(const Path &path) const {
 	return 1.0f;
 }
@@ -56,12 +56,12 @@ bool BidirectionalMutator::sampleMutation(
 	desiredLength.configure(k, m_kmin, m_kmax);
 	int kPrime = desiredLength.sample(m_sampler->next1D());
 
-	/* Sample the length of the deletion (in # of edges, 1 means 
+	/* Sample the length of the deletion (in # of edges, 1 means
 	   no vertices are removed). When kPrime is smaller than k,
 	   we must delete at least k-kPrime+1 edges to be able to
 	   achieve the desired path length.
-	   
-	   When k==kPrime, we must delete *something*, or the mutation 
+
+	   When k==kPrime, we must delete *something*, or the mutation
 	   is trivial, hence the conditional below expression. */
 
 	int minDeletion = std::max((k == kPrime) ? 2 : 1, k-kPrime+1);
@@ -76,7 +76,7 @@ bool BidirectionalMutator::sampleMutation(
 	int lMin = 0, lMax = k - kd;
 	if (kd == 1 || ka == 1) {
 		/* This will help to avoid certain path changes that would otherwise
-		   always be rejected. Specifically, we don't want to remove the sensor 
+		   always be rejected. Specifically, we don't want to remove the sensor
 		   or emitter sample vertex, and we don't want to insert
 		   vertices between a sensor/emitter sample and its supernode */
 		lMin++; lMax--;
@@ -91,7 +91,7 @@ bool BidirectionalMutator::sampleMutation(
 	if (m_temp.size() == 0)
 		return false;
 
-	int l = m_temp[std::min((int) (m_temp.size() * 
+	int l = m_temp[std::min((int) (m_temp.size() *
 			m_sampler->next1D()), (int) m_temp.size()-1)];
 	int m = l+kd;
 
@@ -104,17 +104,17 @@ bool BidirectionalMutator::sampleMutation(
 
 	/* Sample the number of SIS-type steps to take from the emitter direction */
 	int s = std::min(sMin + (int) ((sMax-sMin+1) * m_sampler->next1D()), sMax);
-	int t = ka - s - 1; 
+	int t = ka - s - 1;
 
 	/* Check a few assumptions */
-	BDAssert(ka >= 1 && kd >= 1 && kd <= k 
-			&& l >= lMin && l <= lMax 
+	BDAssert(ka >= 1 && kd >= 1 && kd <= k
+			&& l >= lMin && l <= lMax
 			&& kPrime == k - kd + ka
 			&& kPrime >= m_kmin
 			&& kPrime <= m_kmax);
 
 	/* Construct a mutation record */
-	muRec = MutationRecord(EBidirectionalMutation, l, m, ka, 
+	muRec = MutationRecord(EBidirectionalMutation, l, m, ka,
 		source.getPrefixSuffixWeight(l, m));
 
 	/* Keep some statistics */
@@ -146,28 +146,28 @@ bool BidirectionalMutator::sampleMutation(
 	proposal.append(connectionEdge);
 	proposal.append(m_tempPath, 0, m_tempPath.vertexCount(), true);
 
-	BDAssert(proposal.length() == kPrime && 
+	BDAssert(proposal.length() == kPrime &&
 			 proposal.vertexCount() == proposal.edgeCount() + 1);
 
-	const PathVertex 
+	const PathVertex
 		*vsPred = l+s > 0 ? proposal.vertex(l+s-1) : NULL,
 		*vtPred = l+s+2 <= kPrime ? proposal.vertex(l+s+2) : NULL;
 	const PathEdge
 		*vsEdge = l+s > 0 ? proposal.edge(l+s-1) : NULL,
 		*vtEdge = l+s+1 < kPrime ? proposal.edge(l+s+1) : NULL;
 
-	/* Now try to connect the two subpaths and reject 
+	/* Now try to connect the two subpaths and reject
 	   the proposal if there is no throughput */
 	PathVertex *vs = proposal.vertex(l+s),
 			   *vt = proposal.vertex(l+s+1);
 
-	if (!PathVertex::connect(m_scene, vsPred, 
+	if (!PathVertex::connect(m_scene, vsPred,
 			vsEdge, vs, connectionEdge, vt, vtEdge, vtPred)) {
 		proposal.release(l, l+ka+1, m_pool);
 		return false;
 	}
 
-	if (m >= k-1) 
+	if (m >= k-1)
 		proposal.vertex(kPrime-1)->updateSamplePosition(
 			proposal.vertex(kPrime-2));
 
@@ -177,7 +177,7 @@ bool BidirectionalMutator::sampleMutation(
 
 Float BidirectionalMutator::pmfMutation(const Path &source, const MutationRecord &muRec) const {
 	TwoTailedGeoDistr desiredLength(2), deletionLength(2);
-	const int k = source.length(), m = muRec.m, l = muRec.l, 
+	const int k = source.length(), m = muRec.m, l = muRec.l,
 		kd = m - l, ka = muRec.ka, kPrime = k - kd + ka;
 	int minDeletion = std::max((k == kPrime) ? 2 : 1, k-kPrime+1);
 
@@ -188,7 +188,7 @@ Float BidirectionalMutator::pmfMutation(const Path &source, const MutationRecord
 		++sMin;
 	else if (m == k && m_scene->hasDegenerateSensor())
 		--sMax;
-	
+
 	int lMin = 0, lMax = k - kd, ctr = 0;
 	if (kd == 1 || ka == 1) {
 		lMin++; lMax--;
@@ -210,13 +210,13 @@ Float BidirectionalMutator::pmfMutation(const Path &source, const MutationRecord
 	Float factor2 = deletionLength.pmf(kd);
 	Float factor3 = 1 / (Float) ctr;
 	Float factor4 = (Float) 1 / (Float) (sMax-sMin+1);
-	
+
 	return factor1 * factor2 * factor3 * factor4;
 }
 
 Float BidirectionalMutator::Q(const Path &source, const Path &proposal,
 		const MutationRecord &muRec) const {
-	const int k = source.length(), l = muRec.l, 
+	const int k = source.length(), l = muRec.l,
 		      m = muRec.m, ka = muRec.ka, mPrime = l+ka;
 
 	Spectrum *importanceWeights = (Spectrum *) alloca(ka * sizeof(Spectrum)),
@@ -245,7 +245,7 @@ Float BidirectionalMutator::Q(const Path &source, const Path &proposal,
 	Float result = 0.0f;
 	for (int s = sMin; s <= sMax; ++s) {
 		const PathEdge *edge = proposal.edge(l+s);
-		const PathVertex *vs = proposal.vertex(l+s), 
+		const PathVertex *vs = proposal.vertex(l+s),
 			  *vt = proposal.vertex(l+s+1);
 		int t = ka - s - 1;
 
@@ -253,7 +253,7 @@ Float BidirectionalMutator::Q(const Path &source, const Path &proposal,
 		if (!vs->isConnectable() || !vt->isConnectable())
 			continue;
 
-		Spectrum weight = importanceWeights[s] 
+		Spectrum weight = importanceWeights[s]
 			* radianceWeights[t]
 			* edge->evalCached(vs, vt, PathEdge::EEverything)
 			* muRec.weight;

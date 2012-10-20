@@ -38,7 +38,7 @@ signals:
 
 class SceneImporter : public Thread {
 public:
-	SceneImporter(FileResolver *resolver, 
+	SceneImporter(FileResolver *resolver,
 		const fs::path &sourceFile, const fs::path &directory,
 		const fs::path &targetScene, const fs::path &adjustmentFile,
 		bool sRGB);

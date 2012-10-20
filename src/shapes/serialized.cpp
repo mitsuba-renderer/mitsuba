@@ -35,7 +35,7 @@ MTS_NAMESPACE_BEGIN
  *	       specifies which one should be loaded. \default{\code{0}, i.e. the first one}
  *	   }
  *     \parameter{faceNormals}{\Boolean}{
- *       When set to \code{true}, any existing or computed vertex normals are 
+ *       When set to \code{true}, any existing or computed vertex normals are
  *       discarded and \emph{face normals} will instead be used during rendering.
  *       This gives the rendered object a faceted apperance.\default{\code{false}}
  *	   }
@@ -57,8 +57,8 @@ MTS_NAMESPACE_BEGIN
  * The serialized mesh format represents the most space and time-efficient way
  * of getting geometry information into Mitsuba. It stores indexed triangle meshes
  * in a lossless gzip-based encoding that (after decompression) nicely matches up
- * with the internally used data structures. Loading such files is considerably 
- * faster than the \pluginref{ply} plugin and orders of magnitude faster than 
+ * with the internally used data structures. Loading such files is considerably
+ * faster than the \pluginref{ply} plugin and orders of magnitude faster than
  * the \pluginref{obj} plugin. \vspace{-3mm}
  *
  * \paragraph{Format description:}
@@ -92,16 +92,16 @@ MTS_NAMESPACE_BEGIN
  * \code{string}&A null-terminated string (utf-8), which denotes the name of the shape.\\
  * \code{uint64}&Number of vertices in the mesh\\
  * \code{uint64}&Number of triangles in the mesh\\
- * \code{array}&Array of all vertex positions (X, Y, Z, X, Y, Z, ...) 
+ * \code{array}&Array of all vertex positions (X, Y, Z, X, Y, Z, ...)
  * specified in binary single or double precision format (as denoted by the
  * flags)\\
- * \code{array}&Array of all vertex normal directions (X, Y, Z, X, Y, Z, ...) 
+ * \code{array}&Array of all vertex normal directions (X, Y, Z, X, Y, Z, ...)
  * specified in binary single or double precision format. When the mesh has
  * no vertex normals, this field is omitted.\\
- * \code{array}&Array of all vertex texture coordinates (U, V, U, V, ...) 
+ * \code{array}&Array of all vertex texture coordinates (U, V, U, V, ...)
  * specified in binary single or double precision format. When the mesh has
  * no texture coordinates, this field is omitted.\\
- * \code{array}&Array of all vertex colors (R, G, B, R, G, B, ...) 
+ * \code{array}&Array of all vertex colors (R, G, B, R, G, B, ...)
  * specified in binary single or double precision format. When the mesh has
  * no vertex colors, this field is omitted.\\
  * \code{array}&Indexed triangle data (\code{[i1, i2, i3]}, \code{[i1, i2, i3]}, ..)
@@ -114,12 +114,12 @@ MTS_NAMESPACE_BEGIN
  * It is possible to store multiple meshes in a single \code{.serialized}
  * file. This is done by simply concatenating their data streams,
  * where every one is structured according to the above description.
- * Hence, after each mesh, the stream briefly reverts back to an 
- * uncompressed format, followed by an uncompressed header, and so on. 
+ * Hence, after each mesh, the stream briefly reverts back to an
+ * uncompressed format, followed by an uncompressed header, and so on.
  * This is neccessary for efficient read access to arbitrary sub-meshes.
  *
  * \paragraph{End-of-file dictionary:} In addition to the previous table,
- * a \code{.serialized} file also concludes with a brief summary at the end of 
+ * a \code{.serialized} file also concludes with a brief summary at the end of
  * the file, which specifies the starting position of each sub-mesh:
  * \begin{center}
  * \begin{longtable}{>{\bfseries}p{2cm}p{11cm}}
@@ -144,11 +144,11 @@ public:
 		/* Object-space -> World-space transformation */
 		Transform objectToWorld = props.getTransform("toWorld", Transform());
 
-		/// When the file contains multiple meshes, this index specifies which one to load 
+		/// When the file contains multiple meshes, this index specifies which one to load
 		int shapeIndex = props.getInteger("shapeIndex", 0);
 
-		m_name = (props.getID() != "unnamed") ? props.getID() 
-			: formatString("%s@%i", filePath.stem().string().c_str(), shapeIndex); 
+		m_name = (props.getID() != "unnamed") ? props.getID()
+			: formatString("%s@%i", filePath.stem().string().c_str(), shapeIndex);
 
 		/* Load the geometry */
 		Log(EInfo, "Loading shape %i from \"%s\" ..", shapeIndex, filePath.filename().string().c_str());
@@ -160,7 +160,7 @@ public:
 
 		/* By default, any existing normals will be used for
 		   rendering. If no normals are found, Mitsuba will
-		   automatically generate smooth vertex normals. 
+		   automatically generate smooth vertex normals.
 		   Setting the 'faceNormals' parameter instead forces
 		   the use of face normals, which will result in a faceted
 		   appearance.
@@ -178,7 +178,7 @@ public:
 				m_aabb.expandBy(p);
 			}
 			if (m_normals) {
-				for (size_t i=0; i<m_vertexCount; ++i) 
+				for (size_t i=0; i<m_vertexCount; ++i)
 					m_normals[i] = objectToWorld(m_normals[i]);
 			}
 		}
@@ -198,7 +198,7 @@ public:
 		}
 	}
 
-	SerializedMesh(Stream *stream, InstanceManager *manager) 
+	SerializedMesh(Stream *stream, InstanceManager *manager)
 		: TriMesh(stream, manager) { }
 
 	MTS_DECLARE_CLASS()

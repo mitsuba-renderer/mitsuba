@@ -49,18 +49,18 @@ MTS_NAMESPACE_BEGIN
  *     }
  *     \parameter{pixelFormat}{\String}{Specifies the desired pixel format
  *         of the generated image. The options are \code{luminance},
- *         \code{luminanceAlpha}, \code{rgb}, \code{rgba}, \code{spectrum}, 
+ *         \code{luminanceAlpha}, \code{rgb}, \code{rgba}, \code{spectrum},
  *         and \code{spectrumAlpha}. In the latter two cases,
  *         the number of written channels depends on the value assigned to
  *         \code{SPECTRUM\_SAMPLES} during compilation (see Section~\ref{sec:compiling}
  *         section for details) \default{\code{rgba}}
  *     }
  *     \parameter{highQualityEdges}{\Boolean}{
- *        If set to \code{true}, regions slightly outside of the film 
- *        plane will also be sampled. This may improve the image 
- *        quality at the edges, especially when using very large 
+ *        If set to \code{true}, regions slightly outside of the film
+ *        plane will also be sampled. This may improve the image
+ *        quality at the edges, especially when using very large
  *        reconstruction filters. In general (and particularly using the
- *        default box filter), this is not needed though. 
+ *        default box filter), this is not needed though.
  *        \default{\code{false}, i.e. disabled}
  *     }
  *     \parameter{\Unnamed}{\RFilter}{Reconstruction filter that should
@@ -70,10 +70,10 @@ MTS_NAMESPACE_BEGIN
  * \renderings{
  *     \rendering{Importing and tonemapping an image in Mathematica}{film_mfilm_mathematica.jpg}
  * }
- * 
- * This plugin provides a camera film that exports spectrum, RGB, XYZ, or 
+ *
+ * This plugin provides a camera film that exports spectrum, RGB, XYZ, or
  * luminance values as a matrix to a MATLAB or Mathematica ASCII file. This is
- * useful when running Mitsuba as simulation step as part of a 
+ * useful when running Mitsuba as simulation step as part of a
  * larger virtual experiment. It can also come in handy when
  * verifying parts of the renderer using an automated test suite.
  */
@@ -87,7 +87,7 @@ public:
 	MFilm(const Properties &props) : Film(props) {
 		std::string pixelFormat = boost::to_lower_copy(
 			props.getString("pixelFormat", "luminance"));
-		
+
 		std::string fileFormat = boost::to_lower_copy(
 			props.getString("fileFormat", "matlab"));
 
@@ -133,7 +133,7 @@ public:
 		m_storage = new ImageBlock(Bitmap::ESpectrumAlphaWeight, m_cropSize);
 	}
 
-	MFilm(Stream *stream, InstanceManager *manager) 
+	MFilm(Stream *stream, InstanceManager *manager)
 		: Film(stream, manager) {
 		m_pixelFormat = (Bitmap::EPixelFormat) stream->readUInt();
 		m_fileFormat = (EMode) stream->readUInt();
@@ -159,7 +159,7 @@ public:
 
 		Film::configure();
 	}
-	
+
 	void clear() {
 		m_storage->clear();
 	}
@@ -174,7 +174,7 @@ public:
 
 	void addBitmap(const Bitmap *bitmap, Float multiplier) {
 		/* Currently, only accumulating spectrum-valued floating point images
-		   is supported. This function basically just exists to support the 
+		   is supported. This function basically just exists to support the
 		   somewhat peculiar film updates done by BDPT */
 
 		Vector2i size = bitmap->getSize();
@@ -199,7 +199,7 @@ public:
 		}
 	}
 
-	bool develop(const Point2i &sourceOffset, const Vector2i &size, 
+	bool develop(const Point2i &sourceOffset, const Vector2i &size,
 			const Point2i &targetOffset, Bitmap *target) const {
 		const Bitmap *source = m_storage->getBitmap();
 		const FormatConverter *cvt = FormatConverter::getInstance(
@@ -209,9 +209,9 @@ public:
 		size_t sourceBpp = source->getBytesPerPixel();
 		size_t targetBpp = target->getBytesPerPixel();
 
-		const uint8_t *sourceData = source->getUInt8Data() 
+		const uint8_t *sourceData = source->getUInt8Data()
 			+ (sourceOffset.x + sourceOffset.y * source->getWidth()) * sourceBpp;
-		uint8_t *targetData = target->getUInt8Data() 
+		uint8_t *targetData = target->getUInt8Data()
 			+ (targetOffset.x + targetOffset.y * target->getWidth()) * targetBpp;
 
 		if (size.x == m_cropSize.x) {
@@ -250,7 +250,7 @@ public:
 			m_pixelFormat, Bitmap::EFloat);
 
 		Log(EInfo, "Writing image to \"%s\" ..", filename.filename().string().c_str());
-	
+
 		fs::ofstream os(filename);
 		if (!os.good() || os.fail())
 			Log(EError, "Output file cannot be created!");

@@ -37,9 +37,9 @@ public:
 		m_transform.setIdentity();
 		m_invTransform.setIdentity();
 	}
-	
+
 	/// Unserialize a transformation from a stream
-	inline Transform(Stream *stream) { 
+	inline Transform(Stream *stream) {
 		m_transform = Matrix4x4(stream);
 		m_invTransform = Matrix4x4(stream);
 	}
@@ -182,7 +182,7 @@ public:
 		return Vector(x, y, z);
 	}
 
-	/** 
+	/**
 	 * \brief Matrix-vector multiplication for vectors in 3d space (no temporaries)
 	 * \remark This function is not available in the Python bindings
 	 */
@@ -196,7 +196,7 @@ public:
 	}
 
 	/**
-	 * \brief Matrix-normal multiplication 
+	 * \brief Matrix-normal multiplication
 	 * \remark In the Python bindings, this is function implemented as
 	 * the multiplication operator (\c __mul__).
 	 */
@@ -222,7 +222,7 @@ public:
 		dest.z = m_invTransform.m[0][2] * v.x + m_invTransform.m[1][2] * v.y
 		       + m_invTransform.m[2][2] * v.z;
 	}
-	
+
 	/**
 	 * \brief 4D matrix-vector multiplication
 	 * \remark In the Python bindings, this is function implemented as
@@ -327,7 +327,7 @@ public:
 
 	/// Create a scale transformation
 	static Transform scale(const Vector &v);
-	
+
 	/** \brief Create a perspective transformation.
 	 *   (Maps [near, far] to [0, 1])
 	 * \param fov Field of view in degrees
@@ -335,7 +335,7 @@ public:
 	 * \param clipFar Far clipping plane
 	 */
 	static Transform perspective(Float fov, Float clipNear, Float clipFar);
-	
+
 	/** \brief Create a perspective transformation for OpenGL.
 	 *   (Maps [-near, -far] to [-1, 1])
 	 * \param fov Field of view in degrees
@@ -360,7 +360,7 @@ public:
 	 * \param clipFar Far clipping plane
 	 */
 	static Transform orthographic(Float clipNear, Float clipFar);
-	
+
 	/** \brief Create an orthographic transformation for OpenGL
 	 * \param clipNear Near clipping plane
 	 * \param clipFar Far clipping plane

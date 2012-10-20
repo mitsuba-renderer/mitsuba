@@ -26,7 +26,7 @@ MTS_NAMESPACE_BEGIN
 
 /**
  * \brief A work unit specifying a range of some quantity to be processed.
- * 
+ *
  * An example usage is in \ref ParticleProcess, where this class specifies
  * sequences of particles to be traced.
  *
@@ -39,7 +39,7 @@ public:
 		m_rangeStart = other->m_rangeStart;
 		m_rangeEnd = other->m_rangeEnd;
 	}
-	
+
 	inline void load(Stream *stream) {
 		m_rangeStart = stream->readSize();
 		m_rangeEnd = stream->readSize();

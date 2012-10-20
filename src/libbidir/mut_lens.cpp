@@ -21,9 +21,9 @@
 
 MTS_NAMESPACE_BEGIN
 
-static StatsCounter statsAccepted("Lens perturbation", 
+static StatsCounter statsAccepted("Lens perturbation",
 		"Acceptance rate", EPercentage);
-static StatsCounter statsGenerated("Lens perturbation", 
+static StatsCounter statsGenerated("Lens perturbation",
 		"Successful generation rate", EPercentage);
 
 LensPerturbation::LensPerturbation(const Scene *scene, Sampler *sampler,
@@ -57,7 +57,7 @@ LensPerturbation::~LensPerturbation() { }
 Mutator::EMutationType LensPerturbation::getType() const {
 	return ELensPerturbation;
 }
-	
+
 Float LensPerturbation::suitability(const Path &path) const {
 	int k = path.length(), m = k - 1, l = m-1;
 
@@ -65,7 +65,7 @@ Float LensPerturbation::suitability(const Path &path) const {
 		--l;
 	--l;
 
-	return (l >= 0 && path.vertex(l)->isConnectable() 
+	return (l >= 0 && path.vertex(l)->isConnectable()
 			&& path.vertex(l+1)->isConnectable()) ? 1.0f : 0.0f;
 }
 
@@ -76,7 +76,7 @@ bool LensPerturbation::sampleMutation(
 		--l;
 	--l;
 
-	muRec = MutationRecord(ELensPerturbation, l, m, m-l, 
+	muRec = MutationRecord(ELensPerturbation, l, m, m-l,
 		source.getPrefixSuffixWeight(l, m));
 	statsAccepted.incrementBase();
 	statsGenerated.incrementBase();
@@ -99,7 +99,7 @@ bool LensPerturbation::sampleMutation(
 	if (sensor->sampleRay(ray, proposalSamplePosition, Point2(0.5f), 0.0f).isZero())
 		return false;
 
-	Float focusDistance = sensor->getFocusDistance() / 
+	Float focusDistance = sensor->getFocusDistance() /
 		absDot(sensor->getInverseViewTransform(0)(Vector(0,0,1)), ray.d);
 
 	/* Correct direction based on the current aperture sample.
@@ -129,9 +129,9 @@ bool LensPerturbation::sampleMutation(
 	dist += perturbMediumDistance(m_sampler, source.vertex(m-1));
 
 	/* Sample a perturbation and propagate it through specular interactions */
-	if (!proposal.vertex(m)->perturbDirection(m_scene, 
+	if (!proposal.vertex(m)->perturbDirection(m_scene,
 			proposal.vertex(k), proposal.edge(m),
-			proposal.edge(m-1), proposal.vertex(m-1), d, dist, 
+			proposal.edge(m-1), proposal.vertex(m-1), d, dist,
 			source.vertex(m-1)->getType(), ERadiance)) {
 		proposal.release(l, m+1, m_pool);
 		return false;
@@ -143,17 +143,17 @@ bool LensPerturbation::sampleMutation(
 		Float dist = source.edge(i-1)->length +
 			perturbMediumDistance(m_sampler, source.vertex(i-1));
 
-		if (!proposal.vertex(i)->propagatePerturbation(m_scene, 
-				proposal.vertex(i+1), proposal.edge(i), 
-				proposal.edge(i-1), proposal.vertex(i-1), 
-				source.vertex(i)->getComponentType(), dist, 
+		if (!proposal.vertex(i)->propagatePerturbation(m_scene,
+				proposal.vertex(i+1), proposal.edge(i),
+				proposal.edge(i-1), proposal.vertex(i-1),
+				source.vertex(i)->getComponentType(), dist,
 				source.vertex(i-1)->getType(), ERadiance)) {
 			proposal.release(l, m+1, m_pool);
 			return false;
 		}
 	}
 
-	if (!PathVertex::connect(m_scene, 
+	if (!PathVertex::connect(m_scene,
 			l > 0 ? proposal.vertex(l-1) : NULL,
 			l > 0 ? proposal.edge(l-1) : NULL,
 			proposal.vertex(l),
@@ -169,7 +169,7 @@ bool LensPerturbation::sampleMutation(
 		proposal.vertex(k-2));
 
 	BDAssert(proposal.matchesConfiguration(source));
-	
+
 	++statsGenerated;
 	return true;
 }
@@ -183,11 +183,11 @@ Float LensPerturbation::Q(const Path &source, const Path &proposal,
 			PathEdge::EEverything);
 
 	for (int i=m; i>l+1; --i) {
-		const PathVertex *v0 = proposal.vertex(i-1), 
+		const PathVertex *v0 = proposal.vertex(i-1),
 			  *v1 = proposal.vertex(i);
 		const PathEdge *edge = proposal.edge(i-1);
 
-		weight *= edge->evalCached(v0, v1, 
+		weight *= edge->evalCached(v0, v1,
 			PathEdge::ETransmittance |
 			(i != m ? PathEdge::EValueCosineRad : 0));
 

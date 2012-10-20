@@ -119,7 +119,7 @@ namespace algo {
 		inline int getVSync(XF86VidModeModeInfo *mode) {
 			return ((int) (0.5f + (1000.0f * mode->dotclock) / (mode->htotal * mode->vtotal)));
 		}
-		
+
 		bool operator() (XF86VidModeModeInfo *mode1, XF86VidModeModeInfo *mode2) {
 			return getVSync(mode1) > getVSync(mode2);
 		}
@@ -204,7 +204,7 @@ void X11Device::init(Device *other) {
 			m_size.x, m_size.y,
 			0, m_visinfo->depth, /* border width, color depth */
 			InputOutput, m_visinfo->visual,
-			CWBackPixel | CWBorderPixel | CWColormap | 
+			CWBackPixel | CWBorderPixel | CWColormap |
 			CWOverrideRedirect, &x11attr);
 
 		XWarpPointer(session->m_display, None, m_window, 0, 0, 0, 0, 0, 0);
@@ -238,12 +238,12 @@ void X11Device::init(Device *other) {
 		XSizeHints *hints = XAllocSizeHints();
 		hints->width = m_size.x;
 		hints->height = m_size.y;
-		
+
 		if (m_resizeAllowed) {
 			hints->min_width = hints->min_height = 10;
 			hints->max_width = hints->max_height = INT_MAX;
 		} else {
-			hints->min_width = hints->max_width = m_size.x; 
+			hints->min_width = hints->max_width = m_size.x;
 			hints->min_height = hints->max_height = m_size.y;
 		}
 

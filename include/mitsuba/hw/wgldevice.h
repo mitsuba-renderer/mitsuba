@@ -50,7 +50,7 @@ public:
 
 	/// Set the window title
 	void setTitle(const std::string &title);
-	
+
 	/// Display the WGL cursor?
 	void showCursor(bool enabled);
 
@@ -81,7 +81,7 @@ protected:
 	bool translateKey(WPARAM vkey, LPARAM lParam, DeviceEvent &event);
 
 	/// Translate a WIN32 mouse event
-	bool translateMouse(UINT uMsg, WPARAM wParam, DeviceEvent &event);	
+	bool translateMouse(UINT uMsg, WPARAM wParam, DeviceEvent &event);
 protected:
 	ref<WGLDevice> m_parent;
 	HWND m_hwnd;

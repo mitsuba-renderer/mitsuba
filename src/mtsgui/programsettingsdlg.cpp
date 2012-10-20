@@ -41,7 +41,7 @@ ProgramSettingsDialog::ProgramSettingsDialog(QWidget *parent) :
 ProgramSettingsDialog::~ProgramSettingsDialog() {
 	delete ui;
 }
-	
+
 void ProgramSettingsDialog::setConnections(QList<ServerConnection> &connections) {
 	m_connections = connections;
 	for (int i=0; i<connections.size(); ++i)
@@ -93,7 +93,7 @@ void ProgramSettingsDialog::on_addPathButton_clicked() {
 	QString dir = QFileDialog::getExistingDirectory(this, tr("Open Directory"), "",
 		QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
 	if (dir != "")
-		ui->searchPathList->addItem(dir);	
+		ui->searchPathList->addItem(dir);
 }
 
 void ProgramSettingsDialog::on_removePathButton_clicked() {

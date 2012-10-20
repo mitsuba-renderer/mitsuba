@@ -73,7 +73,7 @@ public:
 	/// Clear the viewport
 	void clear();
 
-	/// Configure the camera 
+	/// Configure the camera
 	void setCamera(const ProjectiveCamera *pCamera,
 		const Point2 &apertureSample = Point2(0.5f),
 		const Point2 &aaSample = Point2(0.5f),
@@ -89,19 +89,19 @@ public:
 	Matrix4x4 getMatrix(EMatrixType type) const;
 
 	/// Set up the renderer for drawing triangle geometry
-	void beginDrawingMeshes(bool transmitOnlyPositions = false); 
+	void beginDrawingMeshes(bool transmitOnlyPositions = false);
 
 	/// Send a triangle mesh to the renderer
-	void drawMesh(const TriMesh *geo); 
+	void drawMesh(const TriMesh *geo);
 
 	/// Send a triangle mesh to the renderer
-	void drawMesh(const GPUGeometry *geo); 
+	void drawMesh(const GPUGeometry *geo);
 
 	/// Clean up the renderer after drawing triangle geometry
-	void endDrawingMeshes(); 
+	void endDrawingMeshes();
 
 	/**
-	 * \brief Quickly draw all geometry that has been registered 
+	 * \brief Quickly draw all geometry that has been registered
 	 * with the renderer.
 	 *
 	 * Only transmits positions, hence this is mainly useful for
@@ -111,7 +111,7 @@ public:
 
 	/// Draw a quad using the given texture
 	void blitTexture(const GPUTexture *texture,
-		bool flipVertically = false, 
+		bool flipVertically = false,
 		bool centerHoriz = true, bool centerVert = true,
 		const Vector2i &offset = Vector2i(0, 0));
 
@@ -122,7 +122,7 @@ public:
 	 * Draw a line of text on the screen. The coordinates are specified
 	 * in pixel coordinates, where the upper left corner is the origin
 	 */
-	void drawText(const Point2i &pos, 
+	void drawText(const Point2i &pos,
 			const Font *font, const std::string &text);
 
 	/// Set the size of point primitives
@@ -159,7 +159,7 @@ public:
 	void drawFilledRectangle(const Point2i &a, const Point2i &b);
 
 	/// Draw an ellipse with the specified center and axes
-	void drawEllipse(const Point &center, 
+	void drawEllipse(const Point &center,
 			const Vector &axis1, const Vector &axis2);
 
 	/// Draw a wire-frame axis-aligned box
@@ -179,7 +179,7 @@ public:
 
 	/// Set the current fixed-function pipeline color
 	void setColor(const Color3 &color, Float alpha = 1.0f);
-	
+
 	/// Set the current fixed-function pipeline color
 	void setColor(const Spectrum &spec, Float alpha = 1.0f);
 

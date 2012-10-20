@@ -8,9 +8,9 @@
 //
 // Copyright (c) 2002, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -22,8 +22,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission. 
-// 
+// from this software without specific prior written permission.
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -311,9 +311,9 @@ MTS_EXPORT_CORE void			printBits   (char  c[35], float f);
 //	floating point number, whose bits are arranged as follows:
 //
 //	    31 (msb)
-//	    | 
+//	    |
 //	    | 30     23
-//	    | |      | 
+//	    | |      |
 //	    | |      | 22                    0 (lsb)
 //	    | |      | |                     |
 //	    X XXXXXXXX XXXXXXXXXXXXXXXXXXXXXXX
@@ -357,7 +357,7 @@ MTS_EXPORT_CORE void			printBits   (char  c[35], float f);
 //	Here is the bit-layout for a half number, h:
 //
 //	    15 (msb)
-//	    | 
+//	    |
 //	    | 14  10
 //	    | |   |
 //	    | |   | 9        0 (lsb)
@@ -562,7 +562,7 @@ half::round (unsigned int n) const
 // Other inline functions
 //-----------------------
 
-inline half	
+inline half
 half::operator - () const
 {
     half h;
@@ -651,7 +651,7 @@ half::operator /= (float f)
 }
 
 
-inline bool	
+inline bool
 half::isFinite () const
 {
     unsigned short e = (_h >> 10) & 0x001f;
@@ -701,7 +701,7 @@ half::isInfinity () const
 }
 
 
-inline bool	
+inline bool
 half::isNegative () const
 {
     return (_h & 0x8000) != 0;

@@ -51,7 +51,7 @@ public:
 	 *     Minimum jump distance in fractional pixel coordinates
 	 *
 	 * \param coveredArea
-	 *     Approximate fractional image plane area that is 
+	 *     Approximate fractional image plane area that is
 	 *     reachable using the lens perturbation
 	 */
 	MultiChainPerturbation(const Scene *scene, Sampler *sampler,
@@ -62,9 +62,9 @@ public:
 
 	EMutationType getType() const;
 	Float suitability(const Path &path) const;
-	bool sampleMutation(Path &source, Path &proposal, 
+	bool sampleMutation(Path &source, Path &proposal,
 			MutationRecord &muRec);
-	Float Q(const Path &source, const Path &proposal, 
+	Float Q(const Path &source, const Path &proposal,
 			const MutationRecord &muRec) const;
 	void accept(const MutationRecord &muRec);
 

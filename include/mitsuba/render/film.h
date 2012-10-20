@@ -64,7 +64,7 @@ public:
 	virtual void develop() = 0;
 
 	/**
-	 * \brief Develop the contents of a subregion of the film and store 
+	 * \brief Develop the contents of a subregion of the film and store
 	 * it inside the given bitmap
 	 *
 	 * This may fail when the film does not have an explicit representation
@@ -81,21 +81,21 @@ public:
 	/// Does the destination file already exist?
 	virtual bool destinationExists(const fs::path &basename) const = 0;
 
-	/** 
-	 * Should regions slightly outside the image plane be sampled to improve 
+	/**
+	 * Should regions slightly outside the image plane be sampled to improve
 	 * the quality of the reconstruction at the edges? This only makes
 	 * sense when reconstruction filters other than the box filter are used.
 	 */
 	inline bool hasHighQualityEdges() const { return m_highQualityEdges; }
-	
+
 	/// Return the image reconstruction filter
 	inline ReconstructionFilter *getReconstructionFilter() { return m_filter.get(); }
 
 	/// Return the image reconstruction filter (const version)
 	inline const ReconstructionFilter *getReconstructionFilter() const { return m_filter.get(); }
-	
+
 	// =============================================================
-	//! @{ \name ConfigurableObject interface 
+	//! @{ \name ConfigurableObject interface
 	// =============================================================
 
 	/// Add a child node
@@ -106,18 +106,18 @@ public:
 
 	/// Configure the film
 	virtual void configure();
-	
+
 	/// Serialize this film to a binary data stream
 	virtual void serialize(Stream *stream, InstanceManager *manager) const;
-	
+
 	//! @}
 	// =============================================================
-	
+
 	MTS_DECLARE_CLASS()
 protected:
     /// Create a film
     Film(const Properties &props);
-    
+
 	/// Unserialize a film
     Film(Stream *stream, InstanceManager *manager);
 

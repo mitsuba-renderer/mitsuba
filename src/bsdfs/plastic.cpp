@@ -32,7 +32,7 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{extIOR}{\Float\Or\String}{Exterior index of refraction specified
  *      numerically or using a known material name. \default{\texttt{air} / 1.000277}}
  *     \parameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
- *         factor that can be used to modulate the specular reflection component. Note that 
+ *         factor that can be used to modulate the specular reflection component. Note that
  *         for physical realism, this parameter should never be touched. \default{1.0}}
  *     \parameter{diffuse\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
  *         factor used to modulate the diffuse reflection component\default{0.5}}
@@ -50,27 +50,27 @@ MTS_NAMESPACE_BEGIN
  * }
  *
  * \vspace{3mm}
- * This plugin describes a smooth plastic-like material with internal scattering. 
- * It uses the Fresnel reflection and transmission coefficients to provide 
+ * This plugin describes a smooth plastic-like material with internal scattering.
+ * It uses the Fresnel reflection and transmission coefficients to provide
  * direction-dependent specular and diffuse components.
  * Since it is simple, realistic, and fast, this model is often a better choice
  * than the \pluginref{phong}, \pluginref{ward}, and \pluginref{roughplastic}
- * plugins when rendering smooth plastic-like materials. 
+ * plugins when rendering smooth plastic-like materials.
  *
- * For convenience, this model allows to specify IOR values either numerically, 
- * or based on a list of known materials (see \tblref{dielectric-iors} for 
- * an overview). 
+ * For convenience, this model allows to specify IOR values either numerically,
+ * or based on a list of known materials (see \tblref{dielectric-iors} for
+ * an overview).
  *
  * Note that this plugin is quite similar to what one would get by applying the
  * \pluginref{coating} plugin to the \pluginref{diffuse} material. The main
  * difference is that this plugin is significantly faster, while at the same
  * time causing less variance. Furthermore, it accounts for multiple
- * interreflections inside the material (read on for details), which avoids 
+ * interreflections inside the material (read on for details), which avoids
  * a serious energy loss problem of the aforementioned plugin
  * combination.
  * \newpage
  *
- * \begin{xml}[caption=A shiny material whose diffuse reflectance is 
+ * \begin{xml}[caption=A shiny material whose diffuse reflectance is
  *     specified using sRGB, label=lst:plastic-shiny]
  * <bsdf type="plastic">
  *     <srgb name="diffuseReflectance" value="#18455c"/>
@@ -86,19 +86,19 @@ MTS_NAMESPACE_BEGIN
  *        \label{fig:plastic-nonlinear}
  *        When asked to do so, this model can account for subtle nonlinear color shifts due
  *        to internal scattering processes. The above images show a textured
- *        object first rendered using \pluginref{diffuse}, then 
+ *        object first rendered using \pluginref{diffuse}, then
  *        \pluginref{plastic} with the default parameters, and finally using
  *        \pluginref{plastic} and support for nonlinear color shifts.
  *     }
  * }
  *
  * \subsubsection*{Internal scattering}
- * Internally, this is model simulates the interaction of light with a diffuse 
- * base surface coated by a thin dielectric layer. This is a convenient 
- * abstraction rather than a restriction. In other words, there are many 
- * materials that can be rendered with this model, even if they might not not 
+ * Internally, this is model simulates the interaction of light with a diffuse
+ * base surface coated by a thin dielectric layer. This is a convenient
+ * abstraction rather than a restriction. In other words, there are many
+ * materials that can be rendered with this model, even if they might not not
  * fit this description perfectly well.
- * 
+ *
  * \begin{figure}[h]
  * \setcounter{subfigure}{0}
  * \centering
@@ -118,24 +118,24 @@ MTS_NAMESPACE_BEGIN
  * of the illumination is specularly reflected at the material
  * boundary, which results in a sharp reflection in the mirror direction
  * (\subfigref{plastic-intscat}{a}).
- * The remaining illumination refracts into the material, where it 
+ * The remaining illumination refracts into the material, where it
  * scatters from the diffuse base layer. (\subfigref{plastic-intscat}{b}).
- * While some of the diffusely scattered illumination is able to 
- * directly refract outwards again, the remainder is reflected from the 
- * interior side of the dielectric boundary and will in fact remain 
- * trapped inside the material for some number of internal scattering 
+ * While some of the diffusely scattered illumination is able to
+ * directly refract outwards again, the remainder is reflected from the
+ * interior side of the dielectric boundary and will in fact remain
+ * trapped inside the material for some number of internal scattering
  * events until it is finally able to escape (\subfigref{plastic-intscat}{c}).
  *
- * Due to the mathematical simplicity of this setup, it is possible to work 
+ * Due to the mathematical simplicity of this setup, it is possible to work
  * out the correct form of the model without actually having to simulate
  * the potentially large number of internal scattering events.
  *
- * Note that due to the internal scattering, the diffuse color of the 
- * material is in practice slightly different from the color of the 
- * base layer on its own---in particular, the material color will tend to shift towards 
- * darker colors with higher saturation. Since this can be counter-intuitive when 
+ * Note that due to the internal scattering, the diffuse color of the
+ * material is in practice slightly different from the color of the
+ * base layer on its own---in particular, the material color will tend to shift towards
+ * darker colors with higher saturation. Since this can be counter-intuitive when
  * using bitmap textures, these color shifts are disabled by default. Specify
- * the parameter \code{nonlinear=true} to enable them. \figref{plastic-nonlinear} 
+ * the parameter \code{nonlinear=true} to enable them. \figref{plastic-nonlinear}
  * illustrates the resulting change. This effect is also seen in real life,
  * for instance a piece of wood will look slightly darker after coating it
  * with a layer of varnish.
@@ -165,7 +165,7 @@ public:
 		m_specularSamplingWeight = 0.0f;
 	}
 
-	SmoothPlastic(Stream *stream, InstanceManager *manager) 
+	SmoothPlastic(Stream *stream, InstanceManager *manager)
 			: BSDF(stream, manager) {
 		m_eta = stream->readFloat();
 		m_nonlinear = stream->readBool();
@@ -200,10 +200,10 @@ public:
 			  sAvg = m_specularReflectance->getAverage().getLuminance();
 
 		m_specularSamplingWeight = sAvg / (dAvg + sAvg);
-		
+
 		m_invEta2 = 1/(m_eta*m_eta);
 
-		m_usesRayDifferentials = 
+		m_usesRayDifferentials =
 			m_specularReflectance->usesRayDifferentials() ||
 			m_diffuseReflectance->usesRayDifferentials();
 
@@ -223,11 +223,11 @@ public:
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
 		if (child->getClass()->derivesFrom(MTS_CLASS(Texture))) {
-			if (name == "specularReflectance") 
+			if (name == "specularReflectance")
 				m_specularReflectance = static_cast<Texture *>(child);
 			else if (name == "diffuseReflectance")
 				m_diffuseReflectance = static_cast<Texture *>(child);
-			else 
+			else
 				BSDF::addChild(name, child);
 		} else {
 			BSDF::addChild(name, child);
@@ -261,7 +261,7 @@ public:
 			Float Fo = fresnelDielectricExt(Frame::cosTheta(bRec.wo), m_eta);
 
 			Spectrum diff = m_diffuseReflectance->eval(bRec.its);
-		
+
 			if (m_nonlinear)
 				diff /= Spectrum(1.0f) - diff * m_fdrInt;
 			else
@@ -287,7 +287,7 @@ public:
 		if (hasSpecular && hasDiffuse) {
 			Float Fi = fresnelDielectricExt(Frame::cosTheta(bRec.wi), m_eta);
 			probSpecular = (Fi*m_specularSamplingWeight) /
-				(Fi*m_specularSamplingWeight + 
+				(Fi*m_specularSamplingWeight +
 				(1-Fi) * (1-m_specularSamplingWeight));
 		}
 
@@ -308,7 +308,7 @@ public:
 				&& (bRec.component == -1 || bRec.component == 0);
 		bool hasDiffuse = (bRec.typeMask & EDiffuseReflection)
 				&& (bRec.component == -1 || bRec.component == 1);
-		
+
 		if ((!hasDiffuse && !hasSpecular) || Frame::cosTheta(bRec.wi) <= 0)
 			return Spectrum(0.0f);
 
@@ -317,7 +317,7 @@ public:
 		bRec.eta = 1.0f;
 		if (hasDiffuse && hasSpecular) {
 			Float probSpecular = (Fi*m_specularSamplingWeight) /
-				(Fi*m_specularSamplingWeight + 
+				(Fi*m_specularSamplingWeight +
 				(1-Fi) * (1-m_specularSamplingWeight));
 
 			/* Importance sample wrt. the Fresnel reflectance */
@@ -380,7 +380,7 @@ public:
 		bRec.eta = 1.0f;
 		if (hasDiffuse && hasSpecular) {
 			Float probSpecular = (Fi*m_specularSamplingWeight) /
-				(Fi*m_specularSamplingWeight + 
+				(Fi*m_specularSamplingWeight +
 				(1-Fi) * (1-m_specularSamplingWeight));
 
 			/* Importance sample wrt. the Fresnel reflectance */
@@ -407,9 +407,9 @@ public:
 				else
 					diff /= 1 - m_fdrInt;
 
-				pdf = (1-probSpecular) * 
+				pdf = (1-probSpecular) *
 					Warp::squareToCosineHemispherePdf(bRec.wo);
-	
+
 				return diff * (m_invEta2 * (1-Fi) * (1-Fo) / (1-probSpecular));
 			}
 		} else if (hasSpecular) {
@@ -454,7 +454,7 @@ public:
 			<< "  specularSamplingWeight = " << m_specularSamplingWeight << "," << endl
 			<< "  diffuseSamplingWeight = " << (1-m_specularSamplingWeight) << "," << endl
 			<< "  nonlinear = " << m_nonlinear << "," << endl
-			<< "  eta = " << m_eta << "," << endl 
+			<< "  eta = " << m_eta << "," << endl
 			<< "  fdrInt = " << m_fdrInt << "," << endl
 			<< "  fdrExt = " << m_fdrExt << endl
 			<< "]";
@@ -474,15 +474,15 @@ private:
 
 /**
  * Smooth plastic shader -- it is really hopeless to visualize
- * this material in the VPL renderer, so let's try to do at least 
+ * this material in the VPL renderer, so let's try to do at least
  * something that suggests the presence of a specularly-reflecting
  * dielectric material with something diffuse underneath.
  */
 class SmoothPlasticShader : public Shader {
 public:
 	SmoothPlasticShader(Renderer *renderer, const Texture *specularReflectance,
-			const Texture *diffuseReflectance, Float eta) : Shader(renderer, EBSDFShader), 
-			m_specularReflectance(specularReflectance), 
+			const Texture *diffuseReflectance, Float eta) : Shader(renderer, EBSDFShader),
+			m_specularReflectance(specularReflectance),
 			m_diffuseReflectance(diffuseReflectance) {
 		m_specularReflectanceShader = renderer->registerShaderForResource(m_specularReflectance.get());
 		m_diffuseReflectanceShader = renderer->registerShaderForResource(m_diffuseReflectance.get());
@@ -574,7 +574,7 @@ private:
 	Float m_alpha, m_R0;
 };
 
-Shader *SmoothPlastic::createShader(Renderer *renderer) const { 
+Shader *SmoothPlastic::createShader(Renderer *renderer) const {
 	return new SmoothPlasticShader(renderer,
 		m_specularReflectance.get(), m_diffuseReflectance.get(), m_eta);
 }

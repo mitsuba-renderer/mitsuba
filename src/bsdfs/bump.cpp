@@ -27,7 +27,7 @@ MTS_NAMESPACE_BEGIN
  *
  * \parameters{
  *     \parameter{\Unnamed}{\Texture}{
- *       The luminance of this texture specifies the amount of 
+ *       The luminance of this texture specifies the amount of
  *       displacement. The implementation ignores any constant
  *       offset---only changes in the luminance matter.
  *     }
@@ -42,19 +42,19 @@ MTS_NAMESPACE_BEGIN
  * Bump mapping \cite{Blinn1978Simulation} is a simple technique for cheaply
  * adding surface detail to a rendering. This is done by perturbing the
  * shading coordinate frame based on a displacement height field provided
- * as a texture. This method can lend objects a highly realistic and detailed 
+ * as a texture. This method can lend objects a highly realistic and detailed
  * appearance (e.g. wrinkled or covered by scratches and other imperfections)
  * without requiring any changes to the input geometry.
  *
  * The implementation in Mitsuba uses the common approach of ignoring
- * the usually negligible texture-space derivative of the base mesh 
+ * the usually negligible texture-space derivative of the base mesh
  * surface normal. As side effect of this decision, it is invariant
  * to constant offsets in the height field texture---only variations in
  * its luminance cause changes to the shading frame.
  *
- * Note that the magnitude of the height field variations influences 
+ * Note that the magnitude of the height field variations influences
  * the strength of the displacement. If desired, the \pluginref{scale}
- * texture plugin can be used to magnify or reduce the effect of a 
+ * texture plugin can be used to magnify or reduce the effect of a
  * bump map texture.
  * \begin{xml}[caption=A rough metal model with a scaled image-based bump map]
  * <bsdf type="bump">
@@ -76,7 +76,7 @@ class BumpMap : public BSDF {
 public:
 	BumpMap(const Properties &props) : BSDF(props) { }
 
-	BumpMap(Stream *stream, InstanceManager *manager) 
+	BumpMap(Stream *stream, InstanceManager *manager)
 			: BSDF(stream, manager) {
 		m_nested = static_cast<BSDF *>(manager->getInstance(stream));
 		m_displacement = static_cast<Texture *>(manager->getInstance(stream));
@@ -90,7 +90,7 @@ public:
 			Log(EError, "A displacement texture must be specified");
 
 		m_components.clear();
-		for (int i=0; i<m_nested->getComponentCount(); ++i) 
+		for (int i=0; i<m_nested->getComponentCount(); ++i)
 			m_components.push_back(m_nested->getType(i) | ESpatiallyVarying | EAnisotropic);
 
 		m_usesRayDifferentials = true;
@@ -136,7 +136,7 @@ public:
 		Float dDispDu = (dispU - disp) / eps;
 		Float dDispDv = (dispV - disp) / eps;
 
-		/* Build a perturbed frame -- ignores the usually 
+		/* Build a perturbed frame -- ignores the usually
 		   negligible normal derivative term */
 		Vector dpdu = its.dpdu + its.shFrame.n * (
 				dDispDu - dot(its.shFrame.n, its.dpdu));
@@ -174,7 +174,7 @@ public:
 		const Intersection& its = bRec.its;
 		Intersection perturbed;
 		perturbIntersection(its, perturbed);
-		
+
 		BSDFSamplingRecord perturbedQuery(perturbed,
 			perturbed.toLocal(its.toWorld(bRec.wi)),
 			perturbed.toLocal(its.toWorld(bRec.wo)), bRec.mode);
@@ -252,7 +252,7 @@ protected:
 	ref<BSDF> m_nested;
 };
 
-// ================ Hardware shader implementation ================ 
+// ================ Hardware shader implementation ================
 
 /**
  * This is a quite approximate version of the bump map model -- it likely
@@ -261,7 +261,7 @@ protected:
  */
 class BumpMapShader : public Shader {
 public:
-	BumpMapShader(Renderer *renderer, const BSDF *nested, const Texture *displacement) 
+	BumpMapShader(Renderer *renderer, const BSDF *nested, const Texture *displacement)
 		: Shader(renderer, EBSDFShader), m_nested(nested), m_displacement(displacement) {
 		m_nestedShader = renderer->registerShaderForResource(m_nested.get());
 		m_displacementShader = renderer->registerShaderForResource(m_displacement.get());
@@ -329,7 +329,7 @@ private:
 	ref<Shader> m_displacementShader;
 };
 
-Shader *BumpMap::createShader(Renderer *renderer) const { 
+Shader *BumpMap::createShader(Renderer *renderer) const {
 	return new BumpMapShader(renderer, m_nested.get(), m_displacement.get());
 }
 

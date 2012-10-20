@@ -20,7 +20,7 @@
 #include <mitsuba/core/bitmap.h>
 #include <mitsuba/render/gatherproc.h>
 #include <mitsuba/render/renderqueue.h>
-			
+
 #if defined(MTS_OPENMP)
 # include <omp.h>
 #endif
@@ -33,30 +33,30 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{maxDepth}{\Integer}{Specifies the longest path depth
  *         in the generated output image (where \code{-1} corresponds to $\infty$).
  *	       A value of \code{1} will only render directly visible light sources.
- *	       \code{2} will lead to single-bounce (direct-only) illumination, 
+ *	       \code{2} will lead to single-bounce (direct-only) illumination,
  *	       and so on. \default{\code{-1}}
  *	   }
  *     \parameter{photonCount}{\Integer}{Number of photons to be shot per iteration\default{250000}}
- *     \parameter{initialRadius}{\Float}{Initial radius of gather points in world space units. 
+ *     \parameter{initialRadius}{\Float}{Initial radius of gather points in world space units.
  *         \default{0, i.e. decide automatically}}
  *     \parameter{alpha}{\Float}{Radius reduction parameter \code{alpha} from the paper\default{0.7}}
  *     \parameter{granularity}{\Integer}{
-		Granularity of photon tracing work units for the purpose 
+		Granularity of photon tracing work units for the purpose
 		of parallelization (in \# of shot particles) \default{0, i.e. decide automatically}
  *     }
- *	   \parameter{rrDepth}{\Integer}{Specifies the minimum path depth, after 
- *	      which the implementation will start to use the ``russian roulette'' 
+ *	   \parameter{rrDepth}{\Integer}{Specifies the minimum path depth, after
+ *	      which the implementation will start to use the ``russian roulette''
  *	      path termination criterion. \default{\code{5}}
  *	   }
  * }
- * This plugin implements stochastic progressive photon mapping by Hachisuka et al. 
- * \cite{Hachisuka2009Stochastic}. This algorithm is an extension of progressive photon 
- * mapping (\pluginref{ppm}) that improves convergence 
+ * This plugin implements stochastic progressive photon mapping by Hachisuka et al.
+ * \cite{Hachisuka2009Stochastic}. This algorithm is an extension of progressive photon
+ * mapping (\pluginref{ppm}) that improves convergence
  * when rendering scenes involving depth-of-field, motion blur, and glossy reflections.
  *
  * Note that the implementation of \pluginref{sppm} in Mitsuba ignores the sampler
- * configuration---hence, the usual steps of choosing a sample generator and a desired 
- * number of samples per pixel are not necessary. As with \pluginref{ppm}, once started, 
+ * configuration---hence, the usual steps of choosing a sample generator and a desired
+ * number of samples per pixel are not necessary. As with \pluginref{ppm}, once started,
  * the rendering process continues indefinitely until it is manually stopped.
  *
  * \remarks{
@@ -90,7 +90,7 @@ public:
 		m_alpha = props.getFloat("alpha", .7);
 		/* Number of photons to shoot in each iteration */
 		m_photonCount = props.getInteger("photonCount", 250000);
-		/* Granularity of the work units used in parallelizing the 
+		/* Granularity of the work units used in parallelizing the
 		   particle tracing task (default: choose automatically). */
 		m_granularity = props.getInteger("granularity", 0);
 		/* Longest visualized path length (<tt>-1</tt>=infinite). When a positive value is
@@ -102,7 +102,7 @@ public:
 		/* Indicates if the gathering steps should be canceled if not enough photons are generated. */
 		m_autoCancelGathering = props.getBoolean("autoCancelGathering", true);
 		m_mutex = new Mutex();
-		if (m_maxDepth <= 1 && m_maxDepth != -1) 
+		if (m_maxDepth <= 1 && m_maxDepth != -1)
 			Log(EError, "Maximum depth must be set to \"2\" or higher!");
 	}
 
@@ -134,14 +134,14 @@ public:
 		return true;
 	}
 
-	bool render(Scene *scene, RenderQueue *queue, 
+	bool render(Scene *scene, RenderQueue *queue,
 		const RenderJob *job, int sceneResID, int sensorResID, int unused) {
 		ref<Scheduler> sched = Scheduler::getInstance();
 		ref<Sensor> sensor = scene->getSensor();
 		ref<Film> film = sensor->getFilm();
 		size_t nCores = sched->getCoreCount();
-		Log(EInfo, "Starting render job (%ix%i, " SIZE_T_FMT " %s, " SSE_STR ") ..", 
-			film->getCropSize().x, film->getCropSize().y, 
+		Log(EInfo, "Starting render job (%ix%i, " SIZE_T_FMT " %s, " SSE_STR ") ..",
+			film->getCropSize().x, film->getCropSize().y,
 			nCores, nCores == 1 ? "core" : "cores");
 
 		Vector2i cropSize = film->getCropSize();
@@ -188,9 +188,9 @@ public:
 #endif
 
 		int it=0;
-		while (m_running) { 
+		while (m_running) {
 			distributedRTPass(scene, samplers);
-			photonMapPass(++it, queue, job, film, sceneResID, 
+			photonMapPass(++it, queue, job, film, sceneResID,
 					sensorResID, samplerResID);
 		}
 
@@ -261,13 +261,13 @@ public:
 								gatherPoint.depth = -1;
 								break;
 							}
-		
+
 							const BSDF *bsdf = gatherPoint.its.getBSDF();
 
 							/* Create hit point if this is a diffuse material or a glossy
 							   one, and there has been a previous interaction with
 							   a glossy material */
-							if ((bsdf->getType() & BSDF::EAll) == BSDF::EDiffuseReflection || 
+							if ((bsdf->getType() & BSDF::EAll) == BSDF::EDiffuseReflection ||
 								(bsdf->getType() & BSDF::EAll) == BSDF::EDiffuseTransmission ||
 								(depth + 1 > m_maxDepth && m_maxDepth != -1)) {
 								gatherPoint.weight = weight;
@@ -282,7 +282,7 @@ public:
 									gatherPoint.depth = -1;
 									break;
 								}
-								ray = RayDifferential(gatherPoint.its.p, 
+								ray = RayDifferential(gatherPoint.its.p,
 									gatherPoint.its.toWorld(bRec.wo), ray.time);
 								++depth;
 							}
@@ -299,9 +299,9 @@ public:
 		}
 	}
 
-	void photonMapPass(int it, RenderQueue *queue, const RenderJob *job,  
+	void photonMapPass(int it, RenderQueue *queue, const RenderJob *job,
 			Film *film, int sceneResID, int sensorResID, int samplerResID) {
-		Log(EInfo, "Performing a photon mapping pass %i (" SIZE_T_FMT " photons so far)", 
+		Log(EInfo, "Performing a photon mapping pass %i (" SIZE_T_FMT " photons so far)",
 				it, m_totalPhotons);
 		ref<Scheduler> sched = Scheduler::getInstance();
 
@@ -320,7 +320,7 @@ public:
 
 		ref<PhotonMap> photonMap = proc->getPhotonMap();
 		photonMap->build();
-		Log(EDebug, "Photon map full. Shot " SIZE_T_FMT " particles, excess photons due to parallelism: " 
+		Log(EDebug, "Photon map full. Shot " SIZE_T_FMT " particles, excess photons due to parallelism: "
 			SIZE_T_FMT, proc->getShotParticles(), proc->getExcessPhotons());
 
 		Log(EInfo, "Gathering ..");
@@ -347,7 +347,7 @@ public:
 					flux = Spectrum(0.0f);
 				}
 
-				if (N == 0 && !gp.emission.isZero()) 
+				if (N == 0 && !gp.emission.isZero())
 					gp.N = N = 1;
 
 				if (N+M == 0) {
@@ -356,8 +356,8 @@ public:
 					Float ratio = (N + m_alpha * M) / (N + M);
 					gp.radius = gp.radius * std::sqrt(ratio);
 
-					gp.flux = (gp.flux + 
-							gp.weight * flux + 
+					gp.flux = (gp.flux +
+							gp.weight * flux +
 							gp.emission * (Float) proc->getShotParticles() * M_PI * gp.radius*gp.radius) * ratio;
 					gp.N = N + m_alpha * M;
 					contrib = gp.flux / ((Float) m_totalEmitted * gp.radius*gp.radius * M_PI);

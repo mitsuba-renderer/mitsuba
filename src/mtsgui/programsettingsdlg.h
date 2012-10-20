@@ -10,7 +10,7 @@ class ProgramSettingsDialog : public QDialog {
 public:
 	ProgramSettingsDialog(QWidget *parent);
 	~ProgramSettingsDialog();
-	
+
 	inline QList<ServerConnection> &getConnections() {
 		return m_connections;
 	}
@@ -20,7 +20,7 @@ public:
 	inline QString getNodeName() const {
 		return ui->nodeName->text();
 	}
-	
+
 	inline void setNodeName(const QString &name) const {
 		ui->nodeName->setText(name);
 	}
@@ -28,7 +28,7 @@ public:
 	inline int getListenPort() const {
 		return ui->listenPort->text().toInt();
 	}
-	
+
 	inline void setListenPort(int port) const {
 		ui->listenPort->setText(QString("%1").arg(port));
 	}
@@ -36,11 +36,11 @@ public:
 	inline bool getInvertMouse() const {
 		return ui->invertMouseBox->checkState() == Qt::Checked;
 	}
-	
+
 	inline ENavigationMode getNavigationMode() const {
 		return (ENavigationMode) ui->navigationModeBox->currentIndex();
 	}
-	
+
 	inline void setNavigationMode(ENavigationMode mode) const {
 		ui->navigationModeBox->setCurrentIndex(mode);
 	}
@@ -60,14 +60,14 @@ public:
 	inline bool getCheckForUpdates() const {
 		return ui->checkForUpdatesBox->checkState() == Qt::Checked;
 	}
-	
+
 	inline void setCheckForUpdates(bool value) {
 		ui->checkForUpdatesBox->setCheckState(value ? Qt::Checked : Qt::Unchecked);
 	}
 
 	inline void setSearchPaths(const QStringList &paths) {
 		ui->searchPathList->clear();
-		ui->searchPathList->addItems(paths);	
+		ui->searchPathList->addItems(paths);
 	}
 
 	inline void setLocalWorkerCount(size_t count) {

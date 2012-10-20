@@ -27,35 +27,35 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * \brief Base class of all sample generators. 
+ * \brief Base class of all sample generators.
  *
  * For each sample in a pixel, a sample generator produces a (hypothetical)
- * point in the infinite dimensional random number cube. A rendering 
- * algorithm can then request subsequent 1D or 2D components of this point 
+ * point in the infinite dimensional random number cube. A rendering
+ * algorithm can then request subsequent 1D or 2D components of this point
  * using the \ref next1D() and \ref next2D() functions. Some implementations
  * make certain guarantees about the stratification of the first n components
- * with respect to the other points that are sampled within a pixel (the 
- * low-discrepancy and stratified samplers do this for instance). 
+ * with respect to the other points that are sampled within a pixel (the
+ * low-discrepancy and stratified samplers do this for instance).
  *
- * The general interaction between a sampler and a rendering algorithm is as 
- * follows: Before beginning to render a pixel, the rendering algorithm calls 
+ * The general interaction between a sampler and a rendering algorithm is as
+ * follows: Before beginning to render a pixel, the rendering algorithm calls
  * \ref generate(). The first pixel sample can now be computed, after which
  * \ref advance() needs to be invoked. This repeats until all pixel samples have
- * been generated. Note that some implementations need to be configured for a 
- * certain number of pixel samples, and exceeding these will lead to an 
- * exception being thrown. While computing a pixel sample, the rendering 
- * algorithm usually requests batches of (pseudo-) random numbers using 
- * the \ref next1D(), \ref next2D(), \ref next1DArray() and 
+ * been generated. Note that some implementations need to be configured for a
+ * certain number of pixel samples, and exceeding these will lead to an
+ * exception being thrown. While computing a pixel sample, the rendering
+ * algorithm usually requests batches of (pseudo-) random numbers using
+ * the \ref next1D(), \ref next2D(), \ref next1DArray() and
  * \ref next2DArray() functions.
  *
  * The difference between calling \ref next1D(), \ref next2D() a number of
- * times versus using the array variants \ref next1DArray() and 
- * \ref next2DArray() is that the latter can provide stratification 
+ * times versus using the array variants \ref next1DArray() and
+ * \ref next2DArray() is that the latter can provide stratification
  * not only with respect to random numbers obtained within another pixel
  * sample, but also within the array itself. This is useful e.g. in the
  * direct illumination strategy, which spawns several rays after hitting
- * a surface when computing a pixel sample. Since this is done over and 
- * over again for each one of the pixel samples, it makes sense to 
+ * a surface when computing a pixel sample. Since this is done over and
+ * over again for each one of the pixel samples, it makes sense to
  * stratify over all of the rays that are ultimately generated, and the
  * \ref next1DArray() and \ref next2DArray() methods allow to do this.
  * See the file \c direct.cpp for an example.
@@ -68,8 +68,8 @@ public:
 	/**
 	 * \brief Create a clone of this sampler
 	 *
-	 * The clone is allowed to be different to some extent, e.g. a pseudorandom 
-	 * generator should be based on a different random seed compared to the 
+	 * The clone is allowed to be different to some extent, e.g. a pseudorandom
+	 * generator should be based on a different random seed compared to the
 	 * original. All other parameters, are copied exactly.
 	 *
 	 * The default implementation throws an exception.
@@ -88,17 +88,17 @@ public:
 	 * \param res
 	 *    Resolution of the target film
 	 * \param blocked
-	 *    Will the rendering be blocked, i.e. parallelized over many 
+	 *    Will the rendering be blocked, i.e. parallelized over many
 	 *    rectangular image regions?
 	 */
 	virtual void setFilmResolution(const Vector2i &res, bool blocked);
 
 	/**
 	 * \brief Generate new samples
-	 * 
-	 * This function is called initially and every time the generated 
-	 * samples have been exhausted. When used in conjunction with a 
-	 * \ref SamplingIntegrator, this will be called before starting to 
+	 *
+	 * This function is called initially and every time the generated
+	 * samples have been exhausted. When used in conjunction with a
+	 * \ref SamplingIntegrator, this will be called before starting to
 	 * render each pixel, and the argument denotes the pixel position.
 	 * Otherwise, some dummy value should be provided, e.g. Point2i(-1)
 	 */
@@ -123,8 +123,8 @@ public:
 	 * repeatedly - this function will generally return a set of 2D vectors,
 	 * which are not only well-laid out over all samples at the current pixel,
 	 * but also with respect to each other. Note that this 2D array has to be
-	 * requested initially using \ref request2DArray() and later, they have 
-	 * to be retrieved in the same same order and size configuration as the 
+	 * requested initially using \ref request2DArray() and later, they have
+	 * to be retrieved in the same same order and size configuration as the
 	 * requests. An exception is thrown when a mismatch is detected.
 	 *
 	 * This function is useful to support things such as a direct illumination
@@ -140,10 +140,10 @@ public:
 	Float *next1DArray(size_t size);
 
 	/**
-	 * \brief Request that a 2D array will be made available for 
-	 * later consumption by \ref next2DArray(). 
+	 * \brief Request that a 2D array will be made available for
+	 * later consumption by \ref next2DArray().
 	 *
-	 * This function must be called before \ref generate(). 
+	 * This function must be called before \ref generate().
 	 * See \ref next2DArray() for a more detailed description
 	 * of this feature.
 	 */
@@ -154,7 +154,7 @@ public:
 
 	/// Return total number of samples
 	inline size_t getSampleCount() const { return m_sampleCount; }
-	
+
 	/// Return the current sample index
 	inline size_t getSampleIndex() const { return m_sampleIndex; }
 

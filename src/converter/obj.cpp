@@ -16,8 +16,8 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#define BOOST_FILESYSTEM_NO_LIB 
-#define BOOST_SYSTEM_NO_LIB 
+#define BOOST_FILESYSTEM_NO_LIB
+#define BOOST_SYSTEM_NO_LIB
 
 #include <mitsuba/core/plugin.h>
 #include <mitsuba/core/fstream.h>
@@ -28,7 +28,7 @@
 
 std::set<std::string> availableTextures;
 
-void referenceTexture(GeometryConverter *cvt, std::ostream &os, const std::string &parameter, 
+void referenceTexture(GeometryConverter *cvt, std::ostream &os, const std::string &parameter,
 		const std::string &indent, const fs::path &textureDir, std::string filename) {
 	/* Prevent Linux/OSX fs::path handling issues for OBJ files created on Windows */
 	for (size_t i=0; i<filename.length(); ++i) {
@@ -77,9 +77,9 @@ void referenceTexture(GeometryConverter *cvt, std::ostream &os, const std::strin
 }
 
 void addMaterial(GeometryConverter *cvt, std::ostream &os, const std::string &mtlName,
-		const fs::path &texturesDir, const Spectrum &diffuseValue, 
+		const fs::path &texturesDir, const Spectrum &diffuseValue,
 		const std::string &diffuseMap, const std::string maskMap) {
-	if (mtlName == "") 
+	if (mtlName == "")
 		return;
 	SLog(EInfo, "Importing material \"%s\" ..", mtlName.c_str());
 	std::string indent = "";
@@ -95,7 +95,7 @@ void addMaterial(GeometryConverter *cvt, std::ostream &os, const std::string &mt
 	if (diffuseMap == "") {
 		Float r, g, b;
 		diffuseValue.toLinearRGB(r, g, b);
-		os << indent << "\t\t<rgb name=\"reflectance\" value=\"" 
+		os << indent << "\t\t<rgb name=\"reflectance\" value=\""
 			<< r << " " << g << " " << b << "\"/>" << endl;
 	} else {
 		referenceTexture(cvt, os, "reflectance", "\t\t", texturesDir, diffuseMap);
@@ -103,16 +103,16 @@ void addMaterial(GeometryConverter *cvt, std::ostream &os, const std::string &mt
 
 	os << indent << "\t</bsdf>" << endl << endl;
 
-	if (maskMap != "") 
+	if (maskMap != "")
 		os << "\t</bsdf>" << endl;
 }
 
-void parseMaterials(GeometryConverter *cvt, std::ostream &os, const fs::path &texturesDir, 
+void parseMaterials(GeometryConverter *cvt, std::ostream &os, const fs::path &texturesDir,
 		const fs::path &mtlFileName, std::set<std::string> &mtlList) {
 	SLog(EInfo, "Loading OBJ materials from \"%s\" ..", mtlFileName.string().c_str());
 	fs::ifstream is(mtlFileName);
 	if (is.bad() || is.fail())
-		SLog(EError, "Unexpected I/O error while accessing material file '%s'!", 
+		SLog(EError, "Unexpected I/O error while accessing material file '%s'!",
 			mtlFileName.string().c_str());
 	std::string buf, line;
 	std::string mtlName;
@@ -149,7 +149,7 @@ void parseMaterials(GeometryConverter *cvt, std::ostream &os, const fs::path &te
 	addMaterial(cvt, os, mtlName, texturesDir, diffuse, diffuseMap, maskMap);
 }
 
-void GeometryConverter::convertOBJ(const fs::path &inputFile, 
+void GeometryConverter::convertOBJ(const fs::path &inputFile,
 	std::ostream &os,
 	const fs::path &textureDirectory,
 	const fs::path &meshesDirectory) {
@@ -214,8 +214,8 @@ void GeometryConverter::convertOBJ(const fs::path &inputFile,
 			os << "\t\t<integer name=\"shapeIndex\" value=\"" << (m_geometryDict.size()-1) << "\"/>" << endl;
 		}
 
-		if (mesh->getBSDF() != NULL && 
-				mtlList.find(mesh->getBSDF()->getID()) != mtlList.end()) { 
+		if (mesh->getBSDF() != NULL &&
+				mtlList.find(mesh->getBSDF()->getID()) != mtlList.end()) {
 			const std::string &matID = mesh->getBSDF()->getID();
 			os << "\t\t<ref name=\"bsdf\" id=\"" << matID << "_material\"/>" << endl;
 		} else {

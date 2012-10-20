@@ -59,9 +59,9 @@ public:
 		}
 		return spec[i];
 	}
-	
+
 	static void set(Spectrum &spec, int i, Float value) {
-		if (i < 0 || i >= SPECTRUM_SAMPLES) 
+		if (i < 0 || i >= SPECTRUM_SAMPLES)
 			SLog(EError, "Index %i is out of range!", i);
 		else
 			spec[i] = value;
@@ -190,16 +190,16 @@ void logger_logProgress(Logger *logger, Float progress, const std::string &name,
 	const std::string &formatted, const std::string &eta) {
 	logger->logProgress(progress, name, formatted, eta, NULL);
 }
-	
+
 void mts_log(ELogLevel level, const std::string &msg) {
 	bp::object traceback(bp::import("traceback"));
 	bp::object extract_stack(traceback.attr("extract_stack"));
 	bp::object stack = extract_stack();
 	bp::object top(stack[bp::len(stack)-1]);
 	std::string module = bp::extract<std::string>(top[2]);
-	Thread::getThread()->getLogger()->log(level, 
-		NULL, bp::extract<const char *>(top[0]), 
-		bp::extract<int>(top[1]), "%s%s: %s", 
+	Thread::getThread()->getLogger()->log(level,
+		NULL, bp::extract<const char *>(top[0]),
+		bp::extract<int>(top[1]), "%s%s: %s",
 		module.c_str(), module[0] == '<' ? "" : "()",
 		msg.c_str());
 }
@@ -209,9 +209,9 @@ public:
 	FormatterWrapper(PyObject *self) : m_self(self) { Py_INCREF(m_self); }
 
 	std::string format(ELogLevel logLevel, const Class *theClass,
-			const Thread *thread, const std::string &text, 
+			const Thread *thread, const std::string &text,
 			const char *file, int line) {
-		return bp::call_method<std::string>(m_self, "format", logLevel, 
+		return bp::call_method<std::string>(m_self, "format", logLevel,
 				bp::ptr(const_cast<Class *>(theClass)),
 				bp::ptr(const_cast<Thread *>(thread)), text, file, line);
 	}
@@ -232,7 +232,7 @@ public:
 	}
 
 	void logProgress(Float progress, const std::string &name,
-		const std::string &formatted, const std::string &eta, 
+		const std::string &formatted, const std::string &eta,
 		const void *ptr) {
 		bp::call_method<void>(m_self, "logProgress", name, formatted, eta);
 	}
@@ -369,7 +369,7 @@ ConfigurableObject *pluginmgr_create(PluginManager *manager, bp::dict dict) {
 
 	ConfigurableObject *object = manager->createObject(properties);
 	for (std::map<std::string, ConfigurableObject *>::iterator it = children.begin();
-		it != children.end(); ++it) 
+		it != children.end(); ++it)
 		object->addChild(it->first, it->second);
 	object->configure();
 	return object;
@@ -518,7 +518,7 @@ void export_core() {
 
 	BP_CLASS(FileStream, Stream, bp::init<>())
 		.def(bp::init<std::string, FileStream::EFileMode>())
-		.def("getPath", &FileStream::getPath, 
+		.def("getPath", &FileStream::getPath,
 				BP_RETURN_CONSTREF)
 		.def("open", &FileStream::open)
 		.def("close", &FileStream::close)
@@ -550,7 +550,7 @@ void export_core() {
 
 	BP_CLASS(SerializableObject, Object, bp::no_init)
 		.def("serialize", &SerializableObject::serialize);
-	
+
 	void (ConfigurableObject::*cobject_add_child_1)(ConfigurableObject *) = &ConfigurableObject::addChild;
 	void (ConfigurableObject::*cobject_add_child_2)(const std::string &, ConfigurableObject *) = &ConfigurableObject::addChild;
 
@@ -609,7 +609,7 @@ void export_core() {
 
 	BP_WRAPPED_CLASS(Formatter, FormatterWrapper, Object, bp::init<>())
 		.def("format", &Formatter::format);
-	
+
 	Appender *(Logger::*logger_get_appender)(size_t) = &Logger::getAppender;
 	BP_CLASS(Logger, Object, bp::init<ELogLevel>())
 		.def("logProgress", logger_logProgress)
@@ -746,11 +746,11 @@ void export_core() {
 		.def("set", &WorkUnit::set)
 		.def("load", &WorkUnit::load)
 		.def("save", &WorkUnit::save);
-	
+
 	BP_CLASS(WorkResult, Object, bp::no_init)
 		.def("load", &WorkResult::load)
 		.def("save", &WorkResult::save);
-	
+
 	BP_CLASS(WorkProcessor, SerializableObject, bp::no_init)
 		.def("createWorkUnit", &WorkProcessor::createWorkUnit, BP_RETURN_VALUE)
 		.def("createWorkResult", &WorkProcessor::createWorkResult, BP_RETURN_VALUE)
@@ -768,7 +768,7 @@ void export_core() {
 		.def("isLocal", &ParallelProcess::isLocal)
 		.def("getLogLevel", &ParallelProcess::getLogLevel)
 		.def("getRequiredPlugins", &ParallelProcess::getRequiredPlugins, BP_RETURN_VALUE);
-	
+
 	BP_SETSCOPE(ParallelProcess_class);
 	bp::enum_<ParallelProcess::EStatus>("EStatus")
 		.value("EUnknown", ParallelProcess::EUnknown)
@@ -782,7 +782,7 @@ void export_core() {
 		.def("getCoreCount", &Worker::getCoreCount)
 		.def("isRemoteWorker", &Worker::isRemoteWorker);
 
-	BP_CLASS(LocalWorker, Worker, bp::init<const std::string>()) 
+	BP_CLASS(LocalWorker, Worker, bp::init<const std::string>())
 		.def(bp::init<const std::string, Thread::EThreadPriority>());
 
 	BP_CLASS(RemoteWorker, Worker, (bp::init<const std::string, Stream *>()))
@@ -967,7 +967,7 @@ void export_core() {
 		.def_readwrite("x", &Point3::x)
 		.def_readwrite("y", &Point3::y)
 		.def_readwrite("z", &Point3::z);
-	
+
 	BP_STRUCT(Point3i, bp::init<>())
 		.def(bp::init<int, int, int>())
 		.def(bp::init<Vector3i>())
@@ -1122,7 +1122,7 @@ void export_core() {
 		.def("getBSphere", &AABB::getBSphere, BP_RETURN_VALUE)
 		.def("serialize", &AABB::serialize)
 		.def("__repr__", &AABB::toString);
-	
+
 	bp::class_<Frame>("Frame", bp::init<>())
 		.def(bp::init<Vector, Vector, Normal>())
 		.def(bp::init<Vector, Vector, Vector>())
@@ -1151,7 +1151,7 @@ void export_core() {
 		.staticmethod("cosPhi")
 		.staticmethod("sinPhi2")
 		.staticmethod("cosPhi2");
-	
+
 	bp::class_<Transform>("Transform", bp::init<>())
 		.def(bp::init<Stream *>())
 		.def(bp::init<const Matrix4x4 &>())

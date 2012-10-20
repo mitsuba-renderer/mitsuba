@@ -38,14 +38,14 @@ public:
 	SpecularManifold(const Scene *scene, int maxIterations = -1);
 
 	/**
-	 * \brief Initialize the specular manifold with the specified 
+	 * \brief Initialize the specular manifold with the specified
 	 * path segment
 	 */
 	bool init(const Path &path, int start, int end);
 
 	/**
 	 * \brief Update the provided path segment based on the stored
-	 * specular manifold configuration 
+	 * specular manifold configuration
 	 */
 	bool update(Path &path, int start, int end);
 
@@ -98,7 +98,7 @@ private:
 		/* Position and partials */
 		Point p;
 		Vector dpdu, dpdv;
-		
+
 		/* Normal and partials */
 		Normal n, gn;
 		Vector dndu, dndv;
@@ -109,7 +109,7 @@ private:
 		/* Further information about the vertex */
 		Float eta;
 		const Object *object;
-		
+
 		/* Scratch space for matrix assembly */
 		Matrix2x2 a, b, c, u;
 
@@ -118,8 +118,8 @@ private:
 
 		/// Initialize certain fields to zero by default
 		inline SimpleVertex(EType type, const Point &p) :
-			degenerate(false), type(type), p(p), dpdu(0.0f), 
-			dpdv(0.0f), n(0.0f), dndu(0.0f), dndv(0.0f), 
+			degenerate(false), type(type), p(p), dpdu(0.0f),
+			dpdv(0.0f), n(0.0f), dndu(0.0f), dndv(0.0f),
 			m(0.0f), eta(1.0f), object(NULL) { }
 
 		/// Map a tangent space displacement into world space

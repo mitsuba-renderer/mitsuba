@@ -68,7 +68,7 @@ Transform Transform::rotate(const Vector &axis, Float angle) {
 	/* Make sure that the axis is normalized */
 	Vector naxis = normalize(axis);
 	math::sincos(degToRad(angle), &sinTheta, &cosTheta);
-	
+
 	Matrix4x4 result;
 	result(0, 0) = naxis.x * naxis.x + (1.0f - naxis.x * naxis.x) * cosTheta;
 	result(0, 1) = naxis.x * naxis.y * (1.0f - cosTheta) - naxis.z * sinTheta;
@@ -102,7 +102,7 @@ Transform Transform::perspective(Float fov, Float clipNear, Float clipFar) {
 	 *  xProj = x / z
 	 *  yProj = y / z
 	 *  zProj = (far * (z - near)) / (z * (far-near))
-	 *  
+	 *
 	 *  Camera-space depths are not mapped linearly!
 	 */
 	Float recip = 1.0f / (clipFar - clipNear);
@@ -216,7 +216,7 @@ Transform Transform::lookAt(const Point &p, const Point &t, const Vector &up) {
 Transform Transform::fromFrame(const Frame &frame) {
 	Matrix4x4 result(
 		frame.s.x, frame.t.x, frame.n.x, 0,
-		frame.s.y, frame.t.y, frame.n.y, 0, 
+		frame.s.y, frame.t.y, frame.n.y, 0,
 		frame.s.z, frame.t.z, frame.n.z, 0,
 		0, 0, 0, 1
 	);
@@ -231,7 +231,7 @@ std::string Transform::toString() const {
 }
 
 /**
- * \brief Tridiagonalizes a 3x3 matrix using a single 
+ * \brief Tridiagonalizes a 3x3 matrix using a single
  * Householder transformation and returns the result.
  *
  * Based on "Geometric Tools" by David Eberly.
@@ -275,7 +275,7 @@ static inline void tred3(Matrix3x3 &m, Float *diag, Float *subd) {
  * matrix using the QL algorithm with implicit shifts
  *
  * Based on "Geometric Tools" by David Eberly and Numerical Recipes by
- * Teukolsky, et al. Originally, this code goes back to the Handbook 
+ * Teukolsky, et al. Originally, this code goes back to the Handbook
  * for Automatic Computation by Wilkionson and Reinsch, as well as
  * the corresponding EISPACK routine.
  */
@@ -289,7 +289,7 @@ static inline bool ql3(Matrix3x3 &m, Float *diag, Float *subd) {
 			int j;
 			for (j = i; j < 2; ++j) {
 				Float tmp = std::abs(diag[j]) + std::abs(diag[j+1]);
-				if (std::abs(subd[j]) + tmp == tmp) 
+				if (std::abs(subd[j]) + tmp == tmp)
 					break;
 			}
 			if (j == i)
@@ -297,7 +297,7 @@ static inline bool ql3(Matrix3x3 &m, Float *diag, Float *subd) {
 
 			Float value0 = (diag[i + 1] - diag[i])/(2*subd[i]);
 			Float value1 = std::sqrt(value0*value0 + 1);
-			value0 = diag[j] - diag[i] + subd[i] / 
+			value0 = diag[j] - diag[i] + subd[i] /
 				((value0 < 0) ? (value0 - value1) : (value0 + value1));
 
 			Float sn = 1, cs = 1, value2 = 0;
@@ -367,11 +367,11 @@ bool eig3(Matrix3x3 &m, Float lambda[3]) {
 			std::swap(lambda[i], lambda[largest]);
 
 			// Swap the eigenvectors
-			for (int j=0; j<3; ++j) 
+			for (int j=0; j<3; ++j)
 				std::swap(m(j, i), m(j, largest));
 		}
 	}
-	
+
 	return true;
 }
 
@@ -404,7 +404,7 @@ static void eig3_evals(const Matrix3x3 &A, double root[3]) {
 	// and in solving the equation for the roots in closed form.
 	double c2Div3 = c2*msInv3;
 	double aDiv3 = (c1 - c2*c2Div3)*msInv3;
-	if (aDiv3 > 0.0) 
+	if (aDiv3 > 0.0)
 		aDiv3 = 0.0;
 
 	double halfMB = 0.5*(c0 + c2Div3*(2.0*c2Div3*c2Div3 - c1));
@@ -493,7 +493,7 @@ static void eig3_evecs(Matrix3x3& A, const Float lambda[3], const Vector& U2, in
 		  absValue = std::abs(p01),
 		  invLength;
 
-	if (absValue > maxValue) 
+	if (absValue > maxValue)
 		maxValue = absValue;
 
 	int row = 0;
@@ -516,7 +516,7 @@ static void eig3_evecs(Matrix3x3& A, const Float lambda[3], const Vector& U2, in
 			evecs[i2] = p11*U0 + p01*U1;
 		}
 	} else {
-		if (row == 0) 
+		if (row == 0)
 			evecs[i2] = U1;
 		else
 			evecs[i2] = U0;
@@ -534,7 +534,7 @@ static void eig3_evecs(Matrix3x3& A, const Float lambda[3], const Vector& U2, in
 	maxValue = std::abs(p00);
 	row = 0;
 	absValue = std::abs(p01);
-	if (absValue > maxValue) 
+	if (absValue > maxValue)
 		maxValue = absValue;
 	absValue = std::abs(p11);
 	if (absValue > maxValue) {
@@ -571,7 +571,7 @@ static void eig3_evecs(Matrix3x3& A, const Float lambda[3], const Vector& U2, in
 
 /**
  * \brief Fast non-iterative 3x3 eigenvalue decomposition
- * 
+ *
  * Based on "Geometric Tools" by David Eberly.
  */
 void eig3_noniter(Matrix3x3 &A, Float lambda[3]) {

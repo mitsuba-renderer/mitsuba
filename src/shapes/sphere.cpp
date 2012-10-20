@@ -47,7 +47,7 @@ MTS_NAMESPACE_BEGIN
  *		  be flipped? \default{\code{false}, i.e. the normals point outside}
  *	   }
  * }
- * 
+ *
  * \renderings{
  *     \rendering{Basic example, see \lstref{sphere-basic}}
  *         {shape_sphere_basic}
@@ -55,11 +55,11 @@ MTS_NAMESPACE_BEGIN
  *         {shape_sphere_parameterization}
  * }
  *
- * This shape plugin describes a simple sphere intersection primitive. It should 
+ * This shape plugin describes a simple sphere intersection primitive. It should
  * always be preferred over sphere approximations modeled using triangles.
- * 
- * \begin{xml}[caption={A sphere can either be configured using a linear 
- * \code{toWorld} transformation or the \code{center} and \code{radius} parameters (or both). 
+ *
+ * \begin{xml}[caption={A sphere can either be configured using a linear
+ * \code{toWorld} transformation or the \code{center} and \code{radius} parameters (or both).
  *    The above two declarations are equivalent.}, label=lst:sphere-basic]
  * <shape type="sphere">
  *     <transform name="toWorld">
@@ -77,7 +77,7 @@ MTS_NAMESPACE_BEGIN
  * \end{xml}
  * When a \pluginref{sphere} shape is turned into an \pluginref{area} light source,
  * Mitsuba switches to an efficient sampling strategy \cite{Shirley91Direct} that
- * has particularly low variance. This makes it a good default choice for lighting 
+ * has particularly low variance. This makes it a good default choice for lighting
  * new scenes (\figref{spherelight}).
  * \renderings{
  *     \rendering{Spherical area light modeled using triangles}
@@ -87,8 +87,8 @@ MTS_NAMESPACE_BEGIN
  *
  *     \caption{
  *         \label{fig:spherelight}
- *         Area lights built from the combination of the \pluginref{area} 
- *         and \pluginref{sphere} plugins produce renderings that have an 
+ *         Area lights built from the combination of the \pluginref{area}
+ *         and \pluginref{sphere} plugins produce renderings that have an
  *         overall lower variance.
  *     }
  * }
@@ -106,7 +106,7 @@ MTS_NAMESPACE_BEGIN
 class Sphere : public Shape {
 public:
 	Sphere(const Properties &props) : Shape(props) {
-		m_objectToWorld = 
+		m_objectToWorld =
 			Transform::translate(Vector(props.getPoint("center", Point(0.0f))));
 		m_radius = props.getFloat("radius", 1.0f);
 
@@ -114,9 +114,9 @@ public:
 			Transform objectToWorld = props.getTransform("toWorld");
 			Float radius = objectToWorld(Vector(1,0,0)).length();
 			// Remove the scale from the object-to-world transform
-			m_objectToWorld = 
-				  objectToWorld 
-				* Transform::scale(Vector(1/radius)) 
+			m_objectToWorld =
+				  objectToWorld
+				* Transform::scale(Vector(1/radius))
 				* m_objectToWorld;
 			m_radius *= radius;
 		}
@@ -131,7 +131,7 @@ public:
 			Log(EError, "Cannot create spheres of radius <= 0");
 	}
 
-	Sphere(Stream *stream, InstanceManager *manager) 
+	Sphere(Stream *stream, InstanceManager *manager)
 			: Shape(stream, manager) {
 		m_objectToWorld = Transform(stream);
 		m_radius = stream->readFloat();
@@ -177,7 +177,7 @@ public:
 		if (nearT < mint) {
 			if (farT > maxt)
 				return false;
-			t = (Float) farT;		
+			t = (Float) farT;
 		} else {
 			t = (Float) nearT;
 		}
@@ -205,10 +205,10 @@ public:
 		return true;
 	}
 
-	void fillIntersectionRecord(const Ray &ray, 
+	void fillIntersectionRecord(const Ray &ray,
 			const void *temp, Intersection &its) const {
 		its.p = ray(its.t);
-		
+
 		#if defined(SINGLE_PRECISION)
 			/* Re-project onto the sphere to limit cancellation effects */
 			its.p = m_center + normalize(its.p - m_center) * m_radius;
@@ -261,7 +261,7 @@ public:
 
 		if (m_flipNormals)
 			pRec.n *= -1;
-	
+
 		pRec.pdf = m_invSurfaceArea;
 		pRec.measure = EArea;
 	}
@@ -301,7 +301,7 @@ public:
 				Warp::squareToUniformCone(cosAlpha, sample));
 			dRec.pdf = Warp::squareToUniformConePdf(cosAlpha);
 
-			/* Distance to the projection of the sphere center 
+			/* Distance to the projection of the sphere center
 			   onto the ray (dRec.ref, dRec.d) */
 			const Float projDist = dot(refToCenter, dRec.d);
 
@@ -310,7 +310,7 @@ public:
 			   with normal refToCenter which goes through the sphere's center */
 			const Float baseT = refDist2 / projDist;
 			const Point query = dRec.ref + dRec.d * baseT;
-			
+
 			const Vector queryToCenter = m_center - query;
 			const Float queryDist2     = queryToCenter.lengthSquared();
 			const Float queryProjDist  = dot(queryToCenter, dRec.d);
@@ -323,7 +323,7 @@ public:
 			Float nearT, farT;
 			if (!solveQuadratic(A, B, C, nearT, farT)) {
 				/* The intersection couldn't be found due to roundoff errors..
-				   Don't give up -- one workaround is to project the closest 
+				   Don't give up -- one workaround is to project the closest
 				   ray position onto the sphere */
 				nearT = queryProjDist;
 			}
@@ -343,7 +343,7 @@ public:
 			Float dist2 = dRec.d.lengthSquared();
 			dRec.dist = std::sqrt(dist2);
 			dRec.d /= dRec.dist;
-			dRec.pdf = m_invSurfaceArea * dist2 
+			dRec.pdf = m_invSurfaceArea * dist2
 				/ absDot(dRec.d, dRec.n);
 		}
 
@@ -369,7 +369,7 @@ public:
 			if (dRec.measure == ESolidAngle)
 				return pdfSA;
 			else if (dRec.measure == EArea)
-				return pdfSA * absDot(dRec.d, dRec.n) 
+				return pdfSA * absDot(dRec.d, dRec.n)
 					/ (dRec.dist*dRec.dist);
 			else
 				return 0.0f;
@@ -470,7 +470,7 @@ public:
 			<< "  radius = " << m_radius << ", " << endl
 			<< "  center = " << m_center.toString() << ", " << endl
 			<< "  bsdf = " << indent(m_bsdf.toString()) << "," << endl;
-		if (isMediumTransition()) 
+		if (isMediumTransition())
 			oss << "  interiorMedium = " << indent(m_interiorMedium.toString()) << "," << endl
 				<< "  exteriorMedium = " << indent(m_exteriorMedium.toString()) << "," << endl;
 		oss << "  emitter = " << indent(m_emitter.toString()) << "," << endl

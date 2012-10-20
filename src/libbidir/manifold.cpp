@@ -50,7 +50,7 @@ static StatsCounter statsUpdateFailed(
 static StatsCounter statsMaxManifold(
 		"Specular manifold", "Max. manifold size", EMaximumValue);
 
-SpecularManifold::SpecularManifold(const Scene *scene, int maxIterations) 
+SpecularManifold::SpecularManifold(const Scene *scene, int maxIterations)
   : m_scene(scene) {
 	m_maxIterations = maxIterations > 0 ? maxIterations :
 		MTS_MANIFOLD_MAX_ITERATIONS;
@@ -73,7 +73,7 @@ bool SpecularManifold::init(const Path &path, int start, int end) {
 	/* When the endpoint is on an orthographic camera or directional light
 	   source, switch to a directionally pinned vertex instead */
 	if (vs->getType() & (PathVertex::ESensorSample | PathVertex::EEmitterSample)) {
-		const PositionSamplingRecord &pRec 
+		const PositionSamplingRecord &pRec
 			= vs->getPositionSamplingRecord();
 		uint32_t type = static_cast<const AbstractEmitter *>(pRec.object)->getType()
 			& (AbstractEmitter::EDeltaDirection | AbstractEmitter::EDeltaPosition);
@@ -219,7 +219,7 @@ bool SpecularManifold::computeTangents() {
 		if (ili == 0)
 			return false;
 
-		ili = 1/ili; wi *= ili; 
+		ili = 1/ili; wi *= ili;
 
 		if (v[0].type == EReflection || v[0].type == ERefraction) {
 			Float eta = v[0].eta;
@@ -229,9 +229,9 @@ bool SpecularManifold::computeTangents() {
 			Vector H;
 			Float ilh;
 			if (normalizeH) {
-				/* Generally compute derivatives with respect to the normalized 
-				   half-vector. When given an index-matched refraction event, 
-				   don't perform this normalization, since the desired vertex 
+				/* Generally compute derivatives with respect to the normalized
+				   half-vector. When given an index-matched refraction event,
+				   don't perform this normalization, since the desired vertex
 				   configuration is actually where H = 0. */
 
 				if (dot(wi, v[0].gn) < 0)
@@ -245,7 +245,7 @@ bool SpecularManifold::computeTangents() {
 				ilh = 1.0f;
 			}
 
-			/* Orient the half-vector so that it points in the same 
+			/* Orient the half-vector so that it points in the same
 			   hemisphere as the geometric surface normal */
 
 			Float dot_H_n    = dot(v[0].n, H),
@@ -277,7 +277,7 @@ bool SpecularManifold::computeTangents() {
 			/* Derivatives of C with respect to x_i */
 			dH_du = -v[0].dpdu * (ili + ilo) + wi * (dot(wi, v[0].dpdu) * ili)
 			                                 + wo * (dot(wo, v[0].dpdu) * ilo);
-			dH_dv = -v[0].dpdv * (ili + ilo) + wi * (dot(wi, v[0].dpdv) * ili) 
+			dH_dv = -v[0].dpdv * (ili + ilo) + wi * (dot(wi, v[0].dpdv) * ili)
 			                                 + wo * (dot(wo, v[0].dpdv) * ilo);
 
 			if (normalizeH) {
@@ -301,7 +301,7 @@ bool SpecularManifold::computeTangents() {
 			}
 
 			v[0].c = Matrix2x2(
-			    dot(dH_du, s), dot(dH_dv, s), 
+			    dot(dH_du, s), dot(dH_dv, s),
 			    dot(dH_du, t), dot(dH_dv, t));
 
 			/* Store the microfacet normal wrt. the local (orthonormal) shading frame */
@@ -349,7 +349,7 @@ bool SpecularManifold::computeTangents() {
 			Vector ds_dcur_v  = cross(dt_dcur_v, wi)  + cross(t, dwi_dcur_v);
 
 			/* Some tangential projections */
-			Vector2 
+			Vector2
 				t_cur_dpdu (dot(v[ 0].dpdu, s), dot(v[ 0].dpdu, t)),
 				t_cur_dpdv (dot(v[ 0].dpdv, s), dot(v[ 0].dpdv, t)),
 				t_next_dpdu(dot(v[ 1].dpdu, s), dot(v[ 1].dpdu, t)),
@@ -379,7 +379,7 @@ bool SpecularManifold::computeTangents() {
 
 	/* Find the tangent space with respect to translation of the last
 	   vertex. For this, we must solve a tridiagonal system. The following is
-	   simplified version of the block tridiagonal LU factorization algorithm 
+	   simplified version of the block tridiagonal LU factorization algorithm
 	   for this specific problem */
 	Matrix2x2 Li;
 	if (!m_vertices[0].b.invert(Li))
@@ -393,7 +393,7 @@ bool SpecularManifold::computeTangents() {
 
 	m_vertices[n-1].Tp = -Li * m_vertices[n-1].c;
 
-	for (int i=n-2; i>=0; --i) 
+	for (int i=n-2; i>=0; --i)
 		m_vertices[i].Tp = -m_vertices[i].u * m_vertices[i+1].Tp;
 	return true;
 }
@@ -439,7 +439,7 @@ bool SpecularManifold::project(const Vector &d) {
 			ray.setOrigin(its.p);
 			ray.setDirection(reflect(-ray.d, m));
 		} else if (vertex.type == ERefraction) {
-			if (!m_scene->rayIntersect(ray, its)) 
+			if (!m_scene->rayIntersect(ray, its))
 				return false;
 
 			Vector n = its.shFrame.n,
@@ -460,7 +460,7 @@ bool SpecularManifold::project(const Vector &d) {
 				  invLength = 1.0f / length;
 
 			/* Check for occlusion */
-			if (m_scene->rayIntersect(Ray(ray, Epsilon, length))) 
+			if (m_scene->rayIntersect(Ray(ray, Epsilon, length)))
 				return false;
 
 			vertex.p = ray(length);
@@ -535,7 +535,7 @@ bool SpecularManifold::move(const Point &target, const Normal &n) {
 
 	statsSuccessfulWalks.incrementBase();
 
-	Float invScale = 1.0f / std::max(std::max(std::abs(target.x), 
+	Float invScale = 1.0f / std::max(std::max(std::abs(target.x),
 			std::abs(target.y)), std::abs(target.z));
 	Float stepSize = 1;
 
@@ -551,9 +551,9 @@ bool SpecularManifold::move(const Point &target, const Normal &n) {
 		Float dist = rel.length(), newDist;
 		if (dist * invScale < MTS_MANIFOLD_EPSILON) {
 			/* Check for an annoying corner-case where the last
-			   two vertices converge to the same point (this can 
+			   two vertices converge to the same point (this can
 			   happen e.g. on rough planar reflectors) */
-			dist = (m_vertices[m_vertices.size()-1].p 
+			dist = (m_vertices[m_vertices.size()-1].p
 			      - m_vertices[m_vertices.size()-2].p).length();
 			if (dist * invScale < Epsilon) {
 				return false;
@@ -584,7 +584,7 @@ bool SpecularManifold::move(const Point &target, const Normal &n) {
 			return false;
 		}
 
-		/* Take a step using the computed tangents and project 
+		/* Take a step using the computed tangents and project
 		   back on the manifold */
 		#if MTS_MANIFOLD_DEBUG == 1
 			const SimpleVertex &last = m_vertices[m_vertices.size()-1];
@@ -648,7 +648,7 @@ bool SpecularManifold::update(Path &path, int start, int end) {
 			&v = m_vertices[j],
 			&vn = m_vertices[j+1];
 
-		PathVertex 
+		PathVertex
 			*pred   = path.vertexOrNull(i-step),
 			*vertex = path.vertex(i),
 			*succ   = path.vertex(i+step);
@@ -694,8 +694,8 @@ bool SpecularManifold::update(Path &path, int start, int end) {
 			}
 			i += step;
 		} else if (!v.degenerate) {
-			if (!vertex->perturbDirection(m_scene, 
-					pred, predEdge, succEdge, succ, d, 
+			if (!vertex->perturbDirection(m_scene,
+					pred, predEdge, succEdge, succ, d,
 					length, desiredType, mode)) {
 				#if MTS_MANIFOLD_DEBUG == 1
 					cout << "update(): failed in perturbDirection()" << endl;
@@ -704,7 +704,7 @@ bool SpecularManifold::update(Path &path, int start, int end) {
 				return false;
 			}
 
-			Float relerr = (vn.p - succ->getPosition()).length() / 
+			Float relerr = (vn.p - succ->getPosition()).length() /
 				std::max(std::max(std::abs(vn.p.x),
 					std::abs(vn.p.y)), std::abs(vn.p.z));
 
@@ -723,7 +723,7 @@ bool SpecularManifold::update(Path &path, int start, int end) {
 			else
 				compType = BSDF::EDeltaReflection;
 
-			if (!vertex->propagatePerturbation(m_scene, 
+			if (!vertex->propagatePerturbation(m_scene,
 					pred, predEdge, succEdge, succ, compType,
 					length, desiredType, mode)) {
 				#if MTS_MANIFOLD_DEBUG == 1
@@ -733,7 +733,7 @@ bool SpecularManifold::update(Path &path, int start, int end) {
 				return false;
 			}
 
-			Float relerr = (vn.p - succ->getPosition()).length() / 
+			Float relerr = (vn.p - succ->getPosition()).length() /
 				std::max(std::max(std::abs(vn.p.x),
 					std::abs(vn.p.y)), std::abs(vn.p.z));
 			if (relerr > 1e-3f) {
@@ -792,7 +792,7 @@ Float SpecularManifold::det(const Path &path, int a, int b, int c) {
 	m_vertices[b_idx].c.setZero();
 
 	if (nSpecular == 0) {
-		/* The chain only consists of glossy vertices -- simply compute the 
+		/* The chain only consists of glossy vertices -- simply compute the
 		   determinant of the block tridiagonal matrix A.
 
 		   See D.K. Salkuyeh, Comments on "A note on a three-term recurrence for a
@@ -814,9 +814,9 @@ Float SpecularManifold::det(const Path &path, int a, int b, int c) {
 		return std::abs(1 / det);
 	} else {
 		/* The chain contains both glossy and specular materials. Compute the
-		   determinant of A^-1, where rows corresponding to specular vertices 
+		   determinant of A^-1, where rows corresponding to specular vertices
 		   have been crossed out. The performance of the following is probably
-		   terrible (lots of dynamic memory allocation), but it works and 
+		   terrible (lots of dynamic memory allocation), but it works and
 		   this case happens rarely enough .. */
 
 		Eigen::Matrix<Float, Eigen::Dynamic, Eigen::Dynamic> A(2*(nGlossy + nSpecular), 2*(nGlossy + nSpecular));
@@ -902,7 +902,7 @@ Float SpecularManifold::G(const Path &path, int a, int b) {
 	if (std::abs(a-b) == 1) {
 		if (a > b)
 			std::swap(a, b);
-		return path.edge(a)->evalCached(path.vertex(a), 
+		return path.edge(a)->evalCached(path.vertex(a),
 			path.vertex(b), PathEdge::EGeometricTerm)[0];
 	}
 

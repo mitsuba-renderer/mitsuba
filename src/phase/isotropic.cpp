@@ -24,7 +24,7 @@ MTS_NAMESPACE_BEGIN
 
 /*!\plugin{isotropic}{Isotropic phase function}
  * \order{1}
- 
+
  * \renderings{
  *     \rendering{Isotropic}{phase_isotropic}
  *     \rendering{Anisotropic micro-flakes}{phase_microflakes_005}
@@ -34,16 +34,16 @@ MTS_NAMESPACE_BEGIN
  *
  *
  * This phase function simulates completely uniform scattering,
- * where all directionality is lost after a single scattering 
+ * where all directionality is lost after a single scattering
  * interaction. It does not have any parameters.
  */
 class IsotropicPhaseFunction : public PhaseFunction {
 public:
-	IsotropicPhaseFunction(const Properties &props) 
+	IsotropicPhaseFunction(const Properties &props)
 		: PhaseFunction(props) {
 	}
 
-	IsotropicPhaseFunction(Stream *stream, InstanceManager *manager) 
+	IsotropicPhaseFunction(Stream *stream, InstanceManager *manager)
 		: PhaseFunction(stream, manager) {
 		configure();
 	}
@@ -59,14 +59,14 @@ public:
 		PhaseFunction::serialize(stream, manager);
 	}
 
-	Float sample(PhaseFunctionSamplingRecord &pRec, 
+	Float sample(PhaseFunctionSamplingRecord &pRec,
 			Sampler *sampler) const {
 		Point2 sample(sampler->next2D());
 		pRec.wo = Warp::squareToUniformSphere(sample);
 		return 1.0f;
 	}
 
-	Float sample(PhaseFunctionSamplingRecord &pRec, 
+	Float sample(PhaseFunctionSamplingRecord &pRec,
 			Float &pdf, Sampler *sampler) const {
 		pRec.wo = Warp::squareToUniformSphere(sampler->next2D());
 		pdf = Warp::squareToUniformSpherePdf();

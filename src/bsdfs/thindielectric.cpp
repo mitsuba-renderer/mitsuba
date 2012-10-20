@@ -30,21 +30,21 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{extIOR}{\Float\Or\String}{Exterior index of refraction specified
  *      numerically or using a known material name. \default{\texttt{air} / 1.000277}}
  *     \parameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
- *         factor that can be used to modulate the specular reflection component. Note 
+ *         factor that can be used to modulate the specular reflection component. Note
  *         that for physical realism, this parameter should never be touched. \default{1.0}}
  *     \parameter{specular\showbreak Transmittance}{\Spectrum\Or\Texture}{Optional
- *         factor that can be used to modulate the specular transmission component. Note 
+ *         factor that can be used to modulate the specular transmission component. Note
  *         that for physical realism, this parameter should never be touched. \default{1.0}}
  * }
  *
- * This plugin models a \emph{thin} dielectric material that is embedded inside another 
- * dielectric---for instance, glass surrounded by air. The interior of the material 
+ * This plugin models a \emph{thin} dielectric material that is embedded inside another
+ * dielectric---for instance, glass surrounded by air. The interior of the material
  * is assumed to be so thin that its effect on transmitted rays is negligible,
  * Hence, light exits such a material without any form of angular deflection
  * (though there is still specular reflection).
  *
- * This model should be used for things like glass windows that were modeled using only a 
- * single sheet of triangles or quads. On the other hand, when the window consists of 
+ * This model should be used for things like glass windows that were modeled using only a
+ * single sheet of triangles or quads. On the other hand, when the window consists of
  * proper closed geometry, \pluginref{dielectric} is the right choice. This is illustrated below:
  *
  * \begin{figure}[h]
@@ -62,11 +62,11 @@ MTS_NAMESPACE_BEGIN
  *     An illustration of the difference between the \pluginref{dielectric} and \pluginref{thindielectric} plugins}
  * \end{figure}
  *
- * The implementation correctly accounts for multiple internal reflections 
- * inside the thin dielectric at \emph{no significant extra cost}, i.e. paths 
- * of the type $R, TRT, TR^3T, ..$ for reflection and $TT, TR^2, TR^4T, ..$ for 
- * refraction, where $T$ and $R$ denote individual reflection and refraction 
- * events, respectively. 
+ * The implementation correctly accounts for multiple internal reflections
+ * inside the thin dielectric at \emph{no significant extra cost}, i.e. paths
+ * of the type $R, TRT, TR^3T, ..$ for reflection and $TT, TR^2, TR^4T, ..$ for
+ * refraction, where $T$ and $R$ denote individual reflection and refraction
+ * events, respectively.
  */
 class ThinDielectric : public BSDF {
 public:
@@ -89,7 +89,7 @@ public:
 			props.getSpectrum("specularTransmittance", Spectrum(1.0f)));
 	}
 
-	ThinDielectric(Stream *stream, InstanceManager *manager) 
+	ThinDielectric(Stream *stream, InstanceManager *manager)
 			: BSDF(stream, manager) {
 		m_eta = stream->readFloat();
 		m_specularReflectance = static_cast<Texture *>(manager->getInstance(stream));
@@ -111,18 +111,18 @@ public:
 			m_specularReflectance, "specularReflectance", 1.0f);
 		m_specularTransmittance = ensureEnergyConservation(
 			m_specularTransmittance, "specularTransmittance", 1.0f);
-		
+
 		m_components.clear();
 		m_components.push_back(EDeltaReflection | EFrontSide | EBackSide
 			| (m_specularReflectance->isConstant() ? 0 : ESpatiallyVarying));
-		m_components.push_back(ENull | EFrontSide | EBackSide 
+		m_components.push_back(ENull | EFrontSide | EBackSide
 			| (m_specularTransmittance->isConstant() ? 0 : ESpatiallyVarying));
 
 		m_components.clear();
 		m_components.push_back(ENull | EFrontSide | EBackSide);
 		m_usesRayDifferentials = false;
 
-		m_usesRayDifferentials = 
+		m_usesRayDifferentials =
 			m_specularReflectance->usesRayDifferentials() ||
 			m_specularTransmittance->usesRayDifferentials();
 
@@ -331,7 +331,7 @@ private:
 };
 
 /* Fake glass shader -- it is really hopeless to visualize
-   this material in the VPL renderer, so let's try to do at least 
+   this material in the VPL renderer, so let's try to do at least
    something that suggests the presence of a transparent boundary */
 class ThinDielectricShader : public Shader {
 public:
@@ -362,7 +362,7 @@ public:
 	MTS_DECLARE_CLASS()
 };
 
-Shader *ThinDielectric::createShader(Renderer *renderer) const { 
+Shader *ThinDielectric::createShader(Renderer *renderer) const {
 	return new ThinDielectricShader(renderer);
 }
 

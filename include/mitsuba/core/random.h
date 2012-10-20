@@ -23,7 +23,7 @@
 #include <mitsuba/mitsuba.h>
 #include <mitsuba/core/cobject.h>
 
-/* 
+/*
    SIMD oriented Fast Mersenne Twister (SFMT) pseudorandom number generator
    http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/SFMT/
 
@@ -65,12 +65,12 @@
 	 Springer (2008) 607--622.
 	 DOI: 10.1007/978-3-540-74496-2_36
    T. Nishimura, ``Tables of 64-bit Mersenne Twisters''
-     ACM Transactions on Modeling and 
+     ACM Transactions on Modeling and
      Computer Simulation 10. (2000) 348--357.
    M. Matsumoto and T. Nishimura,
      ``Mersenne Twister: a 623-dimensionally equidistributed
        uniform pseudorandom number generator''
-     ACM Transactions on Modeling and 
+     ACM Transactions on Modeling and
      Computer Simulation 8. (Jan. 1998) 3--30.
  * \ingroup libcore
 */
@@ -79,7 +79,7 @@ MTS_NAMESPACE_BEGIN
 
 /**
  * \brief %Random number generator based on SIMD-oriented Fast Mersenne Twister
- * 
+ *
  * \author Mutsuo Saito and Makoto Matsumoto at Hiroshima University.
  *
  * \ingroup libcore
@@ -90,7 +90,7 @@ public:
 	/**
 	 * \brief Construct a new seeded random generator.
 	 *
-	 * Uses the default seed on Windows and '/dev/urandom' 
+	 * Uses the default seed on Windows and '/dev/urandom'
 	 * on OSX and Linux.
 	 */
 	Random();
@@ -117,18 +117,18 @@ public:
 
 	/**
 	 * \brief Seed the random generator from an array
-	 * \remark This function is currently not exposed 
+	 * \remark This function is currently not exposed
 	 * by the Python bindings
 	 */
 	void seed(uint64_t *values, uint64_t length);
 
-	/// Return an integer on the [0, 2^63-1]-interval 
+	/// Return an integer on the [0, 2^63-1]-interval
 	uint64_t nextULong();
 
-	/// Return an integer on the [0, n)-interval 
+	/// Return an integer on the [0, n)-interval
 	uint32_t nextUInt(uint32_t n);
 
-	/// Return an integer on the [0, n)-interval 
+	/// Return an integer on the [0, n)-interval
 	size_t nextSize(size_t n);
 
 	/// Return a floating point value on the [0, 1) interval
@@ -138,16 +138,16 @@ public:
 	Float nextStandardNormal();
 
 	/**
-	 * \brief Draw a uniformly distributed permutation and permute the 
+	 * \brief Draw a uniformly distributed permutation and permute the
 	 * given STL container.
 	 *
 	 * See Knuth, TAoCP Vol. 2 (3rd 3d), Section 3.4.2.
 	 *
-	 * \remark This function is currently not exposed 
+	 * \remark This function is currently not exposed
 	 * by the Python bindings
 	 */
 	template <typename Iterator> void shuffle(Iterator it1, Iterator it2) {
-		for (Iterator it = it2 - 1; it > it1; --it) 
+		for (Iterator it = it2 - 1; it > it1; --it)
 			std::iter_swap(it, it1 + nextSize((size_t) (it-it1)));
 	}
 

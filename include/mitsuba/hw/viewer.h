@@ -50,14 +50,14 @@ protected:
 	/// Draw a heads-up display
 	void drawHUD(const std::string &text);
 
-	/// Request that the draw() routine be called 
+	/// Request that the draw() routine be called
 	inline void redraw() { m_leaveEventLoop = true; }
 
 	/// To be overwritten by the subclass: main drawing routine
 	virtual void draw() = 0;
 
 	/**
-	 * \brief To be overwritten (optionally): perform any necessary 
+	 * \brief To be overwritten (optionally): perform any necessary
 	 * initializations
 	 *
 	 * The default implementation does nothing and returns \c true.
@@ -73,13 +73,13 @@ protected:
 
 	/// To be overwritten (optionally): handle a key press event
 	virtual void keyPressed(const DeviceEvent &event);
-	
+
 	/// To be overwritten (optionally): handle a key release event
 	virtual void keyReleased(const DeviceEvent &event);
-	
+
 	/// To be overwritten (optionally): handle a mouse button press event
 	virtual void mouseButtonPressed(const DeviceEvent &event);
-	
+
 	/// To be overwritten (optionally): handle a mouse button release event
 	virtual void mouseButtonReleased(const DeviceEvent &event);
 
@@ -94,7 +94,7 @@ protected:
 
 	/// To be overwritten (optionally): handle a mouse end drag event
 	virtual void mouseEndDrag(const DeviceEvent &event);
-	
+
 	/// To be overwritten (optionally): handle a window resize event
 	virtual void windowResized(const DeviceEvent &event);
 

@@ -33,10 +33,10 @@ Texture::Texture(const Properties &props)
  : ConfigurableObject(props) {
 }
 
-Texture::Texture(Stream *stream, InstanceManager *manager) 
+Texture::Texture(Stream *stream, InstanceManager *manager)
  : ConfigurableObject(stream, manager) {
 }
-	
+
 Vector3i Texture::getResolution() const {
 	return Vector3i(0);
 }
@@ -74,7 +74,7 @@ Texture2D::Texture2D(const Properties &props) : Texture(props) {
 	}
 }
 
-Texture2D::Texture2D(Stream *stream, InstanceManager *manager) 
+Texture2D::Texture2D(Stream *stream, InstanceManager *manager)
  : Texture(stream, manager) {
 	m_uvOffset = Point2(stream);
 	m_uvScale = Vector2(stream);
@@ -92,7 +92,7 @@ void Texture2D::serialize(Stream *stream, InstanceManager *manager) const {
 Spectrum Texture2D::eval(const Intersection &its, bool filter) const {
 	Point2 uv = Point2(its.uv.x * m_uvScale.x, its.uv.y * m_uvScale.y) + m_uvOffset;
 	if (its.hasUVPartials && filter) {
-		return eval(uv, 
+		return eval(uv,
 			Vector2(its.dudx * m_uvScale.x, its.dvdx * m_uvScale.y),
 			Vector2(its.dudy * m_uvScale.x, its.dvdy * m_uvScale.y));
 	} else {

@@ -26,7 +26,7 @@
 
 MTS_NAMESPACE_BEGIN
 
-GLGeometry::GLGeometry(const TriMesh *mesh) 
+GLGeometry::GLGeometry(const TriMesh *mesh)
  : GPUGeometry(mesh) {
 	m_id[0] = m_id[1] = 0;
 }
@@ -35,8 +35,8 @@ void GLGeometry::init() {
 	Assert(m_id[0] == 0 && m_id[1] == 0);
 	glGenBuffers(2, m_id);
 	refresh();
-	
 }
+
 void GLGeometry::refresh() {
 	Assert(m_id[0] != 0 && m_id[1] != 0);
 	m_stride = 3;
@@ -54,7 +54,7 @@ void GLGeometry::refresh() {
 	m_size[EVertexID] = (GLuint) (vertexCount * m_stride);
 	m_size[EIndexID] = (GLuint) (triCount * sizeof(GLuint) * 3);
 
-	Log(ETrace, "Uploading a GPU geometry object (\"%s\", " SIZE_T_FMT 
+	Log(ETrace, "Uploading a GPU geometry object (\"%s\", " SIZE_T_FMT
 		" vertices, " SIZE_T_FMT " triangles, %s)",
 		getName().c_str(), vertexCount, triCount,
 		memString(m_size[EVertexID] + m_size[EIndexID]).c_str());
@@ -118,7 +118,7 @@ void GLGeometry::refresh() {
 		}
 	}
 	Assert(pos * sizeof(GLfloat) == m_stride * vertexCount);
-	
+
 	bind();
 
 	glBufferData(GL_ARRAY_BUFFER, m_size[EVertexID], vertices, GL_STATIC_DRAW);

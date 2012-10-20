@@ -26,14 +26,14 @@ MTS_NAMESPACE_BEGIN
 /*!\plugin{photonmapper}{Photon map integrator}
  * \order{6}
  * \parameters{
- *     \parameter{directSamples}{\Integer}{Number of samples used for the 
+ *     \parameter{directSamples}{\Integer}{Number of samples used for the
  *        direct illumination component \default{16}}
  *     \parameter{glossySamples}{\Integer}{Number of samples used for the indirect
  *        illumination component of glossy materials \default{32}}
  *     \parameter{maxDepth}{\Integer}{Specifies the longest path depth
  *         in the generated output image (where \code{-1} corresponds to $\infty$).
  *	       A value of \code{1} will only render directly visible light sources.
- *	       \code{2} will lead to single-bounce (direct-only) illumination, 
+ *	       \code{2} will lead to single-bounce (direct-only) illumination,
  *	       and so on. \default{\code{-1}}
  *	   }
  *     \parameter{globalPhotons}{\Integer}{Number of photons that will be collected for the global photon map\default{250000}}
@@ -43,15 +43,15 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{causticLookup\showbreak Radius}{\Float}{Maximum radius of photon lookups in the caustic photon map (relative to the scene size)\default{0.0125}}
  *     \parameter{lookupSize}{\Integer}{Number of photons that should be fetched in photon map queries\default{120}}
  *     \parameter{granularity}{\Integer}{
- *		Granularity of photon tracing work units for the purpose 
+ *		Granularity of photon tracing work units for the purpose
  *		of parallelization (in \# of shot particles) \default{0, i.e. decide automatically}
  *     }
- *	   \parameter{rrDepth}{\Integer}{Specifies the minimum path depth, after 
- *	      which the implementation will start to use the ``russian roulette'' 
+ *	   \parameter{rrDepth}{\Integer}{Specifies the minimum path depth, after
+ *	      which the implementation will start to use the ``russian roulette''
  *	      path termination criterion. \default{\code{5}}
  *	   }
  * }
- * This plugin implements the two-pass photon mapping algorithm as proposed by Jensen \cite{Jensen1996Global}. 
+ * This plugin implements the two-pass photon mapping algorithm as proposed by Jensen \cite{Jensen1996Global}.
  * The implementation partitions the illumination into three different classes (diffuse, caustic, and volumetric),
  * and builds a separate photon map for each class.
  *
@@ -69,8 +69,8 @@ MTS_NAMESPACE_BEGIN
  *   \rendering{Rendered using plain photon mapping}{integrator_photonmapper_1}
  *   \rendering{Rendered using photon mapping together with irradiance caching}{integrator_photonmapper_2}
  *   \vspace{-2mm}
- *   \caption{\label{fig:pmap-blotchy}Sponza atrium illuminated by a point light and rendered using 5 million photons. 
- *   Irradiance caching significantly accelerates the rendering time and eliminates the ``blotchy'' 
+ *   \caption{\label{fig:pmap-blotchy}Sponza atrium illuminated by a point light and rendered using 5 million photons.
+ *   Irradiance caching significantly accelerates the rendering time and eliminates the ``blotchy''
  *   kernel density estimation artifacts. Model courtesy of Marko Dabrovic.}
  * }
  *
@@ -90,14 +90,14 @@ public:
 		m_glossySamples = props.getInteger("glossySamples", 32);
 		/* Depth to start using russian roulette when tracing photons */
 		m_rrDepth = props.getInteger("rrDepth", 5);
-		/* Longest visualized path length (\c -1 = infinite). 
+		/* Longest visualized path length (\c -1 = infinite).
 		   A value of \c 1 will visualize only directly visible light sources.
 		   \c 2 will lead to single-bounce (direct-only) illumination, and so on. */
 		m_maxDepth = props.getInteger("maxDepth", -1);
 		/**
 		 * When encountering an ideally specular material, the photon mapper places
 		 * a sample on each lobe (e.g. reflection *and* transmission). This leads
-		 * to an exponential growth in running time but greatly reduces variance and 
+		 * to an exponential growth in running time but greatly reduces variance and
 		 * is therefore usually worth it. This parameter specifies after how many
 		 * bounces this behavior should be stopped.
 		 */
@@ -131,7 +131,7 @@ public:
 			Log(EError, "maxDepth must be greater than zero!");
 		} else if (m_maxDepth == -1) {
 			/**
-			 * An infinite depth is currently not supported, since 
+			 * An infinite depth is currently not supported, since
 			 * the photon tracing step uses a Halton sequence
 			 * that is based on a finite-sized prime number table
 			 */
@@ -221,7 +221,7 @@ public:
 		m_invGlossySamples = 1.0f / m_glossySamples;
 	}
 
-	bool preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job, 
+	bool preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job,
 			int sceneResID, int sensorResID, int samplerResID) {
 		SamplingIntegrator::preprocess(scene, queue, job, sceneResID, sensorResID, samplerResID);
 		/* Create a deterministic sampler for the photon gathering step */
@@ -235,7 +235,7 @@ public:
 			clonedSampler->incRef();
 			samplers[i] = clonedSampler.get();
 		}
-		int qmcSamplerID = sched->registerMultiResource(samplers); 
+		int qmcSamplerID = sched->registerMultiResource(samplers);
 		for (size_t i=0; i<samplers.size(); ++i)
 			samplers[i]->decRef();
 
@@ -264,7 +264,7 @@ public:
 			if (proc->getReturnStatus() != ParallelProcess::ESuccess)
 				return false;
 
-			Log(EDebug, "Global photon map full. Shot " SIZE_T_FMT " particles, excess photons due to parallelism: " 
+			Log(EDebug, "Global photon map full. Shot " SIZE_T_FMT " particles, excess photons due to parallelism: "
 				SIZE_T_FMT, proc->getShotParticles(), proc->getExcessPhotons());
 
 			ref<PhotonMap> globalPhotonMap = proc->getPhotonMap();
@@ -291,11 +291,11 @@ public:
 			sched->schedule(proc);
 			sched->wait(proc);
 			m_proc = NULL;
-	
+
 			if (proc->getReturnStatus() != ParallelProcess::ESuccess)
 				return false;
 
-			Log(EDebug, "Caustic photon map full. Shot " SIZE_T_FMT " particles, excess photons due to parallelism: " 
+			Log(EDebug, "Caustic photon map full. Shot " SIZE_T_FMT " particles, excess photons due to parallelism: "
 				SIZE_T_FMT, proc->getShotParticles(), proc->getExcessPhotons());
 
 			ref<PhotonMap> causticPhotonMap = proc->getPhotonMap();
@@ -326,7 +326,7 @@ public:
 			if (proc->getReturnStatus() != ParallelProcess::ESuccess)
 				return false;
 
-			Log(EDebug, "Volume photon map full. Shot " SIZE_T_FMT " particles, excess photons due to parallelism: " 
+			Log(EDebug, "Volume photon map full. Shot " SIZE_T_FMT " particles, excess photons due to parallelism: "
 				SIZE_T_FMT, proc->getShotParticles(), proc->getExcessPhotons());
 
 			ref<PhotonMap> volumePhotonMap = proc->getPhotonMap();
@@ -346,7 +346,7 @@ public:
 
 		return true;
 	}
-	
+
 	void setParent(ConfigurableObject *parent) {
 		if (parent->getClass()->derivesFrom(MTS_CLASS(SamplingIntegrator)))
 			m_parentIntegrator = static_cast<SamplingIntegrator *>(parent);
@@ -393,10 +393,10 @@ public:
 		bool cacheQuery = (rRec.extra & RadianceQueryRecord::ECacheQuery);
 		bool adaptiveQuery = (rRec.extra & RadianceQueryRecord::EAdaptiveQuery);
 
-		/* Perform the first ray intersection (or ignore if the 
+		/* Perform the first ray intersection (or ignore if the
 		   intersection has already been provided). */
 		rRec.rayIntersect(ray);
-		
+
 		if (rRec.medium) {
 			Ray mediumRaySegment(ray, 0, its.t);
 			transmittance = rRec.medium->evalTransmittance(mediumRaySegment);
@@ -407,7 +407,7 @@ public:
 		}
 
 		if (!its.isValid()) {
-			/* If no intersection could be found, possibly return 
+			/* If no intersection could be found, possibly return
 			   attenuated radiance from a background luminaire */
 			if (rRec.type & RadianceQueryRecord::EEmittedRadiance)
 				LiSurf = scene->evalEnvironment(ray);
@@ -415,7 +415,7 @@ public:
 		}
 
 		/* Possibly include emitted radiance if requested */
-		if (its.isEmitter() && (rRec.type & RadianceQueryRecord::EEmittedRadiance)) 
+		if (its.isEmitter() && (rRec.type & RadianceQueryRecord::EEmittedRadiance))
 			LiSurf += its.Le(-ray.d);
 
 		/* Include radiance from a subsurface scattering model if requested */
@@ -453,7 +453,7 @@ public:
 					Spectrum bsdfVal = bsdf->sample(bRec, Point2(0.0f));
 					if (bsdfVal.isZero())
 						continue;
-					
+
 					rRec2.recursiveQuery(rRec, RadianceQueryRecord::ERadiance);
 					RayDifferential bsdfRay(its.p, its.toWorld(bRec.wo), ray.time);
 					if (its.isMediumTransition())
@@ -470,7 +470,7 @@ public:
 				   numBSDFSamples;
 
 			Float weightLum, weightBSDF;
-	
+
 			if (rRec.depth > 1 || cacheQuery || adaptiveQuery) {
 				/* This integrator is used recursively by another integrator.
 				   Be less accurate as this sample will not directly be observed. */
@@ -486,7 +486,7 @@ public:
 					weightBSDF = m_invGlossySamples;
 				}
 			}
-	
+
 			if (numEmitterSamples > 1) {
 				sampleArray = rRec.sampler->next2DArray(m_directSamples);
 			} else {
@@ -498,40 +498,40 @@ public:
 				for (int i=0; i<numEmitterSamples; ++i) {
 					int interactions = m_maxDepth - rRec.depth - 1;
 					Spectrum value = scene->sampleAttenuatedEmitterDirect(
-							dRec, its, rRec.medium, interactions, 
+							dRec, its, rRec.medium, interactions,
 							sampleArray[i], rRec.sampler);
-	
+
 					/* Estimate the direct illumination if this is requested */
 					if (!value.isZero()) {
 						const Emitter *emitter = static_cast<const Emitter *>(dRec.object);
-						
+
 						/* Allocate a record for querying the BSDF */
 						BSDFSamplingRecord bRec(its, its.toLocal(dRec.d));
-		
+
 						/* Evaluate BSDF * cos(theta) */
 						const Spectrum bsdfVal = bsdf->eval(bRec);
-		
+
 						if (!bsdfVal.isZero()) {
 							/* Calculate prob. of having sampled that direction
 							   using BSDF sampling */
 							Float bsdfPdf = (emitter->isOnSurface()
 									&& dRec.measure == ESolidAngle
-									&& interactions == 0) 
+									&& interactions == 0)
 									? bsdf->pdf(bRec) : (Float) 0.0f;
-	
+
 							/* Weight using the power heuristic */
-							const Float weight = miWeight(dRec.pdf * numEmitterSamples, 
+							const Float weight = miWeight(dRec.pdf * numEmitterSamples,
 									bsdfPdf * numBSDFSamples) * weightLum;
 							LiSurf += value * bsdfVal * weight;
 						}
 					}
 				}
 			}
-	
+
 			/* ==================================================================== */
 			/*                            BSDF sampling                             */
 			/* ==================================================================== */
-	
+
 			if (numBSDFSamples > 1) {
 				sampleArray = rRec.sampler->next2DArray(
 					std::max(m_directSamples, m_glossySamples));
@@ -549,7 +549,7 @@ public:
 				Spectrum bsdfVal = bsdf->sample(bRec, bsdfPdf, sampleArray[i]);
 				if (bsdfVal.isZero())
 					continue;
-	
+
 				/* Trace a ray in this direction */
 				RayDifferential bsdfRay(its.p, its.toWorld(bRec.wo), ray.time);
 
@@ -574,13 +574,13 @@ public:
 				}
 
 				if (hitEmitter) {
-					const Float emitterPdf = (!(bRec.sampledType & BSDF::EDelta)) ? 
+					const Float emitterPdf = (!(bRec.sampledType & BSDF::EDelta)) ?
 						scene->pdfEmitterDirect(dRec) : 0;
 
-					Spectrum transmittance = rRec2.medium ? 
+					Spectrum transmittance = rRec2.medium ?
 						rRec2.medium->evalTransmittance(Ray(bsdfRay, 0, bsdfIts.t)) : Spectrum(1.0f);
 
-					const Float weight = miWeight(bsdfPdf * numBSDFSamples, 
+					const Float weight = miWeight(bsdfPdf * numBSDFSamples,
 						emitterPdf * numEmitterSamples) * weightBSDF;
 
 					LiSurf += value * bsdfVal * weight * transmittance;
@@ -588,7 +588,7 @@ public:
 
 				/* Recurse */
 				if (!isDiffuse && (rRec.type & RadianceQueryRecord::EIndirectSurfaceRadiance) && !cacheQuery) {
-					rRec2.recursiveQuery(rRec, 
+					rRec2.recursiveQuery(rRec,
 						RadianceQueryRecord::ERadianceNoEmission);
 					rRec2.type ^= RadianceQueryRecord::EIntersection;
 
@@ -623,7 +623,7 @@ public:
 				Spectrum bsdfVal = bsdf->sample(bRec, bsdfPdf, sampleArray[i]);
 				if (bsdfVal.isZero())
 					continue;
-				rRec2.recursiveQuery(rRec, 
+				rRec2.recursiveQuery(rRec,
 					RadianceQueryRecord::ERadianceNoEmission);
 
 				RayDifferential bsdfRay(its.p, its.toWorld(bRec.wo), ray.time);

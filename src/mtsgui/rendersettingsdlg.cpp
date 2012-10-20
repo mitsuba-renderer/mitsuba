@@ -110,7 +110,7 @@ RenderSettingsDialog::RenderSettingsDialog(QWidget *parent) :
 	ui->treeView->setUniformRowHeights(true);
 	ui->treeView->setColumnWidth(0, 270);
 	ui->treeView->setItemDelegate(new PropertyDelegate(this));
-	connect(ui->treeView->selectionModel(), SIGNAL(selectionChanged(const QItemSelection &, const QItemSelection)), 
+	connect(ui->treeView->selectionModel(), SIGNAL(selectionChanged(const QItemSelection &, const QItemSelection)),
 		SLOT(onTreeSelectionChange(const QItemSelection &, const QItemSelection &)));
 	connect(m_model, SIGNAL(dataChanged(const QModelIndex&, const QModelIndex&)), this, SLOT(dataChanged()));
 	m_integratorNode = m_model->registerClass("MIPathTracer", "Path tracer");
@@ -123,7 +123,7 @@ RenderSettingsDialog::RenderSettingsDialog(QWidget *parent) :
 	pal.setColor(QPalette::Base, pal.color(QPalette::Window));
 	ui->helpViewer->setPalette(pal);
 }
-	
+
 void RenderSettingsDialog::setDocumentation(const QString &text) {
 	m_currentDocumentation = text;
 	bool hasErrors = false;
@@ -219,15 +219,15 @@ void RenderSettingsDialog::update() {
 	if (sender() == ui->integratorBox) {
 		for (int i=0; i<m_integratorNode->childCount(); ++i) {
 			TreeItem *treeItem = m_integratorNode->child(i);
-			if (integratorProps.hasProperty(treeItem->getName().toStdString())) 
+			if (integratorProps.hasProperty(treeItem->getName().toStdString()))
 				m_integratorNode->setProperty(treeItem->getName().toStdString(), integratorProps);
 		}
 	}
-	
+
 	if (sender() == ui->samplerBox) {
 		for (int i=0; i<m_samplerNode->childCount(); ++i) {
 			TreeItem *treeItem = m_samplerNode->child(i);
-			if (samplerProps.hasProperty(treeItem->getName().toStdString())) 
+			if (samplerProps.hasProperty(treeItem->getName().toStdString()))
 				m_samplerNode->setProperty(treeItem->getName().toStdString(), samplerProps);
 		}
 	}
@@ -317,33 +317,33 @@ void RenderSettingsDialog::apply(SceneContext *ctx) {
 
 	/* Configure the reconstruction filter */
 	Properties rFilterProps(getPluginName(ui->rFilterBox));
-	if (m_rFilterNode != NULL) 
+	if (m_rFilterNode != NULL)
 		m_rFilterNode->putProperties(rFilterProps);
-	ref<ReconstructionFilter> rFilter = static_cast<ReconstructionFilter *> 
+	ref<ReconstructionFilter> rFilter = static_cast<ReconstructionFilter *>
 		(pluginMgr->createObject(MTS_CLASS(ReconstructionFilter), rFilterProps));
 	rFilter->configure();
 
 	/* Configure the sampler */
 	Properties samplerProps(getPluginName(ui->samplerBox));
-	if (m_samplerNode != NULL) 
+	if (m_samplerNode != NULL)
 		m_samplerNode->putProperties(samplerProps);
-	ref<Sampler> sampler = static_cast<Sampler *> 
+	ref<Sampler> sampler = static_cast<Sampler *>
 		(pluginMgr->createObject(MTS_CLASS(Sampler), samplerProps));
 	sampler->configure();
-	
+
 	/* Configure the integrator */
 	Properties integratorProps(getPluginName(ui->integratorBox));
-	if (m_integratorNode != NULL) 
+	if (m_integratorNode != NULL)
 		m_integratorNode->putProperties(integratorProps);
-	ref<Integrator> integrator = static_cast<Integrator *> 
+	ref<Integrator> integrator = static_cast<Integrator *>
 		(pluginMgr->createObject(MTS_CLASS(Integrator), integratorProps));
 	integrator->configure();
 
 	if (ui->icBox->isChecked()) {
 		Properties icProps("irrcache");
-		if (m_icNode != NULL) 
+		if (m_icNode != NULL)
 			m_icNode->putProperties(icProps);
-		ref<Integrator> ic = static_cast<Integrator *> 
+		ref<Integrator> ic = static_cast<Integrator *>
 			(pluginMgr->createObject(MTS_CLASS(Integrator), icProps));
 		ic->addChild(integrator);
 		ic->configure();
@@ -352,9 +352,9 @@ void RenderSettingsDialog::apply(SceneContext *ctx) {
 
 	if (ui->aiBox->isChecked()) {
 		Properties aiProps("adaptive");
-		if (m_aiNode != NULL) 
+		if (m_aiNode != NULL)
 			m_aiNode->putProperties(aiProps);
-		ref<Integrator> ai = static_cast<Integrator *> 
+		ref<Integrator> ai = static_cast<Integrator *>
 			(pluginMgr->createObject(MTS_CLASS(Integrator), aiProps));
 		ai->addChild(integrator);
 		ai->configure();
@@ -413,11 +413,11 @@ void RenderSettingsDialog::apply(SceneContext *ctx) {
 	if (oldSensor->getClass()->derivesFrom(MTS_CLASS(PerspectiveCamera))) {
 		sensorProps.removeProperty("focalLength");
 		sensorProps.setString("fovAxis", "y", false);
-		sensorProps.setFloat("fov", 
+		sensorProps.setFloat("fov",
 			static_cast<const PerspectiveCamera *>(oldSensor.get())->getYFov(), false);
 	}
 
-	ref<Sensor> newSensor = static_cast<Sensor *> 
+	ref<Sensor> newSensor = static_cast<Sensor *>
 		(pluginMgr->createObject(MTS_CLASS(Sensor), sensorProps));
 	newSensor->addChild(sampler);
 	newSensor->addChild(film);
@@ -519,7 +519,7 @@ void PropertyDelegate::updateEditorGeometry(QWidget *editor,
 }
 
 QStringList RenderSettingsDialog::validateConfiguration() const {
-	/* Ad-hoc verification until we have something better 
+	/* Ad-hoc verification until we have something better
 	   (preferably specifiable by the plugins themselves) */
 	QStringList messages;
 	std::string integratorName = getPluginName(ui->integratorBox);
@@ -537,7 +537,7 @@ QStringList RenderSettingsDialog::validateConfiguration() const {
 
 	if ((samplerName == "ldsampler" || samplerName == "stratified") && integratorName == "ptracer")
 		messages << "Error: the particle tracer does not support the stratified or low-discrepancy samplers!";
-	
+
 	if (samplerName == "halton" || samplerName == "hammersley") {
 		if (integratorName == "bdpt")
 			messages << "Error: the Bidirectional Path Tracer should not be used with the Halton/Hammersley samplers!";

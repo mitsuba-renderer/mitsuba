@@ -27,7 +27,7 @@ MTS_NAMESPACE_BEGIN
 /**
  * \brief Von Mises-Fisher distribution on the 2-sphere
  *
- * This is a basic implementation, which assumes that the 
+ * This is a basic implementation, which assumes that the
  * distribution is centered around the Z-axis.
  *
  * \author Wenzel Jakob
@@ -36,7 +36,7 @@ MTS_NAMESPACE_BEGIN
 struct MTS_EXPORT_CORE VonMisesFisherDistr {
 public:
 	/**
-	 * \brief Create a new von Mises-Fisher distribution 
+	 * \brief Create a new von Mises-Fisher distribution
 	 * with the given concentration parameter
 	 */
 	VonMisesFisherDistr(Float kappa = 0);
@@ -48,7 +48,7 @@ public:
 
 	/// Evaluate the distribution for a given value of cos(theta)
 	Float eval(Float cosTheta) const;
-	
+
 	/**
 	 * \brief Generate a sample from this distribution
 	 *
@@ -64,9 +64,9 @@ public:
 	static Float forPeakValue(Float x);
 
 	/**
-	 * \brief Compute an concentration parameter that approximately 
+	 * \brief Compute an concentration parameter that approximately
 	 * corresponds to the spherical convolution of two vMF distributions.
-	 * 
+	 *
 	 * For details, see "Directional Statistics" by Mardia and Jupp, p.44
 	 */
 	static Float convolve(Float kappa1, Float kappa2);

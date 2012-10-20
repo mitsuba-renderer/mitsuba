@@ -34,7 +34,7 @@ public:
 		float invGamma;
 		float invWhitePoint;
 		float multiplier;
-	
+
 		// key / averageLogLuminance
 		float scale;
 

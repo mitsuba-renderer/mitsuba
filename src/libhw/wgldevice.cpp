@@ -50,7 +50,7 @@
 #define WGL_DOUBLE_BUFFER_ARB                                   0x2011
 #define WGL_FULL_ACCELERATION_ARB                               0x2027
 
-typedef BOOL (APIENTRY * wglChoosePixelFormatARBProc) (HDC hdc, const int *piAttribIList, 
+typedef BOOL (APIENTRY * wglChoosePixelFormatARBProc) (HDC hdc, const int *piAttribIList,
 		const FLOAT *pfAttribFList, UINT nMaxFormats, int *piFormats, UINT *nNumFormats);
 #endif
 
@@ -67,7 +67,7 @@ LONG WINAPI WGLDevice::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 
 	/* See comment above */
 	WGLDevice *device = reinterpret_cast<WGLDevice *>(GetWindowLong(hWnd, 0));
-	if (device == NULL) 
+	if (device == NULL)
 		device = __global_workaround;
 	PAINTSTRUCT ps;
 
@@ -87,7 +87,7 @@ LONG WINAPI WGLDevice::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 			break;
 		case WM_PAINT:
 			BeginPaint(hWnd, &ps);
-			if (device->getDoubleBuffer()) 
+			if (device->getDoubleBuffer())
 				SwapBuffers(device->m_hdc);
 			EndPaint(hWnd, &ps);
 			break;
@@ -288,11 +288,11 @@ void WGLDevice::init(Device *other) {
 	for (int i=0; i<2; i++) {
 		/* Do this twice, the first pass creates a dummy device &
 		   rendering context in order to get hold of a proper pixel format
-		   (windows is soo bugged!), the second pass creates the actual 
+		   (windows is soo bugged!), the second pass creates the actual
 		   window with the matching pixel format
 		*/
 		int extra = 0;
-		if (m_resizeAllowed) 
+		if (m_resizeAllowed)
 			extra = WS_SIZEBOX | WS_MAXIMIZEBOX;
 
 		m_hwnd = CreateWindow(
@@ -455,7 +455,7 @@ bool WGLDevice::translateMouse(UINT uMsg, WPARAM wParam, DeviceEvent &event) {
 			event.setType(EMouseMotionEvent);
 			event.setMouseButton(ENoButton);
 			if (m_grab)
-				warpMouse(Point2i(getSize().x / 2, 
+				warpMouse(Point2i(getSize().x / 2,
 					getSize().y/2));
 			break;
 		case WM_LBUTTONDOWN:
@@ -516,7 +516,7 @@ void WGLDevice::initPixelFormat(HWND hWnd) {
 	}
 
 	if (m_pf != -1) {
-		if (!SetPixelFormat(m_hdc, m_pf, &m_pfd)) 
+		if (!SetPixelFormat(m_hdc, m_pf, &m_pfd))
 			Log(EError, "Could not set the pixel format");
 		return;
 	}
@@ -541,7 +541,7 @@ void WGLDevice::initPixelFormat(HWND hWnd) {
 	if (!m_pf)
 		Log(EError, "Could not find a matching pixel format");
 
-	if (!SetPixelFormat(m_hdc, m_pf, &m_pfd)) 
+	if (!SetPixelFormat(m_hdc, m_pf, &m_pfd))
 		Log(EError, "Could not set the pixel format");
 
 	HGLRC context = wglCreateContext(m_hdc);
@@ -585,7 +585,7 @@ void WGLDevice::initPixelFormat(HWND hWnd) {
 	float fAttributes[] = {0,0};
 	bool valid = wglChoosePixelFormatARB(m_hdc,attribs,fAttributes,1,&m_pf,&numFormats);
 
-	if (!(valid && numFormats >= 1)) 
+	if (!(valid && numFormats >= 1))
 		Log(EError, "Could not find a matching pixel format!");
 
 	/* Self destruction .. */
@@ -616,7 +616,7 @@ void WGLDevice::flip() {
 void WGLDevice::setPosition(const Point2i &position) {
 	Assert(m_initialized);
 
-	SetWindowPos(m_hwnd, HWND_TOP, 
+	SetWindowPos(m_hwnd, HWND_TOP,
 		getPosition().x, getPosition().y,
 		0, 0, SWP_NOSIZE | SWP_NOZORDER);
 }
@@ -645,7 +645,7 @@ void WGLDevice::warpMouse(const Point2i &position) {
 	m_mouse = position;
 	ClientToScreen(m_hwnd, &pt);
 	SetCursorPos(pt.x, pt.y);
-	// Not so nice but does the job 
+	// Not so nice but does the job
 	PeekMessage(&msg, m_hwnd, WM_MOUSEFIRST, WM_MOUSELAST, PM_REMOVE);
 }
 

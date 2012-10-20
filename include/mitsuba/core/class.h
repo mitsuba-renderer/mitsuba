@@ -56,7 +56,7 @@ public:
 	 * \param instPtr Pointer to an instantiation function
 	 * \param unSerPtr Pointer to an unserialization function
 	 */
-	Class(const std::string &name, bool abstract, const std::string &superClassName, 
+	Class(const std::string &name, bool abstract, const std::string &superClassName,
 		void *instPtr = NULL, void *unSerPtr = NULL);
 
 	/// Return the name of the represented class
@@ -134,7 +134,7 @@ private:
 #define MTS_CLASS(x) x::m_theClass
 
 /**
- * \brief This macro must be used in the initial definition in 
+ * \brief This macro must be used in the initial definition in
  * classes that derive from \ref Object.
  *
  * This is needed for the basic RTTI support provided by Mitsuba objects.
@@ -158,7 +158,7 @@ private:
 #define MTS_DECLARE_CLASS() \
 	virtual const Class *getClass() const; \
 public: \
-	static Class *m_theClass; 
+	static Class *m_theClass;
 
 /**
  * \brief Creates basic RTTI support for a class
@@ -227,7 +227,7 @@ public: \
 
 /**
  * \brief Creates basic RTTI support for a class. To be used when the class
- * can be unserialized from a binary data stream as well as instantiated 
+ * can be unserialized from a binary data stream as well as instantiated
  * by a constructor that does not take any arguments.
  *
  * This macro or one of its variants should be invoked in the main

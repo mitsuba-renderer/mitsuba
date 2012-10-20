@@ -50,7 +50,7 @@ void NSGLSession::processEvents() {
 
 	/* NSRunloop emulation */
 	do {
-		event = [NSApp nextEventMatchingMask: NSAnyEventMask 
+		event = [NSApp nextEventMatchingMask: NSAnyEventMask
 			untilDate: nil inMode: NSDefaultRunLoopMode dequeue: YES];
 		if (event == nil)
 			break;
@@ -71,7 +71,7 @@ void NSGLSession::processEventsBlocking(bool &stop) {
 
 	/* NSRunloop emulation */
 	while (true) {
-		event = [NSApp nextEventMatchingMask: NSAnyEventMask 
+		event = [NSApp nextEventMatchingMask: NSAnyEventMask
 			untilDate: nil inMode: NSDefaultRunLoopMode dequeue: YES];
 
 		if (event != nil) {
@@ -85,7 +85,7 @@ void NSGLSession::processEventsBlocking(bool &stop) {
 				break;
 
 			/* Wait for the next event (blocking) */
-			event = [NSApp nextEventMatchingMask: NSAnyEventMask 
+			event = [NSApp nextEventMatchingMask: NSAnyEventMask
 				untilDate: [NSDate distantFuture] inMode: NSDefaultRunLoopMode dequeue: YES];
 
 			if (event != nil)

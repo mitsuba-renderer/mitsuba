@@ -23,7 +23,7 @@
 #include <mitsuba/mitsuba.h>
 
 MTS_NAMESPACE_BEGIN
-	
+
 /// Create a new memory pool with an initial set of 128 entries
 #define MTS_MEMPOOL_GRANULARITY 128
 
@@ -31,12 +31,12 @@ MTS_NAMESPACE_BEGIN
 #define MTS_DEBUG_MEMPOOL 0
 
 /**
- * \brief Basic memory pool for efficient allocation and deallocation 
+ * \brief Basic memory pool for efficient allocation and deallocation
  * of objects of the same type.
  *
  * This class attempts to keep most instances contiguous in memory, while
  * having only minimal interaction with the underlying allocator.
- * 
+ *
  * \ingroup libcore
  */
 template <typename T> class BasicMemoryPool {
@@ -82,12 +82,12 @@ public:
 	inline size_t size() const {
 		return m_size;
 	}
-	
+
 	/// Check if every entry has been released
 	bool unused() const {
 		return m_free.size() == m_size;
 	}
-	
+
 	/// Return a human-readable description
 	std::string toString() const {
 		std::ostringstream oss;

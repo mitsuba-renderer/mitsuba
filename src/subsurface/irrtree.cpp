@@ -98,7 +98,7 @@ void IrradianceOctree::propagate(OctreeNode *node) {
 		repr.E /= repr.area;
 	if (weightSum != 0)
 		repr.p /= weightSum;
-	
+
 	++statsNumNodes;
 }
 

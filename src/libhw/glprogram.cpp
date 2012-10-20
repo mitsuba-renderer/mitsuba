@@ -43,7 +43,7 @@ namespace {
 	}
 }
 
-GLProgram::GLProgram(const std::string &name) 
+GLProgram::GLProgram(const std::string &name)
  : GPUProgram(name) {
 	m_id[EVertexProgram] = 0;
 	m_id[EFragmentProgram] = 0;
@@ -61,7 +61,7 @@ void GLProgram::init() {
 
 	m_program = glCreateProgramObjectARB();
 
-	m_id[EVertexProgram] = createShader(GL_VERTEX_SHADER_ARB, 
+	m_id[EVertexProgram] = createShader(GL_VERTEX_SHADER_ARB,
 		m_source[EVertexProgram]);
 	m_id[EFragmentProgram] = createShader(GL_FRAGMENT_SHADER_ARB,
 		m_source[EFragmentProgram]);
@@ -71,10 +71,10 @@ void GLProgram::init() {
 	if (m_id[EGeometryProgram] != 0) {
 		Assert(m_maxVertices > 0);
 		glProgramParameteriEXT(m_program, GL_GEOMETRY_INPUT_TYPE_EXT,
-			translateGeometryType(m_inputGeometryType)); 
-		glProgramParameteriEXT(m_program, GL_GEOMETRY_OUTPUT_TYPE_EXT, 
-			translateGeometryType(m_outputGeometryType)); 
-		glProgramParameteriEXT(m_program, GL_GEOMETRY_VERTICES_OUT_EXT, 
+			translateGeometryType(m_inputGeometryType));
+		glProgramParameteriEXT(m_program, GL_GEOMETRY_OUTPUT_TYPE_EXT,
+			translateGeometryType(m_outputGeometryType));
+		glProgramParameteriEXT(m_program, GL_GEOMETRY_VERTICES_OUT_EXT,
 			m_maxVertices);
 	}
 
@@ -282,7 +282,7 @@ void GLProgram::setParameter(int id, const GPUTexture *value) {
 	if (id == -1)
 		return;
 	const std::set<int> &units = value->getTextureUnits();
-	if (units.size() > 0) 
+	if (units.size() > 0)
 		glUniform1i(id, *(units.begin()));
 	else
 		Log(EWarn, "Unable to supply unbound texture \"%s\" to shader \"%s\"",

@@ -44,9 +44,9 @@ MTS_NAMESPACE_BEGIN
  *
  * Since a numerical integration over the microfacet distribution is involved
  * in every transmittance evaluation, this function is usually prohibitively
- * expensive. That is the motivation for this class, which instead performs 
+ * expensive. That is the motivation for this class, which instead performs
  * lookups into an extensive precomputed three-dimensional table containing
- * appropriately spaced evaluations of this function. The lookups are combined 
+ * appropriately spaced evaluations of this function. The lookups are combined
  * using tricubic interpolation (more specifically, Catmull-Rom splines).
  *
  * The 3D array is parameterized in a way so that the transmittance
@@ -54,9 +54,9 @@ MTS_NAMESPACE_BEGIN
  * quite accurate over a large parameter range (avg. abs. error < 1e-4,
  * for eta in [1, 4] and RMS roughness in [0, 4])
  *
- * In many cases, the flexibility to evaluate the rough transmittance 
- * function for any (ior, roughness, angle)-triple is not actually 
- * needed, since  the index of refraction parameter might always be 
+ * In many cases, the flexibility to evaluate the rough transmittance
+ * function for any (ior, roughness, angle)-triple is not actually
+ * needed, since  the index of refraction parameter might always be
  * constant (and potentially also the roughness).
  *
  * This class therefore provides the operations \ref setEta()
@@ -74,7 +74,7 @@ public:
 	 * \brief Load a rough transmittance data file from disk
 	 *
 	 * \param type
-	 *     Denotes the type of a microfacet distribution, 
+	 *     Denotes the type of a microfacet distribution,
 	 *     i.e. Beckmann or GGX
 	 */
 	RoughTransmittance(MicrofacetDistribution::EType type) : m_trans(NULL), m_diffTrans(NULL) {
@@ -92,7 +92,7 @@ public:
 		fs::path sourceFile = Thread::getThread()->getFileResolver()->resolve(
 			formatString("data/microfacet/%s.dat", name.c_str()));
 
-		ref<FileStream> fstream = new FileStream(sourceFile, 
+		ref<FileStream> fstream = new FileStream(sourceFile,
 				FileStream::EReadOnly);
 		fstream->setByteOrder(Stream::ELittleEndian);
 
@@ -106,13 +106,13 @@ public:
 		m_etaSamples = fstream->readSize();
 		m_alphaSamples = fstream->readSize();
 		m_thetaSamples = fstream->readSize();
-		
+
 		m_transSize = 2 * m_etaSamples * m_alphaSamples * m_thetaSamples;
 		m_diffTransSize = 2 * m_etaSamples * m_alphaSamples;
 
-		SLog(EDebug, "Loading " SIZE_T_FMT "x" SIZE_T_FMT "x" SIZE_T_FMT 
+		SLog(EDebug, "Loading " SIZE_T_FMT "x" SIZE_T_FMT "x" SIZE_T_FMT
 			" (%s) rough transmittance samples from \"%s\"", 2*m_etaSamples,
-			m_alphaSamples, m_thetaSamples, 
+			m_alphaSamples, m_thetaSamples,
 			memString((m_transSize + m_diffTransSize) * sizeof(float)).c_str(),
 			sourceFile.string().c_str());
 
@@ -191,11 +191,11 @@ public:
 		} else if (m_etaFixed) {
 			SAssert(cosTheta >= 0);
 
-			Float warpedAlpha = std::pow((alpha - m_alphaMin) 
+			Float warpedAlpha = std::pow((alpha - m_alphaMin)
 					/ (m_alphaMax-m_alphaMin), (Float) 0.25f);
 
 			result = interpCubic2D(Point2(warpedCosTheta, warpedAlpha),
-				m_trans, Point2(0.0f), Point2(1.0f), 
+				m_trans, Point2(0.0f), Point2(1.0f),
 				Size2(m_thetaSamples, m_alphaSamples));
 		} else {
 			if (cosTheta < 0) {
@@ -205,7 +205,7 @@ public:
 
 			Float *data = m_trans;
 			if (eta < 1) {
-				/* Entering a less dense medium -- skip ahead to the 
+				/* Entering a less dense medium -- skip ahead to the
 				   second data block */
 				data += m_etaSamples * m_alphaSamples * m_thetaSamples;
 				eta = 1.0f / eta;
@@ -215,22 +215,22 @@ public:
 				eta = m_etaMin;
 
 			/* Transform the roughness and IOR values into the warped parameter space */
-			Float warpedAlpha = std::pow((alpha - m_alphaMin) 
+			Float warpedAlpha = std::pow((alpha - m_alphaMin)
 					/ (m_alphaMax-m_alphaMin), (Float) 0.25f);
-			Float warpedEta = std::pow((eta - m_etaMin) 
+			Float warpedEta = std::pow((eta - m_etaMin)
 					/ (m_etaMax-m_etaMin), (Float) 0.25f);
-			
+
 			result = interpCubic3D(Point3(warpedCosTheta, warpedAlpha, warpedEta),
-				data, Point3(0.0f), Point3(1.0f), 
+				data, Point3(0.0f), Point3(1.0f),
 				Size3(m_thetaSamples, m_alphaSamples, m_etaSamples));
 		}
 
-		return std::min((Float) 1.0f, std::max((Float) 0.0f, result));	
+		return std::min((Float) 1.0f, std::max((Float) 0.0f, result));
 	}
 
 
 	/**
-	 * \brief Evaluate the \a diffuse rough transmittance for a given 
+	 * \brief Evaluate the \a diffuse rough transmittance for a given
 	 * index of refraction, roughness, and angle of incidence.
 	 *
 	 * The diffuse rough transmittance is cosine-weighted integral
@@ -247,15 +247,15 @@ public:
 		if (m_alphaFixed && m_etaFixed) {
 			result = m_diffTrans[0];
 		} else if (m_etaFixed) {
-			Float warpedAlpha = std::pow((alpha - m_alphaMin) 
+			Float warpedAlpha = std::pow((alpha - m_alphaMin)
 					/ (m_alphaMax-m_alphaMin), (Float) 0.25f);
 
-			result = interpCubic1D(warpedAlpha, m_diffTrans, 
+			result = interpCubic1D(warpedAlpha, m_diffTrans,
 				0.0f, 1.0f, m_alphaSamples);
 		} else {
 			Float *data = m_diffTrans;
 			if (eta < 1) {
-				/* Entering a less dense medium -- skip ahead to the 
+				/* Entering a less dense medium -- skip ahead to the
 				   second data block */
 				data += m_etaSamples * m_alphaSamples;
 				eta = 1.0f / eta;
@@ -265,12 +265,12 @@ public:
 				eta = m_etaMin;
 
 			/* Transform the roughness and IOR values into the warped parameter space */
-			Float warpedAlpha = std::pow((alpha - m_alphaMin) 
+			Float warpedAlpha = std::pow((alpha - m_alphaMin)
 					/ (m_alphaMax-m_alphaMin), (Float) 0.25f);
-			Float warpedEta = std::pow((eta - m_etaMin) 
+			Float warpedEta = std::pow((eta - m_etaMin)
 					/ (m_etaMax-m_etaMin), (Float) 0.25f);
 
-			result = interpCubic2D(Point2(warpedAlpha, warpedEta), data, 
+			result = interpCubic2D(Point2(warpedAlpha, warpedEta), data,
 				Point2(0.0f), Point2(1.0f), Size2(m_alphaSamples, m_etaSamples));
 		}
 
@@ -290,14 +290,14 @@ public:
 		m_transSize = m_alphaSamples * m_thetaSamples;
 		m_diffTransSize = m_alphaSamples;
 
-		SLog(EDebug, "Reducing dimension from 3D to 2D (%s), eta = %f", 
+		SLog(EDebug, "Reducing dimension from 3D to 2D (%s), eta = %f",
 			memString((m_transSize + m_diffTransSize) * sizeof(Float)).c_str(), eta);
 
 		Float *trans = m_trans,
 			  *diffTrans = m_diffTrans;
 
 		if (eta < 1) {
-			/* Entering a less dense medium -- skip ahead to the 
+			/* Entering a less dense medium -- skip ahead to the
 			   second data block */
 			trans += m_etaSamples * m_alphaSamples * m_thetaSamples;
 			diffTrans += m_etaSamples * m_alphaSamples;
@@ -306,8 +306,8 @@ public:
 
 		if (eta < m_etaMin)
 			eta = m_etaMin;
-		
-		Float warpedEta = std::pow((eta - m_etaMin) 
+
+		Float warpedEta = std::pow((eta - m_etaMin)
 				/ (m_etaMax-m_etaMin), (Float) 0.25f);
 
 		Float *newTrans = new Float[m_transSize];
@@ -319,13 +319,13 @@ public:
 		for (size_t i=0; i<m_alphaSamples; ++i) {
 			for (size_t j=0; j<m_thetaSamples; ++j)
 				newTrans[i*m_thetaSamples + j] = interpCubic3D(
-					Point3(j*dTheta, i*dAlpha, warpedEta), 
-					trans, Point3(0.0f), Point3(1.0f), 
+					Point3(j*dTheta, i*dAlpha, warpedEta),
+					trans, Point3(0.0f), Point3(1.0f),
 					Size3(m_thetaSamples, m_alphaSamples, m_etaSamples));
 
 			newDiffTrans[i] = interpCubic2D(
-					Point2(i*dAlpha, warpedEta), 
-					diffTrans, Point2(0.0f), Point2(1.0f), 
+					Point2(i*dAlpha, warpedEta),
+					diffTrans, Point2(0.0f), Point2(1.0f),
 					Size2(m_alphaSamples, m_etaSamples));
 		}
 
@@ -352,10 +352,10 @@ public:
 		m_transSize = m_thetaSamples;
 		m_diffTransSize = 1;
 
-		SLog(EDebug, "Reducing dimension from 2D to 1D (%s), alpha = %f", 
+		SLog(EDebug, "Reducing dimension from 2D to 1D (%s), alpha = %f",
 			memString((m_transSize + m_diffTransSize) * sizeof(Float)).c_str(), alpha);
 
-		Float warpedAlpha = std::pow((alpha - m_alphaMin) 
+		Float warpedAlpha = std::pow((alpha - m_alphaMin)
 				/ (m_alphaMax-m_alphaMin), (Float) 0.25f);
 
 		Float *newTrans = new Float[m_transSize];
@@ -363,10 +363,10 @@ public:
 
 		Float dTheta = 1.0f / (m_thetaSamples - 1);
 
-		for (size_t i=0; i<m_thetaSamples; ++i) 
+		for (size_t i=0; i<m_thetaSamples; ++i)
 			newTrans[i] = interpCubic2D(
-				Point2(i*dTheta, warpedAlpha), 
-				m_trans, Point2(0.0f), Point2(1.0f), 
+				Point2(i*dTheta, warpedAlpha),
+				m_trans, Point2(0.0f), Point2(1.0f),
 				Size2(m_thetaSamples, m_alphaSamples));
 
 		newDiffTrans[0] = interpCubic1D(warpedAlpha,
@@ -384,7 +384,7 @@ public:
 		if (alpha < m_alphaMin || alpha > m_alphaMax) {
 			SLog(EError, "Error: the requested roughness value alpha=%f is"
 				" outside of the supported range [%f, %f]! Please scale "
-				" your roughness value/texture to lie within this range.", 
+				" your roughness value/texture to lie within this range.",
 				alpha, m_alphaMin, m_alphaMax);
 		}
 	}
@@ -392,10 +392,10 @@ public:
 	void checkEta(Float eta) {
 		if (eta < 1)
 			eta = 1/eta;
-		if (eta < m_etaMin || eta > m_etaMax) 
+		if (eta < m_etaMin || eta > m_etaMax)
 			SLog(EError, "Error: the requested relative index of refraction "
 				"eta=%f is outside of the supported range [%f, %f]! Please "
-				"update your  scene so that it uses realistic IOR values.", 
+				"update your  scene so that it uses realistic IOR values.",
 				eta, m_etaMin, m_etaMax);
 	}
 

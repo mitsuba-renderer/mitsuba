@@ -23,8 +23,8 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * @{ \name Forward declaration: 
- * CIE 1931 XYZ color matching functions. 
+ * @{ \name Forward declaration:
+ * CIE 1931 XYZ color matching functions.
  */
 static const int   CIE_samples = 471;
 extern const Float CIE_wavelengths[CIE_samples];
@@ -34,7 +34,7 @@ extern const Float CIE_Z_entries[CIE_samples];
 /// @}
 
 /**
- * @{ \name Forward declaration: 
+ * @{ \name Forward declaration:
  * Smits-style Spectrum-to-RGB conversion data, data by Karl vom Berge
  */
 static const int   RGB2Spec_samples = 32;
@@ -63,7 +63,7 @@ static InterpolatedSpectrum CIE_Z_interp(CIE_wavelengths, CIE_Z_entries, CIE_sam
 
 
 #if SPECTRUM_SAMPLES != 3
-/// @{ \name Pre-integrated CIE 1931 XYZ color matching functions. 
+/// @{ \name Pre-integrated CIE 1931 XYZ color matching functions.
 Spectrum Spectrum::CIE_X;
 Spectrum Spectrum::CIE_Y;
 Spectrum Spectrum::CIE_Z;
@@ -186,7 +186,7 @@ Float Spectrum::eval(Float lambda) const {
 		"is configured for RGB-based rendering");
 	return 0.0f;
 #else
-	int index = floorToInt((lambda - SPECTRUM_MIN_WAVELENGTH) * 
+	int index = floorToInt((lambda - SPECTRUM_MIN_WAVELENGTH) *
 		((Float) SPECTRUM_SAMPLES / (Float) SPECTRUM_RANGE));
 
 	if (index < 0 || index >= SPECTRUM_SAMPLES)
@@ -238,7 +238,7 @@ void Spectrum::toXYZ(Float &x, Float &y, Float &z) const {
 
 Float Spectrum::getLuminance() const {
 	Float luminance = 0.0f;
-	for (size_t i=0; i<SPECTRUM_SAMPLES; ++i) 
+	for (size_t i=0; i<SPECTRUM_SAMPLES; ++i)
 		luminance += CIE_Y[i] * s[i];
 	return luminance * CIE_normalization;
 }
@@ -415,7 +415,7 @@ std::string Spectrum::toString() const {
 		oss << s[i];
 #else
 		oss.precision(1);
-		oss << m_wavelengths[i] << "-" 
+		oss << m_wavelengths[i] << "-"
 			<< m_wavelengths[i+1] << "nm => ";
 		oss.precision(3);
 		oss << s[i];
@@ -462,7 +462,7 @@ std::string ProductSpectrum::toString() const {
 
 RayleighSpectrum::RayleighSpectrum(EMode mode, Float eta, Float height) {
 	/* See ``Display of the Earth Taking into Account Atmospheric Scattering'',
-	 * by Nishita et al., SIGGRAPH 1993 */ 
+	 * by Nishita et al., SIGGRAPH 1993 */
 	Float tmp = eta * eta - 1;
 	Float rho = math::fastexp(-height/7794.0f);
 	//Float Ns = <molecular number density of the standard atmosphere>;
@@ -499,14 +499,14 @@ Float ContinuousSpectrum::average(Float lambdaMin, Float lambdaMax) const {
 	Float integral = 0;
 
 	/// Integrate over 50nm-sized regions
-	size_t nSteps = std::max((size_t) 1, 
+	size_t nSteps = std::max((size_t) 1,
 			(size_t) std::ceil((lambdaMax - lambdaMin) / 50));
 	Float stepSize = (lambdaMax - lambdaMin) / nSteps,
 		  pos = lambdaMin;
 
 	for (size_t i=0; i<nSteps; ++i) {
 		integral += integrator.integrate(
-			boost::bind(&ContinuousSpectrum::eval, this, _1), 
+			boost::bind(&ContinuousSpectrum::eval, this, _1),
 			pos, pos + stepSize);
 		pos += stepSize;
 	}
@@ -518,7 +518,7 @@ InterpolatedSpectrum::InterpolatedSpectrum(size_t size) {
 	m_wavelengths.reserve(size);
 	m_values.reserve(size);
 }
-	
+
 InterpolatedSpectrum::InterpolatedSpectrum(const fs::path &path) {
 	fs::ifstream is(path);
 	if (is.bad() || is.fail())
@@ -540,14 +540,14 @@ InterpolatedSpectrum::InterpolatedSpectrum(const fs::path &path) {
 	}
 
 	if (m_wavelengths.size() == 0)
-		SLog(EError, "\"%s\": unable to parse any entries!", 
+		SLog(EError, "\"%s\": unable to parse any entries!",
 				path.string().c_str());
 
 	SLog(EInfo, "\"%s\": loaded a spectral power distribution with " SIZE_T_FMT
 			" entries (between %f and %f nm)", path.filename().string().c_str(), m_wavelengths.size(),
 			m_wavelengths[0], m_wavelengths[m_wavelengths.size()-1]);
 }
-	
+
 InterpolatedSpectrum::InterpolatedSpectrum(const Float *wavelengths, const Float *values, size_t nEntries) {
 	m_wavelengths.resize(nEntries);
 	m_values.resize(nEntries);
@@ -607,7 +607,7 @@ Float InterpolatedSpectrum::average(Float lambdaMin, Float lambdaMax) const {
 		return 0.0f;
 
 	/* Find the starting index using binary search */
-	size_t entry = std::max((size_t) (std::lower_bound(m_wavelengths.begin(), 
+	size_t entry = std::max((size_t) (std::lower_bound(m_wavelengths.begin(),
 			m_wavelengths.end(), rangeStart) - m_wavelengths.begin()), (size_t) 1) - 1;
 
 	Float result = 0.0f;
@@ -638,11 +638,11 @@ Float InterpolatedSpectrum::eval(Float lambda) const {
 	typedef std::vector<Float>::const_iterator iterator;
 	if (m_wavelengths.size() < 2 ||
 		lambda < m_wavelengths[0] ||
-		lambda > m_wavelengths[m_wavelengths.size()-1]) 
+		lambda > m_wavelengths[m_wavelengths.size()-1])
 		return 0.0f;
 
 	/* Find the associated table entries using binary search */
-	std::pair<iterator, iterator> result = 
+	std::pair<iterator, iterator> result =
 		std::equal_range(m_wavelengths.begin(), m_wavelengths.end(), lambda);
 
 	size_t idx1 = result.first - m_wavelengths.begin();
@@ -681,7 +681,7 @@ std::string InterpolatedSpectrum::toString() const {
 
 /// ==========================================================================
 ///                  CIE XYZ color matching functions from
-///           http://www.cvrl.org/database/data/cmfs/ciexyz31_1.txt 
+///           http://www.cvrl.org/database/data/cmfs/ciexyz31_1.txt
 /// ==========================================================================
 
 #ifdef _MSC_VER

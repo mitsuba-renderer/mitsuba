@@ -88,19 +88,19 @@ union SSEVector {
 		: ps(ps) {
 	}
 
-	explicit SSEVector(float f0, float f1, float f2, float f3) 
+	explicit SSEVector(float f0, float f1, float f2, float f3)
 		: f0(f0), f1(f1), f2(f2), f3(f3) {
 	}
 
 	explicit SSEVector(float f) : f0(f), f1(f), f2(f), f3(f) {}
-	
-	explicit SSEVector(int32_t i0, int32_t i1, int32_t i2, int32_t i3) 
+
+	explicit SSEVector(int32_t i0, int32_t i1, int32_t i2, int32_t i3)
 		: i0(i0), i1(i1), i2(i2), i3(i3) {
 	}
 
 	explicit SSEVector(int32_t i) : i0(i), i1(i), i2(i), i3(i) {}
 
-	explicit SSEVector(uint32_t ui0, uint32_t ui1, uint32_t ui2, uint32_t ui3) 
+	explicit SSEVector(uint32_t ui0, uint32_t ui1, uint32_t ui2, uint32_t ui3)
 		: ui0(ui0), ui1(ui1), ui2(ui2), ui3(ui3) {
 	}
 

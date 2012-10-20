@@ -28,7 +28,7 @@ MTS_NAMESPACE_BEGIN
  * \headerfile mitsuba/core/object.h mitsuba/mitsuba.h
  * \brief Parent of all Mitsuba classes.
  *
- * Contains functions relevant to every object such as reference counting, 
+ * Contains functions relevant to every object such as reference counting,
  * limited type introspection and lifetime management.
  *
  * \sa ref, Class
@@ -37,7 +37,7 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_CORE Object {
 public:
-	/// Construct a new object 
+	/// Construct a new object
 	Object();
 
 	/// Return the current reference count
@@ -48,10 +48,10 @@ public:
 	 */
 	void incRef() const;
 
-	/** \brief Decrease the reference count of 
-	 * the object and possibly deallocate it. 
+	/** \brief Decrease the reference count of
+	 * the object and possibly deallocate it.
 	 *
-	 * The object will automatically be deallocated once 
+	 * The object will automatically be deallocated once
 	 * the reference count reaches zero.
 	 */
 	void decRef() const;
@@ -70,7 +70,7 @@ public:
 	 */
 	virtual std::string toString() const;
 
-	/** \brief Initializes the built-in reference count 
+	/** \brief Initializes the built-in reference count
 	 * debugger (if enabled)
 	 */
 	static void staticInitialization();

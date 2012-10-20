@@ -27,10 +27,10 @@
 
 MTS_NAMESPACE_BEGIN
 
-Shape::Shape(const Properties &props) 
+Shape::Shape(const Properties &props)
  : ConfigurableObject(props) { }
 
-Shape::Shape(Stream *stream, InstanceManager *manager) 
+Shape::Shape(Stream *stream, InstanceManager *manager)
  : ConfigurableObject(stream, manager) {
 	m_bsdf = static_cast<BSDF *>(manager->getInstance(stream));
 	m_subsurface = static_cast<Subsurface *>(manager->getInstance(stream));
@@ -72,7 +72,7 @@ void Shape::configure() {
 bool Shape::isCompound() const {
 	return false;
 }
-	
+
 std::string Shape::getName() const {
 	return "Unnamed";
 }
@@ -80,14 +80,14 @@ std::string Shape::getName() const {
 Shape *Shape::getElement(int i) {
 	return NULL;
 }
-	
+
 AABB Shape::getClippedAABB(const AABB &box) const {
 	AABB result = getAABB();
 	result.clip(box);
 	return result;
 }
 
-void Shape::sampleDirect(DirectSamplingRecord &dRec, 
+void Shape::sampleDirect(DirectSamplingRecord &dRec,
 			const Point2 &sample) const {
 	/* Piggyback on sampleArea() */
 	samplePosition(dRec, sample);
@@ -181,24 +181,24 @@ void Shape::serialize(Stream *stream, InstanceManager *manager) const {
 	manager->serialize(stream, m_interiorMedium.get());
 	manager->serialize(stream, m_exteriorMedium.get());
 }
-	
+
 Float Shape::getSurfaceArea() const { NotImplementedError("getSurfaceArea"); }
-bool Shape::rayIntersect(const Ray &ray, Float mint, 
+bool Shape::rayIntersect(const Ray &ray, Float mint,
 		Float maxt, Float &t, void *temp) const { NotImplementedError("rayIntersect"); }
-bool Shape::rayIntersect(const Ray &ray, Float mint, 
+bool Shape::rayIntersect(const Ray &ray, Float mint,
 		Float maxt) const { NotImplementedError("rayIntersect"); }
 
-void Shape::fillIntersectionRecord(const Ray &ray, 
+void Shape::fillIntersectionRecord(const Ray &ray,
 		const void *temp, Intersection &its) const {
 	NotImplementedError("fillIntersectionRecord"); }
 
-void Shape::getCurvature(const Intersection &its, Float &H, Float &K, 
+void Shape::getCurvature(const Intersection &its, Float &H, Float &K,
 		bool shadingFrame) const {
 	Vector dndu, dndv;
 	getNormalDerivative(its, dndu, dndv, shadingFrame);
 
 	/* Compute the coefficients of the first and second fundamental form */
-	Float 
+	Float
 		E =  dot(its.dpdu, its.dpdu),
 		F =  dot(its.dpdu, its.dpdv),
 		G =  dot(its.dpdv, its.dpdv),

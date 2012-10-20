@@ -45,12 +45,12 @@ extern MTS_EXPORT_CORE std::pair<double, double> legendrePD(int l, double x);
  * \brief Computes the nodes and weights of a Gauss-Legendre quadrature
  * (aka "Gaussian quadrature") rule with the given number of evaluations.
  *
- * Integration is over the interval \f$[-1, 1]\f$. Gauss-Legendre quadrature 
- * maximizes the order of exactly integrable polynomials achieves this up to 
+ * Integration is over the interval \f$[-1, 1]\f$. Gauss-Legendre quadrature
+ * maximizes the order of exactly integrable polynomials achieves this up to
  * degree \f$2n-1\f$ (where \f$n\f$ is the number of function evaluations).
  *
  * This method is numerically well-behaved until about \f$n=200\f$
- * and then becomes progressively less accurate. It is generally not a 
+ * and then becomes progressively less accurate. It is generally not a
  * good idea to go much higher---in any case, a composite or
  * adaptive integration scheme will be superior for large \f$n\f$.
  *
@@ -68,15 +68,15 @@ extern MTS_EXPORT_CORE void gaussLegendre(int n, Float *nodes, Float *weights);
  * \brief Computes the nodes and weights of a Gauss-Lobatto quadrature
  * rule with the given number of evaluations.
  *
- * Integration is over the interval \f$[-1, 1]\f$. Gauss-Lobatto quadrature 
- * is preferable to Gauss-Legendre quadrature whenever the endpoints of the 
- * integration domain should explicitly be included. It maximizes the order 
- * of exactly integrable polynomials subject to this constraint and achieves 
- * this up to degree \f$2n-3\f$ (where \f$n\f$ is the number of function 
+ * Integration is over the interval \f$[-1, 1]\f$. Gauss-Lobatto quadrature
+ * is preferable to Gauss-Legendre quadrature whenever the endpoints of the
+ * integration domain should explicitly be included. It maximizes the order
+ * of exactly integrable polynomials subject to this constraint and achieves
+ * this up to degree \f$2n-3\f$ (where \f$n\f$ is the number of function
  * evaluations).
  *
  * This method is numerically well-behaved until about \f$n=200\f$
- * and then becomes progressively less accurate. It is generally not a 
+ * and then becomes progressively less accurate. It is generally not a
  * good idea to go much higher---in any case, a composite or
  * adaptive integration scheme will be superior for large \f$n\f$.
  *
@@ -113,11 +113,11 @@ extern MTS_EXPORT_CORE void gaussLobatto(int n, Float *nodes, Float *weights);
  *
  * The original MATLAB version can be downloaded here
  * http://www.inf.ethz.ch/personal/gander/adaptlob.m
- * 
- * This particular implementation is based on code in QuantLib, 
+ *
+ * This particular implementation is based on code in QuantLib,
  * a free-software/open-source library for financial quantitative
  * analysts and developers - http://quantlib.org/
- * 
+ *
  * \ingroup libcore
  */
 class MTS_EXPORT_CORE GaussLobattoIntegrator {
@@ -173,7 +173,7 @@ protected:
 		Float a, Float b, Float fa, Float fb, Float is, size_t &evals) const;
 
 	/**
-	 * Compute the absolute error tolerance using a 13-point 
+	 * Compute the absolute error tolerance using a 13-point
 	 * Gauss-Lobatto rule.
 	 */
 	Float calculateAbsTolerance(const boost::function<Float (Float)>& f,
@@ -191,7 +191,7 @@ protected:
 };
 
 /**
- * \brief Adaptively computes the integral of a multidimensional function using 
+ * \brief Adaptively computes the integral of a multidimensional function using
  * either a Gauss-Kronod (1D) or a Genz-Malik (>1D) cubature rule.
  *
  * This class is a C++ wrapper around the \c cubature code by Steven G. Johnson
@@ -227,9 +227,9 @@ public:
 	 * \param fDim Number of integrands (i.e. dimensions of the image space)
 	 * \param nDim Number of integration dimensions (i.e. dimensions of the
 	 *      function domain)
-	 * \param maxEvals Maximum number of function evaluations (0 means no 
+	 * \param maxEvals Maximum number of function evaluations (0 means no
 	 *      limit). The error bounds will likely be exceeded when the
-	 *      integration is forced to stop prematurely. Note: the actual 
+	 *      integration is forced to stop prematurely. Note: the actual
 	 *      number of evaluations may somewhat exceed this value.
 	 * \param absError Absolute error requirement (0 to disable)
 	 * \param relError Relative error requirement (0 to disable)
@@ -238,7 +238,7 @@ public:
 			size_t maxEvals, Float absError = 0, Float relError = 0);
 
 	/**
-	 * \brief Integrate the function \c f over the rectangular domain 
+	 * \brief Integrate the function \c f over the rectangular domain
 	 * bounded by \c min and \c max.
 	 *
 	 * The supplied function should have the interface
@@ -255,12 +255,12 @@ public:
 			Float *result, Float *error, size_t *evals = NULL) const;
 
 	/**
-	 * \brief Integrate the function \c f over the rectangular domain 
+	 * \brief Integrate the function \c f over the rectangular domain
 	 * bounded by \c min and \c max.
 	 *
 	 * This function implements a vectorized version of the above
 	 * integration function, which is more efficient by evaluating
-	 * the integrant in `batches'. The supplied function should 
+	 * the integrant in `batches'. The supplied function should
 	 * have the interface
 	 *
 	 * <code>
@@ -269,7 +269,7 @@ public:
 	 *
 	 * Note that \c in in is not a single point, but an array of \c numPoints points
 	 * (length \c numPoints x \c dim), and upon return the values of all \c fDim
-	 * integrands at all \c numPoints points should be stored in \c out 
+	 * integrands at all \c numPoints points should be stored in \c out
 	 * (length \c fDim x \c numPoints). In particular, out[i*dim + j] is the j-th
 	 * coordinate of the i-th point, and the k-th function evaluation (k<fDim)
 	 * for the i-th point is returned in out[k*npt + i].
@@ -281,7 +281,7 @@ public:
 	 * up requiring several thousand points in total, \c numPoints may grow to
 	 * several hundred.
 	 */
-	EResult integrateVectorized(const VectorizedIntegrand &f, const Float *min, 
+	EResult integrateVectorized(const VectorizedIntegrand &f, const Float *min,
 		const Float *max, Float *result, Float *error, size_t *evals = NULL) const;
 protected:
 	size_t m_fdim, m_dim, m_maxEvals;

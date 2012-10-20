@@ -23,8 +23,8 @@
  * \file brent.cpp
  * \brief Brent's method nonlinear zero finder
  *
- * The implementation is transcribed from the Apache Commons 
- * Java implementation. 
+ * The implementation is transcribed from the Apache Commons
+ * Java implementation.
  */
 MTS_NAMESPACE_BEGIN
 
@@ -61,7 +61,7 @@ BrentSolver::Result BrentSolver::solve(const boost::function<Float (Float)> &f,
 
 	// return the initial guess if it is good enough
 	Float yInitial = f(initial);
-	if (std::abs(yInitial) <= m_absAccuracy) 
+	if (std::abs(yInitial) <= m_absAccuracy)
 		return Result(true, 0, initial, yInitial);
 
 	// return the first endpoint if it is good enough
@@ -79,7 +79,7 @@ BrentSolver::Result BrentSolver::solve(const boost::function<Float (Float)> &f,
 		return Result(true, 0, max, yMax);
 
 	// reduce interval if initial and max bracket the root
-	if (yInitial * yMax < 0) 
+	if (yInitial * yMax < 0)
 		return solve(f, initial, yInitial, max, yMax, initial, yInitial);
 
 	SLog(EWarn, "BrentSolver: Function values at the endpoints do not have different signs -- "
@@ -116,7 +116,7 @@ BrentSolver::Result BrentSolver::solve(const boost::function<Float (Float)> &f,
 		Float tolerance =
 			std::max(m_relAccuracyPos * std::abs(x1), m_absAccuracyPos);
 
-		if (std::abs(dx) <= tolerance) 
+		if (std::abs(dx) <= tolerance)
 			return Result(true, i, x1, y1);
 		if ((std::abs(oldDelta) < tolerance) ||
 				(std::abs(y0) <= std::abs(y1))) {

@@ -28,88 +28,88 @@ MTS_NAMESPACE_BEGIN
  * \icon{bsdf_roughconductor}
  * \parameters{
  *     \parameter{distribution}{\String}{
- *          Specifies the type of microfacet normal distribution 
+ *          Specifies the type of microfacet normal distribution
  *          used to model the surface roughness.
  *       \begin{enumerate}[(i)]
  *           \item \code{beckmann}: Physically-based distribution derived from
  *               Gaussian random surfaces. This is the default.
  *           \item \code{ggx}: New distribution proposed by
- *              Walter et al. \cite{Walter07Microfacet}, which is meant to better handle 
- *              the long tails observed in measurements of ground surfaces. 
+ *              Walter et al. \cite{Walter07Microfacet}, which is meant to better handle
+ *              the long tails observed in measurements of ground surfaces.
  *              Renderings with this distribution may converge slowly.
  *           \item \code{phong}: Classical $\cos^p\theta$ distribution.
- *              Due to the underlying microfacet theory, 
- *              the use of this distribution here leads to more realistic 
+ *              Due to the underlying microfacet theory,
+ *              the use of this distribution here leads to more realistic
  *              behavior than the separately available \pluginref{phong} plugin.
  *           \item \code{as}: Anisotropic Phong-style microfacet distribution proposed by
  *              Ashikhmin and Shirley \cite{Ashikhmin2005Anisotropic}.\vspace{-3mm}
  *       \end{enumerate}
  *     }
  *     \parameter{alpha}{\Float\Or\Texture}{
- *         Specifies the roughness of the unresolved surface micro-geometry. 
- *         When the Beckmann distribution is used, this parameter is equal to the 
+ *         Specifies the roughness of the unresolved surface micro-geometry.
+ *         When the Beckmann distribution is used, this parameter is equal to the
  *         \emph{root mean square} (RMS) slope of the microfacets. This
  *         parameter is only valid when \texttt{distribution=beckmann/phong/ggx}.
- *         \default{0.1}. 
+ *         \default{0.1}.
  *     }
  *     \parameter{alphaU, alphaV}{\Float\Or\Texture}{
- *         Specifies the anisotropic roughness values along the tangent and 
- *         bitangent directions. These parameter are only valid when 
- *         \texttt{distribution=as}. \default{0.1}. 
+ *         Specifies the anisotropic roughness values along the tangent and
+ *         bitangent directions. These parameter are only valid when
+ *         \texttt{distribution=as}. \default{0.1}.
  *     }
- *     \parameter{material}{\String}{Name of a material preset, see 
+ *     \parameter{material}{\String}{Name of a material preset, see
  *           \tblref{conductor-iors}.\!\default{\texttt{Cu} / copper}}
- *     \parameter{eta}{\Spectrum}{Real part of the material's index 
+ *     \parameter{eta}{\Spectrum}{Real part of the material's index
  *           of refraction \default{based on the value of \texttt{material}}}
- *     \parameter{k}{\Spectrum}{Imaginary part of the material's index of 
+ *     \parameter{k}{\Spectrum}{Imaginary part of the material's index of
  *             refraction (the absorption coefficient).
  *             \default{based on \texttt{material}}}
  *     \parameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
- *         factor that can be used to modulate the specular reflection component. Note 
+ *         factor that can be used to modulate the specular reflection component. Note
  *         that for physical realism, this parameter should never be touched. \default{1.0}}
  * }
  * \vspace{4mm}
  * This plugin implements a realistic microfacet scattering model for rendering
- * rough conducting materials, such as metals. It can be interpreted as a fancy 
- * version of the Cook-Torrance model and should be preferred over 
+ * rough conducting materials, such as metals. It can be interpreted as a fancy
+ * version of the Cook-Torrance model and should be preferred over
  * heuristic models like \pluginref{phong} and \pluginref{ward} when possible.
  * \renderings{
  *     \rendering{Rough copper (Beckmann, $\alpha=0.1$)}
  *     	   {bsdf_roughconductor_copper.jpg}
- *     \rendering{Vertically brushed aluminium (Ashikhmin-Shirley, 
- *         $\alpha_u=0.05,\ \alpha_v=0.3$), see 
+ *     \rendering{Vertically brushed aluminium (Ashikhmin-Shirley,
+ *         $\alpha_u=0.05,\ \alpha_v=0.3$), see
  *         \lstref{roughconductor-aluminium}}
  *         {bsdf_roughconductor_anisotropic_aluminium.jpg}
  * }
  *
- * Microfacet theory describes rough 
- * surfaces as an arrangement of unresolved and ideally specular facets, whose 
- * normal directions are given by a specially chosen \emph{microfacet distribution}. 
- * By accounting for shadowing and masking effects between these facets, it is 
- * possible to reproduce the important off-specular reflections peaks observed 
+ * Microfacet theory describes rough
+ * surfaces as an arrangement of unresolved and ideally specular facets, whose
+ * normal directions are given by a specially chosen \emph{microfacet distribution}.
+ * By accounting for shadowing and masking effects between these facets, it is
+ * possible to reproduce the important off-specular reflections peaks observed
  * in real-world measurements of such materials.
  *
  * This plugin is essentially the ``roughened'' equivalent of the (smooth) plugin
  * \pluginref{conductor}. For very low values of $\alpha$, the two will
- * be identical, though scenes using this plugin will take longer to render 
+ * be identical, though scenes using this plugin will take longer to render
  * due to the additional computational burden of tracking surface roughness.
- * 
+ *
  * The implementation is based on the paper ``Microfacet Models
- * for Refraction through Rough Surfaces'' by Walter et al. 
+ * for Refraction through Rough Surfaces'' by Walter et al.
  * \cite{Walter07Microfacet}. It supports several different types of microfacet
- * distributions and has a texturable roughness parameter. 
- * To facilitate the tedious task of specifying spectrally-varying index of 
+ * distributions and has a texturable roughness parameter.
+ * To facilitate the tedious task of specifying spectrally-varying index of
  * refraction information, this plugin can access a set of measured materials
- * for which visible-spectrum information was publicly available  
+ * for which visible-spectrum information was publicly available
  * (see \tblref{conductor-iors} for the full list).
  *
- * When no parameters are given, the plugin activates the default settings, 
- * which describe copper with a light amount of roughness modeled using a 
+ * When no parameters are given, the plugin activates the default settings,
+ * which describe copper with a light amount of roughness modeled using a
  * Beckmann distribution.
  *
  * To get an intuition about the effect of the surface roughness
- * parameter $\alpha$, consider the following approximate classification: 
- * a value of $\alpha=0.001-0.01$ corresponds to a material 
+ * parameter $\alpha$, consider the following approximate classification:
+ * a value of $\alpha=0.001-0.01$ corresponds to a material
  * with slight imperfections on an
  * otherwise smooth surface finish, $\alpha=0.1$ is relatively rough,
  * and $\alpha=0.3-0.7$ is \emph{extremely} rough (e.g. an etched or ground
@@ -125,11 +125,11 @@ MTS_NAMESPACE_BEGIN
  * \end{xml}
  *
  * \subsubsection*{Technical details}
- * When rendering with the Ashikhmin-Shirley or Phong microfacet 
- * distributions, a conversion is used to turn the specified 
+ * When rendering with the Ashikhmin-Shirley or Phong microfacet
+ * distributions, a conversion is used to turn the specified
  * $\alpha$ roughness value into the exponents of these distributions.
- * This is done in a way, such that the different 
- * distributions all produce a similar appearance for the same value of 
+ * This is done in a way, such that the different
+ * distributions all produce a similar appearance for the same value of
  * $\alpha$.
  *
  * The Ashikhmin-Shirley microfacet distribution allows the specification
@@ -137,14 +137,14 @@ MTS_NAMESPACE_BEGIN
  * directions. This can be used to provide a material with a ``brushed''
  * appearance. The alignment of the anisotropy will follow the UV
  * parameterization of the underlying mesh in this case. This also means that
- * such an anisotropic material cannot be applied to triangle meshes that 
+ * such an anisotropic material cannot be applied to triangle meshes that
  * are missing texture coordinates.
  *
- * When using this plugin, you should ideally compile Mitsuba with support for 
- * spectral rendering to get the most accurate results. While it also works 
+ * When using this plugin, you should ideally compile Mitsuba with support for
+ * spectral rendering to get the most accurate results. While it also works
  * in RGB mode, the computations will be more approximate in nature.
- * Also note that this material is one-sided---that is, observed from the 
- * back side, it will be completely black. If this is undesirable, 
+ * Also note that this material is one-sided---that is, observed from the
+ * back side, it will be completely black. If this is undesirable,
  * consider using the \pluginref{twosided} BRDF adapter.
  */
 class RoughConductor : public BSDF {
@@ -180,7 +180,7 @@ public:
 			m_alphaV = new ConstantFloatTexture(alphaV);
 	}
 
-	RoughConductor(Stream *stream, InstanceManager *manager) 
+	RoughConductor(Stream *stream, InstanceManager *manager)
 	 : BSDF(stream, manager) {
 		m_distribution = MicrofacetDistribution(
 			(MicrofacetDistribution::EType) stream->readUInt()
@@ -198,7 +198,7 @@ public:
 		unsigned int extraFlags = 0;
 		if (m_alphaU != m_alphaV) {
 			extraFlags |= EAnisotropic;
-			if (m_distribution.getType() != 
+			if (m_distribution.getType() !=
 				MicrofacetDistribution::EAshikhminShirley)
 				Log(EError, "Different roughness values along the tangent and "
 						"bitangent directions are only supported when using the "
@@ -216,7 +216,7 @@ public:
 		m_specularReflectance = ensureEnergyConservation(
 			m_specularReflectance, "specularReflectance", 1.0f);
 
-		m_usesRayDifferentials = 
+		m_usesRayDifferentials =
 			m_alphaU->usesRayDifferentials() ||
 			m_alphaV->usesRayDifferentials() ||
 			m_specularReflectance->usesRayDifferentials();
@@ -239,12 +239,12 @@ public:
 			return Spectrum(0.0f);
 
 		/* Calculate the reflection half-vector */
-		Vector H = normalize(bRec.wo+bRec.wi); 
+		Vector H = normalize(bRec.wo+bRec.wi);
 
 		/* Evaluate the roughness */
-		Float alphaU = m_distribution.transformRoughness( 
+		Float alphaU = m_distribution.transformRoughness(
 					m_alphaU->eval(bRec.its).average()),
-			  alphaV = m_distribution.transformRoughness( 
+			  alphaV = m_distribution.transformRoughness(
 					m_alphaV->eval(bRec.its).average());
 
 		/* Evaluate the microsurface normal distribution */
@@ -261,7 +261,7 @@ public:
 		/* Calculate the total amount of reflection */
 		Float value = D * G / (4.0f * Frame::cosTheta(bRec.wi));
 
-		return m_specularReflectance->eval(bRec.its) * F * value; 
+		return m_specularReflectance->eval(bRec.its) * F * value;
 	}
 
 	Float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const {
@@ -274,11 +274,11 @@ public:
 
 		/* Calculate the reflection half-vector */
 		Vector H = normalize(bRec.wo+bRec.wi);
-	
+
 		/* Evaluate the roughness */
-		Float alphaU = m_distribution.transformRoughness( 
+		Float alphaU = m_distribution.transformRoughness(
 					m_alphaU->eval(bRec.its).average()),
-			  alphaV = m_distribution.transformRoughness( 
+			  alphaV = m_distribution.transformRoughness(
 					m_alphaV->eval(bRec.its).average());
 
 		return m_distribution.pdf(H, alphaU, alphaV)
@@ -292,14 +292,14 @@ public:
 			return Spectrum(0.0f);
 
 		/* Evaluate the roughness */
-		Float alphaU = m_distribution.transformRoughness( 
+		Float alphaU = m_distribution.transformRoughness(
 					m_alphaU->eval(bRec.its).average()),
-			  alphaV = m_distribution.transformRoughness( 
+			  alphaV = m_distribution.transformRoughness(
 					m_alphaV->eval(bRec.its).average());
 
 		/* Sample M, the microsurface normal */
 		Float microfacetPDF;
-		const Normal m = m_distribution.sample(sample, 
+		const Normal m = m_distribution.sample(sample,
 			alphaU, alphaV, microfacetPDF);
 
 		if (microfacetPDF == 0)
@@ -336,13 +336,13 @@ public:
 			return Spectrum(0.0f);
 
 		/* Evaluate the roughness */
-		Float alphaU = m_distribution.transformRoughness( 
+		Float alphaU = m_distribution.transformRoughness(
 					m_alphaU->eval(bRec.its).average()),
-			  alphaV = m_distribution.transformRoughness( 
+			  alphaV = m_distribution.transformRoughness(
 					m_alphaV->eval(bRec.its).average());
 
 		/* Sample M, the microsurface normal */
-		const Normal m = m_distribution.sample(sample, 
+		const Normal m = m_distribution.sample(sample,
 			alphaU, alphaV, pdf);
 
 		if (pdf == 0)
@@ -364,7 +364,7 @@ public:
 		Float numerator = m_distribution.eval(m, alphaU, alphaV)
 			* m_distribution.G(bRec.wi, bRec.wo, m, alphaU, alphaV)
 			* dot(bRec.wi, m);
-		
+
 		Float denominator = pdf * Frame::cosTheta(bRec.wi);
 
 		/* Jacobian of the half-direction mapping */
@@ -434,9 +434,9 @@ private:
 
 /**
  * GLSL port of the rough conductor shader. This version is much more
- * approximate -- it only supports the Ashikhmin-Shirley distribution, 
+ * approximate -- it only supports the Ashikhmin-Shirley distribution,
  * does everything in RGB, and it uses the Schlick approximation to the
- * Fresnel reflectance of conductors. When the roughness is lower than 
+ * Fresnel reflectance of conductors. When the roughness is lower than
  * \alpha < 0.2, the shader clamps it to 0.2 so that it will still perform
  * reasonably well in a VPL-based preview.
  */
@@ -444,7 +444,7 @@ class RoughConductorShader : public Shader {
 public:
 	RoughConductorShader(Renderer *renderer, const Texture *specularReflectance,
 			const Texture *alphaU, const Texture *alphaV, const Spectrum &eta,
-			const Spectrum &k) : Shader(renderer, EBSDFShader), 
+			const Spectrum &k) : Shader(renderer, EBSDFShader),
 			m_specularReflectance(specularReflectance), m_alphaU(alphaU), m_alphaV(alphaV){
 		m_specularReflectanceShader = renderer->registerShaderForResource(m_specularReflectance.get());
 		m_alphaUShader = renderer->registerShaderForResource(m_alphaU.get());
@@ -540,7 +540,7 @@ private:
 	Spectrum m_R0;
 };
 
-Shader *RoughConductor::createShader(Renderer *renderer) const { 
+Shader *RoughConductor::createShader(Renderer *renderer) const {
 	return new RoughConductorShader(renderer,
 		m_specularReflectance.get(), m_alphaU.get(), m_alphaV.get(), m_eta, m_k);
 }

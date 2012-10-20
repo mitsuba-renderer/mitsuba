@@ -40,7 +40,7 @@ template <typename T> struct TPoint1 {
 	const static int dim = 1;
 
 	/** \brief Construct a new point without initializing it.
-	 * 
+	 *
 	 * This construtor is useful when the point will either not
 	 * be used at all (it might be part of a larger data structure)
 	 * or initialized at a later point in time. Always make sure
@@ -56,13 +56,13 @@ template <typename T> struct TPoint1 {
 
 	/// Initialize the point with the specified value
 	TPoint1(T x) : x(x) {  }
-	
+
 	/// Initialize the point with the components of another point
-	template <typename T1> explicit TPoint1(const TPoint1<T1> &p) 
+	template <typename T1> explicit TPoint1(const TPoint1<T1> &p)
 		: x((T) p.x) { }
 
 	/// Initialize the point with the components of a vector data structure
-	template <typename T1> explicit TPoint1(const TVector1<T1> &v) 
+	template <typename T1> explicit TPoint1(const TVector1<T1> &v)
 		: x((T) v.x) { }
 
 	/// Unserialize a point from a binary data stream
@@ -82,13 +82,13 @@ template <typename T> struct TPoint1 {
 
 	/// Add a vector to this one (e.g. to compute a weighted position)
 	TPoint1& operator+=(const TVector1<T> &v) {
-		x += v.x;  
+		x += v.x;
 		return *this;
 	}
 
 	/// Add a point to this one (e.g. to compute a weighted position)
 	TPoint1& operator+=(const TPoint1 &p) {
-		x += p.x; 
+		x += p.x;
 		return *this;
 	}
 
@@ -104,7 +104,7 @@ template <typename T> struct TPoint1 {
 
 	/// Subtract a vector from this point
 	TPoint1& operator-=(const TVector1<T> &v) {
-		x -= v.x; 
+		x -= v.x;
 		return *this;
 	}
 
@@ -115,7 +115,7 @@ template <typename T> struct TPoint1 {
 
 	/// Scale the point's coordinates by the given scalar
 	TPoint1 &operator*=(T f) {
-		x *= f; 
+		x *= f;
 		return *this;
 	}
 
@@ -127,7 +127,7 @@ template <typename T> struct TPoint1 {
 	/// Divide the point's coordinates by the given scalar and return the result
 	TPoint1 operator/(T f) const {
 #ifdef MTS_DEBUG
-		if (f == 0) 
+		if (f == 0)
 			SLog(EWarn, "Point1: Division by zero!");
 #endif
 		return TPoint1(x / f);
@@ -136,10 +136,10 @@ template <typename T> struct TPoint1 {
 	/// Divide the point's coordinates by the given scalar
 	TPoint1 &operator/=(T f) {
 #ifdef MTS_DEBUG
-		if (f == 0) 
+		if (f == 0)
 			SLog(EWarn, "Point1: Division by zero!");
 #endif
-		x /= f; 
+		x /= f;
 		return *this;
 	}
 
@@ -195,7 +195,7 @@ template <typename T> inline T distanceSquared(const TPoint1<T> &p1, const TPoin
 
 template <> inline TPoint1<int> TPoint1<int>::operator/(int s) const {
 #ifdef MTS_DEBUG
-	if (s == 0) 
+	if (s == 0)
 		SLog(EWarn, "Point1i: Division by zero!");
 #endif
 	return TPoint1(x/s);
@@ -203,7 +203,7 @@ template <> inline TPoint1<int> TPoint1<int>::operator/(int s) const {
 
 template <> inline TPoint1<int> &TPoint1<int>::operator/=(int s) {
 #ifdef MTS_DEBUG
-	if (s == 0) 
+	if (s == 0)
 		SLog(EWarn, "Point1i: Division by zero!");
 #endif
 	x /= s;
@@ -226,7 +226,7 @@ template <typename T> struct TPoint2 {
 	const static int dim = 2;
 
 	/** \brief Construct a new point without initializing it.
-	 * 
+	 *
 	 * This construtor is useful when the point will either not
 	 * be used at all (it might be part of a larger data structure)
 	 * or initialized at a later point in time. Always make sure
@@ -242,13 +242,13 @@ template <typename T> struct TPoint2 {
 
 	/// Initialize the point with the specified X, Y and Z components
 	TPoint2(T x, T y) : x(x), y(y) {  }
-	
+
 	/// Initialize the point with the components of another point
-	template <typename T2> explicit TPoint2(const TPoint2<T2> &p) 
+	template <typename T2> explicit TPoint2(const TPoint2<T2> &p)
 		: x((T) p.x), y((T) p.y) { }
 
 	/// Initialize the point with the components of a vector data structure
-	template <typename T2> explicit TPoint2(const TVector2<T2> &v) 
+	template <typename T2> explicit TPoint2(const TVector2<T2> &v)
 		: x((T) v.x), y((T) v.y) { }
 
 	/// Initialize all components of the the point with the specified value
@@ -272,7 +272,7 @@ template <typename T> struct TPoint2 {
 
 	/// Add a vector to this one (e.g. to compute a weighted position)
 	TPoint2& operator+=(const TVector2<T> &v) {
-		x += v.x; y += v.y; 
+		x += v.x; y += v.y;
 		return *this;
 	}
 
@@ -317,7 +317,7 @@ template <typename T> struct TPoint2 {
 	/// Divide the point's coordinates by the given scalar and return the result
 	TPoint2 operator/(T f) const {
 #ifdef MTS_DEBUG
-		if (f == 0) 
+		if (f == 0)
 			SLog(EWarn, "Point2: Division by zero!");
 #endif
 		T recip = (T) 1 / f;
@@ -327,7 +327,7 @@ template <typename T> struct TPoint2 {
 	/// Divide the point's coordinates by the given scalar
 	TPoint2 &operator/=(T f) {
 #ifdef MTS_DEBUG
-		if (f == 0) 
+		if (f == 0)
 			SLog(EWarn, "Point2: Division by zero!");
 #endif
 		T recip = (T) 1 / f;
@@ -388,7 +388,7 @@ template <typename T> inline T distanceSquared(const TPoint2<T> &p1, const TPoin
 
 template <> inline TPoint2<int> TPoint2<int>::operator/(int s) const {
 #ifdef MTS_DEBUG
-	if (s == 0) 
+	if (s == 0)
 		SLog(EWarn, "Point2i: Division by zero!");
 #endif
 	return TPoint2(x/s, y/s);
@@ -396,7 +396,7 @@ template <> inline TPoint2<int> TPoint2<int>::operator/(int s) const {
 
 template <> inline TPoint2<int> &TPoint2<int>::operator/=(int s) {
 #ifdef MTS_DEBUG
-	if (s == 0) 
+	if (s == 0)
 		SLog(EWarn, "Point2i: Division by zero!");
 #endif
 	x /= s;
@@ -419,7 +419,7 @@ template <typename T> struct TPoint3 {
 	const static int dim = 3;
 
 	/** \brief Construct a new point without initializing it.
-	 * 
+	 *
 	 * This construtor is useful when the point will either not
 	 * be used at all (it might be part of a larger data structure)
 	 * or initialized at a later point in time. Always make sure
@@ -435,13 +435,13 @@ template <typename T> struct TPoint3 {
 
 	/// Initialize the point with the specified X, Y and Z components
 	TPoint3(T x, T y, T z) : x(x), y(y), z(z) {  }
-	
+
 	/// Initialize the point with the components of another point
-	template <typename T2> explicit TPoint3(const TPoint3<T2> &p) 
+	template <typename T2> explicit TPoint3(const TPoint3<T2> &p)
 		: x((T) p.x), y((T) p.y), z((T) p.z) { }
 
 	/// Initialize the point with the components of a vector data structure
-	template <typename T2> explicit TPoint3(const TVector3<T2> &v) 
+	template <typename T2> explicit TPoint3(const TVector3<T2> &v)
 		: x((T) v.x), y((T) v.y), z((T) v.z) { }
 
 	/// Initialize all components of the the point with the specified value
@@ -472,7 +472,7 @@ template <typename T> struct TPoint3 {
 
 	/// Add a point to this one (e.g. to compute a weighted position)
 	TPoint3& operator+=(const TPoint3 &p) {
-		x += p.x; y += p.y; z += p.z; 
+		x += p.x; y += p.y; z += p.z;
 		return *this;
 	}
 
@@ -488,7 +488,7 @@ template <typename T> struct TPoint3 {
 
 	/// Subtract a vector from this point
 	TPoint3& operator-=(const TVector3<T> &v) {
-		x -= v.x; y -= v.y; z -= v.z; 
+		x -= v.x; y -= v.y; z -= v.z;
 		return *this;
 	}
 
@@ -499,7 +499,7 @@ template <typename T> struct TPoint3 {
 
 	/// Scale the point's coordinates by the given scalar
 	TPoint3 &operator*=(T f) {
-		x *= f; y *= f; z *= f; 
+		x *= f; y *= f; z *= f;
 		return *this;
 	}
 
@@ -511,7 +511,7 @@ template <typename T> struct TPoint3 {
 	/// Divide the point's coordinates by the given scalar and return the result
 	TPoint3 operator/(T f) const {
 #ifdef MTS_DEBUG
-		if (f == 0) 
+		if (f == 0)
 			SLog(EWarn, "Point3: Division by zero!");
 #endif
 		T recip = (T) 1 / f;
@@ -521,11 +521,11 @@ template <typename T> struct TPoint3 {
 	/// Divide the point's coordinates by the given scalar
 	TPoint3 &operator/=(T f) {
 #ifdef MTS_DEBUG
-		if (f == 0) 
+		if (f == 0)
 			SLog(EWarn, "Point3: Division by zero!");
 #endif
 		T recip = (T) 1 / f;
-		x *= recip; y *= recip; z *= recip; 
+		x *= recip; y *= recip; z *= recip;
 		return *this;
 	}
 
@@ -584,7 +584,7 @@ template <typename T> inline T distanceSquared(const TPoint3<T> &p1, const TPoin
 
 template <> inline TPoint3<int> TPoint3<int>::operator/(int s) const {
 #ifdef MTS_DEBUG
-	if (s == 0) 
+	if (s == 0)
 		SLog(EWarn, "Point3i: Division by zero!");
 #endif
 	return TPoint3(x/s, y/s, z/s);
@@ -592,7 +592,7 @@ template <> inline TPoint3<int> TPoint3<int>::operator/(int s) const {
 
 template <> inline TPoint3<int> &TPoint3<int>::operator/=(int s) {
 #ifdef MTS_DEBUG
-	if (s == 0) 
+	if (s == 0)
 		SLog(EWarn, "Point3i: Division by zero!");
 #endif
 	x /= s;
@@ -611,12 +611,12 @@ template <typename T> struct TPoint4 {
 	typedef TVector4<T> VectorType;
 
 	T x, y, z, w;
-	
+
 	/// Number of dimensions
 	const static int dim = 4;
 
 	/** \brief Construct a new point without initializing it.
-	 * 
+	 *
 	 * This construtor is useful when the point will either not
 	 * be used at all (it might be part of a larger data structure)
 	 * or initialized at a later point in time. Always make sure
@@ -634,11 +634,11 @@ template <typename T> struct TPoint4 {
 	TPoint4(T x, T y, T z, T w) : x(x), y(y), z(z), w(w) {  }
 
 	/// Initialize the point with the components of another point
-	template <typename T2> explicit TPoint4(const TPoint4<T2> &p) 
+	template <typename T2> explicit TPoint4(const TPoint4<T2> &p)
 		: x((T) p.x), y((T) p.y), z((T) p.z), w((T) p.w) { }
 
 	/// Initialize the point with the components of a vector data structure
-	template <typename T2> explicit TPoint4(const TVector4<T2> &v) 
+	template <typename T2> explicit TPoint4(const TVector4<T2> &v)
 		: x((T) v.x), y((T) v.y), z((T) v.z), w((T) v.w) { }
 
 	/// Initialize all components of the the point with the specified value
@@ -709,7 +709,7 @@ template <typename T> struct TPoint4 {
 	/// Divide the point's coordinates by the given scalar and return the result
 	TPoint4 operator/(T f) const {
 #ifdef MTS_DEBUG
-		if (f == 0) 
+		if (f == 0)
 			SLog(EWarn, "Point4: Division by zero!");
 #endif
 		T recip = (T) 1 / f;
@@ -719,7 +719,7 @@ template <typename T> struct TPoint4 {
 	/// Divide the point's coordinates by the given scalar
 	TPoint4 &operator/=(T f) {
 #ifdef MTS_DEBUG
-		if (f == 0) 
+		if (f == 0)
 			SLog(EWarn, "Point4: Division by zero!");
 #endif
 		T recip = (T) 1 / f;
@@ -759,7 +759,7 @@ template <typename T> struct TPoint4 {
 		stream->writeElement<T>(z);
 		stream->writeElement<T>(w);
 	}
-	
+
 	/// Return a readable string representation of this point
 	std::string toString() const {
 		std::ostringstream oss;
@@ -782,7 +782,7 @@ template <typename T> inline T distanceSquared(const TPoint4<T> &p1, const TPoin
 
 template <> inline TPoint4<int> TPoint4<int>::operator/(int s) const {
 #ifdef MTS_DEBUG
-	if (s == 0) 
+	if (s == 0)
 		SLog(EWarn, "Point4i: Division by zero!");
 #endif
 	return TPoint4(x/s, y/s, z/s, w/s);
@@ -790,7 +790,7 @@ template <> inline TPoint4<int> TPoint4<int>::operator/(int s) const {
 
 template <> inline TPoint4<int> &TPoint4<int>::operator/=(int s) {
 #ifdef MTS_DEBUG
-	if (s == 0) 
+	if (s == 0)
 		SLog(EWarn, "Point4i: Division by zero!");
 #endif
 

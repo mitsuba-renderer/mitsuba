@@ -30,14 +30,14 @@ MTS_NAMESPACE_BEGIN
  *
  * This class implements a simple and efficient one-entry storage for caching
  * the result of a call to an expensive-to-evaluate function that has no side
- * effects. 
+ * effects.
  *
- * The target application is a situation where multiple threads are causing 
- * calls to such a function and each individual thread may invoke it a few 
+ * The target application is a situation where multiple threads are causing
+ * calls to such a function and each individual thread may invoke it a few
  * times in a row using the same input argument.
- * 
- * This storage class provides the means to avoid re-evaluating the function 
- * in this case. By isolating threads from one another, it does not suffer 
+ *
+ * This storage class provides the means to avoid re-evaluating the function
+ * in this case. By isolating threads from one another, it does not suffer
  * heavy costs for inter-thread synchronizations.
  *
  * Here is an example snippet:
@@ -68,7 +68,7 @@ MTS_NAMESPACE_BEGIN
  * \tparam ReturnType
  *     Return type of the function whose return values should be cached
  */
-template <typename ArgType, typename ReturnType> class SimpleCache 
+template <typename ArgType, typename ReturnType> class SimpleCache
 	: protected PrimitiveThreadLocal< std::pair<ArgType, ReturnType> > {
 protected:
 	typedef std::pair<ArgType, ReturnType>     ValueType;

@@ -26,7 +26,7 @@ MTS_NAMESPACE_BEGIN
 /*                             Work result                              */
 /* ==================================================================== */
 
-BDPTWorkResult::BDPTWorkResult(const BDPTConfiguration &conf, 
+BDPTWorkResult::BDPTWorkResult(const BDPTConfiguration &conf,
 		const ReconstructionFilter *rfilter, Vector2i blockSize) {
 	/* Stores the 'camera image' -- this can be blocked when
 	   spreading out work to multiple workers */
@@ -38,7 +38,7 @@ BDPTWorkResult::BDPTWorkResult(const BDPTConfiguration &conf,
 	m_block->setSize(blockSize);
 
 	if (conf.lightImage) {
-		/* Stores the 'light image' -- every worker requires a 
+		/* Stores the 'light image' -- every worker requires a
 		   full-resolution version, since contributions of s==0
 		   and s==1 paths can affect any pixel of this bitmap */
 		m_lightImage = new ImageBlock(Bitmap::ESpectrum,
@@ -88,7 +88,7 @@ void BDPTWorkResult::clear() {
 #if BDPT_DEBUG == 1
 /* In debug mode, this function allows to dump the contributions of
    the individual sampling strategies to a series of images */
-void BDPTWorkResult::dump(const BDPTConfiguration &conf, 
+void BDPTWorkResult::dump(const BDPTConfiguration &conf,
 		const fs::path &prefix, const fs::path &stem) const {
 	Float weight = (Float) 1.0f / (Float) conf.sampleCount;
 	for (int k = 1; k<=conf.maxDepth; ++k) {
@@ -96,9 +96,9 @@ void BDPTWorkResult::dump(const BDPTConfiguration &conf,
 			size_t s = k+1-t;
 			Bitmap *bitmap = const_cast<Bitmap *>(m_debugBlocks[strategyIndex(s, t)]->getBitmap());
 			ref<Bitmap> ldrBitmap = bitmap->convert(Bitmap::ERGB, Bitmap::EUInt8, -1, weight);
-			fs::path filename = 
+			fs::path filename =
 				prefix / fs::path(formatString("%s_k%02i_s%02i_t%02i.png", stem.filename().string().c_str(), k, s, t));
-			ref<FileStream> targetFile = new FileStream(filename, 
+			ref<FileStream> targetFile = new FileStream(filename,
 				FileStream::ETruncReadWrite);
 			ldrBitmap->write(Bitmap::EPNG, targetFile, 1);
 		}

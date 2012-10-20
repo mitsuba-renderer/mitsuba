@@ -71,16 +71,16 @@ static bool minidumpCallbackWindows(const wchar_t *dump_path,
 	if (!dump_path || !minidump_id)
 		return false;
 
-	std::wstring filename = std::wstring(dump_path) + std::wstring(L"\\") 
+	std::wstring filename = std::wstring(dump_path) + std::wstring(L"\\")
 		+ std::wstring(minidump_id) + std::wstring(L".dmp");
 
 	google_breakpad::CrashReportSender sender(L"");
 	std::map<std::wstring, std::wstring> parameters;
 
 	#if defined(WIN64)
-		parameters[L"prod"] = L"Mitsuba/Win64";	
+		parameters[L"prod"] = L"Mitsuba/Win64";
 	#else
-		parameters[L"prod"] = L"Mitsuba/Win32";	
+		parameters[L"prod"] = L"Mitsuba/Win32";
 	#endif
 
 	std::string version = MTS_VERSION;
@@ -93,11 +93,11 @@ static bool minidumpCallbackWindows(const wchar_t *dump_path,
 	if (MessageBox(NULL, TEXT("Mitsuba crashed due to an internal error. If you agree below, a brief "
 			"report describing the failure will be submitted to the developers. If you would like to "
 			"accelerate the debugging process further, please also create a ticket with information on "
-			"the steps that led to the problem on https://www.mitsuba-renderer.org/tracker -- thank you!"), 
+			"the steps that led to the problem on https://www.mitsuba-renderer.org/tracker -- thank you!"),
 			TEXT("Error"), MB_OKCANCEL | MB_ICONERROR) != IDOK)
 		return false;
 
-	google_breakpad::ReportResult result = 
+	google_breakpad::ReportResult result =
 		sender.SendCrashReport(L"http://www.mitsuba-renderer.org/bugreport.php",
 		parameters, filename, &resultString);
 
@@ -188,13 +188,13 @@ int main(int argc, char *argv[]) {
 		CGEventSourceCreate(kCGEventSourceStateCombinedSessionState);
 	CGEventSourceSetLocalEventsSuppressionInterval(evsrc, 0.0);
 	CFRelease(evsrc);
-	MTS_AUTORELEASE_END() 
+	MTS_AUTORELEASE_END()
 #endif
 
 #if defined(__WINDOWS__)
 	/* Initialize WINSOCK2 */
 	WSADATA wsaData;
-	if (WSAStartup(MAKEWORD(2,2), &wsaData)) 
+	if (WSAStartup(MAKEWORD(2,2), &wsaData))
 		SLog(EError, "Could not initialize WinSock2!");
 	if (LOBYTE(wsaData.wVersion) != 2 || HIBYTE(wsaData.wVersion) != 2)
 		SLog(EError, "Could not find the required version of winsock.dll!");
@@ -225,7 +225,7 @@ int main(int argc, char *argv[]) {
 		app.setStyleSheet(QTextStream(&stylesheet).readAll().toAscii());
 
 #if defined(__OSX__)
-		app.setAttribute(Qt::AA_DontShowIconsInMenus); 
+		app.setAttribute(Qt::AA_DontShowIconsInMenus);
 #endif
 		/* Disable the default appenders */
 		ref<Logger> logger = Thread::getThread()->getLogger();
@@ -237,10 +237,10 @@ int main(int argc, char *argv[]) {
 
 #if defined(__OSX__)
 		/* Create a log file inside the application bundle */
-		MTS_AUTORELEASE_BEGIN() 
-		logger->addAppender(new StreamAppender(formatString("%s/mitsuba.%s.log", 
+		MTS_AUTORELEASE_BEGIN()
+		logger->addAppender(new StreamAppender(formatString("%s/mitsuba.%s.log",
 			__mts_bundlepath().c_str(), getHostName().c_str())));
-		MTS_AUTORELEASE_END() 
+		MTS_AUTORELEASE_END()
 
 		/* Set application defaults (disable OSX synchronization feature) */
 		__mts_set_appdefaults();
@@ -263,7 +263,7 @@ int main(int argc, char *argv[]) {
 		dump_path.resize(1024);
 		GetTempPathW(1024, &dump_path[0]);
 
-		google_breakpad::ExceptionHandler *breakpad = 
+		google_breakpad::ExceptionHandler *breakpad =
 			new google_breakpad::ExceptionHandler(
 				dump_path, NULL, minidumpCallbackWindows, NULL,
 				google_breakpad::ExceptionHandler::HANDLER_ALL,

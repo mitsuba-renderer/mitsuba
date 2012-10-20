@@ -22,12 +22,12 @@
 	#define MAYBE_UNUSED
 #endif
 
-static const char *sh_paraboloid_vert MAYBE_UNUSED = 
+static const char *sh_paraboloid_vert MAYBE_UNUSED =
 	"void main() {\n"
 	"	gl_Position = gl_ModelViewMatrix * gl_Vertex;\n"
 	"}\n";
 
-static const char *sh_paraboloid_geom MAYBE_UNUSED = 
+static const char *sh_paraboloid_geom MAYBE_UNUSED =
 	"#extension GL_EXT_geometry_shader4 : enable\n"
 	"\n"
 	"/* -> Fragment shader (triangle data, projected position) */\n"
@@ -145,7 +145,7 @@ static const char *sh_paraboloid_geom MAYBE_UNUSED =
 	"	EndPrimitive();\n"
 	"}\n";
 
-static const char *sh_paraboloid_frag MAYBE_UNUSED = 
+static const char *sh_paraboloid_frag MAYBE_UNUSED =
 	"/* Triangle data (from geometry shader) */\n"
 	"varying vec3 p0, edge1, edge2;\n"
 	"\n"
@@ -192,19 +192,19 @@ static const char *sh_paraboloid_frag MAYBE_UNUSED =
 	"	gl_FragDepth = depth + sqrt(dx*dx+dy*dy);\n"
 	"}\n";
 
-static const char *sh_directional_vert MAYBE_UNUSED = 
+static const char *sh_directional_vert MAYBE_UNUSED =
 	"void main() {\n"
 	"	gl_Position = ftransform();\n"
 	"}\n";
 
-static const char *sh_directional_frag MAYBE_UNUSED = 
+static const char *sh_directional_frag MAYBE_UNUSED =
 	"void main() {\n"
 	"	float depth = gl_FragCoord.z,\n"
 	"	      dx = dFdx(depth), dy = dFdy(depth);\n"
 	"	gl_FragDepth = depth + sqrt(dx*dx+dy*dy);\n"
 	"}\n";
 
-static const char *sh_cube_6pass_vert MAYBE_UNUSED = 
+static const char *sh_cube_6pass_vert MAYBE_UNUSED =
 	"/* Transformation matrix for the current cube map face */\n"
 	"uniform mat4 transform;\n"
 	"\n"
@@ -220,7 +220,7 @@ static const char *sh_cube_6pass_vert MAYBE_UNUSED =
 	"	depth = dot(projDir, pos);\n"
 	"}\n";
 
-static const char *sh_cube_6pass_frag MAYBE_UNUSED = 
+static const char *sh_cube_6pass_frag MAYBE_UNUSED =
 	"/* Linear depth from the vertex shader */\n"
 	"varying float depth;\n"
 	"\n"
@@ -234,12 +234,12 @@ static const char *sh_cube_6pass_frag MAYBE_UNUSED =
 	"	#endif\n"
 	"}\n";
 
-static const char *sh_cube_1pass_vert MAYBE_UNUSED = 
+static const char *sh_cube_1pass_vert MAYBE_UNUSED =
 	"void main() {\n"
 	"	gl_Position = gl_ModelViewMatrix * gl_Vertex;\n"
 	"}\n";
 
-static const char *sh_cube_1pass_geom MAYBE_UNUSED = 
+static const char *sh_cube_1pass_geom MAYBE_UNUSED =
 	"#extension GL_EXT_geometry_shader4 : enable\n"
 	"\n"
 	"/* Transformation matrix for each cube map face */\n"
@@ -266,7 +266,7 @@ static const char *sh_cube_1pass_geom MAYBE_UNUSED =
 	"	}\n"
 	"}\n";
 
-static const char *sh_cube_1pass_frag MAYBE_UNUSED = 
+static const char *sh_cube_1pass_frag MAYBE_UNUSED =
 	"/* Linear depth from the vertex shader */\n"
 	"varying float depth;\n"
 	"\n"
@@ -275,12 +275,12 @@ static const char *sh_cube_1pass_frag MAYBE_UNUSED =
 	"	gl_FragDepth = depth + sqrt(dx*dx+dy*dy);\n"
 	"}\n";
 
-static const char *sh_hemicube_1pass_vert MAYBE_UNUSED = 
+static const char *sh_hemicube_1pass_vert MAYBE_UNUSED =
 	"void main() {\n"
 	"	gl_Position = gl_ModelViewMatrix * gl_Vertex;\n"
 	"}\n";
 
-static const char *sh_hemicube_1pass_geom MAYBE_UNUSED = 
+static const char *sh_hemicube_1pass_geom MAYBE_UNUSED =
 	"#extension GL_EXT_geometry_shader4 : enable\n"
 	"\n"
 	"/* Transformation matrix for each cube map face */\n"
@@ -307,7 +307,7 @@ static const char *sh_hemicube_1pass_geom MAYBE_UNUSED =
 	"	}\n"
 	"}\n";
 
-static const char *sh_hemicube_1pass_frag MAYBE_UNUSED = 
+static const char *sh_hemicube_1pass_frag MAYBE_UNUSED =
 	"/* Linear depth from the vertex shader */\n"
 	"varying float depth;\n"
 	"\n"
@@ -316,7 +316,7 @@ static const char *sh_hemicube_1pass_frag MAYBE_UNUSED =
 	"	gl_FragDepth = depth + sqrt(dx*dx+dy*dy);\n"
 	"}\n";
 
-static const char *sh_background_vert MAYBE_UNUSED = 
+static const char *sh_background_vert MAYBE_UNUSED =
 	"uniform mat4 clipToWorld;\n"
 	"varying vec3 position;\n"
 	"\n"
@@ -329,7 +329,7 @@ static const char *sh_background_vert MAYBE_UNUSED =
 	"}\n"
 	"\n";
 
-static const char *sh_background_frag MAYBE_UNUSED = 
+static const char *sh_background_frag MAYBE_UNUSED =
 	"#extension GL_EXT_gpu_shader4 : enable\n"
 	"\n"
 	"varying vec3 position;\n"
@@ -356,7 +356,7 @@ static const char *sh_background_frag MAYBE_UNUSED =
 	"	gl_FragColor = vec4(result * emitterScale, 1.0);\n"
 	"}\n";
 
-static const char *sh_unsupported_vert MAYBE_UNUSED = 
+static const char *sh_unsupported_vert MAYBE_UNUSED =
 	"/* Uniform parameters */\n"
 	"uniform mat4 instanceTransform;\n"
 	"\n"
@@ -365,12 +365,12 @@ static const char *sh_unsupported_vert MAYBE_UNUSED =
 	"	gl_Position = gl_ModelViewProjectionMatrix * pos;\n"
 	"}\n";
 
-static const char *sh_unsupported_frag MAYBE_UNUSED = 
+static const char *sh_unsupported_frag MAYBE_UNUSED =
 	"void main() {\n"
 	"	gl_FragColor = vec4(0.0);\n"
 	"}\n";
 
-static const char *sh_render_vert MAYBE_UNUSED = 
+static const char *sh_render_vert MAYBE_UNUSED =
 	"/* Uniform parameters */\n"
 	"uniform mat4 vplTransform;\n"
 	"uniform mat4 instanceTransform;\n"
@@ -430,7 +430,7 @@ static const char *sh_render_vert MAYBE_UNUSED =
 	"	#endif\n"
 	"}\n";
 
-static const char *sh_render_geom MAYBE_UNUSED = 
+static const char *sh_render_geom MAYBE_UNUSED =
 	"#extension GL_EXT_geometry_shader4 : enable\n"
 	"\n"
 	"/* From vertex program */\n"
@@ -469,7 +469,7 @@ static const char *sh_render_geom MAYBE_UNUSED =
 	"	EndPrimitive();\n"
 	"}\n";
 
-static const char *sh_render_frag MAYBE_UNUSED = 
+static const char *sh_render_frag MAYBE_UNUSED =
 	"#extension GL_EXT_gpu_shader4 : enable\n"
 	"\n"
 	"#define EPSILON 0.001\n"

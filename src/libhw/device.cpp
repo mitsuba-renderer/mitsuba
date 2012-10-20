@@ -187,12 +187,12 @@ std::string DeviceEvent::toString() const {
 			break;
 		case Device::EKeyDownEvent:
 			oss << "keyDown, key='" << (m_keyboard.key == 0 ? ' ' : m_keyboard.key) << "', special="
-				<< (int) m_keyboard.special << ", modifiers=" << (int) m_keyboard.modifiers 
+				<< (int) m_keyboard.special << ", modifiers=" << (int) m_keyboard.modifiers
 				<< ", interpreted='" << m_keyboard.interpreted << "'";
 			break;
 		case Device::EKeyUpEvent:
 			oss << "keyUp, key='" << (m_keyboard.key == 0 ? ' ' : m_keyboard.key) << "', special="
-				<< (int) m_keyboard.special << ", modifiers=" << (int) m_keyboard.modifiers 
+				<< (int) m_keyboard.special << ", modifiers=" << (int) m_keyboard.modifiers
 				<< ", interpreted='" << m_keyboard.interpreted << "'";
 			break;
 		case Device::EMouseMotionEvent:

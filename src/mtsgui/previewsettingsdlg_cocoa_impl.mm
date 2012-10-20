@@ -238,7 +238,7 @@
 
 PreviewSettingsDlg::PreviewSettingsDlg(QWidget *parent) : QObject(parent) {
 	NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-	m_dlg = [[CocoaRenderSettingsDlg alloc] 
+	m_dlg = [[CocoaRenderSettingsDlg alloc]
 		initWithParentView: (NSView *) parent->winId()
 		andDelegate: this
 	];
@@ -252,7 +252,7 @@ void PreviewSettingsDlg::show() {
 	QWidget *widget = (QWidget *) parent();
 	QPoint pos = widget->pos();
 	QSize size = widget->size();
-	[m_dlg showAt: NSMakePoint(pos.x() + size.width()/2, 
+	[m_dlg showAt: NSMakePoint(pos.x() + size.width()/2,
 		pos.y() + size.height()/2)];
 }
 

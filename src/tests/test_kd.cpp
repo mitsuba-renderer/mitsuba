@@ -56,7 +56,7 @@ public:
 		));
 		assertFalse(clippedAABB.isValid());
 
-		/* Verify that a no clipping whatsoever happens when 
+		/* Verify that a no clipping whatsoever happens when
 		   the AABB fully contains a triangle */
 		clippedAABB = t.getClippedAABB(vertices, AABB(
 			Point(-1, -1, -1),
@@ -124,7 +124,7 @@ public:
 			Float perc = nIntersections/(Float) nRays;
 			Log(EInfo, "  Found " SIZE_T_FMT " intersections (%.3f%%) in %i ms",
 				nIntersections, perc, timer->getMilliseconds());
-			Log(EInfo, "  -> %.3f MRays/s", 
+			Log(EInfo, "  -> %.3f MRays/s",
 				nRays / (timer->getMilliseconds() * (Float) 1000));
 			Log(EInfo, "");
 		}
@@ -144,7 +144,7 @@ public:
 				kdtree[i].setPosition(Point2(random->nextFloat(), random->nextFloat()));
 				kdtree[i].setData(random->nextFloat());
 			}
-		
+
 			KDTree2::SearchResult results[11];
 			std::vector<KDTree2::SearchResult> resultsBF;
 
@@ -173,7 +173,7 @@ public:
 						resultsBF.push_back(KDTree2::SearchResult((kdtree[j].getPosition()-p).lengthSquared(), (uint32_t) j));
 					std::sort(results, results + k, KDTree2::SearchResultComparator());
 					std::sort(resultsBF.begin(), resultsBF.end(), KDTree2::SearchResultComparator());
-					for (int j=0; j<k; ++j) 
+					for (int j=0; j<k; ++j)
 						assertTrue(results[j] == resultsBF[j]);
 				}
 				Log(EInfo, "Average number of traversals for a %i-nn query = " SIZE_T_FMT, k, nTraversals / nTries);
@@ -186,7 +186,7 @@ public:
 			kdtree[i].setPosition(Point2(random->nextFloat(), random->nextFloat()));
 			kdtree[i].setData(random->nextFloat());
 		}
-	
+
 		std::vector<KDTree2Left::SearchResult> resultsBF;
 		KDTree2Left::SearchResult results[11];
 
@@ -205,12 +205,12 @@ public:
 					resultsBF.push_back(KDTree2Left::SearchResult((kdtree[j].getPosition()-p).lengthSquared(), (uint32_t) j));
 				std::sort(results, results + k, KDTree2Left::SearchResultComparator());
 				std::sort(resultsBF.begin(), resultsBF.end(), KDTree2Left::SearchResultComparator());
-				for (int j=0; j<k; ++j) 
+				for (int j=0; j<k; ++j)
 					assertTrue(results[j] == resultsBF[j]);
 			}
 			Log(EInfo, "Average number of traversals for a %i-nn query = " SIZE_T_FMT, k, nTraversals / nTries);
 		}
-		
+
 		Log(EInfo, "Normal node size = " SIZE_T_FMT " bytes", sizeof(KDTree2::NodeType));
 		Log(EInfo, "Left-balanced node size = " SIZE_T_FMT " bytes", sizeof(KDTree2Left::NodeType));
 	}

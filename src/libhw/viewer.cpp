@@ -44,7 +44,7 @@ int Viewer::run(int argc, char **argv) {
 		while (true) {
 			m_session->processEventsBlocking(m_leaveEventLoop);
 			m_leaveEventLoop = false;
-			if (m_quit) 
+			if (m_quit)
 				break;
 			m_renderer->clear();
 			draw();
@@ -83,7 +83,7 @@ void Viewer::windowResized(const DeviceEvent &event) { }
 bool Viewer::deviceEventOccurred(const DeviceEvent &event) {
 	switch (event.getType()) {
 		case Device::EKeyDownEvent:
-			if (event.getKeyboardKey() == 'q' 
+			if (event.getKeyboardKey() == 'q'
 				|| event.getKeyboardSpecial() == Device::EKeyEscape) {
 				m_quit = true;
 				m_leaveEventLoop = true;

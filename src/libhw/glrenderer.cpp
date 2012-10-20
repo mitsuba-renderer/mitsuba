@@ -95,7 +95,7 @@ void GLRenderer::init(Device *device, Renderer *other) {
 
 	/* OpenGL extensions */
 	GLenum err = glewInit();
-	if (err != GLEW_OK) 
+	if (err != GLEW_OK)
 		Log(EError, "GLEW Error: %s\n", glewGetErrorString(err));
 
 	if (glewIsSupported("GL_EXT_framebuffer_object")) {
@@ -138,7 +138,7 @@ void GLRenderer::init(Device *device, Renderer *other) {
 		Log(m_warnLogLevel, "Capabilities: Fast buffer blitting is NOT supported!");
 	}
 
-	if (glewIsSupported("GL_EXT_framebuffer_multisample") && 
+	if (glewIsSupported("GL_EXT_framebuffer_multisample") &&
 		glewIsSupported("GL_EXT_framebuffer_blit") &&
 		glewIsSupported("GL_ARB_texture_multisample")) {
 		m_capabilities->setSupported(
@@ -194,7 +194,7 @@ void GLRenderer::init(Device *device, Renderer *other) {
 			RendererCapabilities::EBindless, true);
 		Log(m_logLevel, "Capabilities: Bindless rendering is supported.");
 	} else {
-		Log((m_warnLogLevel == EWarn) ? EInfo : m_warnLogLevel, 
+		Log((m_warnLogLevel == EWarn) ? EInfo : m_warnLogLevel,
 			"Capabilities: Bindless rendering is NOT supported!");
 	}
 
@@ -250,7 +250,7 @@ GPUGeometry *GLRenderer::createGPUGeometry(const Shape *shape) {
 GPUProgram *GLRenderer::createGPUProgram(const std::string &name) {
 	return new GLProgram(name);
 }
-	
+
 GPUSync *GLRenderer::createGPUSync() {
 	return new GLSync();
 }
@@ -329,7 +329,7 @@ void GLRenderer::drawMesh(const TriMesh *mesh) {
 					glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 					m_tangentsEnabled = true;
 				}
-				glTexCoordPointer(3, dataType, sizeof(Vector), tangents); 
+				glTexCoordPointer(3, dataType, sizeof(Vector), tangents);
 			} else if (m_tangentsEnabled) {
 				glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 				m_tangentsEnabled = false;
@@ -350,7 +350,7 @@ void GLRenderer::drawMesh(const TriMesh *mesh) {
 		size_t size = mesh->getTriangleCount();
 		if (EXPECT_TAKEN(m_queuedTriangles + size < MTS_GL_MAX_QUEUED_TRIS)) {
 			/* Draw all triangles */
-			glDrawElements(GL_TRIANGLES, (GLsizei) (mesh->getTriangleCount()*3), 
+			glDrawElements(GL_TRIANGLES, (GLsizei) (mesh->getTriangleCount()*3),
 				GL_UNSIGNED_INT, indices);
 			m_queuedTriangles += size;
 		} else {
@@ -360,7 +360,7 @@ void GLRenderer::drawMesh(const TriMesh *mesh) {
 				size_t drawAmt = std::min(size - cur,
 						MTS_GL_MAX_QUEUED_TRIS - m_queuedTriangles);
 				if (drawAmt > 0)
-					glDrawElements(GL_TRIANGLES, (GLsizei) (drawAmt * 3), 
+					glDrawElements(GL_TRIANGLES, (GLsizei) (drawAmt * 3),
 						GL_UNSIGNED_INT, indices + cur * 3);
 				m_queuedTriangles += drawAmt; cur += drawAmt;
 				if (cur < size)
@@ -393,19 +393,19 @@ void GLRenderer::drawMesh(const GPUGeometry *_geo) {
 			glColorFormatNV(3, GL_FLOAT, stride);
 			m_stride = stride;
 		}
-		
-		glBufferAddressRangeNV(GL_VERTEX_ARRAY_ADDRESS_NV, 
+
+		glBufferAddressRangeNV(GL_VERTEX_ARRAY_ADDRESS_NV,
 				0, vertexAddr, vertexSize);
 
 		if (!m_transmitOnlyPositions) {
 			int pos = 3 * sizeof(GLfloat);
-			
+
 			if (mesh->hasVertexNormals()) {
 				if (!m_normalsEnabled) {
 					glEnableClientState(GL_NORMAL_ARRAY);
 					m_normalsEnabled = true;
 				}
-				glBufferAddressRangeNV(GL_NORMAL_ARRAY_ADDRESS_NV, 0, 
+				glBufferAddressRangeNV(GL_NORMAL_ARRAY_ADDRESS_NV, 0,
 					vertexAddr + pos, vertexSize - pos);
 
 				pos += 3 * sizeof(GLfloat);
@@ -453,7 +453,7 @@ void GLRenderer::drawMesh(const GPUGeometry *_geo) {
 					m_colorsEnabled = true;
 				}
 
-				glBufferAddressRangeNV(GL_COLOR_ARRAY_ADDRESS_NV, 0, 
+				glBufferAddressRangeNV(GL_COLOR_ARRAY_ADDRESS_NV, 0,
 					vertexAddr + pos, vertexSize - pos);
 			} else if (m_colorsEnabled) {
 				glDisableClientState(GL_COLOR_ARRAY);
@@ -529,7 +529,7 @@ void GLRenderer::drawMesh(const GPUGeometry *_geo) {
 	size_t size = mesh->getTriangleCount();
 	if (EXPECT_TAKEN(m_queuedTriangles + size < MTS_GL_MAX_QUEUED_TRIS)) {
 		/* Draw all triangles */
-		glDrawElements(GL_TRIANGLES, (GLsizei) (size * 3), 
+		glDrawElements(GL_TRIANGLES, (GLsizei) (size * 3),
 			GL_UNSIGNED_INT, (GLvoid *) 0);
 		m_queuedTriangles += size;
 	} else {
@@ -539,10 +539,10 @@ void GLRenderer::drawMesh(const GPUGeometry *_geo) {
 			size_t drawAmt = std::min(size - cur,
 					MTS_GL_MAX_QUEUED_TRIS - m_queuedTriangles);
 			if (drawAmt > 0)
-				glDrawElements(GL_TRIANGLES, (GLsizei) (drawAmt * 3), 
+				glDrawElements(GL_TRIANGLES, (GLsizei) (drawAmt * 3),
 					GL_UNSIGNED_INT, (GLuint *) 0 + cur * 3);
 			m_queuedTriangles += drawAmt; cur += drawAmt;
-			if (cur < size) 
+			if (cur < size)
 				finish();
 		}
 	}
@@ -591,7 +591,7 @@ void GLRenderer::drawAll(const std::vector<TransformedGPUGeometry> &allGeometry)
 	GLRenderer::beginDrawingMeshes(true);
 
 	if (m_capabilities->isSupported(RendererCapabilities::EBindless)) {
-		for (std::vector<TransformedGPUGeometry>::const_iterator it = allGeometry.begin(); 
+		for (std::vector<TransformedGPUGeometry>::const_iterator it = allGeometry.begin();
 				it != allGeometry.end(); ++it) {
 			const GLGeometry *geo  = static_cast<const GLGeometry *>((*it).first);
 			const Matrix4x4 &trafo = (*it).second;
@@ -614,14 +614,14 @@ void GLRenderer::drawAll(const std::vector<TransformedGPUGeometry> &allGeometry)
 
 			glBufferAddressRangeNV(GL_VERTEX_ARRAY_ADDRESS_NV, 0,
 				vertexAddr, vertexSize);
-			glBufferAddressRangeNV(GL_ELEMENT_ARRAY_ADDRESS_NV, 0, 
+			glBufferAddressRangeNV(GL_ELEMENT_ARRAY_ADDRESS_NV, 0,
 				indexAddr, indexSize);
 
 			size_t size = mesh->getTriangleCount();
 
 			if (EXPECT_TAKEN(m_queuedTriangles + size < MTS_GL_MAX_QUEUED_TRIS)) {
 				/* Draw all triangles */
-				glDrawElements(GL_TRIANGLES, (GLsizei) (size * 3), 
+				glDrawElements(GL_TRIANGLES, (GLsizei) (size * 3),
 					GL_UNSIGNED_INT, (GLvoid *) 0);
 				m_queuedTriangles += size;
 			} else {
@@ -631,7 +631,7 @@ void GLRenderer::drawAll(const std::vector<TransformedGPUGeometry> &allGeometry)
 					size_t drawAmt = std::min(size - cur,
 							MTS_GL_MAX_QUEUED_TRIS - m_queuedTriangles);
 					if (drawAmt > 0)
-						glDrawElements(GL_TRIANGLES, (GLsizei) (drawAmt * 3), 
+						glDrawElements(GL_TRIANGLES, (GLsizei) (drawAmt * 3),
 							GL_UNSIGNED_INT, (GLuint *) 0 + cur * 3);
 					m_queuedTriangles += drawAmt; cur += drawAmt;
 					if (cur < size)
@@ -640,7 +640,7 @@ void GLRenderer::drawAll(const std::vector<TransformedGPUGeometry> &allGeometry)
 			}
 		}
 	} else {
-		for (std::vector<TransformedGPUGeometry>::const_iterator it = allGeometry.begin(); 
+		for (std::vector<TransformedGPUGeometry>::const_iterator it = allGeometry.begin();
 				it != allGeometry.end(); ++it) {
 			const GLGeometry *geo  = static_cast<const GLGeometry *>((*it).first);
 			const Matrix4x4 &trafo = (*it).second;
@@ -661,7 +661,7 @@ void GLRenderer::drawAll(const std::vector<TransformedGPUGeometry> &allGeometry)
 
 			if (EXPECT_TAKEN(m_queuedTriangles + size < MTS_GL_MAX_QUEUED_TRIS)) {
 				/* Draw all triangles */
-				glDrawElements(GL_TRIANGLES, (GLsizei) (size * 3), 
+				glDrawElements(GL_TRIANGLES, (GLsizei) (size * 3),
 					GL_UNSIGNED_INT, (GLvoid *) 0);
 				m_queuedTriangles += size;
 			} else {
@@ -671,7 +671,7 @@ void GLRenderer::drawAll(const std::vector<TransformedGPUGeometry> &allGeometry)
 					size_t drawAmt = std::min(size - cur,
 							MTS_GL_MAX_QUEUED_TRIS - m_queuedTriangles);
 					if (drawAmt > 0)
-						glDrawElements(GL_TRIANGLES, (GLsizei) (drawAmt * 3), 
+						glDrawElements(GL_TRIANGLES, (GLsizei) (drawAmt * 3),
 							GL_UNSIGNED_INT, (GLuint *) 0 + cur * 3);
 					m_queuedTriangles += drawAmt; cur += drawAmt;
 					if (cur < size)
@@ -690,7 +690,7 @@ void GLRenderer::blitTexture(const GPUTexture *tex, bool flipVertically,
 	tex->bind();
 	glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 
-	GLint viewport[4];	
+	GLint viewport[4];
 	glGetIntegerv(GL_VIEWPORT, viewport);
 	Vector2i scrSize = Vector2i(viewport[2], viewport[3]);
 	Vector2i texSize = Vector2i(tex->getSize().x, tex->getSize().y);
@@ -733,7 +733,7 @@ void GLRenderer::blitTexture(const GPUTexture *tex, bool flipVertically,
 }
 
 void GLRenderer::blitQuad(bool flipVertically) {
-	GLint viewport[4];	
+	GLint viewport[4];
 	glGetIntegerv(GL_VIEWPORT, viewport);
 	Vector2 scrSize((float) viewport[2], (float) viewport[3]);
 	glMatrixMode(GL_PROJECTION);
@@ -759,7 +759,7 @@ void GLRenderer::blitQuad(bool flipVertically) {
 	glPopMatrix();
 }
 
-void GLRenderer::drawText(const Point2i &_pos, 
+void GLRenderer::drawText(const Point2i &_pos,
 		const Font *font, const std::string &text) {
 	int viewport[4];
 	glGetIntegerv(GL_VIEWPORT, viewport);
@@ -895,13 +895,13 @@ void GLRenderer::drawFilledRectangle(const Point2i &a, const Point2i &b) {
 	glEnd();
 }
 
-void GLRenderer::drawEllipse(const Point &center, 
+void GLRenderer::drawEllipse(const Point &center,
 		const Vector &axis1, const Vector &axis2) {
 	const int nSteps = 100;
 	const float stepSize = 2*M_PI/nSteps;
 	glBegin(GL_LINE_LOOP);
 	for (int i=0; i<100; ++i) {
-		Point p = center + axis1 * std::cos(i*stepSize) 
+		Point p = center + axis1 * std::cos(i*stepSize)
 			+ axis2 * std::sin(i*stepSize);
 		glVertex3f(p.x, p.y, p.z);
 	}
@@ -928,7 +928,7 @@ Matrix4x4 GLRenderer::getMatrix(EMatrixType type) const {
 	return fetchMatrix(type == EProjection ? GL_PROJECTION_MATRIX : GL_MODELVIEW_MATRIX);
 }
 
-void GLRenderer::setCamera(const ProjectiveCamera *camera, 
+void GLRenderer::setCamera(const ProjectiveCamera *camera,
 		const Point2 &apertureSample, const Point2 &aaSample, Float timeSample) {
 	Float time = camera->getShutterOpen() + camera->getShutterOpenTime() * timeSample;
 
@@ -937,7 +937,7 @@ void GLRenderer::setCamera(const ProjectiveCamera *camera,
 		apertureSample, aaSample).getMatrix());
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
-	/* Apply a rotation to account for the difference in camera 
+	/* Apply a rotation to account for the difference in camera
 	   conventions. In OpenGL, forward is z=-1, in Mitsuba it is z=+1 */
 	glScalef(-1.0f, 1.0f, -1.0f);
 	multMatrix(camera->getViewTransform(time).getMatrix());
@@ -948,7 +948,7 @@ void GLRenderer::setCamera(const Matrix4x4 &proj, const Matrix4x4 &view) {
 	loadMatrix(proj);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
-	/* Apply a rotation to account for the difference in camera 
+	/* Apply a rotation to account for the difference in camera
 	   conventions. In OpenGL, forward is z=-1, in Mitsuba it is z=+1 */
 	glScalef(-1.0f, 1.0f, -1.0f);
 	multMatrix(view);
@@ -984,7 +984,7 @@ void GLRenderer::finish() {
 void GLRenderer::setColor(const Color3 &col, Float alpha) {
 	glColor4f((GLfloat) col[0], (GLfloat) col[1], (GLfloat) col[2], alpha);
 }
-	
+
 void GLRenderer::setColor(const Spectrum &spec, Float alpha) {
 	Float r, g, b;
 	spec.toLinearRGB(r, g, b);

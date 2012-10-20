@@ -24,7 +24,7 @@
 #include <fstream>
 #include <iomanip>
 #include <omp.h>
-		
+
 #define RESOLUTION_IOR          50
 #define RESOLUTION_ROUGHNESS    30
 #define RESOLUTION_THETA        100
@@ -50,20 +50,20 @@ void transmittanceIntegrand(const BSDF *bsdf, const Vector &wi, size_t nPts, con
 		if (sample.y == 1)
 			sample.y = 1-Epsilon;
 		out[i] = bsdf->sample(bRec, sample)[0];
-		if (std::isnan(out[i])) 
+		if (std::isnan(out[i]))
 			SLog(EError, "%s\n\nNaN!", bRec.toString().c_str());
 	}
 }
 
 void diffTransmittanceIntegrand(Float *data, size_t resolution, size_t nPts, const Float *in, Float *out) {
 	#pragma omp parallel for
-	for (int i=0; i<(int) nPts; ++i) 
+	for (int i=0; i<(int) nPts; ++i)
 		out[i] = 2 * in[i] * interpCubic1D(std::pow(in[i], (Float) 0.25f), data, 0, 1, resolution);
 }
 
 class PrecomputeTransmittance : public Utility {
 public:
-	Float *computeTransmittance(const char *name, Float ior, Float alpha, 
+	Float *computeTransmittance(const char *name, Float ior, Float alpha,
 			size_t resolution, Float &diffTrans, int inverted) {
 		Properties bsdfProps(alpha == 0 ? "dielectric" : "roughdielectric");
 		if (inverted) {
@@ -89,7 +89,7 @@ public:
 			Float t = i * stepSize;
 			if (i == 0) /* Don't go all the way to zero */
 				t = stepSize/10;
-	
+
 			Float cosTheta = std::pow(t, (Float) 4.0f);
 
 			Vector wi(math::safe_sqrt(1-cosTheta*cosTheta), 0, cosTheta);
@@ -215,7 +215,7 @@ public:
 		ref<Timer> timer = new Timer();
 
 //		fit("beckmann", 0);
-//		fit("beckmann", 1); 
+//		fit("beckmann", 1);
 		fit("phong", 0);
 		fit("phong", 1);
 //		fit("ggx", 0);

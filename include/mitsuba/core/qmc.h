@@ -23,7 +23,7 @@
 #include <mitsuba/mitsuba.h>
 
 MTS_NAMESPACE_BEGIN
- 
+
 /*! \addtogroup libcore */
 /*! @{ */
 
@@ -40,7 +40,7 @@ extern const int MTS_EXPORT_CORE primeTable[primeTableSize];
 /// Van der Corput radical inverse in base 2 with single precision
 inline float radicalInverse2Single(uint32_t n, uint32_t scramble = 0U) {
 	/* Efficiently reverse the bits in 'n' using binary operations */
-#if defined __GNUC__ && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 2)) 
+#if defined __GNUC__ && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 2))
 	n = __builtin_bswap32(n);
 #else
 	n = (n << 16) | (n >> 16);
@@ -59,7 +59,7 @@ inline float radicalInverse2Single(uint32_t n, uint32_t scramble = 0U) {
 /// Van der Corput radical inverse in base 2 with double precision
 inline double radicalInverse2Double(uint64_t n, uint64_t scramble = 0ULL) {
 	/* Efficiently reverse the bits in 'n' using binary operations */
-#if defined __GNUC__ && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 2)) 
+#if defined __GNUC__ && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 2))
 	n = __builtin_bswap64(n);
 #else
 	n = (n << 32) | (n >> 32);
@@ -125,7 +125,7 @@ inline Point2 sample02(size_t n) {
 }
 
 /**
- * \ref Generate fast and reasonably good pseudorandom numbers using the 
+ * \ref Generate fast and reasonably good pseudorandom numbers using the
  * Tiny Encryption Algorithm (TEA) by David Wheeler and Roger Needham.
  *
  * For details, refer to "GPU Random Numbers via the Tiny Encryption Algorithm"
@@ -146,7 +146,7 @@ inline uint64_t sampleTEA(uint32_t v0, uint32_t v1, int rounds = 4) {
 
 	for (int i=0; i<rounds; ++i) {
 		sum += 0x9e3779b9;
-		v0 += ((v1 << 4) + 0xA341316C) ^ (v1 + sum) ^ ((v1 >> 5) + 0xC8013EA4); 
+		v0 += ((v1 << 4) + 0xA341316C) ^ (v1 + sum) ^ ((v1 >> 5) + 0xC8013EA4);
 		v1 += ((v0 << 4) + 0xAD90777D) ^ (v0 + sum) ^ ((v0 >> 5) + 0x7E95761E);
 	}
 
@@ -155,7 +155,7 @@ inline uint64_t sampleTEA(uint32_t v0, uint32_t v1, int rounds = 4) {
 
 #if defined(DOUBLE_PRECISION)
 inline Float sampleTEAFloat(uint32_t v0, uint32_t v1, int rounds = 4) {
-	/* Trick from MTGP: generate an uniformly distributed 
+	/* Trick from MTGP: generate an uniformly distributed
        single precision number in [1,2) and subtract 1. */
     union {
 		uint64_t u;
@@ -167,7 +167,7 @@ inline Float sampleTEAFloat(uint32_t v0, uint32_t v1, int rounds = 4) {
 
 #else
 inline Float sampleTEAFloat(uint32_t v0, uint32_t v1, int rounds = 4) {
-	/* Trick from MTGP: generate an uniformly distributed 
+	/* Trick from MTGP: generate an uniformly distributed
        single precision number in [1,2) and subtract 1. */
     union {
 		uint32_t u;
@@ -183,7 +183,7 @@ inline Float sampleTEAFloat(uint32_t v0, uint32_t v1, int rounds = 4) {
  *
  * This function is used as a building block to construct Halton and
  * Hammersley sequences. Roughly, it computes a b-ary representation
- * of the input value \c index, mirrors it along the decimal 
+ * of the input value \c index, mirrors it along the decimal
  * point, and returns the resulting fractional value.
  */
 extern MTS_EXPORT_CORE Float radicalInverse(int base, uint64_t index);
@@ -191,13 +191,13 @@ extern MTS_EXPORT_CORE Float radicalInverse(int base, uint64_t index);
 /**
  * \brief Calculate a scrambled radical inverse function
  *
- * This function is used as a building block to construct permuted 
+ * This function is used as a building block to construct permuted
  * Halton and Hammersley sequence variants. It works like the normal
- * radical inverse function \ref radicalInverse(), except that every digit 
- * is run through an extra scrambling permutation specified as array 
+ * radical inverse function \ref radicalInverse(), except that every digit
+ * is run through an extra scrambling permutation specified as array
  * of size \c base.
  */
-extern MTS_EXPORT_CORE Float scrambledRadicalInverse(int base, 
+extern MTS_EXPORT_CORE Float scrambledRadicalInverse(int base,
 	uint64_t index, uint16_t *perm);
 
 /**
@@ -211,13 +211,13 @@ extern MTS_EXPORT_CORE Float radicalInverseIncremental(int base, Float x);
 /**
  * \brief Calculate a radical inverse function (fast version)
  *
- * This function works similarly to \ref radicalInverse, but is potentially much 
+ * This function works similarly to \ref radicalInverse, but is potentially much
  * faster. Internally, it relies on optimized implementations of the radical inverse
- * functions for the first 1024 prime number bases. For that reason, only works for 
+ * functions for the first 1024 prime number bases. For that reason, only works for
  * such bases.
  *
  * \ref baseIndex
- *    Prime number index starting at 0 (i.e. 3 would cause 7 to be 
+ *    Prime number index starting at 0 (i.e. 3 would cause 7 to be
  *    used as the basis)
  * \ref perm
  *    Sequence index
@@ -227,12 +227,12 @@ extern MTS_EXPORT_CORE Float radicalInverseFast(uint16_t baseIndex, uint64_t ind
 /**
  * \brief Calculate a scrambled radical inverse function (fast version)
  *
- * This function is used as a building block to construct permuted 
+ * This function is used as a building block to construct permuted
  * Halton and Hammersley sequence variants. It works like the fast
- * radical inverse function \ref radicalInverseFast(), except that every 
+ * radical inverse function \ref radicalInverseFast(), except that every
  * digit is run through an extra scrambling permutation.
  */
-extern MTS_EXPORT_CORE Float scrambledRadicalInverseFast(uint16_t baseIndex, 
+extern MTS_EXPORT_CORE Float scrambledRadicalInverseFast(uint16_t baseIndex,
 		uint64_t index, uint16_t *perm);
 
 //! @}

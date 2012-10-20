@@ -27,7 +27,7 @@
  * \brief Should Mitsuba use a left-balanced photon map?
  *
  * This saves some memory, but at a noticeable cost in query
- * performance. The default is to build an unbalanced 
+ * performance. The default is to build an unbalanced
  * photon map using the sliding midpoint rule.
  */
 #define MTS_PHOTONMAP_LEFT_BALANCED 0
@@ -54,7 +54,7 @@ struct PhotonData {
  * \ingroup librender
  * \sa PhotonMap
  */
-struct MTS_EXPORT_RENDER Photon : 
+struct MTS_EXPORT_RENDER Photon :
 #if MTS_PHOTONMAP_LEFT_BALANCED == 1
 	public LeftBalancedKDNode<Point, PhotonData> {
 #else
@@ -65,11 +65,11 @@ public:
 	/// Dummy constructor
 	inline Photon() { }
 
-	/// Construct from a photon interaction 
+	/// Construct from a photon interaction
 	Photon(const Point &pos, const Normal &normal,
 			const Vector &dir, const Spectrum &power,
 			uint16_t depth);
-	
+
 	/// Unserialize from a binary data stream
 	Photon(Stream *stream);
 
@@ -83,7 +83,7 @@ public:
 
 	/**
 	 * Convert the photon direction from quantized spherical coordinates
-	 * to a floating point vector value. Precomputation idea based on 
+	 * to a floating point vector value. Precomputation idea based on
 	 * Jensen's implementation.
 	 */
 	inline Vector getDirection() const {

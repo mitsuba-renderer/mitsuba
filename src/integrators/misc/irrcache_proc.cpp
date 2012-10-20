@@ -25,9 +25,9 @@ MTS_NAMESPACE_BEGIN
 /* Parallel overture pass implementation (worker) */
 class OvertureWorker : public WorkProcessor {
 public:
-	OvertureWorker(int resolution, bool gradients, bool clampNeighbor, 
+	OvertureWorker(int resolution, bool gradients, bool clampNeighbor,
 		bool clampScreen, Float quality) : m_resolution(resolution), m_gradients(gradients),
-		m_clampNeighbor(clampNeighbor), m_clampScreen(clampScreen), 
+		m_clampNeighbor(clampNeighbor), m_clampScreen(clampScreen),
 		m_quality(quality) {
 	}
 
@@ -73,7 +73,7 @@ public:
 		m_hs = new HemisphereSampler(m_resolution, 3*m_resolution);
 	}
 
-	void process(const WorkUnit *workUnit, WorkResult *workResult, 
+	void process(const WorkUnit *workUnit, WorkResult *workResult,
 		const bool &stop) {
 		const RectangularWorkUnit *rect = static_cast<const RectangularWorkUnit *>(workUnit);
 		IrradianceRecordVector *result = static_cast<IrradianceRecordVector *>(workResult);
@@ -90,7 +90,7 @@ public:
 
 		for (int y = sy; y < ey; y++) {
 			for (int x = sx; x < ex; x++) {
-				if (stop) 
+				if (stop)
 					break;
 				Point2 pixelSample(x + .5f, y + .5f);
 				RayDifferential ray;
@@ -178,9 +178,9 @@ std::string IrradianceRecordVector::toString() const {
 	return oss.str();
 }
 
-OvertureProcess::OvertureProcess(const RenderJob *job, int resolution, bool gradients, 
-	bool clampNeighbor, bool clampScreen, Float quality) : m_job(job), m_resolution(resolution), 
-	m_gradients(gradients), m_clampNeighbor(clampNeighbor), 
+OvertureProcess::OvertureProcess(const RenderJob *job, int resolution, bool gradients,
+	bool clampNeighbor, bool clampScreen, Float quality) : m_job(job), m_resolution(resolution),
+	m_gradients(gradients), m_clampNeighbor(clampNeighbor),
 	m_clampScreen(clampScreen), m_quality(quality), m_progress(NULL) {
 	m_resultCount = 0;
 	m_resultMutex = new Mutex();

@@ -33,13 +33,13 @@ MTS_NAMESPACE_BEGIN
  *     }
  * }
  *
- * This sensor plugin implements a simple irradiance meter, which 
- * measures the average incident power per unit area over a 
- * provided surface. 
- * Such a sensor is useful for conducting virtual experiments and 
+ * This sensor plugin implements a simple irradiance meter, which
+ * measures the average incident power per unit area over a
+ * provided surface.
+ * Such a sensor is useful for conducting virtual experiments and
  * testing the renderer for correctness.
  *
- * To create an irradiance meter, instantiate the desired measurement 
+ * To create an irradiance meter, instantiate the desired measurement
  * shape and specify the sensor as its child. Note that when the
  * sensor's film resolution is larger than $1\times 1$, each pixel
  * will record the average irradiance over a rectangular part of the
@@ -53,7 +53,7 @@ MTS_NAMESPACE_BEGIN
  *     <shape type="sphere">
  *         <sensor type="irradiancemeter">
  *             <!-- Write the output to a MATLAB M-file. The output file will
- *                  contain a 1x1 matrix storing an estimate of the average 
+ *                  contain a 1x1 matrix storing an estimate of the average
  *                  irradiance over the surface of the sphere. -->
  *             <film type="mfilm"/>
  *
@@ -80,7 +80,7 @@ public:
 				"its parent shape");
 	}
 
-	IrradianceMeter(Stream *stream, InstanceManager *manager) 
+	IrradianceMeter(Stream *stream, InstanceManager *manager)
 		: Sensor(stream, manager) {
 		m_shape = static_cast<Shape *>(manager->getInstance(stream));
 		configure();
@@ -142,7 +142,7 @@ public:
 		return m_shape->pdfPosition(pRec);
 	}
 
-	Spectrum sampleDirection(DirectionSamplingRecord &dRec, 
+	Spectrum sampleDirection(DirectionSamplingRecord &dRec,
 			PositionSamplingRecord &pRec,
 			const Point2 &sample, const Point2 *extra) const {
 		Vector local = Warp::squareToCosineHemisphere(sample);
@@ -172,11 +172,11 @@ public:
 		return INV_PI * dp;
 	}
 
-	Spectrum sampleDirect(DirectSamplingRecord &dRec, 
+	Spectrum sampleDirect(DirectSamplingRecord &dRec,
 			const Point2 &sample) const {
 		m_shape->sampleDirect(dRec, sample);
 
-		/* Check that the sensor and reference position are oriented correctly 
+		/* Check that the sensor and reference position are oriented correctly
 		   with respect to each other. Note that the >= 0 check
 		   for 'refN' is intentional -- those sampling requests that specify
 		   a reference point within a medium or on a transmissive surface
@@ -191,7 +191,7 @@ public:
 	}
 
 	Float pdfDirect(const DirectSamplingRecord &dRec) const {
-		/* Check that the sensor and reference position are oriented correctly 
+		/* Check that the sensor and reference position are oriented correctly
 		   with respect to each other. */
 		if (dot(dRec.d, dRec.refN) >= 0 && dot(dRec.d, dRec.n) < 0) {
 			return m_shape->pdfDirect(dRec);

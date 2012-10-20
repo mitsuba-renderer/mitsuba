@@ -45,9 +45,9 @@ void WGLRenderer::init(Device *device, Renderer *other) {
 
 		if (other != NULL) {
 			Assert(other->getClass() == m_theClass);
-			if (wglShareLists(m_context, 
-				static_cast<WGLRenderer *>(other)->m_context) != TRUE) 
-				Log(EError, "Unable to set up context sharing: %s", 
+			if (wglShareLists(m_context,
+				static_cast<WGLRenderer *>(other)->m_context) != TRUE)
+				Log(EError, "Unable to set up context sharing: %s",
 					lastErrorText().c_str());
 		}
 

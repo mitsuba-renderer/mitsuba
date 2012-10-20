@@ -51,7 +51,7 @@ template <typename T> struct TQuaternion {
 	TQuaternion() : v(0.0f), w(1) { }
 
 	/**
-	 * Initialize the quaternion with the specified 
+	 * Initialize the quaternion with the specified
 	 * real and imaginary components
 	 */
 	TQuaternion(const TVector3<T> &v, T w) : v(v), w(w) {  }
@@ -74,7 +74,7 @@ template <typename T> struct TQuaternion {
 
 	/// Add another quaternions to the current one
 	TQuaternion& operator+=(const TQuaternion &q) {
-		v += q.v; w += q.w; 
+		v += q.v; w += q.w;
 		return *this;
 	}
 
@@ -91,7 +91,7 @@ template <typename T> struct TQuaternion {
 
 	/// Multiply the quaternion by the given scalar
 	TQuaternion &operator*=(T f) {
-		v *= f; w *= f; 
+		v *= f; w *= f;
 		return *this;
 	}
 
@@ -112,7 +112,7 @@ template <typename T> struct TQuaternion {
 			SLog(EWarn, "Quaternion: Division by zero!");
 #endif
 		T recip = (T) 1 / f;
-		v *= recip; w *= recip; 
+		v *= recip; w *= recip;
 		return *this;
 	}
 
@@ -148,7 +148,7 @@ template <typename T> struct TQuaternion {
 
 	/**
 	 * \brief Compute the exponential of a quaternion with
-	 * scalar part w = 0. 
+	 * scalar part w = 0.
 	 *
 	 * Based on code the appendix of
 	 * "Quaternion Calculus for Computer Graphics" by Ken Shoemake
@@ -157,7 +157,7 @@ template <typename T> struct TQuaternion {
 		T theta = v.length();
 		T c = std::cos(theta);
 
-		if (theta > Epsilon) 
+		if (theta > Epsilon)
 			return TQuaternion(v * (std::sin(theta) / theta), c);
 		else
 			return TQuaternion(v, c);
@@ -189,7 +189,7 @@ template <typename T> struct TQuaternion {
 	}
 
 	/**
-	 * \brief Construct an unit quaternion, which rotates unit direction 
+	 * \brief Construct an unit quaternion, which rotates unit direction
 	 * \a from onto \a to.
 	 */
 	static TQuaternion fromDirectionPair(const Vector &from, const Vector &to) {
@@ -255,7 +255,7 @@ template <typename T> struct TQuaternion {
 		}
 		return TQuaternion(v, w);
 	}
-	
+
 	/**
 	 * \brief Construct an unit quaternion matching the supplied
 	 * rotation expressed in Euler angles (in radians)
@@ -279,7 +279,7 @@ template <typename T> struct TQuaternion {
 				return qy * qx * qz;
 			case EEulerZYX:
 				return qx * qy * qz;
-			default:	
+			default:
 				SLog(EError, "Internal error!");
 				return TQuaternion();
 		}

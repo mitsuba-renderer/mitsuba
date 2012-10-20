@@ -37,7 +37,7 @@ MTS_NAMESPACE_BEGIN
 
 /** \brief Base class of all testcases.
  *
- * Implementations of this interface can be executed using the 'mtsutil' command. 
+ * Implementations of this interface can be executed using the 'mtsutil' command.
  * The execution order is as follows: after initializaiton using init(), any tests
  * declared using the MTS_DECLARE_TEST() macro are executed. Finally,
  * the shutdown() method is called. See the files in 'mitsuba/src/tests'
@@ -61,7 +61,7 @@ public:
 
 	/// Return the number of executed testcases
 	inline int getExecuted() const { return m_executed; }
-	
+
 	/// Return the number of successfully executed testcases
 	inline int getSucceeded() const { return m_succeeded; }
 
@@ -75,7 +75,7 @@ protected:
 
 	/// Asserts that the two floating point values are equal
 	void assertEqualsImpl(Float actual, Float expected, Float epsilon, const char *file, int line);
-	
+
 	/// Asserts that the two spectral power distributions are equal
 	void assertEqualsImpl(const Spectrum &actual, const Spectrum &expected, Float epsilon, const char *file, int line);
 

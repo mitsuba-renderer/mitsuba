@@ -26,10 +26,10 @@ MTS_NAMESPACE_BEGIN
 
 /**
  * \brief Discrete probability distribution
- * 
+ *
  * This data structure can be used to transform uniformly distributed
  * samples to a stored discrete probability distribution.
- * 
+ *
  * \ingroup libcore
  */
 struct DiscreteDistribution {
@@ -103,7 +103,7 @@ public:
 		m_sum = m_cdf[m_cdf.size()-1];
 		if (m_sum > 0) {
 			m_normalization = 1.0f / m_sum;
-			for (size_t i=1; i<m_cdf.size(); ++i) 
+			for (size_t i=1; i<m_cdf.size(); ++i)
 				m_cdf[i] *= m_normalization;
 			m_cdf[m_cdf.size()-1] = 1.0f;
 			m_normalized = true;
@@ -115,14 +115,14 @@ public:
 
 	/**
 	 * \brief %Transform a uniformly distributed sample to the stored distribution
-	 * 
+	 *
 	 * \param[in] sampleValue
 	 *     An uniformly distributed sample on [0,1]
 	 * \return
 	 *     The discrete index associated with the sample
 	 */
 	inline size_t sample(Float sampleValue) const {
-		std::vector<Float>::const_iterator entry = 
+		std::vector<Float>::const_iterator entry =
 				std::lower_bound(m_cdf.begin(), m_cdf.end(), sampleValue);
 		size_t index = std::min(m_cdf.size()-2,
 			(size_t) std::max((ptrdiff_t) 0, entry - m_cdf.begin() - 1));
@@ -137,7 +137,7 @@ public:
 
 	/**
 	 * \brief %Transform a uniformly distributed sample to the stored distribution
-	 * 
+	 *
 	 * \param[in] sampleValue
 	 *     An uniformly distributed sample on [0,1]
 	 * \param[out] pdf
@@ -153,7 +153,7 @@ public:
 
 	/**
 	 * \brief %Transform a uniformly distributed sample to the stored distribution
-	 * 
+	 *
 	 * The original sample is value adjusted so that it can be "reused".
 	 *
 	 * \param[in, out] sampleValue
@@ -169,8 +169,8 @@ public:
 	}
 
 	/**
-	 * \brief %Transform a uniformly distributed sample. 
-	 * 
+	 * \brief %Transform a uniformly distributed sample.
+	 *
 	 * The original sample is value adjusted so that it can be "reused".
 	 *
 	 * \param[in,out]
@@ -193,7 +193,7 @@ public:
 	 */
 	std::string toString() const {
 		std::ostringstream oss;
-		oss << "DiscreteDistribution[sum=" << m_sum << ", normalized=" 
+		oss << "DiscreteDistribution[sum=" << m_sum << ", normalized="
 			<< (int) m_normalized << ", cdf={";
 		for (size_t i=0; i<m_cdf.size(); ++i) {
 			oss << m_cdf[i];
@@ -217,23 +217,23 @@ namespace math {
 		/// Index of the alias entry
 		Index index;
 	};
-	
+
 	/**
 	 * \brief Create the lookup table needed for Walker's alias sampling
 	 * method implemented in \ref sampleAlias(). Runs in linear time.
 	 *
-	 * The basic idea of this method is that one can "redistribute" the 
+	 * The basic idea of this method is that one can "redistribute" the
 	 * probability mass of a distribution to make it uniform. This
 	 * this can be done in a way such that the probability of each entry in
-	 * the "flattened" PMF consists of probability mass from at most *two* 
-	 * entries in the original PMF. That then leads to an efficient O(1) 
-	 * sampling algorithm with a O(n) preprocessing step to set up this 
+	 * the "flattened" PMF consists of probability mass from at most *two*
+	 * entries in the original PMF. That then leads to an efficient O(1)
+	 * sampling algorithm with a O(n) preprocessing step to set up this
 	 * special decomposition.
 	 *
 	 * The downside of this method is that it generally does not preserve
 	 * the nice stratification properties of QMC number sequences.
 	 *
-	 * \return The original (un-normalized) sum of all probabilities 
+	 * \return The original (un-normalized) sum of all probabilities
 	 * in \c pmf.
 	 */
 	template <typename Scalar, typename QuantizedScalar, typename Index> float makeAliasTable(
@@ -241,15 +241,15 @@ namespace math {
 		/* Allocate temporary storage for classification purposes */
 		Index *c = new Index[size],
 		      *c_short = c - 1, *c_long  = c + size;
-	
+
 		/* Begin by computing the normalization constant */
 		Scalar sum = 0;
 		for (size_t i=0; i<size; ++i)
 			sum += pmf[i];
-	
+
 		Scalar normalization = (Scalar) 1 / sum;
 		for (Index i=0; i<size; ++i) {
-			/* For each entry, determine whether there is 
+			/* For each entry, determine whether there is
 			   "too little" or "too much" probability mass */
 			Scalar value = size * normalization * pmf[i];
 			if (value < 1)
@@ -259,52 +259,52 @@ namespace math {
 			tbl[i].prob  = value;
 			tbl[i].index = i;
 		}
-	
-		/* Perform pairwise exchanges while there are entries 
+
+		/* Perform pairwise exchanges while there are entries
 		   with too much probability mass */
 		for (Index i=0; i < size-1 && c_long - c < size; ++i) {
 			Index short_index = c[i],
 			      long_index  = *c_long;
-	
+
 			tbl[short_index].index = long_index;
 			tbl[long_index].prob  -= (Scalar) 1 - tbl[short_index].prob;
-	
+
 			if (tbl[long_index].prob <= 1)
 				++c_long;
 		}
-	
+
 		delete[] c;
-	
+
 		return sum;
 	}
-	
+
 	/// Generate a sample in constant time using the alias method
 	template <typename Scalar, typename QuantizedScalar, typename Index> Index sampleAlias(
 			const AliasTableEntry<QuantizedScalar, Index> *tbl, Index size, Scalar sample) {
 		Index l = std::min((Index) (sample * size), (Index) (size - 1));
 		Scalar prob = (Scalar) tbl[l].prob;
-	
+
 		sample = sample * size - l;
-	
+
 		if (prob == 1 || (prob != 0 && sample < prob))
 			return l;
 		else
 			return tbl[l].index;
 	}
-	
+
 	/**
 	 * \brief Generate a sample in constant time using the alias method
 	 *
-	 * This variation shifts and scales the uniform random sample so 
+	 * This variation shifts and scales the uniform random sample so
 	 * that it can be reused for another sampling operation
 	 */
 	template <typename Scalar, typename QuantizedScalar, typename Index> Index sampleAliasReuse(
 			const AliasTableEntry<QuantizedScalar, Index> *tbl, Index size, Scalar &sample) {
 		Index l = std::min((Index) (sample * size), (Index) (size - 1));
 		Scalar prob = (Scalar) tbl[l].prob;
-	
+
 		sample = sample * size - l;
-		
+
 		if (prob == 1 || (prob != 0 && sample < prob)) {
 			sample /= prob;
 			return l;
@@ -314,7 +314,7 @@ namespace math {
 		}
 	}
 };
-	
+
 MTS_NAMESPACE_END
 
 #endif /* __MITSUBA_CORE_PMF_H_ */

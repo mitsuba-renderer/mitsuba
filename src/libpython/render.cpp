@@ -49,7 +49,7 @@ void export_render() {
 		.value("ERadiance", ERadiance)
 		.value("EImportance", EImportance)
 		.export_values();
-	
+
 	bp::enum_<EMeasure>("EMeasure")
 		.value("EInvalidMeasure", EInvalidMeasure)
 		.value("ESolidAngle", ESolidAngle)

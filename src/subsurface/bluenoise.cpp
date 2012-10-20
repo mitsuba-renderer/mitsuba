@@ -63,7 +63,7 @@ struct Cell {
 };
 
 void blueNoisePointSet(const Scene *scene, const std::vector<Shape *> &shapes,
-		Float radius, PositionSampleVector *target, Float &sa, AABB &aabb, 
+		Float radius, PositionSampleVector *target, Float &sa, AABB &aabb,
 		const void *data) {
 	int kmax = 8; /* Perform 8 trial runs */
 
@@ -175,7 +175,7 @@ void blueNoisePointSet(const Scene *scene, const std::vector<Shape *> &shapes,
 
 	SLog(EInfo, "  phase 4: establishing valid cells and phase groups ..");
 	typedef boost::unordered_map<int64_t, Cell> CellMap;
-		
+
 	CellMap cells(samples.size());
 	std::vector<std::vector<int64_t> > phaseGroups(27);
 	for (int i=0; i<27; ++i)
@@ -200,7 +200,7 @@ void blueNoisePointSet(const Scene *scene, const std::vector<Shape *> &shapes,
 	}
 
 	SLog(EInfo, "    done (took %i ms), got %i cells, avg. samples per cell: %f",
-		timer->getMilliseconds(), (int) cells.size(), 
+		timer->getMilliseconds(), (int) cells.size(),
 		samples.size() / (Float) cells.size());
 	rep.update(4);
 	timer->reset();
@@ -230,7 +230,7 @@ void blueNoisePointSet(const Scene *scene, const std::vector<Shape *> &shapes,
 				for (int z=-2; z<3; ++z) {
 					for (int y=-2; y<3; ++y) {
 						for (int x=-2; x<3; ++x) {
-							int64_t neighborCellID = cellID + x 
+							int64_t neighborCellID = cellID + x
 								+ (int64_t) cellCount[0] * (y + z * (int64_t) cellCount[1]);
 
 							CellMap::iterator it = cells.find(neighborCellID);
@@ -271,5 +271,5 @@ void blueNoisePointSet(const Scene *scene, const std::vector<Shape *> &shapes,
 
 	SLog(EInfo, "Sampling finished (obtained %i blue noise samples)", (int) target->size());
 }
-	
+
 MTS_NAMESPACE_END

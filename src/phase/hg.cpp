@@ -28,7 +28,7 @@ MTS_NAMESPACE_BEGIN
  * \parameters{
  *     \parameter{g}{\Float}{
  *       This parameter must be somewhere in the range $-1$ to $1$
- *       (but not equal to $-1$ or $1$). It denotes the \emph{mean cosine} 
+ *       (but not equal to $-1$ or $1$). It denotes the \emph{mean cosine}
  *       of scattering interactions. A value greater than zero indicates that
  *       medium interactions predominantly scatter incident light into a similar
  *       direction (i.e. the medium is \emph{forward-scattering}), whereas
@@ -36,23 +36,23 @@ MTS_NAMESPACE_BEGIN
  *       scatter more light in the opposite direction.
  *     }
  * }
- * This plugin implements the phase function model proposed by 
- * Henyey and Greenstein \cite{Henyey1941Diffuse}. It is 
- * parameterizable from backward- ($g<0$) through 
+ * This plugin implements the phase function model proposed by
+ * Henyey and Greenstein \cite{Henyey1941Diffuse}. It is
+ * parameterizable from backward- ($g<0$) through
  * isotropic- ($g=0$) to forward ($g>0$) scattering.
  */
 class HGPhaseFunction : public PhaseFunction {
 public:
-	HGPhaseFunction(const Properties &props) 
+	HGPhaseFunction(const Properties &props)
 		: PhaseFunction(props) {
-		/* Asymmetry parameter: must lie in [-1, 1] where >0 is 
+		/* Asymmetry parameter: must lie in [-1, 1] where >0 is
 		   forward scattering and <0 is backward scattering. */
 		m_g = props.getFloat("g", 0.8f);
 		if (m_g >= 1 || m_g <= -1)
 			Log(EError, "The asymmetry parameter must lie in the interval (-1, 1)!");
 	}
 
-	HGPhaseFunction(Stream *stream, InstanceManager *manager) 
+	HGPhaseFunction(Stream *stream, InstanceManager *manager)
 		: PhaseFunction(stream, manager) {
 		m_g = stream->readFloat();
 		configure();
@@ -85,7 +85,7 @@ public:
 
 		Float sinTheta = math::safe_sqrt(1.0f-cosTheta*cosTheta),
 			  sinPhi, cosPhi;
-	
+
 		math::sincos(2*M_PI*sample.y, &sinPhi, &cosPhi);
 
 		pRec.wo = Frame(-pRec.wi).toWorld(Vector(

@@ -80,45 +80,45 @@ public:
 						return 0;
 					}
 					break;
-				case 'f': 
+				case 'f':
 					fitParameters = true;
 					break;
-				case 'i': 
+				case 'i':
 					intersectionCost = (Float) strtod(optarg, &end_ptr);
 					if (*end_ptr != '\0')
 						SLog(EError, "Could not parse the intersection cost!");
 					break;
-				case 't': 
+				case 't':
 					traversalCost = (Float) strtod(optarg, &end_ptr);
 					if (*end_ptr != '\0')
 						SLog(EError, "Could not parse the traversal cost!");
 					break;
-				case 'e': 
+				case 'e':
 					emptySpaceBonus = (Float) strtod(optarg, &end_ptr);
 					if (*end_ptr != '\0')
 						SLog(EError, "Could not parse the empty space bonus!");
 					break;
-				case 'l': 
+				case 'l':
 					stopPrims = strtol(optarg, &end_ptr, 10);
 					if (*end_ptr != '\0')
 						SLog(EError, "Could not parse the stopping primitive count!");
 					break;
-				case 'd': 
+				case 'd':
 					maxDepth = strtol(optarg, &end_ptr, 10);
 					if (*end_ptr != '\0')
 						SLog(EError, "Could not parse the maximum depth!");
 					break;
-				case 'x': 
+				case 'x':
 					exactPrims = strtol(optarg, &end_ptr, 10);
 					if (*end_ptr != '\0')
 						SLog(EError, "Could not parse the -e parameter!");
 					break;
-				case 'b': 
+				case 'b':
 					minMaxBins = strtol(optarg, &end_ptr, 10);
 					if (*end_ptr != '\0')
 						SLog(EError, "Could not parse the min-max bins parameter!");
 					break;
-				case 'c': 
+				case 'c':
 					if (strcmp(optarg, "true") == 0)
 						clip = true;
 					else if (strcmp(optarg, "false") == 0)
@@ -126,7 +126,7 @@ public:
 					else
 						SLog(EError, "Could not parse the clipping parameter!");
 					break;
-				case 'p': 
+				case 'p':
 					if (strcmp(optarg, "true") == 0)
 						parallel = true;
 					else if (strcmp(optarg, "false") == 0)
@@ -134,7 +134,7 @@ public:
 					else
 						SLog(EError, "Could not parse the parallel build parameter!");
 					break;
-				case 'r': 
+				case 'r':
 					if (strcmp(optarg, "true") == 0)
 						retract = true;
 					else if (strcmp(optarg, "false") == 0)
@@ -155,7 +155,7 @@ public:
 
 		std::string lowercase = boost::to_lower_copy(std::string(argv[optind]));
 		if (boost::ends_with(lowercase, ".xml")) {
-			fs::path 
+			fs::path
 				filename = fileResolver->resolve(argv[optind]),
 				filePath = fs::absolute(filename).parent_path(),
 				baseName = filename.stem();

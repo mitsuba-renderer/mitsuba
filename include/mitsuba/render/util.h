@@ -33,7 +33,7 @@ class MTS_EXPORT_RENDER Utility : public Object {
 public:
 	/**
 	 * Run the utility. The supplied <tt>argc</tt>
-	 * and <tt>argv</tt> parameters contain any 
+	 * and <tt>argv</tt> parameters contain any
 	 * extra arguments passed to mtsutil. The value
 	 * returned here will be used as the return value of the
 	 * 'mtsutil' process.
@@ -50,7 +50,7 @@ protected:
 	/// Load a scene from an external file
 	ref<Scene> loadScene(const fs::path &fname,
 		const ParameterMap &params= ParameterMap());
-	
+
 	/// Load a scene from a string
 	ref<Scene> loadSceneFromString(const std::string &content,
 		const ParameterMap &params= ParameterMap());

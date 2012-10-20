@@ -38,7 +38,7 @@ MTS_NAMESPACE_BEGIN
  *     }
  *     \parameter{nearClip, farClip}{\Float}{
  *         Distance to the near/far clip
- *         planes.\default{\code{near\code}-\code{Clip=1e-2} (i.e. 
+ *         planes.\default{\code{near\code}-\code{Clip=1e-2} (i.e.
  *         \code{0.01}) and {\code{farClip=1e4} (i.e. \code{10000})}}
  *     }
  * }
@@ -50,9 +50,9 @@ MTS_NAMESPACE_BEGIN
  *
  * This plugin implements a simple orthographic camera, i.e. a sensor
  * based on an orthographic projection without any form of perspective.
- * It can be thought of as a planar sensor that measures the radiance 
+ * It can be thought of as a planar sensor that measures the radiance
  * along its normal direction. By default, this is the region $[-1, 1]^2$ inside
- * the XY-plane facing along the positive Z direction. Transformed versions 
+ * the XY-plane facing along the positive Z direction. Transformed versions
  * can be instantiated e.g. as follows:
  *
  * \begin{xml}
@@ -61,7 +61,7 @@ MTS_NAMESPACE_BEGIN
  *         <!-- Resize the sensor plane to 20x20 world space units -->
  *         <scale x="10" y="10"/>
  *
- *         <!-- Move and rotate it so that it contains the point 
+ *         <!-- Move and rotate it so that it contains the point
  *              (1, 1, 1) and faces direction (0, 1, 0) -->
  *         <lookat origin="1, 1, 1" target="1, 2, 1" up="0, 0, 1"/>
  *     </transform>
@@ -75,7 +75,7 @@ public:
 		m_type |= EDeltaDirection | EOrthographicCamera | EPositionSampleMapsToPixels;
 	}
 
-	OrthographicCamera(Stream *stream, InstanceManager *manager) 
+	OrthographicCamera(Stream *stream, InstanceManager *manager)
 			: ProjectiveCamera(stream, manager) {
 		configure();
 	}
@@ -104,7 +104,7 @@ public:
 		 * 4+5. Translate and scale the coordinates once more to account
 		 *     for a cropping window (if there is any)
 		 */
-		m_cameraToSample = 
+		m_cameraToSample =
 			  Transform::scale(Vector(1.0f / relSize.x, 1.0f / relSize.y, 1.0f))
 			* Transform::translate(Vector(-relOffset.x, -relOffset.y, 0.0f))
 			* Transform::scale(Vector(-0.5f, -0.5f*m_aspect, 1.0f))
@@ -114,9 +114,9 @@ public:
 		m_sampleToCamera = m_cameraToSample.inverse();
 
 		/* Position differentials on the near plane */
-		m_dx = m_sampleToCamera(Point(m_invResolution.x, 0.0f, 0.0f)) 
+		m_dx = m_sampleToCamera(Point(m_invResolution.x, 0.0f, 0.0f))
 			 - m_sampleToCamera(Point(0.0f));
-		m_dy = m_sampleToCamera(Point(0.0f, m_invResolution.y, 0.0f)) 
+		m_dy = m_sampleToCamera(Point(0.0f, m_invResolution.y, 0.0f))
 			 - m_sampleToCamera(Point(0.0f));
 
 		/* Clip-space transformation for OpenGL */
@@ -139,7 +139,7 @@ public:
 		ray.time = sampleTime(timeSample);
 		const Transform &trafo = m_worldTransform->eval(ray.time);
 
-		/* Compute the corresponding position on the 
+		/* Compute the corresponding position on the
 		   near plane (in local camera space) */
 		Point nearP = m_sampleToCamera.transformAffine(Point(
 			pixelSample.x * m_invResolution.x,
@@ -159,7 +159,7 @@ public:
 		ray.time = sampleTime(timeSample);
 		const Transform &trafo = m_worldTransform->eval(ray.time);
 
-		/* Compute the corresponding position on the 
+		/* Compute the corresponding position on the
 		   near plane (in local camera space) */
 		Point nearP = m_sampleToCamera.transformAffine(Point(
 			pixelSample.x * m_invResolution.x,
@@ -211,7 +211,7 @@ public:
 		return (pRec.measure == EArea) ? m_invSurfaceArea : 0.0f;
 	}
 
-	Spectrum sampleDirection(DirectionSamplingRecord &dRec, 
+	Spectrum sampleDirection(DirectionSamplingRecord &dRec,
 			PositionSamplingRecord &pRec, const Point2 &sample,
 			const Point2 *extra) const {
 
@@ -243,7 +243,7 @@ public:
 
 		Point sample = m_cameraToSample.transformAffine(localP);
 
-		if (sample.x < 0 || sample.x > 1 || sample.y < 0 || 
+		if (sample.x < 0 || sample.x > 1 || sample.y < 0 ||
 			sample.y > 1 || sample.z < 0 || sample.z > 1) {
 			dRec.pdf = 0.0f;
 			return Spectrum(0.0f);
@@ -280,7 +280,7 @@ public:
 		return true;
 	}
 
-	Transform getProjectionTransform(const Point2 &apertureSample, 
+	Transform getProjectionTransform(const Point2 &apertureSample,
 			const Point2 &aaSample) const {
 		Point2 offset(
 			2.0f * m_invResolution.x * (aaSample.x-0.5f),

@@ -24,7 +24,7 @@
 #include <mitsuba/core/simplecache.h>
 
 MTS_NAMESPACE_BEGIN
-	
+
 template <typename T> class AnimationTrack;
 
 /**
@@ -36,13 +36,13 @@ class MTS_EXPORT_RENDER AbstractAnimationTrack : public Object {
 public:
 	enum EType {
 		EInvalid        = 0,
-		ETranslationX   = 1,  
-		ETranslationY   = 2, 
-		ETranslationZ   = 3, 
-		ETranslationXYZ = 4, 
-		EScaleX         = 5, 
-		EScaleY         = 6, 
-		EScaleZ         = 7, 
+		ETranslationX   = 1,
+		ETranslationY   = 2,
+		ETranslationZ   = 3,
+		ETranslationXYZ = 4,
+		EScaleX         = 5,
+		EScaleY         = 6,
+		EScaleZ         = 7,
 		EScaleXYZ       = 8,
 		ERotationX      = 9,
 		ERotationY      = 10,
@@ -67,7 +67,7 @@ public:
 
 	MTS_DECLARE_CLASS()
 protected:
-	AbstractAnimationTrack(EType type, size_t nKeyframes) 
+	AbstractAnimationTrack(EType type, size_t nKeyframes)
 		: m_type(type), m_times(nKeyframes) { }
 
 	virtual ~AbstractAnimationTrack() { }
@@ -84,10 +84,10 @@ template <typename T> class AnimationTrack : public AbstractAnimationTrack {
 public:
 	typedef T value_type;
 
-	AnimationTrack(EType type, size_t nKeyframes) 
+	AnimationTrack(EType type, size_t nKeyframes)
 		: AbstractAnimationTrack(type, nKeyframes), m_values(nKeyframes) { }
 
-	AnimationTrack(EType type, Stream *stream) 
+	AnimationTrack(EType type, Stream *stream)
 		: AbstractAnimationTrack(type, stream->readSize()) {
 		m_values.resize(m_times.size());
 		stream->readFloatArray(&m_times[0], m_times.size());
@@ -109,11 +109,11 @@ public:
 		for (size_t i=0; i<m_values.size(); ++i)
 			serialize(stream, m_values[i]);
 	}
-			
+
 	/// Evaluate the animation track at an arbitrary time value
 	inline value_type eval(Float time) const {
 		SAssert(m_times.size() > 0);
-		std::vector<Float>::const_iterator entry = 
+		std::vector<Float>::const_iterator entry =
 				std::lower_bound(m_times.begin(), m_times.end(), time);
 		size_t idx0 = (size_t) std::max(
 				(ptrdiff_t) (entry - m_times.begin()) - 1,
@@ -140,7 +140,7 @@ protected:
 private:
 	std::vector<value_type> m_values;
 };
-	
+
 template<typename T> inline T AnimationTrack<T>::lerp(size_t idx0, size_t idx1, Float t) const {
 	return m_values[idx0] * (1-t) + m_values[idx1] * t;
 }
@@ -194,11 +194,11 @@ public:
 	/**
 	 * \brief Create a new animated transformation
 	 *
-	 * When the transformation is constant (i.e. there are no 
+	 * When the transformation is constant (i.e. there are no
 	 * animation tracks), the supplied parameter specifies the
 	 * target value.
 	 */
-	AnimatedTransform(const Transform &trafo = Transform()) 
+	AnimatedTransform(const Transform &trafo = Transform())
 		: m_transform(trafo) { }
 
 	/// Unserialized an animated transformation from a binary data stream

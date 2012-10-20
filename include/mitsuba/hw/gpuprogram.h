@@ -80,104 +80,104 @@ public:
 	virtual int getParameterID(const std::string &name, bool failIfMissing = true) const = 0;
 
 	/// Set a boolean parameter by name
-	inline void setParameter(const std::string &name, bool value, 
+	inline void setParameter(const std::string &name, bool value,
 		bool failIfMissing = true) {
 		setParameter(getParameterID(name, failIfMissing), value);
 	}
 
 	/// Set a integer parameter by name
-	inline void setParameter(const std::string &name, int value, 
+	inline void setParameter(const std::string &name, int value,
 		bool failIfMissing = true) {
 		setParameter(getParameterID(name, failIfMissing), value);
 	}
 
 	/// Set an unsigned integer parameter by name
-	inline void setParameter(const std::string &name, uint32_t value, 
+	inline void setParameter(const std::string &name, uint32_t value,
 		bool failIfMissing = true) {
 		setParameter(getParameterID(name, failIfMissing), value);
 	}
 
 	/// Set a float parameter by name
-	inline void setParameter(const std::string &name, Float value, 
+	inline void setParameter(const std::string &name, Float value,
 		bool failIfMissing = true) {
 		setParameter(getParameterID(name, failIfMissing), value);
 	}
 
 	/// Set a Vector parameter by name
 	inline void setParameter(const std::string &name, const Vector &value,
-		bool failIfMissing = true) { 
+		bool failIfMissing = true) {
 		setParameter(getParameterID(name, failIfMissing), value);
 	}
 
 	/// Set a Vector3i parameter by name
 	inline void setParameter(const std::string &name, const Vector3i &value,
-		bool failIfMissing = true) { 
+		bool failIfMissing = true) {
 		setParameter(getParameterID(name, failIfMissing), value);
 	}
 
 	/// Set a Vector2 parameter by name
 	inline void setParameter(const std::string &name, const Vector2 &value,
-		bool failIfMissing = true) { 
+		bool failIfMissing = true) {
 		setParameter(getParameterID(name, failIfMissing), value);
 	}
 
 	/// Set a Vector2i parameter by name
 	inline void setParameter(const std::string &name, const Vector2i &value,
-		bool failIfMissing = true) { 
+		bool failIfMissing = true) {
 		setParameter(getParameterID(name, failIfMissing), value);
 	}
 
 	/// Set a Vector4 parameter by name
 	inline void setParameter(const std::string &name, const Vector4 &value,
-		bool failIfMissing = true) { 
+		bool failIfMissing = true) {
 		setParameter(getParameterID(name, failIfMissing), value);
 	}
 
 	/// Set a Point parameter by name
 	inline void setParameter(const std::string &name, const Point &value,
-		bool failIfMissing = true) { 
+		bool failIfMissing = true) {
 		setParameter(getParameterID(name, failIfMissing), value);
 	}
 
 	/// Set a Point3i parameter by name
 	inline void setParameter(const std::string &name, const Point3i &value,
-		bool failIfMissing = true) { 
+		bool failIfMissing = true) {
 		setParameter(getParameterID(name, failIfMissing), value);
 	}
 
 	/// Set a Point2 parameter by name
 	inline void setParameter(const std::string &name, const Point2 &value,
-		bool failIfMissing = true) { 
+		bool failIfMissing = true) {
 		setParameter(getParameterID(name, failIfMissing), value);
 	}
 
 	/// Set a Point2i parameter by name
 	inline void setParameter(const std::string &name, const Point2i &value,
-		bool failIfMissing = true) { 
+		bool failIfMissing = true) {
 		setParameter(getParameterID(name, failIfMissing), value);
 	}
 
 	/// Set a Point4 parameter by name
 	inline void setParameter(const std::string &name, const Point4 &value,
-		bool failIfMissing = true) { 
+		bool failIfMissing = true) {
 		setParameter(getParameterID(name, failIfMissing), value);
 	}
 
 	/// Set a Matrix2x2 parameter by name
 	inline void setParameter(const std::string &name, const Matrix2x2 &value,
-		bool failIfMissing = true) { 
+		bool failIfMissing = true) {
 		setParameter(getParameterID(name, failIfMissing), value);
 	}
 
 	/// Set a Matrix3x3 parameter by name
 	inline void setParameter(const std::string &name, const Matrix3x3 &value,
-		bool failIfMissing = true) { 
+		bool failIfMissing = true) {
 		setParameter(getParameterID(name, failIfMissing), value);
 	}
 
 	/// Set a Matrix4x4 parameter by name
 	inline void setParameter(const std::string &name, const Matrix4x4 &value,
-		bool failIfMissing = true) { 
+		bool failIfMissing = true) {
 		setParameter(getParameterID(name, failIfMissing), value);
 	}
 
@@ -189,20 +189,20 @@ public:
 
 	/// Set a Color3 parameter by name
 	inline void setParameter(const std::string &name, const Color3 &value,
-		bool failIfMissing = true) { 
+		bool failIfMissing = true) {
 		setParameter(getParameterID(name, failIfMissing), value);
 	}
 
 	/// Set a Spectrum parameter (will be converted to linear RGB) by name
 	inline void setParameter(const std::string &name, const Spectrum &value,
-		bool failIfMissing = true) { 
+		bool failIfMissing = true) {
 		setParameter(getParameterID(name, failIfMissing), value);
 	}
 
 	/** Set a GPUTexture parameter by name. Must be executed after
 	    binding the texture to a texture unit */
 	inline void setParameter(const std::string &name, const GPUTexture *value,
-		bool failIfMissing = true) { 
+		bool failIfMissing = true) {
 		setParameter(getParameterID(name, failIfMissing), value);
 	}
 
@@ -214,7 +214,7 @@ public:
 
 	/// Set a int parameter
 	virtual void setParameter(int id, int value) = 0;
-	
+
 	/// Set a uint32_t parameter
 	virtual void setParameter(int id, uint32_t value) = 0;
 

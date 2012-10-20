@@ -26,7 +26,7 @@ MTS_NAMESPACE_BEGIN
 
 Medium::Medium(const Properties &props)
  : NetworkedObject(props) {
-	lookupMaterial(props, m_sigmaS, m_sigmaA);	
+	lookupMaterial(props, m_sigmaS, m_sigmaA);
 	m_sigmaT = m_sigmaA + m_sigmaS;
 }
 
@@ -37,7 +37,7 @@ Medium::Medium(Stream *stream, InstanceManager *manager)
 	m_sigmaS = Spectrum(stream);
 	m_sigmaT = m_sigmaA + m_sigmaS;
 }
-	
+
 void Medium::addChild(const std::string &name, ConfigurableObject *child) {
 	const Class *cClass = child->getClass();
 

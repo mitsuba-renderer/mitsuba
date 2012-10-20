@@ -31,10 +31,7 @@
 #include <functional>
 #include <algorithm>
 
-
 MTS_NAMESPACE_BEGIN
-
-
 
 namespace {
 
@@ -229,7 +226,7 @@ public:
 	}
 
 	// No-op!
-	fake_iterator& operator++() { 
+	fake_iterator& operator++() {
 		return *this;
 	}
 };
@@ -288,7 +285,7 @@ double chi_squared_pval(
 		chi_squared += (delta * delta) / expected;
 		++df;
 	}
-	
+
 	assert(restrictions < df);
 	df -= restrictions;
 
@@ -406,7 +403,7 @@ private:
 
 	private:
 		typedef std::vector<size_t>::iterator iterator;
-		
+
 		std::vector<size_t> m_bins;
 		size_t m_count;
 	};
@@ -540,7 +537,7 @@ void TestRandom::test02_helper(ref<Random> & rnd)
 void TestRandom::test02_range()
 {
 	const int N = 1000;
-	
+
 	ref<Random> rnd = new Random;
 	for (int i = 0; i < N*N; ++i) {
 		test02_helper<Float>(rnd);
@@ -684,7 +681,7 @@ double TestRandom::binary_rank_instance(ref<Random> & rnd, const double alpha,
 
 	// Chi-squared P-value
 	const double pval = chi_squared_pval(ranks.begin(), ranks.end(), expected);
-	
+
 	assertFalse(pval < alpha);
 	return pval;
 }
@@ -759,7 +756,7 @@ void TestRandom::test08_serialize()
 	const int N = 2000;
 	std::vector<uint64_t> vec;
 	typedef std::vector<uint64_t>::const_iterator citerator;
-	
+
 	ref<InstanceManager> manager = new InstanceManager;
 	ref<Stream> s = new MemoryStream;
 	{
@@ -796,7 +793,7 @@ void TestRandom::test09_set()
 	const int N = 1000000;
 	ref<Random> rnd1 = new Random(1234);
 	ref<Random> rnd2 = new Random(5678);
-	
+
 	for (int i = 0; i < N; ++i) {
 		const uint64_t v1 = rnd1->nextULong();
 		const uint64_t v2 = rnd2->nextULong();
@@ -852,7 +849,7 @@ void TestRandom::benchmark()
 	Log(EInfo, "Generated %.1fM random numbers in %.2f s (%.3f M-random/s)",
 		1e-6 * N, seconds, 1e-6 * N / seconds);
 	estimate /= (N1+1);
-	assertEqualsEpsilon(estimate, static_cast<Float>(0.5), epsilon); 
+	assertEqualsEpsilon(estimate, static_cast<Float>(0.5), epsilon);
 }
 
 

@@ -28,25 +28,25 @@ MTS_NAMESPACE_BEGIN
 
 /**
  * \brief This class is responsible for the on-demand creation of
- * GPU shaders to render shapes that are illuminated by virtual 
- * point light sources. 
+ * GPU shaders to render shapes that are illuminated by virtual
+ * point light sources.
  *
- * This is used to drive the \c vpl integrator as well as the 
+ * This is used to drive the \c vpl integrator as well as the
  * interactive preview in the Mitsuba GUI.
  *
- * For each encountered BSDF-VPL pair, a custom piece of code 
+ * For each encountered BSDF-VPL pair, a custom piece of code
  * describing the characteristic light transport between them is
  * created and cached. The implementation carefully looks at
  * the tree of shader dependencies and creates code that can be
  * shared with other materials that have a similar configuration.
- * This is necessary to avoid generating a potentially huge O(N^2) 
+ * This is necessary to avoid generating a potentially huge O(N^2)
  * number of very similar programs and brings it down to O(n^2)
  * where n << N.
  *
  * \ingroup libhw
  */
 class MTS_EXPORT_HW VPLShaderManager : public Object {
-public:	
+public:
 	/// Create a new shader manager
 	VPLShaderManager(Renderer *renderer);
 
@@ -73,14 +73,14 @@ public:
 	 * \brief Prepare the shader manager for rendering
 	 * with a new VPL
 	 *
-	 * Must be called after \ref setScene() and before 
-	 * \ref bind(). This function creates a suitable 
+	 * Must be called after \ref setScene() and before
+	 * \ref bind(). This function creates a suitable
 	 * shadow map for the VPL.
 	 */
 	void setVPL(const VPL &vpl);
 
 	/**
-	 * \brief Bind a shader for rendering a certain 
+	 * \brief Bind a shader for rendering a certain
 	 * VPL/BSDF/Emitter triplet
 	 *
 	 * \param vpl
@@ -100,12 +100,12 @@ public:
 	 *    When set to \c true, a special shader is used to
 	 *    create face normals for the geometry
 	 */
-	void bind(const VPL &vpl, const BSDF *bsdf, 
-		const Sensor *sensor, const Emitter *emitter, 
+	void bind(const VPL &vpl, const BSDF *bsdf,
+		const Sensor *sensor, const Emitter *emitter,
 		const Matrix4x4 &instanceTransform, bool faceNormals);
 
 	/**
-	 * \brief Release the currently bound shader and 
+	 * \brief Release the currently bound shader and
 	 * any resources (textures,..) that it references
 	 */
 	void unbind();
@@ -115,8 +115,8 @@ public:
 	 * for a given VPL
 	 *
 	 * This function issues the necessary calls to \ref bind()
-	 * \ref unbind(), etc., and schedules draw calls for all 
-	 * of the scene geometry. 
+	 * \ref unbind(), etc., and schedules draw calls for all
+	 * of the scene geometry.
 	 */
 	void drawAllGeometryForVPL(const VPL &vpl, const Sensor *sensor);
 
@@ -141,7 +141,7 @@ public:
 
 	/// Return whether or not non-diffuse VPLs are used
 	inline bool getDiffuseSources() const { return m_diffuseSources; }
-	
+
 	/// Set whether or not surfaces are drawn assumed to be diffuse
 	inline void setDiffuseReceivers(bool diffuseReceivers) { m_diffuseReceivers = diffuseReceivers; }
 
@@ -165,7 +165,7 @@ protected:
 		const Shader *shader;
 		std::vector<DependencyNode> children;
 		std::vector<int> parameterIDs;
-	
+
 		/// Create from a \ref Shader object
 		inline DependencyNode(Shader *shader = NULL) : shader(shader) {
 			if (!shader)
@@ -176,12 +176,12 @@ protected:
 				it != deps.end(); ++it)
 				children.push_back(DependencyNode(*it));
 		}
-	
+
 		/// Copy constructor
-		inline DependencyNode(const DependencyNode &node) 
-			: shader(node.shader), children(node.children), 
+		inline DependencyNode(const DependencyNode &node)
+			: shader(node.shader), children(node.children),
 			  parameterIDs(node.parameterIDs) { }
-	
+
 		/// Generate GLSL code for the entire shader chain
 		inline std::string generateCode(std::ostringstream &oss, int &id) const {
 			std::vector<std::string> depNames;
@@ -192,17 +192,17 @@ protected:
 			oss << endl;
 			return evalName;
 		}
-	
+
 		/// Resolve all parameters of the shader chain
 		inline void resolve(GPUProgram *program, int &id) {
 			std::vector<std::string> depNames;
 			for (size_t i=0; i<children.size(); ++i)
 				children[i].resolve(program, id);
-	
+
 			std::string evalName = formatString("shader_%i", id++);
 			shader->resolve(program, evalName, parameterIDs);
 		}
-	
+
 		/// Bind all referenced resources (textures etc)
 		inline void bind(GPUProgram *program, const DependencyNode &targetNode, int &textureUnitOffset) {
 			if (!shader)
@@ -211,7 +211,7 @@ protected:
 				children[i].bind(program, targetNode.children[i], textureUnitOffset);
 			shader->bind(program, targetNode.parameterIDs, textureUnitOffset);
 		}
-	
+
 		/// Release resources that were bound by \ref bind()
 		inline void unbind() {
 			if (!shader)
@@ -220,7 +220,7 @@ protected:
 			for (size_t i=0; i<children.size(); ++i)
 				children[i].unbind();
 		}
-	
+
 		/// Generate a textual summary of the entire shader chain
 		inline void toString(std::ostringstream &oss) const {
 			if (!shader)
@@ -236,14 +236,14 @@ protected:
 				oss << "]";
 			}
 		}
-		
+
 		inline std::string toString() const {
 			std::ostringstream oss;
 			toString(oss);
 			return oss.str();
 		}
 	};
-	
+
 	/**
 	 * \brief Describes the configuration of a (vpl, bsdf, emitter)
 	 * shader chain triplet
@@ -252,7 +252,7 @@ protected:
 		DependencyNode vpl, bsdf, emitter;
 		bool faceNormals;
 		GPUProgram *program;
-	
+
 		/* GLSL program paramter IDs */
 		int param_instanceTransform, param_vplTransform;
 		int param_vplPosition, param_vplDirection;
@@ -268,7 +268,7 @@ protected:
 		/// Create a new configuration for the given (vpl, bsdf, emitter) triplet
 		inline VPLConfiguration(Shader *vpl, Shader *bsdf, Shader *emitter, bool faceNormals)
 			: vpl(vpl), bsdf(bsdf), emitter(emitter), faceNormals(faceNormals), program(NULL) { }
-	
+
 		/// Generate GLSL code for the entire shader chain
 		inline void generateCode(std::ostringstream &oss, std::string &vplEvalName,
 				std::string &bsdfEvalName, std::string &emitterEvalName) const {
@@ -278,7 +278,7 @@ protected:
 			if (emitter.shader)
 				emitterEvalName = emitter.generateCode(oss, id);
 		}
-	
+
 		/// Resolve all parameters of the shader chain
 		inline void resolve(GPUProgram *program) {
 			int id = 0;
@@ -287,7 +287,7 @@ protected:
 			if (emitter.shader)
 				emitter.resolve(program, id);
 		}
-	
+
 		/// Bind all referenced resources (textures etc)
 		inline void bind(const VPLConfiguration &targetConf, int textureUnitOffset) {
 			vpl.bind(targetConf.program, targetConf.vpl, textureUnitOffset);
@@ -295,7 +295,7 @@ protected:
 			if (emitter.shader)
 				emitter.bind(targetConf.program, targetConf.emitter, textureUnitOffset);
 		}
-	
+
 		/// Release resources that were bound by \ref bind()
 		inline void unbind() {
 			vpl.unbind();
@@ -303,7 +303,7 @@ protected:
 			if (emitter.shader)
 				emitter.unbind();
 		}
-	
+
 		/// Generate a textual summary of the entire shader chain
 		inline std::string toString() const {
 			std::ostringstream oss;
@@ -357,7 +357,7 @@ private:
 	/* Background rendering - related */
 	ref<GPUProgram> m_backgroundProgram;
 	DependencyNode m_backgroundDependencies;
-	int m_backgroundParam_camPosition; 
+	int m_backgroundParam_camPosition;
 	int m_backgroundParam_camDirection;
 	int m_backgroundParam_clipToWorld;
 	int m_backgroundParam_emitterScale;

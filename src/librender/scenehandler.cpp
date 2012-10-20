@@ -101,7 +101,7 @@ SceneHandler::SceneHandler(const SAXParser *parser,
 	m_tags["alias"]      = TagEntry(EAlias,      (Class *) NULL);
 
 
-	XMLTransService::Codes failReason; 
+	XMLTransService::Codes failReason;
 	m_transcoder = XMLPlatformUtils::fgTransService->makeNewTranscoderFor(
 			"UTF-8", failReason, TRANSCODE_BLOCKSIZE);
 }
@@ -125,14 +125,14 @@ void SceneHandler::clear() {
 
 std::string SceneHandler::transcode(const XMLCh * input) const {
 	XMLSize_t charsToBeConsumed = XMLString::stringLen(input);
-	char output[TRANSCODE_BLOCKSIZE + 4]; 
+	char output[TRANSCODE_BLOCKSIZE + 4];
 	XMLSize_t totalCharsConsumed = 0;
 	std::string result;
 
 	while (totalCharsConsumed < charsToBeConsumed) {
 		XMLSize_t charsConsumed = 0;
 		XMLSize_t charsProduced = m_transcoder->transcodeTo(input,
-			std::min((XMLSize_t) 2048, charsToBeConsumed - totalCharsConsumed), 
+			std::min((XMLSize_t) 2048, charsToBeConsumed - totalCharsConsumed),
 			(XMLByte *) output, TRANSCODE_BLOCKSIZE, charsConsumed,
 			XMLTranscoder::UnRep_RepChar);
 
@@ -211,7 +211,7 @@ void SceneHandler::startElement(const XMLCh* const xmlName,
 	switch (tag.first) {
 		case EScene: {
 				std::string versionString = context.attributes["version"];
-				if (versionString == "") 
+				if (versionString == "")
 					throw VersionException(formatString("The requested scene cannot be loaded, since it "
 						"is missing version information! Since Mitsuba 0.3.0, it is "
 						"mandatory that scene XML files specify the version of Mitsuba "
@@ -288,7 +288,7 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 				int64_t i = strtoll(context.attributes["value"].c_str(), &end_ptr, 10);
 #endif
 				if (*end_ptr != '\0')
-					XMLLog(EError, "Invalid integer value specified (in <%s>)", 
+					XMLLog(EError, "Invalid integer value specified (in <%s>)",
 						context.attributes["name"].c_str());
 				context.parent->properties.setLong(context.attributes["name"], i);
 			}
@@ -377,11 +377,11 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 			break;
 
 		case EScale: {
-				bool hasXYZ = 
+				bool hasXYZ =
 					context.attributes["x"] != "" ||
 					context.attributes["y"] != "" ||
 					context.attributes["z"] != "";
-				bool hasValue = 
+				bool hasValue =
 					context.attributes["value"] != "";
 				Float x=0, y=0, z=0;
 
@@ -463,7 +463,7 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 				} else if (tokens.size() == 1) {
 					value[0] = value[1] = value[2] = parseFloat(name, tokens[0]);
 				} else if (tokens.size() == 3) {
-					for (int i=0; i<3; i++) 
+					for (int i=0; i<3; i++)
 						value[i] = parseFloat(name, tokens[i]);
 				} else {
 					value[0] = value[1] = value[2] = 0; // avoid warning
@@ -492,7 +492,7 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 				} else if (tokens.size() == 1) {
 					value[0] = value[1] = value[2] = parseFloat(name, tokens[0]);
 				} else if (tokens.size() == 3) {
-					for (int i=0; i<3; i++) 
+					for (int i=0; i<3; i++)
 						value[i] = parseFloat(name, tokens[i]);
 				} else {
 					value[0] = value[1] = value[2] = 0; // avoid warning
@@ -550,7 +550,7 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 							/* Wavelength -> Value mapping */
 							for (size_t i=0; i<tokens.size(); i++) {
 								std::vector<std::string> tokens2 = tokenize(tokens[i], ":");
-								if (tokens2.size() != 2) 
+								if (tokens2.size() != 2)
 									XMLLog(EError, "Invalid spectrum->value mapping specified");
 								Float wavelength = parseFloat(name, tokens2[0]);
 								Float value = parseFloat(name, tokens2[1]);
@@ -565,7 +565,7 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 						} else {
 							if (tokens.size() != SPECTRUM_SAMPLES)
 								XMLLog(EError, "Invalid spectrum value specified (incorrect length)");
-							for (int i=0; i<SPECTRUM_SAMPLES; i++) 
+							for (int i=0; i<SPECTRUM_SAMPLES; i++)
 								value[i] = parseFloat(name, tokens[i]);
 							context.parent->properties.setSpectrum(context.attributes["name"],
 								Spectrum(value));
@@ -655,7 +655,7 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 			}
 
 			/* Don't configure a scene object if it is from an included file */
-			if (name != "include" && (!m_isIncludedFile || !object->getClass()->derivesFrom(MTS_CLASS(Scene)))) 
+			if (name != "include" && (!m_isIncludedFile || !object->getClass()->derivesFrom(MTS_CLASS(Scene))))
 				object->configure();
 
 			if (object->getClass()->derivesFrom(MTS_CLASS(Texture)))
@@ -721,7 +721,7 @@ ref<Scene> SceneHandler::loadScene(const fs::path &filename, const ParameterMap 
 	parser->setDoNamespaces(true);
 	parser->setDocumentHandler(handler);
 	parser->setErrorHandler(handler);
-		
+
 	parser->parse(filename.c_str());
 	ref<Scene> scene = handler->getScene();
 
@@ -751,7 +751,7 @@ ref<Scene> SceneHandler::loadSceneFromString(const std::string &content, const P
 
 	XMLCh *inputName = XMLString::transcode("<string input>");
 
-	MemBufInputSource input((const XMLByte *) content.c_str(), 
+	MemBufInputSource input((const XMLByte *) content.c_str(),
 			content.length(), inputName);
 	parser->parse(input);
 	ref<Scene> scene = handler->getScene();

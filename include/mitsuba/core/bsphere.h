@@ -48,7 +48,7 @@ struct BSphere {
 	}
 
 	/// Copy constructor
-	inline BSphere(const BSphere &boundingSphere) 
+	inline BSphere(const BSphere &boundingSphere)
 		: center(boundingSphere.center), radius(boundingSphere.radius) {
 	}
 
@@ -61,7 +61,7 @@ struct BSphere {
 	inline void expandBy(const Point p) {
 		radius = std::max(radius, (p-center).length());
 	}
-	
+
 	/// Check whether the specified point is inside or on the sphere
 	inline bool contains(const Point p) const {
 		return (p - center).length() <= radius;

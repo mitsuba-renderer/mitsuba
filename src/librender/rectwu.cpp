@@ -23,7 +23,7 @@ MTS_NAMESPACE_BEGIN
 /* ==================================================================== */
 /*                          RectangularWorkUnit                         */
 /* ==================================================================== */
-	
+
 void RectangularWorkUnit::set(const WorkUnit *wu) {
 	const RectangularWorkUnit *rect = static_cast<const RectangularWorkUnit *>(wu);
 	m_offset = rect->m_offset;
@@ -50,7 +50,7 @@ void RectangularWorkUnit::save(Stream *stream) const {
 
 std::string RectangularWorkUnit::toString() const {
 	std::ostringstream oss;
-	oss << "RectangularWorkUnit[offset=" << m_offset.toString() 
+	oss << "RectangularWorkUnit[offset=" << m_offset.toString()
 		<< ", size=" << m_size.toString() << "]";
 	return oss.str();
 }

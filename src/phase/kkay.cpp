@@ -27,15 +27,15 @@ MTS_NAMESPACE_BEGIN
 
 /*!\plugin{kkay}{Kajiya-Kay phase function}
  * This plugin implements the Kajiya-Kay \cite{Kajiya1989Rendering}
- * phase function for volumetric rendering of fibers, e.g. 
+ * phase function for volumetric rendering of fibers, e.g.
  * hair or cloth.
  *
- * The function is normalized so that it has no energy loss when 
+ * The function is normalized so that it has no energy loss when
  * \code{ks}=1 and illumination arrives perpendicularly to the surface.
  */
 class KajiyaKayPhaseFunction : public PhaseFunction {
 public:
-	KajiyaKayPhaseFunction(const Properties &props) 
+	KajiyaKayPhaseFunction(const Properties &props)
 		: PhaseFunction(props) {
 		m_ks = props.getFloat("ks", .4f);
 		m_kd = props.getFloat("kd", .2f);
@@ -44,7 +44,7 @@ public:
 			Log(EWarn, "Energy conservation is violated!");
 	}
 
-	KajiyaKayPhaseFunction(Stream *stream, InstanceManager *manager) 
+	KajiyaKayPhaseFunction(Stream *stream, InstanceManager *manager)
 		: PhaseFunction(stream, manager) {
 		m_ks = stream->readFloat();
 		m_kd = stream->readFloat();
@@ -88,7 +88,7 @@ public:
 		return eval(pRec) * (4 * M_PI);
 	}
 
-	Float sample(PhaseFunctionSamplingRecord &pRec, 
+	Float sample(PhaseFunctionSamplingRecord &pRec,
 			Float &pdf, Sampler *sampler) const {
 		pRec.wo = Warp::squareToUniformSphere(sampler->next2D());
 		pdf = Warp::squareToUniformSpherePdf();
@@ -107,7 +107,7 @@ public:
 		Vector reflectedLocal = frame.toLocal(pRec.wo);
 
 		reflectedLocal.z = -dot(pRec.wi, frame.n);
-		Float a = std::sqrt((1-reflectedLocal.z*reflectedLocal.z) / 
+		Float a = std::sqrt((1-reflectedLocal.z*reflectedLocal.z) /
 			(reflectedLocal.x*reflectedLocal.x + reflectedLocal.y*reflectedLocal.y));
 		reflectedLocal.y *= a;
 		reflectedLocal.x *= a;

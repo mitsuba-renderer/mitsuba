@@ -28,37 +28,37 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{maxDepth}{\Integer}{Specifies the longest path depth
  *         in the generated output image (where \code{-1} corresponds to $\infty$).
  *	       A value of \code{1} will only render directly visible light sources.
- *	       \code{2} will lead to single-bounce (direct-only) illumination, 
+ *	       \code{2} will lead to single-bounce (direct-only) illumination,
  *	       and so on. \default{\code{-1}}
  *	   }
  *     \parameter{photonCount}{\Integer}{Number of photons to be shot per iteration\default{250000}}
- *     \parameter{initialRadius}{\Float}{Initial radius of gather points in world space units. 
+ *     \parameter{initialRadius}{\Float}{Initial radius of gather points in world space units.
  *         \default{0, i.e. decide automatically}}
  *     \parameter{alpha}{\Float}{Radius reduction parameter \code{alpha} from the paper\default{0.7}}
  *     \parameter{granularity}{\Integer}{
-		Granularity of photon tracing work units for the purpose 
+		Granularity of photon tracing work units for the purpose
 		of parallelization (in \# of shot particles) \default{0, i.e. decide automatically}
  *     }
- *	   \parameter{rrDepth}{\Integer}{Specifies the minimum path depth, after 
- *	      which the implementation will start to use the ``russian roulette'' 
+ *	   \parameter{rrDepth}{\Integer}{Specifies the minimum path depth, after
+ *	      which the implementation will start to use the ``russian roulette''
  *	      path termination criterion. \default{\code{5}}
  *	   }
  * }
- * This plugin implements the progressive photon mapping algorithm by Hachisuka et al. 
+ * This plugin implements the progressive photon mapping algorithm by Hachisuka et al.
  * \cite{Hachisuka2008Progressive}. Progressive photon mapping is a variant of photon
  * mapping that alternates between photon shooting and gathering passes that involve
  * a relatively small (e.g. 250K) numbers of photons that are subsequently discarded.
  *
- * This is done in a way such that the variance and bias of the resulting output 
+ * This is done in a way such that the variance and bias of the resulting output
  * vanish as the number of passes tends to infinity. The progressive nature of this
  * method enables renderings with an effectively arbitrary number of photons
- * without exhausting the available system memory. 
+ * without exhausting the available system memory.
  *
- * The desired sample count specified in the sample generator configuration 
+ * The desired sample count specified in the sample generator configuration
  * determines how many photon query points are created per pixel. It should not be
  * set too high, since the rendering time is approximately proportional to
- * this number. For good results, use between 2-4 samples along with the 
- * \code{ldsampler}. Once started, the rendering process continues indefinitely 
+ * this number. For good results, use between 2-4 samples along with the
+ * \code{ldsampler}. Once started, the rendering process continues indefinitely
  * until it is manually stopped.
  *
  * \remarks{
@@ -98,7 +98,7 @@ public:
 		m_alpha = props.getFloat("alpha", .7);
 		/* Number of photons to shoot in each iteration */
 		m_photonCount = props.getInteger("photonCount", 250000);
-		/* Granularity of the work units used in parallelizing the 
+		/* Granularity of the work units used in parallelizing the
 		   particle tracing task (default: choose automatically). */
 		m_granularity = props.getInteger("granularity", 0);
 		/* Longest visualized path length (<tt>-1</tt>=infinite). When a positive value is
@@ -110,7 +110,7 @@ public:
 		/* Indicates if the gathering steps should be canceled if not enough photons are generated. */
 		m_autoCancelGathering = props.getBoolean("autoCancelGathering", true);
 		m_mutex = new Mutex();
-		if (m_maxDepth <= 1 && m_maxDepth != -1) 
+		if (m_maxDepth <= 1 && m_maxDepth != -1)
 			Log(EError, "Maximum depth must either be set to \"-1\" or \"2\" or higher!");
 	}
 
@@ -120,7 +120,7 @@ public:
 		m_workUnits.clear();
 	}
 
-	void configureSampler(const Scene *scene, Sampler *sampler) { 
+	void configureSampler(const Scene *scene, Sampler *sampler) {
 		/* Prepare the sampler for bucket-based rendering */
 		sampler->setFilmResolution(scene->getFilm()->getCropSize(), true);
 	}
@@ -144,19 +144,19 @@ public:
 		return true;
 	}
 
-	bool render(Scene *scene, RenderQueue *queue, 
+	bool render(Scene *scene, RenderQueue *queue,
 		const RenderJob *job, int sceneResID, int sensorResID, int samplerResID) {
 		ref<Scheduler> sched = Scheduler::getInstance();
 		ref<Sensor> sensor = scene->getSensor();
 		ref<Film> film = sensor->getFilm();
 		size_t nCores = sched->getCoreCount();
 		Sampler *sensorSampler = (Sampler *) sched->getResource(samplerResID, 0);
-	
+
 		size_t sampleCount = sensorSampler->getSampleCount();
 		Vector2i cropSize = film->getCropSize();
 		Point2i cropOffset = film->getCropOffset();
-		Log(EInfo, "Starting render job (%ix%i, " SIZE_T_FMT " %s, " SIZE_T_FMT 
-			" %s, " SSE_STR ") ..", cropSize.x, cropSize.y, sampleCount, 
+		Log(EInfo, "Starting render job (%ix%i, " SIZE_T_FMT " %s, " SIZE_T_FMT
+			" %s, " SSE_STR ") ..", cropSize.x, cropSize.y, sampleCount,
 			sampleCount == 1 ? "sample" : "samples", nCores, nCores == 1 ? "core" : "cores");
 
 		m_running = true;
@@ -184,7 +184,7 @@ public:
 			samplers[i] = clonedSampler.get();
 		}
 
-		int indepSamplerResID = sched->registerMultiResource(samplers); 
+		int indepSamplerResID = sched->registerMultiResource(samplers);
 		for (size_t i=0; i<sched->getCoreCount(); ++i)
 			samplers[i]->decRef();
 
@@ -203,7 +203,7 @@ public:
 				PPMWorkUnit *wu = new PPMWorkUnit();
 				m_workUnits[xofs/blockSize+yofs/blockSize*blocksW] = wu;
 
-				wu->block = new ImageBlock(Bitmap::ESpectrumAlphaWeight, 
+				wu->block = new ImageBlock(Bitmap::ESpectrumAlphaWeight,
 					Vector2i(blockSize), film->getReconstructionFilter());
 				wu->block->setOffset(Point2i(cropOffset.x + xofs, cropOffset.y + yofs));
 				wu->gatherPoints.clear();
@@ -226,10 +226,10 @@ public:
 							if (needsTimeSample)
 								timeSample = sensorSampler->next1D();
 							sample.x += x; sample.y += y;
-							sensor->sampleRayDifferential(sensorRay, sample, 
+							sensor->sampleRayDifferential(sensorRay, sample,
 								apertureSample, timeSample);
 							size_t offset = wu->gatherPoints.size();
-							int count = createGatherPoints(scene, sensorRay, sample, 
+							int count = createGatherPoints(scene, sensorRay, sample,
 								sensorSampler, Spectrum(1.0f), wu->gatherPoints, 1);
 							const Float fcount = static_cast<Float>(count);
 							for (int i = 0; i<count; ++i)
@@ -243,7 +243,7 @@ public:
 		}
 
 		int it = 0;
-		while (m_running) 
+		while (m_running)
 			photonMapPass(++it, queue, job, film, sceneResID, sensorResID, indepSamplerResID);
 
 #ifdef MTS_DEBUG_FP
@@ -254,8 +254,8 @@ public:
 		return true;
 	}
 
-	int createGatherPoints(Scene *scene, const RayDifferential &ray, 
-			const Point2 &sample, Sampler *sampler, const Spectrum &weight, 
+	int createGatherPoints(Scene *scene, const RayDifferential &ray,
+			const Point2 &sample, Sampler *sampler, const Spectrum &weight,
 			std::vector<GatherPoint> &gatherPoints, int depth) {
 		int count = 0;
 		if (depth >= m_maxDepth && m_maxDepth != -1)
@@ -291,7 +291,7 @@ public:
 					const Float rrProb = depth < 4 ? 1 : 0.8f;
 					if (sampler->next1D() < rrProb) {
 						RayDifferential recursiveRay(p.its.p, p.its.toWorld(bRec.wo), ray.time);
-						count += createGatherPoints(scene, recursiveRay, sample, sampler, 
+						count += createGatherPoints(scene, recursiveRay, sample, sampler,
 							weight * bsdfVal / rrProb, gatherPoints, depth+1);
 					}
 				}
@@ -307,9 +307,9 @@ public:
 		return count;
 	}
 
-	void photonMapPass(int it, RenderQueue *queue, const RenderJob *job,  
+	void photonMapPass(int it, RenderQueue *queue, const RenderJob *job,
 			Film *film, int sceneResID, int sensorResID, int samplerResID) {
-		Log(EInfo, "Performing a photon mapping pass %i (" SIZE_T_FMT " photons so far)", 
+		Log(EInfo, "Performing a photon mapping pass %i (" SIZE_T_FMT " photons so far)",
 				it, m_totalPhotons);
 		ref<Scheduler> sched = Scheduler::getInstance();
 
@@ -328,7 +328,7 @@ public:
 
 		ref<PhotonMap> photonMap = proc->getPhotonMap();
 		photonMap->build();
-		Log(EDebug, "Photon map full. Shot " SIZE_T_FMT " particles, excess photons due to parallelism: " 
+		Log(EDebug, "Photon map full. Shot " SIZE_T_FMT " particles, excess photons due to parallelism: "
 			SIZE_T_FMT, proc->getShotParticles(), proc->getExcessPhotons());
 
 		Log(EInfo, "Gathering ..");
@@ -348,7 +348,7 @@ public:
 				GatherPoint &g = wu->gatherPoints[i];
 
 				if (g.radius == 0) {
-					/* Generate a black sample -- necessary for proper 
+					/* Generate a black sample -- necessary for proper
 					   sample weight computation at surface boundaries */
 					wu->block->put(g.sample, g.emission, 1);
 					continue;

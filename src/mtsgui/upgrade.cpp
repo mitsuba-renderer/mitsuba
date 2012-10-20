@@ -23,7 +23,7 @@
 #include <QtXmlPatterns/QtXmlPatterns>
 
 struct VersionComparator {
-	inline bool operator()(const std::pair<Version, fs::path> &s1, 
+	inline bool operator()(const std::pair<Version, fs::path> &s1,
 		const std::pair<Version, fs::path> &s2) const {
 		return s1.first < s2.first;
 	}
@@ -45,7 +45,7 @@ public:
 		else
 			SLog(EWarn, "%s (line %i, column %i, url=%s)", qPrintable(descr),
 				loc.line(), loc.column(), qPrintable(id.toString()));
-		
+
 		if (type == QtFatalMsg)
 			m_fatalError = true;
 	}
@@ -76,8 +76,8 @@ UpgradeManager::UpgradeManager(const FileResolver *resolver) : m_resolver(resolv
 	std::sort(m_transformations.begin(), m_transformations.end(), VersionComparator());
 
 	for (size_t i=0; i<m_transformations.size(); ++i)
-		SLog(EInfo, "  - registered transformation \"%s\", which updates to version %s", 
-			m_transformations[i].second.filename().string().c_str(), 
+		SLog(EInfo, "  - registered transformation \"%s\", which updates to version %s",
+			m_transformations[i].second.filename().string().c_str(),
 			m_transformations[i].first.toString().c_str());
 }
 
@@ -94,13 +94,13 @@ void UpgradeManager::performUpgrade(const QString &filename, const Version &vers
 	if (!file.copy(backupFilename))
 		SLog(EError, "Could not create a backup copy -- "
 			"stopping the upgrade operation!");
-		
+
 	if (!file.open(QIODevice::ReadOnly))
 		SLog(EError, "Unable to open \"%s\" with read access -- stopping "
 			"the upgrade operation.", QStringToUTF8(filename));
 	QByteArray inputArray = file.readAll(), outputArray;
 	file.close();
-		
+
 	QBuffer inputBuffer(&inputArray);
 	QBuffer outputBuffer(&outputArray);
 
@@ -108,19 +108,19 @@ void UpgradeManager::performUpgrade(const QString &filename, const Version &vers
 
 	int nTransformations=0;
 	for (size_t i=0; i<m_transformations.size(); ++i) {
-		if (m_transformations[i].first <= version) 
+		if (m_transformations[i].first <= version)
 			continue;
 		inputBuffer.open(QIODevice::ReadOnly);
 		outputBuffer.open(QIODevice::WriteOnly | QIODevice::Truncate);
 
-		SLog(EInfo, "Applying transformation \"%s\" ..", 
+		SLog(EInfo, "Applying transformation \"%s\" ..",
 			m_transformations[i].second.filename().string().c_str());
 		QString trafoFilename = fromFsPath(m_transformations[i].second);
 		QFile trafoFile(trafoFilename);
 		if (!trafoFile.open(QIODevice::ReadOnly | QIODevice::Text))
 			SLog(EError, "Unable to open the stylesheet \"%s\" -- stopping "
 				"the upgrade operation.", QStringToUTF8(trafoFilename));
-		
+
 		QXmlQuery query(QXmlQuery::XSLT20);
 		query.setMessageHandler(&handler);
 		query.setFocus(&inputBuffer);
@@ -144,12 +144,12 @@ void UpgradeManager::performUpgrade(const QString &filename, const Version &vers
 		inputArray = outputArray;
 		++nTransformations;
 	}
-	
+
 	if (nTransformations == 0) {
 		SLog(EError, "Strange -- no transformations were applied? "
 			"Stopping the upgrade operation.");
 	}
-	
+
 	/* Done, write back to disk */
 	SLog(EInfo, "Successfully applied %i transformations, writing the result "
 		"to \"%s\" ..", nTransformations, QStringToUTF8(filename));

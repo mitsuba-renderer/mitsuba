@@ -58,7 +58,7 @@ protected:
 
 	/// Fit a hierarchy of bounding boxes to the stored photons
 	AABB buildHierarchy(IndexType index);
-	
+
 	/// Blurring kernel used by the BRE
 	inline Float K2(Float sqrParam) const {
 		Float tmp = 1-sqrParam;
@@ -66,10 +66,10 @@ protected:
 	}
 
 	/**
-	 * \brief Return whether or not the inner node of the 
+	 * \brief Return whether or not the inner node of the
 	 * specified index has a right child node.
 	 *
-	 * This function is available for convenience and abstracts away some 
+	 * This function is available for convenience and abstracts away some
 	 * details about the underlying node representation.
 	 */
 	inline bool hasRightChild(IndexType index) const {

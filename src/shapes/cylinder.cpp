@@ -55,14 +55,14 @@ MTS_NAMESPACE_BEGIN
  *     \rendering{Cylinder with two-sided shading, see \lstref{cylinder-twosided}}
  *         {shape_cylinder_twosided}
  * }
- * This shape plugin describes a simple cylinder intersection primitive. 
+ * This shape plugin describes a simple cylinder intersection primitive.
  * It should always be preferred over approximations modeled using
  * triangles. Note that the cylinder does not have endcaps -- also,
- * it's interior has inward-facing normals, which most scattering 
+ * it's interior has inward-facing normals, which most scattering
  * models in Mitsuba will treat as fully absorbing. If this is not
  * desirable, consider using the \pluginref{twosided} plugin.
  *
- * \begin{xml}[caption={A simple example for instantiating a 
+ * \begin{xml}[caption={A simple example for instantiating a
  * cylinder, whose interior is visible}, label=lst:cylinder-twosided]
  * <shape type="cylinder">
  *     <float name="radius" value="0.3"/>
@@ -85,7 +85,7 @@ public:
 		Point p2 = props.getPoint("p1", Point(0.0f, 0.0f, 1.0f));
 		Vector d = p2 - p1;
 		Float length = d.length();
-		m_objectToWorld = 
+		m_objectToWorld =
 			Transform::translate(Vector(p1)) *
 			Transform::fromFrame(Frame(d / length)) *
 			Transform::scale(Vector(radius, radius, length));
@@ -107,7 +107,7 @@ public:
 		Assert(m_length > 0 && m_radius > 0);
 	}
 
-	Cylinder(Stream *stream, InstanceManager *manager) 
+	Cylinder(Stream *stream, InstanceManager *manager)
 		: Shape(stream, manager) {
 		m_objectToWorld = Transform(stream);
 		m_radius = stream->readFloat();
@@ -134,7 +134,7 @@ public:
 		const Float
 			ox = ray.o.x,
 			oy = ray.o.y,
-			dx = ray.d.x, 
+			dx = ray.d.x,
 			dy = ray.d.y;
 
 		const Float A = dx*dx + dy*dy;
@@ -172,7 +172,7 @@ public:
 		const Float
 			ox = ray.o.x,
 			oy = ray.o.y,
-			dx = ray.d.x, 
+			dx = ray.d.x,
 			dy = ray.d.y;
 
 		const Float A = dx*dx + dy*dy;
@@ -258,9 +258,9 @@ public:
 		for (int i=0; i<3; ++i) {
 			Float range = std::sqrt(x1[i]*x1[i] + x2[i]*x2[i]);
 
-			result.min[i] = std::min(std::min(result.min[i], 
+			result.min[i] = std::min(std::min(result.min[i],
 						p0[i]-range), p1[i]-range);
-			result.max[i] = std::max(std::max(result.max[i], 
+			result.max[i] = std::max(std::max(result.max[i],
 						p0[i]+range), p1[i]+range);
 		}
 
@@ -328,7 +328,7 @@ public:
 		Float ellipseLengths[2];
 
 		AABB aabb;
-		if (!intersectCylPlane(min, planeNrml, cylPt, cylD, m_radius, 
+		if (!intersectCylPlane(min, planeNrml, cylPt, cylD, m_radius,
 			ellipseCenter, ellipseAxes, ellipseLengths)) {
 			/* Degenerate case -- return an invalid AABB. This is
 			   not a problem, since one of the other faces will provide
@@ -380,9 +380,9 @@ public:
 			Point p1 = ellipseCenter + cosTheta*ellipseAxes[0] + sinTheta*ellipseAxes[1];
 			Point p2 = ellipseCenter - cosTheta*ellipseAxes[0] - sinTheta*ellipseAxes[1];
 
-			if (faceBounds.contains(p1)) 
+			if (faceBounds.contains(p1))
 				aabb.expandBy(p1);
-			if (faceBounds.contains(p2)) 
+			if (faceBounds.contains(p2))
 				aabb.expandBy(p2);
 		}
 
@@ -393,14 +393,14 @@ public:
 		/* Compute a base bounding box */
 		AABB base(getAABB());
 		base.clip(box);
-		
+
 		Point cylPt = m_objectToWorld(Point(0, 0, 0));
 		Vector cylD(m_objectToWorld(Vector(0, 0, 1)));
 
-		/* Now forget about the cylinder ends and 
+		/* Now forget about the cylinder ends and
 		   intersect an infinite cylinder with each AABB face */
 		AABB clippedAABB;
-		clippedAABB.expandBy(intersectCylFace(0, 
+		clippedAABB.expandBy(intersectCylFace(0,
 				Point(base.min.x, base.min.y, base.min.z),
 				Point(base.min.x, base.max.y, base.max.z),
 				cylPt, cylD));
@@ -410,7 +410,7 @@ public:
 				Point(base.max.x, base.max.y, base.max.z),
 				cylPt, cylD));
 
-		clippedAABB.expandBy(intersectCylFace(1, 
+		clippedAABB.expandBy(intersectCylFace(1,
 				Point(base.min.x, base.min.y, base.min.z),
 				Point(base.max.x, base.min.y, base.max.z),
 				cylPt, cylD));
@@ -420,7 +420,7 @@ public:
 				Point(base.max.x, base.max.y, base.max.z),
 				cylPt, cylD));
 
-		clippedAABB.expandBy(intersectCylFace(2, 
+		clippedAABB.expandBy(intersectCylFace(2,
 				Point(base.min.x, base.min.y, base.min.z),
 				Point(base.max.x, base.max.y, base.min.z),
 				cylPt, cylD));
@@ -513,7 +513,7 @@ public:
 			<< "  length = " << m_length << ", " << endl
 			<< "  objectToWorld = " << indent(m_objectToWorld.toString()) << "," << endl
 			<< "  bsdf = " << indent(m_bsdf.toString()) << "," << endl;
-		if (isMediumTransition()) 
+		if (isMediumTransition())
 			oss << "  interiorMedium = " << indent(m_interiorMedium.toString()) << "," << endl
 				<< "  exteriorMedium = " << indent(m_exteriorMedium.toString()) << "," << endl;
 		oss << "  emitter = " << indent(m_emitter.toString()) << "," << endl

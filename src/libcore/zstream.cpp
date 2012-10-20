@@ -20,7 +20,7 @@
 
 MTS_NAMESPACE_BEGIN
 
-ZStream::ZStream(Stream *childStream, EStreamType streamType, int level) 
+ZStream::ZStream(Stream *childStream, EStreamType streamType, int level)
 		: m_childStream(childStream), m_didWrite(false) {
 	m_deflateStream.zalloc = Z_NULL;
 	m_deflateStream.zfree = Z_NULL;

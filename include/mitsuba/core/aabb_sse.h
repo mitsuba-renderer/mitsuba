@@ -28,16 +28,16 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * NaN-aware slab test using SSE by Thierry Berger-Perrin (Intersects 
- * against 4 rays simultaneously). Returns false if none of the rays 
+ * NaN-aware slab test using SSE by Thierry Berger-Perrin (Intersects
+ * against 4 rays simultaneously). Returns false if none of the rays
  * intersect.
  */
-FINLINE bool AABB::rayIntersectPacket(const RayPacket4 &ray, 
+FINLINE bool AABB::rayIntersectPacket(const RayPacket4 &ray,
 								   RayInterval4 &interval) const {
 	const __m128
 		xl1 = _mm_mul_ps(ray.dRcp[0].ps,
 			_mm_sub_ps(_mm_set1_ps(min.x), ray.o[0].ps)),
-		xl2 = _mm_mul_ps(ray.dRcp[0].ps, 
+		xl2 = _mm_mul_ps(ray.dRcp[0].ps,
 			_mm_sub_ps(_mm_set1_ps(max.x), ray.o[0].ps)),
 		xl1a = _mm_min_ps(xl1, SSEConstants::p_inf.ps),
 		xl2a = _mm_min_ps(xl2, SSEConstants::p_inf.ps),
@@ -49,9 +49,9 @@ FINLINE bool AABB::rayIntersectPacket(const RayPacket4 &ray,
 		lmin = _mm_min_ps(xl1b, xl2b);
 
 	const __m128
-		yl1 = _mm_mul_ps(ray.dRcp[1].ps, 
+		yl1 = _mm_mul_ps(ray.dRcp[1].ps,
 			_mm_sub_ps(_mm_set1_ps(min.y), ray.o[1].ps)),
-		yl2 = _mm_mul_ps(ray.dRcp[1].ps, 
+		yl2 = _mm_mul_ps(ray.dRcp[1].ps,
 			_mm_sub_ps(_mm_set1_ps(max.y), ray.o[1].ps)),
 		yl1a = _mm_min_ps(yl1, SSEConstants::p_inf.ps),
 		yl2a = _mm_min_ps(yl2, SSEConstants::p_inf.ps),
@@ -62,11 +62,11 @@ FINLINE bool AABB::rayIntersectPacket(const RayPacket4 &ray,
 	lmin = _mm_max_ps(_mm_min_ps(yl1b,yl2b), lmin);
 
 	const __m128
-		zl1 = _mm_mul_ps(ray.dRcp[2].ps, 
+		zl1 = _mm_mul_ps(ray.dRcp[2].ps,
 			_mm_sub_ps(_mm_set1_ps(min.z), ray.o[2].ps)),
-		zl2 = _mm_mul_ps(ray.dRcp[2].ps, 
+		zl2 = _mm_mul_ps(ray.dRcp[2].ps,
 			_mm_sub_ps(_mm_set1_ps(max.z), ray.o[2].ps)),
-		zl1a = _mm_min_ps(zl1, SSEConstants::p_inf.ps), 
+		zl1a = _mm_min_ps(zl1, SSEConstants::p_inf.ps),
 		zl2a = _mm_min_ps(zl2, SSEConstants::p_inf.ps),
 		zl1b = _mm_max_ps(zl1, SSEConstants::n_inf.ps),
 		zl2b = _mm_max_ps(zl2, SSEConstants::n_inf.ps);

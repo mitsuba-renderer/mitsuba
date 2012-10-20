@@ -40,17 +40,17 @@ PermutationStorage::PermutationStorage(int scramble) : m_rngIndex(0), m_scramble
 		uint16_t **initialPerm = new uint16_t*[initialBases+1],
 				 *ptr = initialStorage;
 
-		Log(EDebug, "Constructing Faure permutations using %s of memory", 
+		Log(EDebug, "Constructing Faure permutations using %s of memory",
 			memString(initialSize * sizeof(uint16_t)).c_str());
 
 		initialPerm[0] = NULL;
 		for (size_t i=1; i<=initialBases; ++i) {
-			initialPerm[i] = ptr; 
+			initialPerm[i] = ptr;
 			ptr += i;
 		}
 		computeFaurePermutations(initialBases, initialPerm);
 
-		Log(EDebug, "Compactifying permutations to %s of memory", 
+		Log(EDebug, "Compactifying permutations to %s of memory",
 			memString(finalSize * sizeof(uint16_t)).c_str());
 
 		ptr = m_storage;

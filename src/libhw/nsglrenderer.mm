@@ -55,7 +55,7 @@ void NSGLRenderer::init(Device *device, Renderer *other) {
 
 		/* Create a GL context */
 		m_context = [[NSOpenGLContext alloc]
-			initWithFormat: format 
+			initWithFormat: format
 			shareContext: otherContext];
 
 	//	long vsync = 1;

@@ -66,7 +66,7 @@ void ProgressReporter::update(long long value) {
 			curMs - m_lastMs > 1000)) {
 		m_percentage = (int) perc;
 		int fillEnd = (int) ((value * m_fillSize) / m_total);
-	
+
 		Float time = curMs / 1000.0f;
 		Float remaining = (time*m_total) / value - time;
 
@@ -76,7 +76,7 @@ void ProgressReporter::update(long long value) {
 		std::ostringstream oss;
 		std::string eta = timeString(remaining);
 		oss << '\r' << m_title << ": [" << m_string << "] (";
-		oss << timeString(time) << ", ETA: " 
+		oss << timeString(time) << ", ETA: "
 			<< eta << ")  \b\b";
 		Thread::getThread()->getLogger()->logProgress(
 			perc, m_title, oss.str(), eta, m_ptr);
@@ -112,7 +112,7 @@ bool StatsCounter::operator<(const StatsCounter &v) const {
 }
 
 ref<Statistics> Statistics::m_instance = new Statistics();
-	
+
 void Statistics::staticInitialization() {
 	SAssert(sizeof(CacheLineCounter) == 128);
 }
@@ -148,7 +148,7 @@ std::string Statistics::getStats() {
 		oss << "     none." << endl;
 	} else {
 		std::sort(m_plugins.begin(), m_plugins.end());
-		for (unsigned int i=0; i<m_plugins.size(); i++) 
+		for (unsigned int i=0; i<m_plugins.size(); i++)
 			oss << "    -  " << m_plugins[i].first << " [" << m_plugins[i].second
 				<< "]" << endl;
 	}
@@ -219,8 +219,8 @@ std::string Statistics::getStats() {
 						value3 /= 1000.0f;
 						suffixIndex2++;
 					}
-					snprintf(temp, sizeof(temp), "    -  %s : %.2f %% (%.2f%s of %.2f%s)", 
-						counter->getName().c_str(), baseValue == 0 ? (Float) 0 : value/baseValue * 100, 
+					snprintf(temp, sizeof(temp), "    -  %s : %.2f %% (%.2f%s of %.2f%s)",
+						counter->getName().c_str(), baseValue == 0 ? (Float) 0 : value/baseValue * 100,
 						value2, suffixesNumber[suffixIndex].c_str(),
 						value3, suffixesNumber[suffixIndex2].c_str());
 					break;
@@ -236,7 +236,7 @@ std::string Statistics::getStats() {
 						value3 /= 1000.0f;
 						suffixIndex2++;
 					}
-					snprintf(temp, sizeof(temp), "    -  %s : %.2f (%.2f%s / %.2f%s)", 
+					snprintf(temp, sizeof(temp), "    -  %s : %.2f (%.2f%s / %.2f%s)",
 						counter->getName().c_str(), avg,
 						value2, suffixesNumber[suffixIndex].c_str(),
 						value3, suffixesNumber[suffixIndex2].c_str());

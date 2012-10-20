@@ -23,26 +23,26 @@
 
 MTS_NAMESPACE_BEGIN
 
-PhotonMap::PhotonMap(size_t photonCount) 
+PhotonMap::PhotonMap(size_t photonCount)
 		: m_kdtree(0, PhotonTree::ESlidingMidpoint), m_scale(1.0f) {
 	m_kdtree.reserve(photonCount);
 	Assert(Photon::m_precompTableReady);
 }
 
-PhotonMap::PhotonMap(Stream *stream, InstanceManager *manager) 
-    : SerializableObject(stream, manager), 
+PhotonMap::PhotonMap(Stream *stream, InstanceManager *manager)
+    : SerializableObject(stream, manager),
 	  m_kdtree(0, PhotonTree::ESlidingMidpoint) {
 	Assert(Photon::m_precompTableReady);
 	m_scale = (Float) stream->readFloat();
 	m_kdtree.resize(stream->readSize());
 	m_kdtree.setDepth(stream->readSize());
 	m_kdtree.setAABB(AABB(stream));
-	for (size_t i=0; i<m_kdtree.size(); ++i) 
+	for (size_t i=0; i<m_kdtree.size(); ++i)
 		m_kdtree[i] = Photon(stream);
 }
 
 void PhotonMap::serialize(Stream *stream, InstanceManager *manager) const {
-	Log(EDebug, "Serializing a photon map (%s)", 
+	Log(EDebug, "Serializing a photon map (%s)",
 		memString(m_kdtree.size() * sizeof(Photon)).c_str());
 	stream->writeFloat(m_scale);
 	stream->writeSize(m_kdtree.size());
@@ -75,13 +75,13 @@ void PhotonMap::dumpOBJ(const std::string &filename) {
 	}
 
 	/// Need to generate some fake geometry so that blender will import the points
-	for (size_t i=3; i<=m_kdtree.size(); i++) 
+	for (size_t i=3; i<=m_kdtree.size(); i++)
 		os << "f " << i << " " << i-1 << " " << i-2 << endl;
 	os.close();
 }
 
 Spectrum PhotonMap::estimateIrradiance(
-		const Point &p, const Normal &n, 
+		const Point &p, const Normal &n,
 		Float searchRadius, int maxDepth,
 		size_t maxPhotons) const {
 	SearchResult *results = static_cast<SearchResult *>(
@@ -151,7 +151,7 @@ Spectrum PhotonMap::estimateRadiance(const Intersection &its,
 
 struct RawRadianceQuery {
 	RawRadianceQuery(const Intersection &its, int maxDepth)
-	  : its(its), maxDepth(maxDepth), result(0.0f) { 
+	  : its(its), maxDepth(maxDepth), result(0.0f) {
 		bsdf = its.getBSDF();
 	}
 
@@ -172,7 +172,7 @@ struct RawRadianceQuery {
 			return;
 
 		/* Account for non-symmetry due to shading normals */
-		value *= std::abs(Frame::cosTheta(bRec.wi) / 
+		value *= std::abs(Frame::cosTheta(bRec.wi) /
 			(wiDotGeoN * Frame::cosTheta(bRec.wo)));
 
 		result += value;

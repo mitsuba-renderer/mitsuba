@@ -19,7 +19,7 @@
 #include "logwidget.h"
 #include <mitsuba/core/statistics.h>
 
-LogWidget::LogWidget(QWidget *parent) 
+LogWidget::LogWidget(QWidget *parent)
  : QMainWindow(parent) {
 	m_contents = new QTextEdit(this);
 	QFont font("Monospace");
@@ -75,15 +75,15 @@ void LogWidget::onCriticalError(const QString &message) {
 void LogWidget::onTextMessage(ELogLevel level, const QString &message) {
 	QColor color;
 	switch (level) {
-		case ETrace: 
-		case EDebug: 
+		case ETrace:
+		case EDebug:
 		case EInfo:
 			color = Qt::gray;
 			break;
 		case EError:
 			color = Qt::red;
 			break;
-		case EWarn: 
+		case EWarn:
 		default:
 			color = QColor(255,180,180);
 			break;
@@ -104,7 +104,7 @@ void LogWidget::show() {
 		QDesktopWidget *desktop = QApplication::desktop();
 		QRect geo = desktop->screenGeometry();
 		QPoint windowPos(
-			geo.left() + (geo.width() - width()) / 2, 
+			geo.left() + (geo.width() - width()) / 2,
 			geo.top() + (geo.height() - height())/2
 		);
 		move(windowPos);

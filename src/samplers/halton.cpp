@@ -21,12 +21,12 @@
 #include <mitsuba/core/qmc.h>
 #include "faure.h"
 
-/* This implementation limits the maximum pixel resolution and instead 
+/* This implementation limits the maximum pixel resolution and instead
    tiles a block of identical Halton sequences across the screen. This is
    important to avoid running out of single precision bits very quickly ..
    The tile size should not be too small, or visible patterns will emerge */
 
-#define MAX_RESOLUTION 128 
+#define MAX_RESOLUTION 128
 
 MTS_NAMESPACE_BEGIN
 
@@ -42,7 +42,7 @@ MTS_NAMESPACE_BEGIN
  *        \item When set to \code{0}, the implementation will provide the standard Halton sequence.
  *
  *        \item When set to \code{-1}, the implementation will compute
- *        a scrambled variant of the Halton sequence based on permutations by 
+ *        a scrambled variant of the Halton sequence based on permutations by
  *        Faure \cite{Faure1992Good}, which has better equidistribution properties
  *        in high dimensions.
  *
@@ -50,8 +50,8 @@ MTS_NAMESPACE_BEGIN
  *        on this number. This is useful to break up temporally coherent noise when rendering
  *        the frames of an animation --- in this case, simply set the parameter to the current frame index.
  *        \end{enumerate}
- *        Default: \code{-1}, i.e. use the Faure permutations. Note that permutations rely on a 
- *        precomputed table that consumes approximately 7 MiB of additional memory at run time. 
+ *        Default: \code{-1}, i.e. use the Faure permutations. Note that permutations rely on a
+ *        precomputed table that consumes approximately 7 MiB of additional memory at run time.
  *     }
  * }
   * \renderings{
@@ -62,21 +62,21 @@ MTS_NAMESPACE_BEGIN
  * }
  * This plugin implements a Quasi-Monte Carlo (QMC) sample generator based on the
  * Halton sequence. QMC number sequences are designed to reduce sample clumping
- * across integration dimensions, which can lead to a higher order of 
+ * across integration dimensions, which can lead to a higher order of
  * convergence in renderings. Because of the deterministic character of the samples,
  * errors will manifest as grid or moir\'e patterns rather than random noise, but
  * these diminish as the number of samples is increased.
  *
- * The Halton sequence in particular provides a very high quality point set that unfortunately 
- * becomes increasingly correlated in higher dimensions. To ameliorate this problem, the Halton 
+ * The Halton sequence in particular provides a very high quality point set that unfortunately
+ * becomes increasingly correlated in higher dimensions. To ameliorate this problem, the Halton
  * points are usually combined with a scrambling permutation, and this is also the default.
- * Because everything that happens inside this sampler is completely deterministic and 
- * independent of operating system scheduling behavior, subsequent runs of Mitsuba will always 
- * compute the same image, and this even holds when rendering with multiple threads 
+ * Because everything that happens inside this sampler is completely deterministic and
+ * independent of operating system scheduling behavior, subsequent runs of Mitsuba will always
+ * compute the same image, and this even holds when rendering with multiple threads
  * and/or machines.
   * \renderings{
  *     \unframedrendering{A projection of the first 1024 points
- *     of the \emph{original} Halton sequence onto the first two dimensions, obtained by 
+ *     of the \emph{original} Halton sequence onto the first two dimensions, obtained by
  *     setting \code{scramble=0}}{sampler_halton_nonscrambled_0}
  *     \unframedrendering{A projection of the first 1024 points
  *     of the \emph{original} Halton sequence onto the 32th and 33th dimensions.
@@ -89,25 +89,25 @@ MTS_NAMESPACE_BEGIN
  *     of a randomly scrambled Halton sequence onto the 32th and 33th dimensions.}{sampler_halton_rscrambled_32}
  * }
 *
- * By default, the implementation provides a scrambled variant of the Halton sequence based 
+ * By default, the implementation provides a scrambled variant of the Halton sequence based
  * on permutations by Faure \cite{Faure1992Good} that has better equidistribution properties
  * in high dimensions, but this can be changed using the \code{scramble} parameter.
- * Internally, the plugin uses a table of prime numbers to provide elements 
+ * Internally, the plugin uses a table of prime numbers to provide elements
  * of the Halton sequence up to a dimension of 1024. Because of this upper bound,
  * the maximum path depth of the integrator must be limited (e.g. to 100), or
- * rendering might fail with the following error message: \emph{Lookup dimension 
- * exceeds the prime number table size! You may have to reduce the 'maxDepth' 
+ * rendering might fail with the following error message: \emph{Lookup dimension
+ * exceeds the prime number table size! You may have to reduce the 'maxDepth'
  * parameter of your integrator}.
  *
  * To support bucket-based renderings, the Halton sequence is internally enumerated
  * using a scheme proposed by Gr\"unschlo\ss\ et al. \cite{Grunschloss2010Enumerating};
- * the implementation in Mitsuba is based on a Python script by the authors of 
+ * the implementation in Mitsuba is based on a Python script by the authors of
  * this paper.
  *
  * \remarks{
- *   \item This sampler is incompatible with Metropolis Light Transport (all variants). 
- *   It interoperates poorly with Bidirectional Path Tracing and Energy Redistribution 
- *   Path Tracing, hence these should not be used together. The \pluginref{sobol} QMC 
+ *   \item This sampler is incompatible with Metropolis Light Transport (all variants).
+ *   It interoperates poorly with Bidirectional Path Tracing and Energy Redistribution
+ *   Path Tracing, hence these should not be used together. The \pluginref{sobol} QMC
  *   sequence is an alternative for the latter two cases, and \pluginref{ldsampler}
  *   works as well.
  * }
@@ -120,7 +120,7 @@ public:
 		/* Number of samples per pixel */
 		m_sampleCount = props.getSize("sampleCount", 4);
 
-		/* Scramble value, which can be used to break up temporally coherent 
+		/* Scramble value, which can be used to break up temporally coherent
 		   noise patterns when rendering the frames of an animation. */
 		m_scramble = props.getInteger("scramble", -1);
 
@@ -128,7 +128,7 @@ public:
 		m_arrayStartDim = m_arrayEndDim = 5;
 	}
 
-	HaltonSampler(Stream *stream, InstanceManager *manager) 
+	HaltonSampler(Stream *stream, InstanceManager *manager)
 	 : Sampler(stream, manager) {
 		m_arrayStartDim = stream->readUInt();
 		m_arrayEndDim = stream->readUInt();
@@ -183,11 +183,11 @@ public:
 	void configure() {
 		Sampler::configure();
 		if (m_scramble != 0) {
-			/* Only create one set of permutations per address space, since this is costly 
+			/* Only create one set of permutations per address space, since this is costly
 				(taking about .5 sec and 7MB of memory on my machine) */
 			LockGuard guard(m_globalPermutationsMutex);
 
-			if (m_globalPermutations == NULL || m_globalPermutations->getScramble() != m_scramble) 
+			if (m_globalPermutations == NULL || m_globalPermutations->getScramble() != m_scramble)
 				m_globalPermutations = new PermutationStorage(m_scramble);
 			m_permutations = m_globalPermutations;
 		}
@@ -210,7 +210,7 @@ public:
 
 	/**
 	 * \brief Extended Euclidean algorithm
-	 * 	
+	 *
 	 * 	Computes 'x' and 'y' that satisfy gcd(a, b) = ax + by,
 	 * 	where x and y may be negative.
 	 */
@@ -226,7 +226,7 @@ public:
 		y = x_ - (int64_t) (d * y_);
 	}
 
-	/// Positive modulo for 64-bit integers	
+	/// Positive modulo for 64-bit integers
 	uint64_t modulo(int64_t a, int64_t b) {
 		int64_t result = a - (a/b) * b;
 		return (uint64_t) ((result < 0) ? result+b : result);
@@ -245,7 +245,7 @@ public:
 
 	void setFilmResolution(const Vector2i &res, bool blocked) {
 		if (blocked) {
-			/* Determine parameters of the space partition in the first two 
+			/* Determine parameters of the space partition in the first two
 			   dimensions. This is required to support bucketed rendering. */
 
 			m_primeExponents = Vector2i(0, 0);
@@ -291,8 +291,8 @@ public:
 
 				/* Determine axis offset along each requested coordinate independently and
 				   use the chinese remainder theorem to solve for a combined offset */
-				uint64_t offset = inverseScrambledRadicalInverse(primeTable[i], m_pixelPosition[i], 
-						m_primeExponents[i], m_permutations.get() 
+				uint64_t offset = inverseScrambledRadicalInverse(primeTable[i], m_pixelPosition[i],
+						m_primeExponents[i], m_permutations.get()
 						? m_permutations->getInversePermutation(i) : NULL);
 				m_offset += offset * (m_stride / m_primePowers[i]) * m_multInverse[i];
 			}
@@ -349,7 +349,7 @@ public:
 	inline Float nextFloat(uint64_t idx) {
 		uint32_t dim = m_dimension++;
 		if (m_permutations != NULL)
-			return scrambledRadicalInverseFast(dim, idx, 
+			return scrambledRadicalInverseFast(dim, idx,
 				m_permutations->getPermutation(dim));
 		else
 			return radicalInverseFast(dim, idx);
@@ -377,7 +377,7 @@ public:
 
 		uint64_t index = m_offset + m_stride * m_sampleIndex;
 
-		Float value1, value2; 
+		Float value1, value2;
 		if (m_dimension == 0) {
 			value1 = nextFloat(index) * m_primePowers.x - m_pixelPosition.x;
 			value2 = nextFloat(index) * m_primePowers.y - m_pixelPosition.y;
@@ -399,7 +399,7 @@ public:
 			<< "  primeExponents = " << m_primeExponents.toString() << "," << endl
 			<< "  multInverse = [" << m_multInverse[0] << ", " << m_multInverse[1] << "]," << endl
 			<< "  scramble = " << m_scramble << endl
-			<< "]"; 
+			<< "]";
 		return oss.str();
 	}
 
@@ -422,7 +422,7 @@ private:
 	Vector2i m_primeExponents;
 	Point2i m_pixelPosition;
 };
-	
+
 ref<Mutex> HaltonSampler::m_globalPermutationsMutex = new Mutex();
 ref<const PermutationStorage> HaltonSampler::m_globalPermutations = NULL;
 

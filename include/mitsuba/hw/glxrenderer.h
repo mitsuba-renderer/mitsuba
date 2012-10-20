@@ -34,7 +34,7 @@ public:
 
 	/// Return the rendering context
 	inline GLXContext getGLXContext() { return m_context; }
-	
+
 	/// Initialize the renderer
 	void init(Device *device, Renderer *other = NULL);
 

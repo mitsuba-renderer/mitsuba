@@ -52,10 +52,10 @@ MTS_NAMESPACE_BEGIN
  *         \code{xyza}, \code{spectrum}, and \code{spectrumAlpha}. In the latter two cases,
  *         the number of written channels depends on the value assigned to
  *         \code{SPECTRUM\_SAMPLES} during compilation (see Section~\ref{sec:compiling}
- *         section for details) 
+ *         section for details)
  *         \default{\code{rgba}}
  *     }
- *     \parameter{componentFormat}{\String}{Specifies the desired floating 
+ *     \parameter{componentFormat}{\String}{Specifies the desired floating
  *         point component format used for the output. The options are
  *         \code{float16}, \code{float32}, or \code{uint32}
  *         \default{\code{float16}}
@@ -64,30 +64,30 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{\Unnamed}{\RFilter}{Reconstruction filter that should
  *     be used by the film. \default{\code{gaussian}, a windowed Gaussian filter}}
  * }
- * 
+ *
  * This plugin implements a camera film that stores the captured image
  * as a \emph{tiled} high dynamic-range OpenEXR file. It is very similar to
  * \pluginref{hdrfilm}, the main difference being that it does not keep
  * the rendered image in memory. Instead, image tiles are directly written
  * to disk as they are being rendered, which enables renderings of extremely
  * large output images that would otherwise not fit into memory (e.g.
- * 100K$\times$100K). 
+ * 100K$\times$100K).
  *
  * When the image can fit into memory, usage of this plugin is discouraged:
- * due to the extra overhead of tracking image tiles, the rendering process 
- * will be slower, and the output files also generally do not compress as 
+ * due to the extra overhead of tracking image tiles, the rendering process
+ * will be slower, and the output files also generally do not compress as
  * well as those produced by \pluginref{hdrfilm}.
  *
- * Based on the provided parameter values, the film will either write a luminance, 
- * luminance/alpha, RGB(A), XYZ(A) tristimulus, or spectrum/spectrum-alpha-based 
- * bitmap having a \code{float16}, \code{float32}, or \code{uint32}-based 
+ * Based on the provided parameter values, the film will either write a luminance,
+ * luminance/alpha, RGB(A), XYZ(A) tristimulus, or spectrum/spectrum-alpha-based
+ * bitmap having a \code{float16}, \code{float32}, or \code{uint32}-based
  * internal representation. The default is RGBA and \code{float16}.
  * Note that the spectral output options only make sense when using a
- * custom compiled Mitsuba distribution that has spectral rendering 
+ * custom compiled Mitsuba distribution that has spectral rendering
  * enabled. This is not the case for the downloadable release builds.
  *
- * When RGB output is selected, the measured spectral power distributions are 
- * converted to linear RGB based on the CIE 1931 XYZ color matching curves and 
+ * When RGB output is selected, the measured spectral power distributions are
+ * converted to linear RGB based on the CIE 1931 XYZ color matching curves and
  * the ITU-R Rec. BT.709 primaries with a D65 white point.
  *
  * \remarks{
@@ -149,7 +149,7 @@ public:
 				"tiled EXR film. Please disable it.");
 	}
 
-	TiledHDRFilm(Stream *stream, InstanceManager *manager) 
+	TiledHDRFilm(Stream *stream, InstanceManager *manager)
 		: Film(stream, manager), m_output(NULL), m_frameBuffer(NULL) {
 		m_pixelFormat = (Bitmap::EPixelFormat) stream->readUInt();
 		m_componentFormat = (Bitmap::EComponentFormat) stream->readUInt();
@@ -217,7 +217,7 @@ public:
 				"float16, float32, or uint32)");
 			return;
 		}
-	
+
 		Imf::ChannelList &channels = header.channels();
 		if (pixelFormat == Bitmap::ELuminance || pixelFormat == Bitmap::ELuminanceAlpha) {
 			channels.insert("Y", Imf::Channel(compType));
@@ -256,7 +256,7 @@ public:
 		m_pixelStride = channelCount * compStride;
 		m_rowStride = m_pixelStride * m_blockSize;
 		char *ptr = (char *) m_tile->getUInt8Data();
-	
+
 		if (pixelFormat == Bitmap::ELuminance || pixelFormat == Bitmap::ELuminanceAlpha) {
 			m_frameBuffer->insert("Y", Imf::Slice(compType, ptr, m_pixelStride, m_rowStride)); ptr += compStride;
 		} else if (pixelFormat == Bitmap::ERGB || pixelFormat == Bitmap::ERGBA ||
@@ -271,7 +271,7 @@ public:
 				m_frameBuffer->insert(name.c_str(), Imf::Slice(compType, ptr, m_pixelStride, m_rowStride)); ptr += compStride;
 			}
 		}
-	
+
 		if (m_pixelFormat == Bitmap::ERGBA || m_pixelFormat == Bitmap::EXYZA ||
 		    m_pixelFormat == Bitmap::ELuminanceAlpha)
 			m_frameBuffer->insert("A", Imf::Slice(compType, ptr, m_pixelStride, m_rowStride));
@@ -342,13 +342,13 @@ public:
 		if (x < 0 || y < 0 || x >= m_blocksH || y >= m_blocksV)
 			return;
 
-		uint32_t idx = (uint32_t) x + (uint32_t) y * m_blocksH;		
+		uint32_t idx = (uint32_t) x + (uint32_t) y * m_blocksH;
 		std::map<uint32_t, ImageBlock *>::iterator it = m_origBlocks.find(idx);
 		if (it == m_origBlocks.end())
 			return;
 
 		ImageBlock *origBlock = it->second;
-		if (origBlock == NULL) 
+		if (origBlock == NULL)
 			return;
 
 		/* This could be accelerated using some counters */
@@ -366,7 +366,7 @@ public:
 		}
 
 		ImageBlock *mergedBlock = m_mergedBlocks[idx];
-		if (mergedBlock == NULL) 
+		if (mergedBlock == NULL)
 			return;
 
 		/* All neighboring blocks are there -- join overlapping regions */
@@ -391,7 +391,7 @@ public:
 		size_t sourceBpp = source->getBytesPerPixel();
 		size_t targetBpp = m_tile->getBytesPerPixel();
 
-		const uint8_t *sourceData = source->getUInt8Data() 
+		const uint8_t *sourceData = source->getUInt8Data()
 			+ mergedBlock->getBorderSize() * sourceBpp * (1 + source->getWidth());
 		uint8_t *targetData = m_tile->getUInt8Data();
 
@@ -412,14 +412,14 @@ public:
 		size_t ptrOffset = mergedBlock->getOffset().x * m_pixelStride +
 			mergedBlock->getOffset().y * m_rowStride;
 
-		for (Imf::FrameBuffer::Iterator it = m_frameBuffer->begin(); 
+		for (Imf::FrameBuffer::Iterator it = m_frameBuffer->begin();
 			it != m_frameBuffer->end(); ++it)
 			it.slice().base -= ptrOffset;
 
 		m_output->setFrameBuffer(*m_frameBuffer);
 		m_output->writeTile(x, y);
 
-		for (Imf::FrameBuffer::Iterator it = m_frameBuffer->begin(); 
+		for (Imf::FrameBuffer::Iterator it = m_frameBuffer->begin();
 			it != m_frameBuffer->end(); ++it)
 			it.slice().base += ptrOffset;
 
@@ -430,7 +430,7 @@ public:
 		m_mergedBlocks[idx] = NULL;
 	}
 
-	bool develop(const Point2i &sourceOffset, const Vector2i &size, 
+	bool develop(const Point2i &sourceOffset, const Vector2i &size,
 			const Point2i &targetOffset, Bitmap *target) const {
 		target->fill(targetOffset, size, Spectrum(0.0f));
 		return false; /* Not supported by the tiled EXR film! */
@@ -446,19 +446,19 @@ public:
 			m_frameBuffer = NULL;
 			m_tile = NULL;
 
-			for (std::vector<ImageBlock *>::iterator it = m_freeBlocks.begin(); 
-				it != m_freeBlocks.end(); ++it) 
+			for (std::vector<ImageBlock *>::iterator it = m_freeBlocks.begin();
+				it != m_freeBlocks.end(); ++it)
 				(*it)->decRef();
 			m_freeBlocks.clear();
 
-			for (std::map<uint32_t, ImageBlock *>::iterator it = m_origBlocks.begin(); 
+			for (std::map<uint32_t, ImageBlock *>::iterator it = m_origBlocks.begin();
 				it != m_origBlocks.end(); ++it) {
 				if ((*it).second)
 					(*it).second->decRef();
 			}
 			m_origBlocks.clear();
-			
-			for (std::map<uint32_t, ImageBlock *>::iterator it = m_mergedBlocks.begin(); 
+
+			for (std::map<uint32_t, ImageBlock *>::iterator it = m_mergedBlocks.begin();
 				it != m_mergedBlocks.end(); ++it) {
 				if ((*it).second)
 					(*it).second->decRef();

@@ -31,7 +31,7 @@ MTS_NAMESPACE_BEGIN
  *       \code{mean} or \code{gaussian}.
  *     }
  *     \parameter{scale}{\Float}{
- *        A scale factor to bring curvature values into the 
+ *        A scale factor to bring curvature values into the
  *        displayable range [-1, 1]. Everything outside of this range
  *        will be clamped.
  *     }
@@ -59,7 +59,7 @@ public:
 			Log(EError, "Invalid 'curvature' parameter: must be set to 'gaussian' or ' mean'!");
 	}
 
-	Curvature(Stream *stream, InstanceManager *manager) 
+	Curvature(Stream *stream, InstanceManager *manager)
 	 : Texture(stream, manager) {
 		 m_scale = stream->readFloat();
 		 m_showK = stream->readBool();
@@ -126,11 +126,11 @@ private:
 	bool m_showK;
 };
 
-// ================ Hardware shader implementation ================ 
+// ================ Hardware shader implementation ================
 
 class CurvatureShader : public Shader {
 public:
-	CurvatureShader(Renderer *renderer, const Spectrum &value) 
+	CurvatureShader(Renderer *renderer, const Spectrum &value)
 		: Shader(renderer, ETextureShader), m_value(value) {
 	}
 

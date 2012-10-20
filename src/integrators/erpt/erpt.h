@@ -78,7 +78,7 @@ struct ERPTConfiguration {
 			luminance, luminanceSamples);
 		SLog(EDebug, "   Universal perturb. factor   : %f", probFactor);
 		SLog(EDebug, "   Manifold max iterations     : %i", MTS_MANIFOLD_MAX_ITERATIONS);
-		SLog(EDebug, "   Quantiles                   : %f (surfaces), %f (media)", 
+		SLog(EDebug, "   Quantiles                   : %f (surfaces), %f (media)",
 				MTS_MANIFOLD_QUANTILE_SURFACE, MTS_MANIFOLD_QUANTILE_MEDIUM);
 	}
 

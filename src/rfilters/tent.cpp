@@ -22,23 +22,23 @@ MTS_NAMESPACE_BEGIN
 
 /**
  * Simple tent (triangular) filter. This reconstruction filter never
- * suffers from ringing and usually causes less aliasing than a naive 
+ * suffers from ringing and usually causes less aliasing than a naive
  * box filter. When rendering scenes with sharp brightness discontinuities,
  * this may be useful; otherwise, negative-lobed filters may be preferable
  * (e.g. Mitchell-Netravali or Lanczos Sinc)
  */
 class TentFilter : public ReconstructionFilter {
 public:
-	TentFilter(const Properties &props) 
+	TentFilter(const Properties &props)
 		: ReconstructionFilter(props) {
 		m_radius = 1.0f;
 	}
 
-	TentFilter(Stream *stream, InstanceManager *manager) 
+	TentFilter(Stream *stream, InstanceManager *manager)
 		: ReconstructionFilter(stream, manager) {
 		configure();
 	}
- 
+
 	Float eval(Float x) const {
 		return std::max((Float) 0.0f, 1.0f - std::abs(x / m_radius));
 	}

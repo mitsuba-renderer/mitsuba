@@ -39,7 +39,7 @@ MTS_NAMESPACE_BEGIN
 class SurfaceAreaHeuristic3 {
 public:
 	/**
-	 * \brief Initialize the surface area heuristic with the bounds of 
+	 * \brief Initialize the surface area heuristic with the bounds of
 	 * a parent node
 	 *
 	 * Precomputes some information so that traversal probabilities
@@ -47,7 +47,7 @@ public:
 	 */
 	inline SurfaceAreaHeuristic3(const AABB &aabb) {
 		const Vector extents(aabb.getExtents());
-		const Float temp = 1.0f / (extents.x * extents.y 
+		const Float temp = 1.0f / (extents.x * extents.y
 				+ extents.y*extents.z + extents.x*extents.z);
 		m_temp0 = Vector(
 			extents[1] * extents[2],
@@ -63,7 +63,7 @@ public:
 	 * Given a split on axis \a axis that produces children having extents
 	 * \a leftWidth and \a rightWidth along \a axis, compute the probability
 	 * of traversing the left and right child during a typical query
-	 * operation. 
+	 * operation.
 	 */
 	inline std::pair<Float, Float> operator()(int axis, Float leftWidth, Float rightWidth) const {
 		return std::pair<Float, Float>(
@@ -84,25 +84,25 @@ private:
 
 /**
  * \brief Specializes \ref GenericKDTree to a three-dimensional
- * tree to be used for ray tracing. 
+ * tree to be used for ray tracing.
  *
  * One additional function call must be implemented by subclasses:
  * \code
- * /// Check whether a primitive is intersected by the given ray. 
- * /// Some temporary space is supplied, which can be used to cache  
+ * /// Check whether a primitive is intersected by the given ray.
+ * /// Some temporary space is supplied, which can be used to cache
  * /// information about the intersection
- * bool intersect(const Ray &ray, IndexType idx, 
+ * bool intersect(const Ray &ray, IndexType idx,
  *     Float mint, Float maxt, Float &t, void *tmp);
  * \endcode
  *
- * This class implements an epsilon-free version of the optimized ray 
- * traversal algorithm (TA^B_{rec}), which is explained in Vlastimil 
- * Havran's PhD thesis "Heuristic Ray Shooting Algorithms". 
+ * This class implements an epsilon-free version of the optimized ray
+ * traversal algorithm (TA^B_{rec}), which is explained in Vlastimil
+ * Havran's PhD thesis "Heuristic Ray Shooting Algorithms".
  *
  * \author Wenzel Jakob
  * \ingroup librender
  */
-template <typename Derived> 
+template <typename Derived>
 	class SAHKDTree3D : public GenericKDTree<AABB, SurfaceAreaHeuristic3, Derived> {
 public:
 	typedef GenericKDTree<AABB, SurfaceAreaHeuristic3, Derived> Parent;
@@ -175,29 +175,29 @@ protected:
 	 * of the methods implemented in this class.
 	 */
 	template<bool shadowRay> FINLINE
-			bool rayIntersectHavran(const Ray &ray, Float mint, Float maxt, 
+			bool rayIntersectHavran(const Ray &ray, Float mint, Float maxt,
 			Float &t, void *temp) const {
 		KDStackEntryHavran stack[MTS_KD_MAXDEPTH];
 		#if 0
 		static const int prevAxisTable[] = { 2, 0, 1 };
 		static const int nextAxisTable[] = { 1, 2, 0 };
 		#endif
-	
+
 		#if defined(MTS_KD_MAILBOX_ENABLED)
 		HashedMailbox mailbox;
 		#endif
-	
+
 		/* Set up the entry point */
 		uint32_t enPt = 0;
 		stack[enPt].t = mint;
 		stack[enPt].p = ray(mint);
-	
+
 		/* Set up the exit point */
 		uint32_t exPt = 1;
 		stack[exPt].t = maxt;
 		stack[exPt].p = ray(maxt);
 		stack[exPt].node = NULL;
-	
+
 		bool foundIntersection = false;
 		const KDNode * __restrict currNode = m_nodes;
 		while (currNode != NULL) {
@@ -205,14 +205,14 @@ protected:
 				const Float splitVal = (Float) currNode->getSplit();
 				const int axis = currNode->getAxis();
 				const KDNode * __restrict farChild;
-	
+
 				if (stack[enPt].p[axis] <= splitVal) {
 					if (stack[exPt].p[axis] <= splitVal) {
 						/* Cases N1, N2, N3, P5, Z2 and Z3 (see thesis) */
 						currNode = currNode->getLeft();
 						continue;
 					}
-	
+
 					/* Typo in Havran's thesis:
 					   (it specifies "stack[exPt].p == splitVal", which
 					    is clearly incorrect) */
@@ -221,7 +221,7 @@ protected:
 						currNode = currNode->getRight();
 						continue;
 					}
-	
+
 					/* Case N4 */
 					currNode = currNode->getLeft();
 					farChild = currNode + 1; // getRight()
@@ -235,22 +235,22 @@ protected:
 					farChild = currNode->getLeft();
 					currNode = farChild + 1; // getRight()
 				}
-	
+
 				/* Cases P4 and N4 -- calculate the distance to the split plane */
 				Float distToSplit = (splitVal - ray.o[axis]) * ray.dRcp[axis];
-	
+
 				/* Set up a new exit point */
 				const uint32_t tmp = exPt++;
 				if (exPt == enPt) /* Do not overwrite the entry point */
 					++exPt;
-	
+
 				KDAssert(exPt < MTS_KD_MAXDEPTH);
 				stack[exPt].prev = tmp;
 				stack[exPt].t = distToSplit;
 				stack[exPt].node = farChild;
-	
+
 				#if 1
-				/* Intrestingly, this appears to be faster than the 
+				/* Intrestingly, this appears to be faster than the
 				   original code with the prevAxis & nextAxis table */
 				stack[exPt].p = ray(distToSplit);
 				stack[exPt].p[axis] = splitVal;
@@ -263,46 +263,46 @@ protected:
 				stack[exPt].p[prevAxis] = ray.o[prevAxis]
 					+ distToSplit*ray.d[prevAxis];
 				#endif
-	
+
 			}
-	
+
 			/* Reached a leaf node */
 			for (IndexType entry=currNode->getPrimStart(),
 					last = currNode->getPrimEnd(); entry != last; entry++) {
 				const IndexType primIdx = m_indices[entry];
-	
+
 				#if defined(MTS_KD_MAILBOX_ENABLED)
-				if (mailbox.contains(primIdx)) 
+				if (mailbox.contains(primIdx))
 					continue;
 				#endif
-	
+
 				bool result;
 				if (!shadowRay)
 					result = cast()->intersect(ray, primIdx, mint, maxt, t, temp);
 				else
 					result = cast()->intersect(ray, primIdx, mint, maxt);
-	
+
 				if (result) {
 					if (shadowRay)
 						return true;
 					maxt = t;
 					foundIntersection = true;
 				}
-	
+
 				#if defined(MTS_KD_MAILBOX_ENABLED)
 				mailbox.put(primIdx);
 				#endif
 			}
-	
-			if (stack[exPt].t > maxt) 
+
+			if (stack[exPt].t > maxt)
 				break;
-	
+
 			/* Pop from the stack and advance to the next node on the interval */
 			enPt = exPt;
 			currNode = stack[exPt].node;
 			exPt = stack[enPt].prev;
 		}
-	
+
 		return foundIntersection;
 	}
 
@@ -313,7 +313,7 @@ protected:
 		uint64_t time;
 
 		RayStatistics(bool foundIntersection, uint32_t numTraversals,
-			uint32_t numIntersections, uint64_t time) : 
+			uint32_t numIntersections, uint64_t time) :
 			foundIntersection(foundIntersection), numTraversals(numTraversals),
 			numIntersections(numIntersections), time(time) { }
 	};
@@ -329,30 +329,30 @@ protected:
 	FINLINE RayStatistics rayIntersectHavranCollectStatistics(
 			const Ray &ray, Float mint, Float maxt, Float &t, void *temp) const {
 		KDStackEntryHavran stack[MTS_KD_MAXDEPTH];
-	
+
 		/* Set up the entry point */
 		uint32_t enPt = 0;
 		stack[enPt].t = mint;
 		stack[enPt].p = ray(mint);
-	
+
 		/* Set up the exit point */
 		uint32_t exPt = 1;
 		stack[exPt].t = maxt;
 		stack[exPt].p = ray(maxt);
 		stack[exPt].node = NULL;
-	
+
 		uint32_t numTraversals = 0;
 		uint32_t numIntersections = 0;
 		uint64_t timer = rdtsc();
 		bool foundIntersection = false;
-	
+
 		const KDNode * __restrict currNode = m_nodes;
 		while (currNode != NULL) {
 			while (EXPECT_TAKEN(!currNode->isLeaf())) {
 				const Float splitVal = (Float) currNode->getSplit();
 				const int axis = currNode->getAxis();
 				const KDNode * __restrict farChild;
-	
+
 				++numTraversals;
 				if (stack[enPt].p[axis] <= splitVal) {
 					if (stack[exPt].p[axis] <= splitVal) {
@@ -360,7 +360,7 @@ protected:
 						currNode = currNode->getLeft();
 						continue;
 					}
-	
+
 					/* Typo in Havran's thesis:
 					   (it specifies "stack[exPt].p == splitVal", which
 					    is clearly incorrect) */
@@ -369,7 +369,7 @@ protected:
 						currNode = currNode->getRight();
 						continue;
 					}
-	
+
 					/* Case N4 */
 					currNode = currNode->getLeft();
 					farChild = currNode + 1; // getRight()
@@ -383,15 +383,15 @@ protected:
 					farChild = currNode->getLeft();
 					currNode = farChild + 1; // getRight()
 				}
-	
+
 				/* Cases P4 and N4 -- calculate the distance to the split plane */
 				t = (splitVal - ray.o[axis]) * ray.dRcp[axis];
-	
+
 				/* Set up a new exit point */
 				const uint32_t tmp = exPt++;
 				if (exPt == enPt) /* Do not overwrite the entry point */
 					++exPt;
-	
+
 				KDAssert(exPt < MTS_KD_MAXDEPTH);
 				stack[exPt].prev = tmp;
 				stack[exPt].t = t;
@@ -399,61 +399,61 @@ protected:
 				stack[exPt].p = ray(t);
 				stack[exPt].p[axis] = splitVal;
 			}
-	
+
 			/* Reached a leaf node */
 			for (unsigned int entry=currNode->getPrimStart(),
 					last = currNode->getPrimEnd(); entry != last; entry++) {
 				const IndexType primIdx = m_indices[entry];
-	
+
 				++numIntersections;
 				bool result = cast()->intersect(ray, primIdx, mint, maxt, t, temp);
-	
+
 				if (result) {
 					maxt = t;
 					foundIntersection = true;
 				}
 			}
-	
-			if (stack[exPt].t > maxt) 
+
+			if (stack[exPt].t > maxt)
 				break;
-	
+
 			/* Pop from the stack and advance to the next node on the interval */
 			enPt = exPt;
 			currNode = stack[exPt].node;
 			exPt = stack[enPt].prev;
 		}
-	
-		return RayStatistics(foundIntersection, numTraversals, 
+
+		return RayStatistics(foundIntersection, numTraversals,
 				numIntersections, rdtsc() - timer);
 	}
 
 	/**
 	 * \brief Ray tracing kd-tree traversal loop (PBRT variant)
 	 */
-	template<bool shadowRay> FINLINE bool rayIntersectPBRT(const Ray &ray, 
+	template<bool shadowRay> FINLINE bool rayIntersectPBRT(const Ray &ray,
 			Float mint_, Float maxt_, Float &t, void *temp) const {
 		KDStackEntry stack[MTS_KD_MAXDEPTH];
 		int stackPos = 0;
 		Float mint = mint_, maxt=maxt_;
 		const KDNode *node = m_nodes;
 		bool foundIntersection = false;
-	
+
 		while (node != NULL) {
 			if (maxt_ < mint)
 				break;
-	
+
 			if (EXPECT_TAKEN(!node->isLeaf())) {
 				const Float split = (Float) node->getSplit();
 				const int axis = node->getAxis();
 				const float tPlane = (split - ray.o[axis]) * ray.dRcp[axis];
 				bool leftOfSplit = (ray.o[axis] < split)
 					|| (ray.o[axis] == split && ray.d[axis] <= 0);
-	
+
 				const KDNode * __restrict left = node->getLeft();
 				const KDNode * __restrict right = left + 1;
 				const KDNode * __restrict first  = leftOfSplit ? left : right;
 				const KDNode * __restrict second = leftOfSplit ? right : left;
-	
+
 				if (tPlane > maxt || tPlane <= 0) {
 					node = first;
 				} else if (tPlane < mint) {
@@ -470,13 +470,13 @@ protected:
 				for (unsigned int entry=node->getPrimStart(),
 						last = node->getPrimEnd(); entry != last; entry++) {
 					const IndexType primIdx = m_indices[entry];
-	
+
 					bool result;
 					if (!shadowRay)
 						result = cast()->intersect(ray, primIdx, mint, maxt, t, temp);
 					else
 						result = cast()->intersect(ray, primIdx, mint, maxt);
-	
+
 					if (result) {
 						if (shadowRay)
 							return true;
@@ -484,7 +484,7 @@ protected:
 						foundIntersection = true;
 					}
 				}
-	
+
 				if (stackPos > 0) {
 					--stackPos;
 					node = stack[stackPos].node;
@@ -499,10 +499,10 @@ protected:
 	}
 public:
 	/**
-	 * \brief Empirically find the best traversal and intersection 
+	 * \brief Empirically find the best traversal and intersection
 	 * cost values
 	 *
-	 * This is done by running the traversal code on random rays 
+	 * This is done by running the traversal code on random rays
 	 * and fitting the SAH cost model to the collected statistics.
 	 */
 	void findCosts(Float &traversalCost, Float &intersectionCost) {
@@ -513,7 +513,7 @@ public:
 		Vector *A = new Vector[nRays-warmup];
 		Float *b = new Float[nRays-warmup];
 		int nIntersections = 0, idx = 0;
-	
+
 		for (int i=0; i<nRays; ++i) {
 			Point2 sample1(random->nextFloat(), random->nextFloat()),
 				sample2(random->nextFloat(), random->nextFloat());
@@ -539,27 +539,27 @@ public:
 				}
 			}
 		}
-	
-		KDLog(EDebug, "Fitting to " SIZE_T_FMT " samples (" SIZE_T_FMT 
+
+		KDLog(EDebug, "Fitting to " SIZE_T_FMT " samples (" SIZE_T_FMT
 				" intersections)", idx, nIntersections);
-	
+
 		/* Solve using normal equations */
 		Matrix4x4 M(0.0f), Minv;
 		Vector4 rhs(0.0f), x;
-	
+
 		for (int i=0; i<3; ++i) {
-			for (int j=0; j<3; ++j) 
-				for (int k=0; k<idx; ++k) 
+			for (int j=0; j<3; ++j)
+				for (int k=0; k<idx; ++k)
 					M.m[i][j] += A[k][i]*A[k][j];
-			for (int k=0; k<idx; ++k) 
+			for (int k=0; k<idx; ++k)
 				rhs[i] += A[k][i]*b[k];
 		}
 		M.m[3][3] = 1.0f;
 		bool success = M.invert(Minv);
 		SAssert(success);
-	
+
 		Transform(Minv, M)(rhs, x);
-	
+
 		Float avgRdtsc = 0, avgResidual = 0;
 		for (int i=0; i<idx; ++i) {
 			avgRdtsc += b[i];
@@ -570,11 +570,11 @@ public:
 		}
 		avgRdtsc /= idx;
 		avgResidual /= idx;
-	
-		for (int k=0; k<idx; ++k) 
+
+		for (int k=0; k<idx; ++k)
 			avgRdtsc += b[k];
 		avgRdtsc /= idx;
-	
+
 		KDLog(EDebug, "Least squares fit:");
 		KDLog(EDebug, "   Constant overhead    = %.2f", x[0]);
 		KDLog(EDebug, "   Traversal cost       = %.2f", x[1]);
@@ -586,7 +586,7 @@ public:
 		KDLog(EDebug, "   Constant overhead    = %.2f", x[0]);
 		KDLog(EDebug, "   Traversal cost       = %.2f", x[1]);
 		KDLog(EDebug, "   Intersection cost    = %.2f", x[2]);
-	
+
 		delete[] A;
 		delete[] b;
 		traversalCost = x[1];

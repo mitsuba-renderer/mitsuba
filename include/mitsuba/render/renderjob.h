@@ -26,9 +26,9 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * \brief Coordinates the process of rendering a single image. 
+ * \brief Coordinates the process of rendering a single image.
  *
- * Implemented as a thread so that multiple jobs can 
+ * Implemented as a thread so that multiple jobs can
  * be executed concurrently.
  *
  * \ingroup librender
@@ -37,12 +37,12 @@ MTS_NAMESPACE_BEGIN
 class MTS_EXPORT_RENDER RenderJob : public Thread {
 public:
 	/**
-	 * \brief Create a new render job for the given scene. 
+	 * \brief Create a new render job for the given scene.
 	 *
 	 * When the Resource ID parameters (\c sceneResID, \c sensorResID, ..) are
 	 * set to \c -1, the implementation will automatically register the
-	 * associated objects (scene, sensor, sampler) with the scheduler and 
-	 * forward copies to all involved network rendering workers. When some 
+	 * associated objects (scene, sensor, sampler) with the scheduler and
+	 * forward copies to all involved network rendering workers. When some
 	 * of these resources have already been registered with
 	 * the scheduler, their IDs can be provided to avoid this extra
 	 * communication cost.
@@ -60,13 +60,13 @@ public:
 	 * \param samplerResID
 	 *     Resource ID of the sample generator (or \c -1)
 	 * \param threadIsCritical
-	 *     When set to \c true, the entire program will terminate 
+	 *     When set to \c true, the entire program will terminate
 	 *     if this thread fails unexpectedly.
 	 * \param interactive
 	 *     Are partial results of the rendering process visible, e.g. in
 	 *     a graphical user interface?
 	 */
-	RenderJob(const std::string &threadName, 
+	RenderJob(const std::string &threadName,
 		Scene *scene, RenderQueue *queue,
 		int sceneResID = -1,
 		int sensorResID = -1,

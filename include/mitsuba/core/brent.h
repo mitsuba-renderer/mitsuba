@@ -28,7 +28,7 @@ MTS_NAMESPACE_BEGIN
 /**
  * \brief Brent's method nonlinear zero finder
  *
- * The implementation is transcribed from the Apache Commons 
+ * The implementation is transcribed from the Apache Commons
  * Java implementation. The supplied function is required to be
  * continuous, but not necessarily smooth.
  *
@@ -60,7 +60,7 @@ public:
 	};
 
 	/**
-	 * \brief Create a new Brent-style solver with the 
+	 * \brief Create a new Brent-style solver with the
 	 * specified accuracy requirements
 	 *
 	 * \param maxIterations
@@ -69,16 +69,16 @@ public:
 	 *      Absolute accuracy requirement -- the iterations will stop
 	 *      when |f(x)| < absAccuracy.
 	 * \param absAccuracyPos
-	 *      Absolute accuracy requirement of the position -- the 
+	 *      Absolute accuracy requirement of the position -- the
 	 *      iterations will stop when |minX-maxX| < absAccuracyPos.
 	 * \param absAccuracyPos
 	 *      Absolute accuracy requirement of the position -- the
 	 *      iterations will stop when |minX-maxX|/minX < relAccuracyPos.
 	 */
-	inline BrentSolver(size_t maxIterations = 100, 
+	inline BrentSolver(size_t maxIterations = 100,
 			Float absAccuracy = 1e-6f,
 			Float absAccuracyPos = 1e-6f,
-			Float relAccuracyPos = 1e-6f) 
+			Float relAccuracyPos = 1e-6f)
 		: m_maxIterations(maxIterations),
 		  m_absAccuracy(absAccuracy),
 		  m_absAccuracyPos(absAccuracyPos),
@@ -87,8 +87,8 @@ public:
 	/**
 	 * \brief Find a zero in the given interval.
 	 *
-	 * Requires that the values of the function at the endpoints 
-	 * have opposite signs. 
+	 * Requires that the values of the function at the endpoints
+	 * have opposite signs.
 	 *
 	 * \param min the lower bound for the interval.
 	 * \param max the upper bound for the interval.
@@ -100,14 +100,14 @@ public:
 	/**
 	 * \brief Find a zero in the given interval with an initial guess
 	 *
-	 * Requires that the values of the function at the endpoints 
-	 * have opposite signs (note that it is allowed to have endpoints 
-	 * with the same sign if the initial point has opposite sign 
+	 * Requires that the values of the function at the endpoints
+	 * have opposite signs (note that it is allowed to have endpoints
+	 * with the same sign if the initial point has opposite sign
 	 * function-wise).
 	 *
 	 * \param min the lower bound for the interval.
 	 * \param max the upper bound for the interval.
-	 * \param initial the start value to use (must be set to min 
+	 * \param initial the start value to use (must be set to min
 	 *    if no initial point is known)
 	 * \return the value where the function is zero
 	 */
@@ -136,7 +136,7 @@ protected:
 	Float m_absAccuracy;
 	Float m_absAccuracyPos;
 	Float m_relAccuracyPos;
-}; 
+};
 
 MTS_NAMESPACE_END
 

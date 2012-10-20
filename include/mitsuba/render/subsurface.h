@@ -27,7 +27,7 @@ MTS_NAMESPACE_BEGIN
 /**
  * \brief Abstract subsurface scattering models
  *
- * Can be attached to an arbitrary shape to compute exitant 
+ * Can be attached to an arbitrary shape to compute exitant
  * radiance due to internal scattering. How that is done is
  * completely up to the implementation. It might for instance
  * recursively trace rays or perform lookups into a precomputed
@@ -38,10 +38,10 @@ MTS_NAMESPACE_BEGIN
 class MTS_EXPORT_RENDER Subsurface : public NetworkedObject {
 public:
 	/**
-	 * \brief Possibly perform a pre-process task. 
+	 * \brief Possibly perform a pre-process task.
 	 *
-	 * The last three parameters are resource IDs of the associated scene, 
-	 * camera and sample generator, which have been made available to all 
+	 * The last three parameters are resource IDs of the associated scene,
+	 * camera and sample generator, which have been made available to all
 	 * local and remote workers.
 	 */
 	virtual bool preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job,

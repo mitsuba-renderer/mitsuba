@@ -32,7 +32,7 @@
 XERCES_CPP_NAMESPACE_USE
 
 SceneLoader::SceneLoader(FileResolver *resolver, const fs::path &filename,
-	const std::map<std::string, std::string, SimpleStringOrdering> &parameters) 
+	const std::map<std::string, std::string, SimpleStringOrdering> &parameters)
 	: Thread("load"), m_resolver(resolver), m_filename(fromFsPath(filename)),
 	  m_parameters(parameters) {
 	m_wait = new WaitFlag();
@@ -97,7 +97,7 @@ void SceneLoader::run() {
 			parser->setDocumentHandler(handler);
 			parser->setErrorHandler(handler);
 
-			fs::path 
+			fs::path
 				filename = toFsPath(m_filename),
 				filePath = fs::absolute(filename).parent_path(),
 				baseName = filename.stem();

@@ -57,7 +57,7 @@ public:
 	virtual bool isConstant() const;
 
 	/**
-	 * \brief Does this texture perform any pre-filtering when 
+	 * \brief Does this texture perform any pre-filtering when
 	 * ray differentials are available?
 	 */
 	virtual bool usesRayDifferentials() const;

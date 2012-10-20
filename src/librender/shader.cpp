@@ -19,7 +19,7 @@
 #include <mitsuba/render/shader.h>
 
 MTS_NAMESPACE_BEGIN
-	
+
 Shader::Shader(Renderer *renderer, EShaderType type)
   : m_type(type), m_flags(0) {
 }
@@ -29,9 +29,9 @@ Shader::~Shader() {
 
 /* These do nothing by default */
 void Shader::putDependencies(std::vector<Shader *> &deps) { }
-void Shader::bind(GPUProgram *program, const std::vector<int> &parameterIDs, 
+void Shader::bind(GPUProgram *program, const std::vector<int> &parameterIDs,
 	int &textureUnitOffset) const { }
-void Shader::resolve(const GPUProgram *program, const std::string &evalName, 
+void Shader::resolve(const GPUProgram *program, const std::string &evalName,
 	std::vector<int> &parameterIDs) const { }
 void Shader::unbind() const { }
 void Shader::cleanup(Renderer *renderer) { }

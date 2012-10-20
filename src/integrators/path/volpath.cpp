@@ -29,11 +29,11 @@ static StatsCounter avgPathLength("Volumetric path tracer", "Average path length
  *     \parameter{maxDepth}{\Integer}{Specifies the longest path depth
  *         in the generated output image (where \code{-1} corresponds to $\infty$).
  *	       A value of \code{1} will only render directly visible light sources.
- *	       \code{2} will lead to single-bounce (direct-only) illumination, 
+ *	       \code{2} will lead to single-bounce (direct-only) illumination,
  *	       and so on. \default{\code{-1}}
  *	   }
- *	   \parameter{rrDepth}{\Integer}{Specifies the minimum path depth, after 
- *	      which the implementation will start to use the ``russian roulette'' 
+ *	   \parameter{rrDepth}{\Integer}{Specifies the minimum path depth, after
+ *	      which the implementation will start to use the ``russian roulette''
  *	      path termination criterion. \default{\code{5}}
  *	   }
  *     \parameter{strictNormals}{\Boolean}{Be strict about potential
@@ -42,17 +42,17 @@ static StatsCounter avgPathLength("Volumetric path tracer", "Average path length
  * }
  *
  * This plugin provides a volumetric path tracer that can be used to
- * compute approximate solutions to the radiative transfer equation. 
+ * compute approximate solutions to the radiative transfer equation.
  * Its implementation makes use of multiple importance sampling to
- * combine BSDF and phase function sampling with direct illumination 
- * sampling strategies. On surfaces, this integrator behaves exactly 
+ * combine BSDF and phase function sampling with direct illumination
+ * sampling strategies. On surfaces, this integrator behaves exactly
  * like the standard path tracer.
  *
  * \remarks{
- *    \item This integrator will generally perform poorly when rendering 
+ *    \item This integrator will generally perform poorly when rendering
  *      participating media that have a different index of refraction compared
  *      to the surrounding medium.
- *    \item This integrator has poor convergence properties when rendering 
+ *    \item This integrator has poor convergence properties when rendering
  *    caustics and similar effects. In this case, \pluginref{bdpt} or
  *    one of the photon mappers may be preferable.
  * }
@@ -75,7 +75,7 @@ public:
 		bool scattered = false;
 		Float eta = 1.0f;
 
-		/* Perform the first ray intersection (or ignore if the 
+		/* Perform the first ray intersection (or ignore if the
 		   intersection has already been provided). */
 		rRec.rayIntersect(ray);
 
@@ -99,7 +99,7 @@ public:
 				/* ==================================================================== */
 				/*                          Luminaire sampling                          */
 				/* ==================================================================== */
-				
+
 				/* Estimate the single scattering component if this is requested */
 				DirectSamplingRecord dRec(mRec.p, mRec.time);
 
@@ -107,7 +107,7 @@ public:
 					int interactions = m_maxDepth - rRec.depth - 1;
 
 					Spectrum value = scene->sampleAttenuatedEmitterDirect(
-							dRec, rRec.medium, interactions, 
+							dRec, rRec.medium, interactions,
 							rRec.nextSample2D(), rRec.sampler);
 
 					if (!value.isZero()) {
@@ -118,10 +118,10 @@ public:
 						Float phaseVal = phase->eval(pRec);
 
 						if (phaseVal != 0) {
-							/* Calculate prob. of having sampled that direction using 
+							/* Calculate prob. of having sampled that direction using
 							   phase function sampling */
 							Float phasePdf = (emitter->isOnSurface() && dRec.measure == ESolidAngle
-									&& interactions == 0) 
+									&& interactions == 0)
 									? phase->pdf(pRec) : (Float) 0.0f;
 
 							/* Weight using the power heuristic */
@@ -130,7 +130,7 @@ public:
 						}
 					}
 				}
-				
+
 				/* ==================================================================== */
 				/*                         Phase function sampling                      */
 				/* ==================================================================== */
@@ -143,7 +143,7 @@ public:
 
 				bool hitEmitter = false;
 				Spectrum value;
-				
+
 				/* Trace a ray in this direction */
 				ray = Ray(mRec.p, pRec.wo, ray.time);
 				ray.mint = 0;
@@ -184,13 +184,13 @@ public:
 				/* ==================================================================== */
 
 				/* Stop if multiple scattering was not requested */
-				if (!(rRec.type & RadianceQueryRecord::EIndirectMediumRadiance)) 
+				if (!(rRec.type & RadianceQueryRecord::EIndirectMediumRadiance))
 					break;
 				rRec.type = RadianceQueryRecord::ERadianceNoEmission;
 
 				scattered = true;
 			} else {
-				/* Sample 
+				/* Sample
 					tau(x, y) (Surface integral). This happens with probability mRec.pdfFailure
 					Account for this and multiply by the proper per-color-channel transmittance.
 				*/
@@ -198,13 +198,13 @@ public:
 					throughput *= mRec.transmittance / mRec.pdfFailure;
 
 				if (!its.isValid()) {
-					/* If no intersection could be found, possibly return 
+					/* If no intersection could be found, possibly return
 					   attenuated radiance from a background luminaire */
 					if (rRec.type & RadianceQueryRecord::EEmittedRadiance)
 						Li += throughput * scene->evalEnvironment(ray);
 					break;
 				}
-				
+
 				/* Possibly include emitted radiance if requested */
 				if (its.isEmitter() && (rRec.type & RadianceQueryRecord::EEmittedRadiance))
 					Li += throughput * its.Le(-ray.d);
@@ -215,11 +215,11 @@ public:
 
 				if (rRec.depth >= m_maxDepth && m_maxDepth != -1)
 					break;
-				
+
 				/* Prevent light leaks due to the use of shading normals */
 				Float wiDotGeoN = -dot(its.geoFrame.n, ray.d),
 					  wiDotShN  = Frame::cosTheta(its.wi);
-				if (wiDotGeoN * wiDotShN < 0 && m_strictNormals) 
+				if (wiDotGeoN * wiDotShN < 0 && m_strictNormals)
 					break;
 
 				/* ==================================================================== */
@@ -230,7 +230,7 @@ public:
 				DirectSamplingRecord dRec(its);
 
 				/* Estimate the direct illumination if this is requested */
-				if (rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance && 
+				if (rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance &&
 						(bsdf->getType() & BSDF::ESmooth)) {
 					int interactions = m_maxDepth - rRec.depth - 1;
 
@@ -240,23 +240,23 @@ public:
 
 					if (!value.isZero()) {
 						const Emitter *emitter = static_cast<const Emitter *>(dRec.object);
-	
+
 						/* Evaluate BSDF * cos(theta) */
 						BSDFSamplingRecord bRec(its, its.toLocal(dRec.d));
 						const Spectrum bsdfVal = bsdf->eval(bRec);
 
 						Float woDotGeoN = dot(its.geoFrame.n, dRec.d);
-	
+
 						/* Prevent light leaks due to the use of shading normals */
 						if (!bsdfVal.isZero() && (!m_strictNormals ||
 							woDotGeoN * Frame::cosTheta(bRec.wo) > 0)) {
-							/* Calculate prob. of having generated that direction 
+							/* Calculate prob. of having generated that direction
 							   using BSDF sampling */
 							Float bsdfPdf = (emitter->isOnSurface()
 									&& dRec.measure == ESolidAngle
-									&& interactions == 0) 
+									&& interactions == 0)
 									? bsdf->pdf(bRec) : (Float) 0.0f;
-						
+
 							/* Weight using the power heuristic */
 							const Float weight = miWeight(dRec.pdf, bsdfPdf);
 							Li += throughput * value * bsdfVal * weight;
@@ -320,9 +320,9 @@ public:
 				   weight using the power heuristic */
 				if (hitEmitter && (rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance)
 						&& !((bRec.sampledType & BSDF::ENull) && scattered)) {
-					Spectrum transmittance = rRec.medium ? 
+					Spectrum transmittance = rRec.medium ?
 						rRec.medium->evalTransmittance(Ray(ray, 0, its.t)) : Spectrum(1.0f);
-					const Float emitterPdf = (!(bRec.sampledType & BSDF::EDelta)) ? 
+					const Float emitterPdf = (!(bRec.sampledType & BSDF::EDelta)) ?
 						scene->pdfEmitterDirect(dRec) : 0;
 					Li += throughput * value * transmittance * miWeight(bsdfPdf, emitterPdf);
 				}
@@ -330,23 +330,23 @@ public:
 				/* ==================================================================== */
 				/*                         Indirect illumination                        */
 				/* ==================================================================== */
-			
+
 				/* Stop if indirect illumination was not requested */
-				if (!(rRec.type & RadianceQueryRecord::EIndirectSurfaceRadiance)) 
+				if (!(rRec.type & RadianceQueryRecord::EIndirectSurfaceRadiance))
 					break;
 				rRec.type = RadianceQueryRecord::ERadianceNoEmission;
 
-				scattered |= bRec.sampledType != BSDF::ENull; 
+				scattered |= bRec.sampledType != BSDF::ENull;
 			}
 
 			if (rRec.depth++ >= m_rrDepth) {
 				/* Russian roulette: try to keep path weights equal to one,
-				   while accounting for the solid angle compression at refractive 
-				   index boundaries. Stop with at least some probability to avoid 
+				   while accounting for the solid angle compression at refractive
+				   index boundaries. Stop with at least some probability to avoid
 				   getting stuck (e.g. due to total internal reflection) */
 
 				Float q = std::min(throughput.max() * eta * eta, (Float) 0.95f);
-				if (rRec.nextSample1D() >= q) 
+				if (rRec.nextSample1D() >= q)
 					break;
 				throughput /= q;
 			}

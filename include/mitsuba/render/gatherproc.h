@@ -28,7 +28,7 @@ MTS_NAMESPACE_BEGIN
 /**
  * \brief Process for parallel photon map construction
  *
- * Given a number and type (surface/caustic/volume) of photons, this 
+ * Given a number and type (surface/caustic/volume) of photons, this
  * class distributes the work over an arbitrary number of machines.
  * \ingroup librender
  */
@@ -62,12 +62,12 @@ public:
 	 * \param progressReporterPayload
 	 *    Custom pointer payload to be delivered with progress messages
 	 */
-	GatherPhotonProcess(EGatherType type, size_t photonCount, 
+	GatherPhotonProcess(EGatherType type, size_t photonCount,
 		size_t granularity, int maxDepth, int rrDepth, bool isLocal,
 		bool autoCancel, const void *progressReporterPayload);
 
 	/**
-	 * Once the process has finished, this returns a reference 
+	 * Once the process has finished, this returns a reference
 	 * to the (still unbalanced) photon map
 	 */
 	inline PhotonMap *getPhotonMap() { return m_photonMap; }
@@ -93,7 +93,7 @@ public:
 	// ======================================================================
 
 	bool isLocal() const;
-	ref<WorkProcessor> createWorkProcessor() const; 
+	ref<WorkProcessor> createWorkProcessor() const;
 	void processResult(const WorkResult *wr, bool cancelled);
 	EStatus generateWork(WorkUnit *unit, int worker);
 

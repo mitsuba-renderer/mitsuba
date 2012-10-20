@@ -28,15 +28,15 @@ MTS_NAMESPACE_BEGIN
  * \parameters{
  *     \parameter{filename}{\String}{Filename of an animated
  *     transformation}
- *     \parameter{\Unnamed}{\ShapeGroup}{A reference to a 
+ *     \parameter{\Unnamed}{\ShapeGroup}{A reference to a
  *     shape group that should be instantiated}
  * }
- * 
+ *
  * This plugin implements an \emph{animated} geometry instance,
  * i.e. one or more shapes that are undergoing \emph{ridgid}
  * transformations over time.
  *
- * The input file should contain a binary / serialized 
+ * The input file should contain a binary / serialized
  * \code{AnimatedTransform} data structure -- for details,
  * please refer to the C++ implementation of this class.
  */
@@ -52,7 +52,7 @@ public:
 		m_transform = new AnimatedTransform(fs);
 	}
 
-	AnimatedInstance(Stream *stream, InstanceManager *manager) 
+	AnimatedInstance(Stream *stream, InstanceManager *manager)
 		: Shape(stream, manager) {
 		m_shapeGroup = static_cast<ShapeGroup *>(manager->getInstance(stream));
 		m_transform = new AnimatedTransform(stream);
@@ -94,7 +94,7 @@ public:
 		}
 	}
 
-	bool rayIntersect(const Ray &_ray, Float mint, 
+	bool rayIntersect(const Ray &_ray, Float mint,
 			Float maxt, Float &t, void *temp) const {
 		const ShapeKDTree *kdtree = m_shapeGroup->getKDTree();
 		Ray ray;
@@ -113,7 +113,7 @@ public:
 		return kdtree->rayIntersect(ray, mint, maxt);
 	}
 
-	void fillIntersectionRecord(const Ray &_ray, 
+	void fillIntersectionRecord(const Ray &_ray,
 		const void *temp, Intersection &its) const {
 		const ShapeKDTree *kdtree = m_shapeGroup->getKDTree();
 		const Transform &objectToWorld = m_transform->eval(_ray.time);
@@ -137,7 +137,7 @@ public:
 		const Transform &objectToWorld = m_transform->eval(its.time);
 		its.shape->getNormalDerivative(its, dndu, dndv, shadingFrame);
 
-		/* The following will probably be incorrect for 
+		/* The following will probably be incorrect for
 		non-rigid transformations */
 		dndu = objectToWorld(dndu);
 		dndv = objectToWorld(dndv);

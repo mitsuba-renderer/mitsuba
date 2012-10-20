@@ -54,7 +54,7 @@ void ShapeKDTree::addShape(const Shape *shape) {
 		// Triangle meshes are expanded into individual primitives,
 		// which are visible to the tree construction code. Generic
 		// primitives are only handled by their AABBs
-		m_shapeMap.push_back((SizeType) 
+		m_shapeMap.push_back((SizeType)
 			static_cast<const TriMesh *>(shape)->getTriangleCount());
 		m_triangleFlag.push_back(true);
 	} else {
@@ -70,7 +70,7 @@ void ShapeKDTree::build() {
 		m_shapeMap[i] += m_shapeMap[i-1];
 
 	SAHKDTree3D<ShapeKDTree>::buildInternal();
-		
+
 #if !defined(MTS_KD_CONSERVE_MEMORY)
 	ref<Timer> timer = new Timer();
 	SizeType primCount = getPrimitiveCount();
@@ -111,15 +111,15 @@ void ShapeKDTree::build() {
 
 bool ShapeKDTree::rayIntersect(const Ray &ray, Intersection &its) const {
 	uint8_t temp[MTS_KD_INTERSECTION_TEMP];
-	its.t = std::numeric_limits<Float>::infinity(); 
+	its.t = std::numeric_limits<Float>::infinity();
 	Float mint, maxt;
 
 	++raysTraced;
 	if (m_aabb.rayIntersect(ray, mint, maxt)) {
 		/* Use an adaptive ray epsilon */
 		Float rayMinT = ray.mint;
-		if (rayMinT == Epsilon) 
-			rayMinT *= std::max(std::max(std::max(std::abs(ray.o.x), 
+		if (rayMinT == Epsilon)
+			rayMinT *= std::max(std::max(std::max(std::abs(ray.o.x),
 				std::abs(ray.o.y)), std::abs(ray.o.z)), Epsilon);
 
 		if (rayMinT > mint) mint = rayMinT;
@@ -135,11 +135,11 @@ bool ShapeKDTree::rayIntersect(const Ray &ray, Intersection &its) const {
 	return false;
 }
 
-bool ShapeKDTree::rayIntersect(const Ray &ray, Float &t, ConstShapePtr &shape, 
+bool ShapeKDTree::rayIntersect(const Ray &ray, Float &t, ConstShapePtr &shape,
 		Normal &n, Point2 &uv) const {
 	uint8_t temp[MTS_KD_INTERSECTION_TEMP];
 	Float mint, maxt;
-	
+
 	t = std::numeric_limits<Float>::infinity();
 
 	++shadowRaysTraced;
@@ -147,7 +147,7 @@ bool ShapeKDTree::rayIntersect(const Ray &ray, Float &t, ConstShapePtr &shape,
 		/* Use an adaptive ray epsilon */
 		Float rayMinT = ray.mint;
 		if (rayMinT == Epsilon)
-			rayMinT *= std::max(std::max(std::abs(ray.o.x), 
+			rayMinT *= std::max(std::max(std::abs(ray.o.x),
 				std::abs(ray.o.y)), std::abs(ray.o.z));
 
 		if (rayMinT > mint) mint = rayMinT;
@@ -182,7 +182,7 @@ bool ShapeKDTree::rayIntersect(const Ray &ray, Float &t, ConstShapePtr &shape,
 					/// Uh oh... -- much unnecessary work is done here
 					Intersection its;
 					its.t = t;
-					shape->fillIntersectionRecord(ray, 
+					shape->fillIntersectionRecord(ray,
 						reinterpret_cast<const uint8_t*>(temp) + 8, its);
 					n = its.geoFrame.n;
 					uv = its.uv;
@@ -206,14 +206,14 @@ bool ShapeKDTree::rayIntersect(const Ray &ray) const {
 		/* Use an adaptive ray epsilon */
 		Float rayMinT = ray.mint;
 		if (rayMinT == Epsilon)
-			rayMinT *= std::max(std::max(std::abs(ray.o.x), 
+			rayMinT *= std::max(std::max(std::abs(ray.o.x),
 				std::abs(ray.o.y)), std::abs(ray.o.z));
 
 		if (rayMinT > mint) mint = rayMinT;
 		if (ray.maxt < maxt) maxt = ray.maxt;
 
-		if (EXPECT_TAKEN(maxt > mint)) 
-			if (rayIntersectHavran<true>(ray, mint, maxt, t, NULL)) 
+		if (EXPECT_TAKEN(maxt > mint))
+			if (rayIntersectHavran<true>(ray, mint, maxt, t, NULL))
 				return true;
 	}
 	return false;
@@ -232,7 +232,7 @@ struct CoherentKDStackEntry {
 static StatsCounter coherentPackets("General", "Coherent ray packets");
 static StatsCounter incoherentPackets("General", "Incoherent ray packets");
 
-void ShapeKDTree::rayIntersectPacket(const RayPacket4 &packet, 
+void ShapeKDTree::rayIntersectPacket(const RayPacket4 &packet,
 		const RayInterval4 &rayInterval, Intersection4 &its, void *temp) const {
 	CoherentKDStackEntry MM_ALIGN16 stack[MTS_KD_MAXDEPTH];
 	RayInterval4 MM_ALIGN16 interval;
@@ -266,7 +266,7 @@ void ShapeKDTree::rayIntersectPacket(const RayPacket4 &packet,
 					packet.dRcp[axis].ps);
 
 			const __m128
-				startsAfterSplit = _mm_or_ps(masked.ps, 
+				startsAfterSplit = _mm_or_ps(masked.ps,
 					_mm_cmplt_ps(t, interval.mint.ps)),
 				endsBeforeSplit = _mm_or_ps(masked.ps,
 					_mm_cmpgt_ps(t, interval.maxt.ps));
@@ -280,14 +280,14 @@ void ShapeKDTree::rayIntersectPacket(const RayPacket4 &packet,
 				continue;
 			}
 
-			if (EXPECT_TAKEN(_mm_movemask_ps(endsBeforeSplit) == 15)) 
+			if (EXPECT_TAKEN(_mm_movemask_ps(endsBeforeSplit) == 15))
 				continue;
 
 			stack[stackIndex].node = currNode->getSibling();
 			stack[stackIndex].interval.maxt =    interval.maxt;
 			stack[stackIndex].interval.mint.ps = _mm_max_ps(t, interval.mint.ps);
 			interval.maxt.ps =                   _mm_min_ps(t, interval.maxt.ps);
-			masked.ps = _mm_or_ps(masked.ps, 	
+			masked.ps = _mm_or_ps(masked.ps,
 					_mm_cmpgt_ps(interval.mint.ps, interval.maxt.ps));
 			stackIndex++;
 		}
@@ -297,16 +297,16 @@ void ShapeKDTree::rayIntersectPacket(const RayPacket4 &packet,
 		const IndexType primEnd = currNode->getPrimEnd();
 
 		if (EXPECT_NOT_TAKEN(primStart != primEnd)) {
-			SSEVector 
-				searchStart(_mm_max_ps(rayInterval.mint.ps, 
+			SSEVector
+				searchStart(_mm_max_ps(rayInterval.mint.ps,
 					_mm_mul_ps(interval.mint.ps, SSEConstants::om_eps.ps))),
-				searchEnd(_mm_min_ps(rayInterval.maxt.ps, 
+				searchEnd(_mm_min_ps(rayInterval.maxt.ps,
 					_mm_mul_ps(interval.maxt.ps, SSEConstants::op_eps.ps)));
 
 			for (IndexType entry=primStart; entry != primEnd; entry++) {
 				const TriAccel &kdTri = m_triAccel[m_indices[entry]];
 				if (EXPECT_TAKEN(kdTri.k != KNoTriangleFlag)) {
-					itsFound.ps = _mm_or_ps(itsFound.ps, 
+					itsFound.ps = _mm_or_ps(itsFound.ps,
 						mitsuba::rayIntersectPacket(kdTri, packet, searchStart.ps, searchEnd.ps, masked.ps, its));
 				} else {
 					const Shape *shape = m_shapes[kdTri.shapeIndex];
@@ -322,7 +322,7 @@ void ShapeKDTree::rayIntersectPacket(const RayPacket4 &packet,
 						}
 						Float t;
 
-						if (shape->rayIntersect(ray, searchStart.f[i], searchEnd.f[i], t, 
+						if (shape->rayIntersect(ray, searchStart.f[i], searchEnd.f[i], t,
 								reinterpret_cast<uint8_t *>(temp)
 								+ i * MTS_KD_INTERSECTION_TEMP + 8)) {
 							its.t.f[i] = t;
@@ -344,12 +344,12 @@ void ShapeKDTree::rayIntersectPacket(const RayPacket4 &packet,
 		/* Pop from the stack */
 		currNode = stack[stackIndex].node;
 		interval = stack[stackIndex].interval;
-		masked.ps = _mm_or_ps(itsFound.ps, 
+		masked.ps = _mm_or_ps(itsFound.ps,
 			_mm_cmpgt_ps(interval.mint.ps, interval.maxt.ps));
 	}
 }
-	
-void ShapeKDTree::rayIntersectPacketIncoherent(const RayPacket4 &packet, 
+
+void ShapeKDTree::rayIntersectPacketIncoherent(const RayPacket4 &packet,
 		const RayInterval4 &rayInterval, Intersection4 &its4, void *temp) const {
 
 	++incoherentPackets;

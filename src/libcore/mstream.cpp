@@ -21,12 +21,12 @@
 MTS_NAMESPACE_BEGIN
 
 MemoryStream::MemoryStream(size_t initialSize)
- : Stream(), m_capacity(0), m_size(0), m_pos(0), 
+ : Stream(), m_capacity(0), m_size(0), m_pos(0),
    m_ownsBuffer(true), m_data(NULL) {
 	resize(initialSize);
 }
 
-MemoryStream::MemoryStream(void *ptr, size_t size) 
+MemoryStream::MemoryStream(void *ptr, size_t size)
  : Stream(), m_capacity(size), m_size(size), m_pos(0),
   m_ownsBuffer(false), m_data((uint8_t *) ptr) {
 }
@@ -101,7 +101,7 @@ void MemoryStream::read(void *ptr, size_t size) {
 void MemoryStream::write(const void *ptr, size_t size) {
 	size_t endPos = m_pos + size;
 	if (endPos > m_size) {
-		if (endPos > m_capacity) 
+		if (endPos > m_capacity)
 			resize(endPos);
 		m_size = endPos;
 	}

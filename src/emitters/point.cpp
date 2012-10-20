@@ -43,12 +43,12 @@ MTS_NAMESPACE_BEGIN
  *         \default{1}
  *     }
  *     \parameter{samplingWeight}{\Float}{
- *         Specifies the relative amount of samples 
+ *         Specifies the relative amount of samples
  *         allocated to this emitter. \default{1}
  *     }
  * }
  *
- * This sensor plugin implements a simple point light source, which 
+ * This sensor plugin implements a simple point light source, which
  * uniformly radiates illumination into all directions.
  */
 
@@ -68,7 +68,7 @@ public:
 		m_intensity = props.getSpectrum("intensity", Spectrum(1.0f));
 	}
 
-	PointEmitter(Stream *stream, InstanceManager *manager) 
+	PointEmitter(Stream *stream, InstanceManager *manager)
 	 : Emitter(stream, manager) {
 		configure();
 		m_intensity = Spectrum(stream);
@@ -97,7 +97,7 @@ public:
 		return (pRec.measure == EDiscrete) ? 1.0f : 0.0f;
 	}
 
-	Spectrum sampleDirection(DirectionSamplingRecord &dRec, 
+	Spectrum sampleDirection(DirectionSamplingRecord &dRec,
 			PositionSamplingRecord &pRec,
 			const Point2 &sample,
 			const Point2 *extra) const {
@@ -159,7 +159,7 @@ public:
 		oss << "PointEmitter[" << endl
 			<< "  worldTransform = " << indent(m_worldTransform.toString()) << "," << endl
 			<< "  intensity = " << m_intensity.toString() << "," << endl
-			<< "  medium = " << indent(m_medium.toString()) 
+			<< "  medium = " << indent(m_medium.toString())
 			<< "]";
 		return oss.str();
 	}
@@ -172,15 +172,15 @@ private:
 };
 
 
-// ================ Hardware shader implementation ================ 
+// ================ Hardware shader implementation ================
 
 class PointEmitterShader : public Shader {
 public:
-	PointEmitterShader(Renderer *renderer, const Spectrum &intensity) 
+	PointEmitterShader(Renderer *renderer, const Spectrum &intensity)
 		: Shader(renderer, EEmitterShader), m_intensity(intensity) {
 	}
-	
-	void resolve(const GPUProgram *program, const std::string &evalName, 
+
+	void resolve(const GPUProgram *program, const std::string &evalName,
 			std::vector<int> &parameterIDs) const {
 		parameterIDs.push_back(program->getParameterID(evalName + "_intensity", false));
 	}
@@ -198,7 +198,7 @@ public:
 			<< "}" << endl;
 	}
 
-	void bind(GPUProgram *program, const std::vector<int> &parameterIDs, 
+	void bind(GPUProgram *program, const std::vector<int> &parameterIDs,
 		int &textureUnitOffset) const {
 		program->setParameter(parameterIDs[0], m_intensity);
 	}
@@ -208,7 +208,7 @@ private:
 	Spectrum m_intensity;
 };
 
-Shader *PointEmitter::createShader(Renderer *renderer) const { 
+Shader *PointEmitter::createShader(Renderer *renderer) const {
 	return new PointEmitterShader(renderer, m_intensity);
 }
 

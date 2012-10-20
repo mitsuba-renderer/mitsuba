@@ -30,10 +30,10 @@ typedef Spectrum RotationalGradient[3];
 typedef Spectrum TranslationalGradient[3];
 
 /**
- * \brief Utility data structure for hemispherical sampling and 
+ * \brief Utility data structure for hemispherical sampling and
  * translational/rotational gradient computation.
  *
- * Uses the improved translational gradients proposed in 
+ * Uses the improved translational gradients proposed in
  * the paper "Improved radiance gradient computation" by
  * Krivanek J., Gautron P., Bouatouch K., Pattanaik S.
  * (Proceedings of SCCG 2005)
@@ -59,7 +59,7 @@ public:
 
 	/// Return the elevational resolution
 	inline uint32_t getM() const { return m_M; }
-	
+
 	/// Return the azimuthal resolution
 	inline uint32_t getN() const { return m_N; }
 
@@ -125,8 +125,8 @@ private:
 };
 
 
-/** \brief Irradiance cache data structure based on "A Ray Tracing Solution 
- * for Diffuse Interreflection" by Greg J. Ward, Francis M. Rubinstein and 
+/** \brief Irradiance cache data structure based on "A Ray Tracing Solution
+ * for Diffuse Interreflection" by Greg J. Ward, Francis M. Rubinstein and
  * Robert D. Clear (Computer Graphics, Volume 22, Number 4, August 1988)
  *
  * with extensions from
@@ -157,7 +157,7 @@ public:
 	 * Create an empty irradiance of the given size
 	 */
 	IrradianceCache(const AABB &aabb);
-	
+
 	/**
 	 * Unserialize an irradiance cache from a binary data stream
 	 */
@@ -196,13 +196,13 @@ public:
 	 *
 	 * \param ray
 	 * 		Ray differentials (if they exist)
-	 * \param its 
+	 * \param its
 	 * 		The position/normal of the surface in question
 	 * \param sample
-	 *      Record containing all hemispherical samples and 
+	 *      Record containing all hemispherical samples and
 	 *      derived gradient information
 	 */
-	Record *put(const RayDifferential &ray, const Intersection &its, 
+	Record *put(const RayDifferential &ray, const Intersection &its,
 		const HemisphereSampler &hs);
 
 	/**
@@ -249,9 +249,9 @@ public:
 
 		/// Dummy constructor
 		inline Record() { }
-		
+
 		/// Copy constructor
-		inline Record(const Record *rec) 
+		inline Record(const Record *rec)
 		  : p(rec->p), n(rec->n), R0(rec->R0), originalR0(rec->originalR0),
 		    R0_min(rec->R0_min), R0_max(rec->R0_max), E(rec->E) {
 			for (int i=0; i<3; ++i) {
@@ -296,7 +296,7 @@ public:
 		 */
 		inline Float getWeight(const Point &p2, const Normal &n2, Float kappa) const {
 			Float dp = dot(n, n2);
-			
+
 			/* Quickly discard opposite-facing samples */
 			if (dp < 0.0f)
 				return 0.0f;

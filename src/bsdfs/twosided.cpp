@@ -29,24 +29,24 @@ MTS_NAMESPACE_BEGIN
  *     be turned into a two-sided scattering model. If two BRDFs
  *     are specified, they will be placed on the front and back side, respectively.}
  * }
- * 
+ *
  * \renderings{
  *     \unframedrendering{From this angle, the Cornell box scene shows visible back-facing geometry}
  *         {bsdf_twosided_before}
  *     \unframedrendering{Applying the \pluginref{twosided} plugin fixes the rendering}
  *         {bsdf_twosided_after}
  * }
- * 
- * By default, all non-transmissive scattering models in Mitsuba 
- * are \emph{one-sided} --- in other words, they absorb all light 
+ *
+ * By default, all non-transmissive scattering models in Mitsuba
+ * are \emph{one-sided} --- in other words, they absorb all light
  * that is received on the interior-facing side of any associated
- * surfaces. Holes and visible back-facing parts are thus exposed 
+ * surfaces. Holes and visible back-facing parts are thus exposed
  * as black regions.
  *
  * Usually, this is a good idea, since it will reveal modeling
  * issues early on. But sometimes one is forced to deal with
  * improperly closed geometry, where the one-sided behavior is
- * bothersome. In that case, this plugin can be used to turn 
+ * bothersome. In that case, this plugin can be used to turn
  * one-sided scattering models into proper two-sided versions of
  * themselves. The plugin has no parameters other than a required
  * nested BSDF specification. It is also possible to supply two
@@ -64,10 +64,10 @@ MTS_NAMESPACE_BEGIN
  */
 class TwoSidedBRDF : public BSDF {
 public:
-	TwoSidedBRDF(const Properties &props) 
+	TwoSidedBRDF(const Properties &props)
 		: BSDF(props) { }
 
-	TwoSidedBRDF(Stream *stream, InstanceManager *manager) 
+	TwoSidedBRDF(Stream *stream, InstanceManager *manager)
 		: BSDF(stream, manager) {
 		m_nestedBRDF[0] = static_cast<BSDF *>(manager->getInstance(stream));
 		m_nestedBRDF[1] = static_cast<BSDF *>(manager->getInstance(stream));
@@ -142,7 +142,7 @@ public:
 			if (bRec.component != -1)
 				bRec.component -= m_nestedBRDF[0]->getComponentCount();
 		}
-	
+
 		Spectrum result = m_nestedBRDF[flipped ? 1 : 0]->sample(bRec, sample);
 
 		if (flipped) {
@@ -226,11 +226,11 @@ protected:
 };
 
 
-// ================ Hardware shader implementation ================ 
+// ================ Hardware shader implementation ================
 
 class TwoSidedShader : public Shader {
 public:
-	TwoSidedShader(Renderer *renderer, 
+	TwoSidedShader(Renderer *renderer,
 			const ref<BSDF> *nestedBRDF) : Shader(renderer, EBSDFShader) {
 		m_nestedBRDF[0] = nestedBRDF[0].get();
 		m_nestedBRDF[1] = nestedBRDF[1].get();
@@ -286,7 +286,7 @@ private:
 	ref<Shader> m_nestedBRDFShader[2];
 };
 
-Shader *TwoSidedBRDF::createShader(Renderer *renderer) const { 
+Shader *TwoSidedBRDF::createShader(Renderer *renderer) const {
 	return new TwoSidedShader(renderer, m_nestedBRDF);
 }
 

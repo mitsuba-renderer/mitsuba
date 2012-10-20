@@ -23,7 +23,7 @@ MTS_NAMESPACE_BEGIN
 class CylClip : public Viewer {
 public:
 	CylClip() : m_red(0.0f), m_blue(0.0f), m_gray(.5f), m_angle(0) {
-		m_viewTransform = Transform::lookAt(Point(10*std::sin(m_angle), 0, std::cos(m_angle)*10), 
+		m_viewTransform = Transform::lookAt(Point(10*std::sin(m_angle), 0, std::cos(m_angle)*10),
 				Point(0, 0, 0), Vector(0, 1, 0));
 		m_lineParams = Point2(M_PI/2, 0.28f);
 		m_cylPos = Point(0.0f);
@@ -45,7 +45,7 @@ public:
 	void mouseDragged(const DeviceEvent &event) {
 		if (event.getMouseButton() == Device::ELeftButton) {
 			m_angle += event.getMouseRelative().x / 100.0f;
-			m_viewTransform = Transform::lookAt(Point(10*std::sin(m_angle), 0, std::cos(m_angle)*10), 
+			m_viewTransform = Transform::lookAt(Point(10*std::sin(m_angle), 0, std::cos(m_angle)*10),
 					Point(0, 0, 0), Vector(0, 1, 0));
 		} else if (event.getMouseButton() == Device::ERightButton) {
 			m_lineParams += Vector2(
@@ -123,7 +123,7 @@ public:
 		Float ellipseLengths[2];
 
 		AABB aabb;
-		if (!intersectCylPlane(min, planeNrml, cylPt, cylD, m_radius, 
+		if (!intersectCylPlane(min, planeNrml, cylPt, cylD, m_radius,
 			ellipseCenter, ellipseAxes, ellipseLengths)) {
 			/* Degenerate case -- return an invalid AABB. This is
 			   not a problem, since one of the other faces will provide
@@ -172,7 +172,7 @@ public:
 				}
 			}
 		}
-	
+
 		ellipseAxes[0] *= ellipseLengths[0];
 		ellipseAxes[1] *= ellipseLengths[1];
 		m_renderer->setColor(m_blue);
@@ -246,7 +246,7 @@ public:
 		m_renderer->drawLine(m_cylPos-cylD*1e4, m_cylPos+cylD*1e4);
 		AABB clippedAABB;
 
-		clippedAABB.expandBy(intersectCylFace(0, 
+		clippedAABB.expandBy(intersectCylFace(0,
 				Point(aabb.min.x, aabb.min.y, aabb.min.z),
 				Point(aabb.min.x, aabb.max.y, aabb.max.z),
 				m_cylPos, cylD));
@@ -256,7 +256,7 @@ public:
 				Point(aabb.max.x, aabb.max.y, aabb.max.z),
 				m_cylPos, cylD));
 
-		clippedAABB.expandBy(intersectCylFace(1, 
+		clippedAABB.expandBy(intersectCylFace(1,
 				Point(aabb.min.x, aabb.min.y, aabb.min.z),
 				Point(aabb.max.x, aabb.min.y, aabb.max.z),
 				m_cylPos, cylD));
@@ -266,7 +266,7 @@ public:
 				Point(aabb.max.x, aabb.max.y, aabb.max.z),
 				m_cylPos, cylD));
 
-		clippedAABB.expandBy(intersectCylFace(2, 
+		clippedAABB.expandBy(intersectCylFace(2,
 				Point(aabb.min.x, aabb.min.y, aabb.min.z),
 				Point(aabb.max.x, aabb.max.y, aabb.min.z),
 				m_cylPos, cylD));

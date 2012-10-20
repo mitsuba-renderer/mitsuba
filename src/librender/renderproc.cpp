@@ -25,7 +25,7 @@ MTS_NAMESPACE_BEGIN
 
 class BlockRenderer : public WorkProcessor {
 public:
-	BlockRenderer(int blockSize, int borderSize) 
+	BlockRenderer(int blockSize, int borderSize)
 	 : m_blockSize(blockSize), m_borderSize(borderSize) { }
 
 	BlockRenderer(Stream *stream, InstanceManager *manager) {
@@ -39,7 +39,7 @@ public:
 
 	ref<WorkResult> createWorkResult() const {
 		return new ImageBlock(Bitmap::ESpectrumAlphaWeight,
-			Vector2i(m_blockSize), 
+			Vector2i(m_blockSize),
 			m_sensor->getFilm()->getReconstructionFilter());
 	}
 
@@ -60,7 +60,7 @@ public:
 		m_scene->initializeBidirectional();
 	}
 
-	void process(const WorkUnit *workUnit, WorkResult *workResult, 
+	void process(const WorkUnit *workUnit, WorkResult *workResult,
 		const bool &stop) {
 		const RectangularWorkUnit *rect = static_cast<const RectangularWorkUnit *>(workUnit);
 		ImageBlock *block = static_cast<ImageBlock *>(workResult);
@@ -72,7 +72,7 @@ public:
 		block->setOffset(rect->getOffset());
 		block->setSize(rect->getSize());
 		m_hilbertCurve.initialize(TVector2<uint8_t>(rect->getSize()));
-		m_integrator->renderBlock(m_scene, m_sensor, m_sampler, 
+		m_integrator->renderBlock(m_scene, m_sensor, m_sampler,
 			block, stop, m_hilbertCurve.getPoints());
 
 #ifdef MTS_DEBUG_FP
@@ -112,7 +112,7 @@ BlockedRenderProcess::~BlockedRenderProcess() {
 	if (m_progress)
 		delete m_progress;
 }
-	
+
 ref<WorkProcessor> BlockedRenderProcess::createWorkProcessor() const {
 	return new BlockRenderer(m_blockSize, m_borderSize);
 }
@@ -158,7 +158,7 @@ void BlockedRenderProcess::bindResource(const std::string &name, int id) {
 	}
 	BlockedImageProcess::bindResource(name, id);
 }
-		
+
 MTS_IMPLEMENT_CLASS(BlockedRenderProcess, false, BlockedImageProcess)
 MTS_IMPLEMENT_CLASS_S(BlockRenderer, false, WorkProcessor)
 MTS_NAMESPACE_END

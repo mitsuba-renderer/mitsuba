@@ -75,7 +75,7 @@ public:
 
 	/// Set the window title
 	void setTitle(const std::string &title);
-	
+
 	/// Display the NSGL cursor?
 	void showCursor(bool enabled);
 
@@ -103,7 +103,7 @@ public:
 
 	/**
 	 * Deliver all events which have been
-	 * received asynchronously 
+	 * received asynchronously
 	 */
 	void processEvents();
 
@@ -122,7 +122,7 @@ private:
 	NSWindow *m_window;
 	CustomView *m_view;
 	NSOpenGLPixelFormat *m_fmt;
-	NSOpenGLContext *m_currentContext;	
+	NSOpenGLContext *m_currentContext;
 #else
 	void *m_window;
 	void *m_view;

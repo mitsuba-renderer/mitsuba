@@ -39,7 +39,7 @@ MTS_NAMESPACE_BEGIN
  *        \default{automatic}
  *     }
  *     \parameter{stepWidth}{\Float}{
- *        Controls the width of of step function used for the 
+ *        Controls the width of of step function used for the
  *        color transition. It is specified as a value between zero
  *        and one (relative to the \code{lineWidth} parameter)
  *        \default{0.5}
@@ -49,7 +49,7 @@ MTS_NAMESPACE_BEGIN
  *     \rendering{Wireframe texture applied to the material test object}{tex_wireframe}
  * }
  *
- * This plugin implements a simple two-color wireframe texture map 
+ * This plugin implements a simple two-color wireframe texture map
  * that reveals the structure of a triangular mesh.
  */
 class WireFrame : public Texture {
@@ -63,7 +63,7 @@ public:
 		m_mutex = new Mutex();
 	}
 
-	WireFrame(Stream *stream, InstanceManager *manager) 
+	WireFrame(Stream *stream, InstanceManager *manager)
 	 : Texture(stream, manager) {
 		m_mutex = new Mutex();
 		m_edgeColor = Spectrum(stream);
@@ -90,14 +90,14 @@ public:
 		if (m_lineWidth == 0) {
 			/* Somewhat hacky but probably helpful in many cases.
 			   This tries to find a suitable line width, which is set
-			   to 10% of the average average edge length */ 
+			   to 10% of the average average edge length */
 			LockGuard lock(m_mutex);
 			if (m_lineWidth == 0) {
 				Float lineWidth = 0;
 				for (size_t i=0; i<triMesh->getTriangleCount(); ++i) {
 					const Triangle &tri = triMesh->getTriangles()[i];
 					for (int j=0; j<3; ++j)
-						lineWidth += (positions[tri.idx[j]] 
+						lineWidth += (positions[tri.idx[j]]
 							- positions[tri.idx[(j+1)%3]]).length();
 				}
 
@@ -174,11 +174,11 @@ protected:
 	Spectrum m_interiorColor;
 };
 
-// ================ Hardware shader implementation ================ 
+// ================ Hardware shader implementation ================
 
 class WireFrameShader : public Shader {
 public:
-	WireFrameShader(Renderer *renderer, const Spectrum &value) 
+	WireFrameShader(Renderer *renderer, const Spectrum &value)
 		: Shader(renderer, ETextureShader), m_value(value) {
 	}
 

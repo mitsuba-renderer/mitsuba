@@ -56,7 +56,7 @@ void AbstractEmitter::addChild(const std::string &name, ConfigurableObject *chil
 		ConfigurableObject::addChild(name, child);
 	}
 }
-	
+
 ref<Shape> AbstractEmitter::createShape(const Scene *scene) {
 	return NULL;
 }
@@ -67,7 +67,7 @@ Spectrum AbstractEmitter::samplePosition(PositionSamplingRecord &pRec,
 }
 
 Spectrum AbstractEmitter::sampleDirection(DirectionSamplingRecord &dRec,
-		PositionSamplingRecord &pRec, const Point2 &sample, 
+		PositionSamplingRecord &pRec, const Point2 &sample,
 		const Point2 *extra) const {
 	NotImplementedError("sampleDirection");
 }
@@ -136,7 +136,7 @@ bool Emitter::fillDirectSamplingRecord(DirectSamplingRecord &dRec,
 }
 
 Emitter::~Emitter() { }
-	
+
 Emitter *Emitter::getElement(size_t index) {
 	return NULL;
 }

@@ -270,7 +270,7 @@ public:
 	MTS_DECLARE_TEST(testGamma);
 	MTS_DECLARE_TEST(testReinhard);
 	MTS_END_TESTCASE()
-	
+
 	virtual void init();
 
 	void testBasic();
@@ -288,7 +288,7 @@ private:
 	static inline float pow2(float x) {
 		return math::fastexp(x * 0.69314718f);
 	}
-	
+
 	/// Generate a new size for a bitmap, including odd-sizes once every 4 times
 	inline Vector2i nextSize() {
 		uint32_t w = m_rnd->nextUInt(2048) + 1;
@@ -385,7 +385,7 @@ void TestTonemapperSSE::testGamma(Bitmap *hdr, int numImages, int numRuns) {
 			float wFStop = m_rnd->nextStandardNormal();
 			float wFactor = pow2(wFStop);
 			const Float invWhitePoint = 1 / (whitePoint * wFactor);
-				
+
 			tmoSIMD->setInvGamma(invGamma);
 			tmoSIMD->setSRGB(sRGB);
 			tmoSIMD->setInvWhitePoint(invWhitePoint);
@@ -427,7 +427,7 @@ void TestTonemapperSSE::testReinhard(Bitmap *hdr, int numImages, int numRuns) {
 			const Float invWhitePoint = 1 / (whitePoint * wFactor);
 			const Float multiplier = m_rnd->nextFloat() + 0.5f;
 			const Float scale = m_rnd->nextFloat() * 4.0f + 0.01f;
-				
+
 			tmoSIMD->setInvGamma(invGamma);
 			tmoSIMD->setSRGB(sRGB);
 			tmoSIMD->setInvWhitePoint(invWhitePoint);
@@ -494,7 +494,7 @@ void TestTonemapperSSE::testGamma(int numImageSizes, int runsPerImage,
 	m_timerRef->reset(false);
 	m_timerSIMD->reset(false);
 	m_variance.reset();
-	
+
 	m_timer->reset(true);
 	for (int i = 0; i < numImageSizes; ++i) {
 		mitsuba::Vector2i size = nextSize();
@@ -517,7 +517,7 @@ void TestTonemapperSSE::testReinhard(int numImageSizes, int runsPerImage,
 	m_timerRef->reset(false);
 	m_timerSIMD->reset(false);
 	m_variance.reset();
-	
+
 	m_timer->reset(true);
 	for (int i = 0; i < numImageSizes; ++i) {
 		mitsuba::Vector2i size = nextSize();
@@ -573,7 +573,7 @@ void TestTonemapperSSE::testBasic(const RGBA32F &pixel,
 	tmo.multiplier = params.multiplier;
 	tmo.scale = params.scale;
 	tmo.sRGB  = params.isSRGB;
-	
+
 	// Setup the SIMD tonemapper
 	ref<TonemapCPU> tmoSIMD = new TonemapCPU;
 	tmoSIMD->setInvWhitePoint(params.invWhitePoint);
@@ -621,7 +621,7 @@ void TestTonemapperSSE::testBasic(const RGBA32F &pixel,
 }
 
 void TestTonemapperSSE::testBasic() {
-	
+
 	TonemapCPU::Params params;
 	RGBA32F pixel;
 	Vector4f delta(static_cast<Float>(0));
@@ -636,7 +636,7 @@ void TestTonemapperSSE::testBasic() {
 	pixel.b = 0.12698999f;
 	pixel.a = 0.37581384f;
 	testBasic(pixel, params, delta);
-	
+
 	params.invWhitePoint = 8.7875755e-011f;
 	params.invGamma      = 0.90543908f;
 	params.multiplier    = 1.3749540f;

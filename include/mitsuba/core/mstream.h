@@ -24,9 +24,9 @@
 
 MTS_NAMESPACE_BEGIN
 
-/** \brief Simple memory buffer-based stream with automatic memory management 
- * 
- * The underlying memory storage of this implementation dynamically expands 
+/** \brief Simple memory buffer-based stream with automatic memory management
+ *
+ * The underlying memory storage of this implementation dynamically expands
  * as data is written to the stream.
  *
  * \ingroup libcore
@@ -42,7 +42,7 @@ public:
 
 	/**
 	 * \brief Create a memory stream, which operates on a
-	 * pre-allocated buffer. 
+	 * pre-allocated buffer.
 	 *
 	 * A memory stream created in this way will never resize the
 	 * underlying buffer. An exception is thrown e.g. when attempting
@@ -59,13 +59,13 @@ public:
 
 	/// Return the underlying data
 	inline uint8_t *getData() { return m_data; }
-	
+
 	/// Return the underlying data (const version)
 	inline const uint8_t *getData() const { return m_data; }
 
 	/// Return the underlying data at the current position
 	inline uint8_t *getCurrentData() { return m_data + m_pos; }
-	
+
 	/// Return the underlying data at the current position (const version)
 	inline const uint8_t *getCurrentData() const { return m_data + m_pos; }
 

@@ -61,11 +61,11 @@ static void lookupMaterial(const Properties &props, Spectrum &sigmaS, Spectrum &
 	if (props.hasProperty("densityMultiplier") || props.hasProperty("sizeMultiplier"))
 		SLog(EError, "The 'densityMultiplier' parameter has been deprecated and is now called 'scale'.");
 
-	if (hasSigmaAS && hasSigmaTAlbedo) 
+	if (hasSigmaAS && hasSigmaTAlbedo)
 		SLog(EError, "You can either specify sigmaS & sigmaA *or* "
 			"sigmaT & albedo, but no other combinations!");
 
-	std::string material = 
+	std::string material =
 		boost::to_lower_copy(props.getString("material", "skin1"));
 
 	/* Start with a preset */

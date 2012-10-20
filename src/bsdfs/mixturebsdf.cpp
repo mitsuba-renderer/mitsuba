@@ -37,9 +37,9 @@ MTS_NAMESPACE_BEGIN
  *     (\lstref{mixture-example})}{bsdf_mixturebsdf_result}
  * }
  *
- * This plugin implements a ``mixture'' material, which represents  
+ * This plugin implements a ``mixture'' material, which represents
  * linear combinations of multiple BSDF instances. Any surface scattering
- * model in Mitsuba (be it smooth, rough, reflecting, or transmitting) can 
+ * model in Mitsuba (be it smooth, rough, reflecting, or transmitting) can
  * be mixed with others in this manner to synthesize new models. There
  * is no limit on how many models can be mixed, but their combination
  * weights must be non-negative and sum to a value of one or less to ensure
@@ -64,10 +64,10 @@ MTS_NAMESPACE_BEGIN
 
 class MixtureBSDF : public BSDF {
 public:
-	MixtureBSDF(const Properties &props) 
+	MixtureBSDF(const Properties &props)
 		: BSDF(props) {
 		/* Parse the weight parameter */
-		std::vector<std::string> weights = 
+		std::vector<std::string> weights =
 			tokenize(props.getString("weights", ""), " ,;");
 		if (weights.size() == 0)
 			Log(EError, "No weights were supplied!");
@@ -84,7 +84,7 @@ public:
 		}
 	}
 
-	MixtureBSDF(Stream *stream, InstanceManager *manager) 
+	MixtureBSDF(Stream *stream, InstanceManager *manager)
 	 : BSDF(stream, manager) {
 		size_t bsdfCount = stream->readSize();
 		m_weights.resize(bsdfCount);
@@ -104,7 +104,7 @@ public:
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		BSDF::serialize(stream, manager);
-		
+
 		stream->writeSize(m_bsdfs.size());
 		for (size_t i=0; i<m_bsdfs.size(); ++i) {
 			stream->writeFloat(m_weights[i]);
@@ -253,7 +253,7 @@ public:
 
 			result *= m_weights[entry] * pdf;
 			pdf *= m_pdf[entry];
-			
+
 			EMeasure measure = BSDF::getMeasure(bRec.sampledType);
 			for (size_t i=0; i<m_bsdfs.size(); ++i) {
 				if (entry == i)
@@ -285,7 +285,7 @@ public:
 			BSDF::addChild(name, child);
 		}
 	}
-	
+
 	Float getRoughness(const Intersection &its, int component) const {
 		int bsdfIndex = m_indices[component].first;
 		component = m_indices[component].second;
@@ -304,7 +304,7 @@ public:
 		}
 		oss << " }," << endl
 			<< "  bsdfs = {" << endl;
-		for (size_t i=0; i<m_bsdfs.size(); ++i) 
+		for (size_t i=0; i<m_bsdfs.size(); ++i)
 			oss << "    " << indent(m_bsdfs[i]->toString(), 2) << "," << endl;
 		oss << "  }" << endl
 			<< "]";
@@ -322,11 +322,11 @@ private:
 	DiscreteDistribution m_pdf;
 };
 
-// ================ Hardware shader implementation ================ 
+// ================ Hardware shader implementation ================
 
 class MixtureBSDFShader : public Shader {
 public:
-	MixtureBSDFShader(Renderer *renderer, const std::vector<BSDF *> &bsdfs, const std::vector<Float> &weights) 
+	MixtureBSDFShader(Renderer *renderer, const std::vector<BSDF *> &bsdfs, const std::vector<Float> &weights)
 		: Shader(renderer, EBSDFShader), m_bsdfs(bsdfs), m_weights(weights), m_complete(false) {
 		m_bsdfShader.resize(bsdfs.size());
 		for (size_t i=0; i<bsdfs.size(); ++i) {
@@ -432,7 +432,7 @@ private:
 	bool m_complete;
 };
 
-Shader *MixtureBSDF::createShader(Renderer *renderer) const { 
+Shader *MixtureBSDF::createShader(Renderer *renderer) const {
 	return new MixtureBSDFShader(renderer, m_bsdfs, m_weights);
 }
 

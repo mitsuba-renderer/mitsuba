@@ -29,7 +29,7 @@ public:
 	MTS_END_TESTCASE()
 
 	void test01_shRotation() {
-		/* Generate a random SH expansion, rotate it and 
+		/* Generate a random SH expansion, rotate it and
 		   spot-check 100 times against the original evaluated
 		   at appropriately rotated positions */
 

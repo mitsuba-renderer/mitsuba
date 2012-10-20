@@ -12,7 +12,7 @@ struct SceneContext;
 class PreviewSettingsDialog : public QDialog {
     Q_OBJECT
 public:
-	PreviewSettingsDialog(QWidget *parent, 
+	PreviewSettingsDialog(QWidget *parent,
 		SceneContext *ctx, const RendererCapabilities *cap);
 	virtual ~PreviewSettingsDialog();
 

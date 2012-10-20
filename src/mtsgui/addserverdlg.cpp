@@ -30,7 +30,7 @@ AddServerDialog::AddServerDialog(QWidget *parent) :
 #if !defined(__WINDOWS__)
 	uid_t uid = getuid();
 	struct passwd *info = getpwuid(uid);
-	if (info) 
+	if (info)
 		ui->userName->setText(QString(info->pw_name));
 #endif
 	ui->port->setValidator(new QIntValidator(this));
@@ -39,7 +39,7 @@ AddServerDialog::AddServerDialog(QWidget *parent) :
 AddServerDialog::~AddServerDialog() {
 	delete ui;
 }
-	
+
 void AddServerDialog::on_sshConnection_toggled() {
 	if (!ui->sshConnection->isChecked())
 		return;
@@ -78,7 +78,7 @@ ServerConnection AddServerDialog::getConnection() const {
 	conn.userName = ui->userName->text();
 	conn.instDir = ui->installDir->text();
 	conn.port = ui->port->text().toInt();
-	conn.type = ui->directConnection->isChecked() 
+	conn.type = ui->directConnection->isChecked()
 		? EDirectConnection : ESSHConnection;
 	return conn;
 }

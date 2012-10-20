@@ -105,7 +105,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 	}
 
 	virtual void convert(
-			Bitmap::EPixelFormat sourceFormat, Float sourceGamma, const void *_source, 
+			Bitmap::EPixelFormat sourceFormat, Float sourceGamma, const void *_source,
 			Bitmap::EPixelFormat destFormat, Float destGamma, void *_dest,
 			size_t count, Float multiplier, Spectrum::EConversionIntent intent) const {
 
@@ -113,9 +113,9 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 			std::ostringstream oss;
 			oss << "FormatConverter::convert([" << sourceFormat << ", "
 				<< (Bitmap::EComponentFormat) detail::get_pixelformat<SourceFormat>::value
-				<< "] -> [" << destFormat << ", " 
-				<< (Bitmap::EComponentFormat) detail::get_pixelformat<DestFormat>::value 
-				<< "], gamma = " << sourceGamma << " -> " << destGamma 
+				<< "] -> [" << destFormat << ", "
+				<< (Bitmap::EComponentFormat) detail::get_pixelformat<DestFormat>::value
+				<< "], gamma = " << sourceGamma << " -> " << destGamma
 				<< ", count = " << count << ")";
 			SLog(EInfo, "%s", oss.str().c_str());
 		#endif
@@ -169,21 +169,21 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 								*dest++ = convertScalar<DestFormat>(*source++, sourceGamma, precomp, multiplier, invDestGamma);
 							break;
 
-						case Bitmap::ELuminanceAlpha: 
+						case Bitmap::ELuminanceAlpha:
 							for (size_t i=0; i<count; ++i) {
 								*dest++ = convertScalar<DestFormat>(*source++, sourceGamma, precomp, multiplier, invDestGamma);
 								*dest++ = one;
 							}
 							break;
 
-						case Bitmap::ERGB: 
+						case Bitmap::ERGB:
 							for (size_t i=0; i<count; ++i) {
 								DestFormat value = convertScalar<DestFormat>(*source++, sourceGamma, precomp, multiplier, invDestGamma);
 								*dest++ = value; *dest++ = value; *dest++ = value;
 							}
 							break;
 
-						case Bitmap::ERGBA: 
+						case Bitmap::ERGBA:
 							for (size_t i=0; i<count; ++i) {
 								DestFormat value = convertScalar<DestFormat>(*source++, sourceGamma, precomp, multiplier, invDestGamma);
 								*dest++ = value; *dest++ = value; *dest++ = value; *dest++ = one;
@@ -197,26 +197,26 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							}
 							break;
 
-						case Bitmap::EXYZA: 
+						case Bitmap::EXYZA:
 							for (size_t i=0; i<count; ++i) {
 								DestFormat value = convertScalar<DestFormat>(*source++, sourceGamma, precomp, multiplier, invDestGamma);
 								*dest++ = zero; *dest++ = value; *dest++ = zero; *dest++ = one;
 							}
 							break;
 
-						case Bitmap::ESpectrum: 
+						case Bitmap::ESpectrum:
 							for (size_t i=0; i<count; ++i) {
 								DestFormat value = convertScalar<DestFormat>(*source++, sourceGamma, precomp, multiplier, invDestGamma);
 								for (int j=0; j<SPECTRUM_SAMPLES; ++j)
-									*dest++ = value; 
+									*dest++ = value;
 							}
 							break;
 
-						case Bitmap::ESpectrumAlpha: 
+						case Bitmap::ESpectrumAlpha:
 							for (size_t i=0; i<count; ++i) {
 								DestFormat value = convertScalar<DestFormat>(*source++, sourceGamma, precomp, multiplier, invDestGamma);
 								for (int j=0; j<SPECTRUM_SAMPLES; ++j)
-									*dest++ = value; 
+									*dest++ = value;
 								*dest++ = one;
 							}
 							break;
@@ -225,7 +225,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							for (size_t i=0; i<count; ++i) {
 								DestFormat value = convertScalar<DestFormat>(*source++, sourceGamma, precomp, multiplier, invDestGamma);
 								for (int j=0; j<SPECTRUM_SAMPLES; ++j)
-									*dest++ = value; 
+									*dest++ = value;
 								*dest++ = one; *dest++ = one;
 							}
 							break;
@@ -236,7 +236,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 				}
 				break;
 
-			case Bitmap::ELuminanceAlpha: { 
+			case Bitmap::ELuminanceAlpha: {
 					switch (destFormat) {
 						case Bitmap::ELuminance:
 							for (size_t i=0; i<count; ++i) {
@@ -252,7 +252,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							}
 							break;
 
-						case Bitmap::ERGB: 
+						case Bitmap::ERGB:
 							for (size_t i=0; i<count; ++i) {
 								DestFormat value = convertScalar<DestFormat>(*source++, sourceGamma, precomp, multiplier, invDestGamma);
 								*dest++ = value; *dest++ = value; *dest++ = value;
@@ -260,7 +260,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							}
 							break;
 
-						case Bitmap::ERGBA: 
+						case Bitmap::ERGBA:
 							for (size_t i=0; i<count; ++i) {
 								DestFormat value = convertScalar<DestFormat>(*source++, sourceGamma, precomp, multiplier, invDestGamma);
 								*dest++ = value; *dest++ = value; *dest++ = value;
@@ -268,7 +268,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							}
 							break;
 
-						case Bitmap::EXYZ: 
+						case Bitmap::EXYZ:
 							for (size_t i=0; i<count; ++i) {
 								DestFormat value = convertScalar<DestFormat>(*source++, sourceGamma, precomp, multiplier, invDestGamma);
 								*dest++ = zero; *dest++ = value; *dest++ = zero;
@@ -284,20 +284,20 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							}
 							break;
 
-						case Bitmap::ESpectrum: 
+						case Bitmap::ESpectrum:
 							for (size_t i=0; i<count; ++i) {
 								DestFormat value = convertScalar<DestFormat>(*source++, sourceGamma, precomp, multiplier, invDestGamma);
 								for (int j=0; j<SPECTRUM_SAMPLES; ++j)
-									*dest++ = value; 
+									*dest++ = value;
 								source++;
 							}
 							break;
 
-						case Bitmap::ESpectrumAlpha: 
+						case Bitmap::ESpectrumAlpha:
 							for (size_t i=0; i<count; ++i) {
 								DestFormat value = convertScalar<DestFormat>(*source++, sourceGamma, precomp, multiplier, invDestGamma);
 								for (int j=0; j<SPECTRUM_SAMPLES; ++j)
-									*dest++ = value; 
+									*dest++ = value;
 								*dest++ = convertScalar<DestFormat>(*source++);
 							}
 							break;
@@ -306,7 +306,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							for (size_t i=0; i<count; ++i) {
 								DestFormat value = convertScalar<DestFormat>(*source++, sourceGamma, precomp, multiplier, invDestGamma);
 								for (int j=0; j<SPECTRUM_SAMPLES; ++j)
-									*dest++ = value; 
+									*dest++ = value;
 								*dest++ = convertScalar<DestFormat>(*source++);
 								*dest++ = one;
 							}
@@ -330,7 +330,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							}
 							break;
 
-						case Bitmap::ELuminanceAlpha: 
+						case Bitmap::ELuminanceAlpha:
 							for (size_t i=0; i<count; ++i) {
 								Float r = convertScalar<Float>(*source++, sourceGamma);
 								Float g = convertScalar<Float>(*source++, sourceGamma);
@@ -341,7 +341,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							}
 							break;
 
-						case Bitmap::ERGB: 
+						case Bitmap::ERGB:
 							for (size_t i=0; i<count; ++i) {
 								*dest++ = convertScalar<DestFormat>(*source++, sourceGamma, precomp, multiplier, invDestGamma);
 								*dest++ = convertScalar<DestFormat>(*source++, sourceGamma, precomp, multiplier, invDestGamma);
@@ -358,7 +358,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							}
 							break;
 
-						case Bitmap::EXYZ: 
+						case Bitmap::EXYZ:
 							for (size_t i=0; i<count; ++i) {
 								Float r = convertScalar<Float>(*source++, sourceGamma);
 								Float g = convertScalar<Float>(*source++, sourceGamma);
@@ -383,7 +383,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							}
 							break;
 
-						case Bitmap::ESpectrum: 
+						case Bitmap::ESpectrum:
 							for (size_t i=0; i<count; ++i) {
 								Float r = convertScalar<Float>(*source++, sourceGamma);
 								Float g = convertScalar<Float>(*source++, sourceGamma);
@@ -448,7 +448,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							}
 							break;
 
-						case Bitmap::ERGB: 
+						case Bitmap::ERGB:
 							for (size_t i=0; i<count; ++i) {
 								*dest++ = convertScalar<DestFormat>(*source++, sourceGamma, precomp, multiplier, invDestGamma);
 								*dest++ = convertScalar<DestFormat>(*source++, sourceGamma, precomp, multiplier, invDestGamma);
@@ -457,7 +457,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							}
 							break;
 
-						case Bitmap::ERGBA: 
+						case Bitmap::ERGBA:
 							for (size_t i=0; i<count; ++i) {
 								*dest++ = convertScalar<DestFormat>(*source++, sourceGamma, precomp, multiplier, invDestGamma);
 								*dest++ = convertScalar<DestFormat>(*source++, sourceGamma, precomp, multiplier, invDestGamma);
@@ -466,7 +466,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							}
 							break;
 
-						case Bitmap::EXYZ: 
+						case Bitmap::EXYZ:
 							for (size_t i=0; i<count; ++i) {
 								Float r = convertScalar<Float>(*source++, sourceGamma);
 								Float g = convertScalar<Float>(*source++, sourceGamma);
@@ -479,7 +479,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							}
 							break;
 
-						case Bitmap::EXYZA: 
+						case Bitmap::EXYZA:
 							for (size_t i=0; i<count; ++i) {
 								Float r = convertScalar<Float>(*source++, sourceGamma);
 								Float g = convertScalar<Float>(*source++, sourceGamma);
@@ -492,7 +492,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							}
 							break;
 
-						case Bitmap::ESpectrum: 
+						case Bitmap::ESpectrum:
 							for (size_t i=0; i<count; ++i) {
 								Float r = convertScalar<Float>(*source++, sourceGamma);
 								Float g = convertScalar<Float>(*source++, sourceGamma);
@@ -504,7 +504,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							}
 							break;
 
-						case Bitmap::ESpectrumAlpha: 
+						case Bitmap::ESpectrumAlpha:
 							for (size_t i=0; i<count; ++i) {
 								Float r = convertScalar<Float>(*source++, sourceGamma);
 								Float g = convertScalar<Float>(*source++, sourceGamma);
@@ -516,7 +516,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							}
 							break;
 
-						case Bitmap::ESpectrumAlphaWeight: 
+						case Bitmap::ESpectrumAlphaWeight:
 							for (size_t i=0; i<count; ++i) {
 								Float r = convertScalar<Float>(*source++, sourceGamma);
 								Float g = convertScalar<Float>(*source++, sourceGamma);
@@ -554,7 +554,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							}
 							break;
 
-						case Bitmap::ERGB: 
+						case Bitmap::ERGB:
 							for (size_t i=0; i<count; ++i) {
 								Float x = convertScalar<Float>(*source++, sourceGamma);
 								Float y = convertScalar<Float>(*source++, sourceGamma);
@@ -566,7 +566,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							}
 							break;
 
-						case Bitmap::ERGBA: 
+						case Bitmap::ERGBA:
 							for (size_t i=0; i<count; ++i) {
 								Float x = convertScalar<Float>(*source++, sourceGamma);
 								Float y = convertScalar<Float>(*source++, sourceGamma);
@@ -579,7 +579,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							}
 							break;
 
-						case Bitmap::EXYZ: 
+						case Bitmap::EXYZ:
 							for (size_t i=0; i<count; ++i) {
 								*dest++ = convertScalar<DestFormat>(*source++, sourceGamma, precomp, multiplier, invDestGamma);
 								*dest++ = convertScalar<DestFormat>(*source++, sourceGamma, precomp, multiplier, invDestGamma);
@@ -587,7 +587,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							}
 							break;
 
-						case Bitmap::EXYZA: 
+						case Bitmap::EXYZA:
 							for (size_t i=0; i<count; ++i) {
 								*dest++ = convertScalar<DestFormat>(*source++, sourceGamma, precomp, multiplier, invDestGamma);
 								*dest++ = convertScalar<DestFormat>(*source++, sourceGamma, precomp, multiplier, invDestGamma);
@@ -596,7 +596,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							}
 							break;
 
-						case Bitmap::ESpectrum: 
+						case Bitmap::ESpectrum:
 							for (size_t i=0; i<count; ++i) {
 								Float x = convertScalar<Float>(*source++, sourceGamma);
 								Float y = convertScalar<Float>(*source++, sourceGamma);
@@ -607,7 +607,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							}
 							break;
 
-						case Bitmap::ESpectrumAlpha: 
+						case Bitmap::ESpectrumAlpha:
 							for (size_t i=0; i<count; ++i) {
 								Float x = convertScalar<Float>(*source++, sourceGamma);
 								Float y = convertScalar<Float>(*source++, sourceGamma);
@@ -619,7 +619,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							}
 							break;
 
-						case Bitmap::ESpectrumAlphaWeight: 
+						case Bitmap::ESpectrumAlphaWeight:
 							for (size_t i=0; i<count; ++i) {
 								Float x = convertScalar<Float>(*source++, sourceGamma);
 								Float y = convertScalar<Float>(*source++, sourceGamma);
@@ -647,7 +647,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							}
 							break;
 
-						case Bitmap::ELuminanceAlpha: 
+						case Bitmap::ELuminanceAlpha:
 							for (size_t i=0; i<count; ++i) {
 								Float luminance = convertScalar<Float>(source[1], sourceGamma);
 								*dest++ = convertScalar<DestFormat>(luminance, 1.0f, NULL, multiplier, invDestGamma);
@@ -656,7 +656,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							}
 							break;
 
-						case Bitmap::ERGB: 
+						case Bitmap::ERGB:
 							for (size_t i=0; i<count; ++i) {
 								Float x = convertScalar<Float>(*source++, sourceGamma);
 								Float y = convertScalar<Float>(*source++, sourceGamma);
@@ -682,7 +682,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							}
 							break;
 
-						case Bitmap::EXYZ: 
+						case Bitmap::EXYZ:
 							for (size_t i=0; i<count; ++i) {
 								*dest++ = convertScalar<DestFormat>(*source++, sourceGamma, precomp, multiplier, invDestGamma);
 								*dest++ = convertScalar<DestFormat>(*source++, sourceGamma, precomp, multiplier, invDestGamma);
@@ -691,7 +691,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							}
 							break;
 
-						case Bitmap::EXYZA: 
+						case Bitmap::EXYZA:
 							for (size_t i=0; i<count; ++i) {
 								*dest++ = convertScalar<DestFormat>(*source++, sourceGamma, precomp, multiplier, invDestGamma);
 								*dest++ = convertScalar<DestFormat>(*source++, sourceGamma, precomp, multiplier, invDestGamma);
@@ -700,7 +700,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							}
 							break;
 
-						case Bitmap::ESpectrum: 
+						case Bitmap::ESpectrum:
 							for (size_t i=0; i<count; ++i) {
 								Float x = convertScalar<Float>(*source++, sourceGamma);
 								Float y = convertScalar<Float>(*source++, sourceGamma);
@@ -712,7 +712,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							}
 							break;
 
-						case Bitmap::ESpectrumAlpha: 
+						case Bitmap::ESpectrumAlpha:
 							for (size_t i=0; i<count; ++i) {
 								Float x = convertScalar<Float>(*source++, sourceGamma);
 								Float y = convertScalar<Float>(*source++, sourceGamma);
@@ -724,7 +724,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							}
 							break;
 
-						case Bitmap::ESpectrumAlphaWeight: 
+						case Bitmap::ESpectrumAlphaWeight:
 							for (size_t i=0; i<count; ++i) {
 								Float x = convertScalar<Float>(*source++, sourceGamma);
 								Float y = convertScalar<Float>(*source++, sourceGamma);
@@ -763,7 +763,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							}
 							break;
 
-						case Bitmap::ERGB: 
+						case Bitmap::ERGB:
 							for (size_t i=0; i<count; ++i) {
 								for (int j=0; j<SPECTRUM_SAMPLES; ++j)
 									spec[j] = convertScalar<Float>(*source++, sourceGamma);
@@ -775,7 +775,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							}
 							break;
 
-						case Bitmap::ERGBA: 
+						case Bitmap::ERGBA:
 							for (size_t i=0; i<count; ++i) {
 								for (int j=0; j<SPECTRUM_SAMPLES; ++j)
 									spec[j] = convertScalar<Float>(*source++, sourceGamma);
@@ -788,7 +788,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							}
 							break;
 
-						case Bitmap::EXYZ: 
+						case Bitmap::EXYZ:
 							for (size_t i=0; i<count; ++i) {
 								for (int j=0; j<SPECTRUM_SAMPLES; ++j)
 									spec[j] = convertScalar<Float>(*source++, sourceGamma);
@@ -813,8 +813,8 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							}
 							break;
 
-						case Bitmap::ESpectrum: 
-							for (size_t i=0, n = count*SPECTRUM_SAMPLES; i<n; ++i) 
+						case Bitmap::ESpectrum:
+							for (size_t i=0, n = count*SPECTRUM_SAMPLES; i<n; ++i)
 								*dest++ = convertScalar<DestFormat>(*source++, sourceGamma, precomp, multiplier, invDestGamma);
 							break;
 
@@ -860,7 +860,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							}
 							break;
 
-						case Bitmap::ERGB: 
+						case Bitmap::ERGB:
 							for (size_t i=0; i<count; ++i) {
 								for (int j=0; j<SPECTRUM_SAMPLES; ++j)
 									spec[j] = convertScalar<Float>(*source++, sourceGamma);
@@ -873,7 +873,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							}
 							break;
 
-						case Bitmap::ERGBA: 
+						case Bitmap::ERGBA:
 							for (size_t i=0; i<count; ++i) {
 								for (int j=0; j<SPECTRUM_SAMPLES; ++j)
 									spec[j] = convertScalar<Float>(*source++, sourceGamma);
@@ -886,7 +886,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							}
 							break;
 
-						case Bitmap::EXYZ: 
+						case Bitmap::EXYZ:
 							for (size_t i=0; i<count; ++i) {
 								for (int j=0; j<SPECTRUM_SAMPLES; ++j)
 									spec[j] = convertScalar<Float>(*source++, sourceGamma);
@@ -899,7 +899,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							}
 							break;
 
-						case Bitmap::EXYZA: 
+						case Bitmap::EXYZA:
 							for (size_t i=0; i<count; ++i) {
 								for (int j=0; j<SPECTRUM_SAMPLES; ++j)
 									spec[j] = convertScalar<Float>(*source++, sourceGamma);
@@ -912,7 +912,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							}
 							break;
 
-						case Bitmap::ESpectrum: 
+						case Bitmap::ESpectrum:
 							for (size_t i=0; i<count; ++i) {
 								for (int j=0; j<SPECTRUM_SAMPLES; ++j)
 									*dest++ = convertScalar<DestFormat>(*source++, sourceGamma, precomp, multiplier, invDestGamma);
@@ -920,7 +920,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							}
 							break;
 
-						case Bitmap::ESpectrumAlpha: 
+						case Bitmap::ESpectrumAlpha:
 							for (size_t i=0; i<count; ++i) {
 								for (int j=0; j<SPECTRUM_SAMPLES; ++j)
 									*dest++ = convertScalar<DestFormat>(*source++, sourceGamma, precomp, multiplier, invDestGamma);
@@ -966,7 +966,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							}
 							break;
 
-						case Bitmap::ERGB: 
+						case Bitmap::ERGB:
 							for (size_t i=0; i<count; ++i) {
 								for (int j=0; j<SPECTRUM_SAMPLES; ++j)
 									spec[j] = convertScalar<Float>(*source++, sourceGamma);
@@ -980,7 +980,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							}
 							break;
 
-						case Bitmap::ERGBA: 
+						case Bitmap::ERGBA:
 							for (size_t i=0; i<count; ++i) {
 								for (int j=0; j<SPECTRUM_SAMPLES; ++j)
 									spec[j] = convertScalar<Float>(*source++, sourceGamma);
@@ -995,7 +995,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							}
 							break;
 
-						case Bitmap::EXYZ: 
+						case Bitmap::EXYZ:
 							for (size_t i=0; i<count; ++i) {
 								for (int j=0; j<SPECTRUM_SAMPLES; ++j)
 									spec[j] = convertScalar<Float>(*source++, sourceGamma);
@@ -1009,7 +1009,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							}
 							break;
 
-						case Bitmap::EXYZA: 
+						case Bitmap::EXYZA:
 							for (size_t i=0; i<count; ++i) {
 								for (int j=0; j<SPECTRUM_SAMPLES; ++j)
 									spec[j] = convertScalar<Float>(*source++, sourceGamma);
@@ -1024,7 +1024,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							}
 							break;
 
-						case Bitmap::ESpectrum: 
+						case Bitmap::ESpectrum:
 							for (size_t i=0; i<count; ++i) {
 								for (int j=0; j<SPECTRUM_SAMPLES; ++j)
 									spec[j] = convertScalar<Float>(*source++, sourceGamma);
@@ -1139,7 +1139,7 @@ private:
 	}
 };
 
-/* ================================================ 
+/* ================================================
     The following Boost MPL magic is responsible
     for generating code that efficiently converts
     from any image type to any other image type,
@@ -1150,15 +1150,15 @@ private:
 typedef mpl::vector<
 	uint8_t, uint16_t, uint32_t, half, float, double> SupportedTypes;
 
-/* Meta-function that generates all type-pairs with T 
+/* Meta-function that generates all type-pairs with T
    as the first element */
 template <typename T, typename Initial> struct ConversionFn
-	: mpl::fold<SupportedTypes, Initial, 
+	: mpl::fold<SupportedTypes, Initial,
 		mpl::push_back<mpl::_1, mpl::pair<T, mpl::_2> > > { };
 
 /* Generate all possible type pairs */
 typedef mpl::fold<
-    SupportedTypes, mpl::vector<>, 
+    SupportedTypes, mpl::vector<>,
 		mpl::lambda<ConversionFn<mpl::_2, mpl::_1> > >::type
 	SupportedConversions;
 

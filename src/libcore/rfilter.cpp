@@ -25,7 +25,7 @@ ReconstructionFilter::ReconstructionFilter(const Properties &props)
 
 ReconstructionFilter::~ReconstructionFilter() { }
 
-ReconstructionFilter::ReconstructionFilter(Stream *stream, InstanceManager *manager) 
+ReconstructionFilter::ReconstructionFilter(Stream *stream, InstanceManager *manager)
  : ConfigurableObject(stream, manager) {
 	 m_radius = stream->readFloat();
 }

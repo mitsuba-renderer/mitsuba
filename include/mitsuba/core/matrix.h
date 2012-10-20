@@ -34,9 +34,9 @@ template <int M, int N, typename T> struct Matrix {
 public:
 	T m[M][N];
 
-	/** 
+	/**
 	 * \brief Construct a new MxN matrix without initializing it.
-	 * 
+	 *
 	 * This construtor is useful when the matrix will either not
 	 * be used at all (it might be part of a larger data structure)
 	 * or initialized at a later point in time. Always make sure
@@ -328,7 +328,7 @@ public:
 	 *
 	 * Based on the implementation in JAMA.
 	 */
-	template <int K> void cholSolve(const Matrix<M, K, T> &B, 
+	template <int K> void cholSolve(const Matrix<M, K, T> &B,
 			Matrix<M, K, T> &X) const;
 
 	/**
@@ -340,11 +340,11 @@ public:
 	 *
 	 * Based on the implementation in JAMA.
 	 */
-	template <int K> void luSolve(const Matrix<M, K, T> &B, 
+	template <int K> void luSolve(const Matrix<M, K, T> &B,
 			Matrix<M, K, T> &X, int piv[M]) const;
 
 	/**
-	 * \brief Compute the determinant of a decomposed matrix 
+	 * \brief Compute the determinant of a decomposed matrix
 	 * created by \ref lu()
 	 *
 	 * \param pivsign The sign of the pivoting permutation returned
@@ -355,7 +355,7 @@ public:
 	T luDet(int pivsign) const;
 
 	/**
-	 * \brief Compute the determinant of a decomposed matrix 
+	 * \brief Compute the determinant of a decomposed matrix
 	 * created by \ref chol()
 	 */
 
@@ -397,7 +397,7 @@ public:
 	bool invert(Matrix &target) const;
 
 	/**
-	 * \brief Perform a symmetric eigendecomposition of a square matrix 
+	 * \brief Perform a symmetric eigendecomposition of a square matrix
 	 * into Q and D.
 	 *
 	 * Based on the implementation in JAMA.
@@ -468,7 +468,7 @@ public:
 	/// Initialize the matrix from two 2D column vectors
 	explicit inline Matrix2x2(const Vector2 &v1, const Vector2 &v2) {
 		m[0][0] = v1.x; m[0][1] = v2.x;
-		m[1][0] = v1.y; m[1][1] = v2.y; 
+		m[1][0] = v1.y; m[1][1] = v2.y;
 	}
 
 	/// Unserialize a matrix from a stream
@@ -480,7 +480,7 @@ public:
 	/// Initialize with the given values
 	inline Matrix2x2(Float a00, Float a01, Float a10, Float a11) {
 		m[0][0] = a00; m[0][1] = a01;
-		m[1][0] = a10; m[1][1] = a11; 
+		m[1][0] = a10; m[1][1] = a11;
 	}
 
 	/// Return the determinant (Faster than Matrix::det)
@@ -563,7 +563,7 @@ public:
 
 	/// Unserialize a matrix from a stream
 	explicit inline Matrix3x3(Stream *stream) : Matrix<3, 3, Float>(stream) { }
-	
+
 	/// Copy constructor
 	inline Matrix3x3(const Matrix<3, 3, Float> &mtx) : Matrix<3, 3, Float>(mtx) { }
 
@@ -717,7 +717,7 @@ struct MTS_EXPORT_CORE Matrix4x4 : public Matrix<4, 4, Float> {
 };
 
 /// Matrix multiplication (creates a temporary)
-template <typename T, int M1, int N1, int M2, int N2> inline Matrix<M1, N2, T> 
+template <typename T, int M1, int N1, int M2, int N2> inline Matrix<M1, N2, T>
 		operator*(const Matrix<M1, N1, T> &mat1, const Matrix<M2, N2, T> &mat2) {
 	BOOST_STATIC_ASSERT(N1 == M2);
 	Matrix<M1, N2, T> result;
@@ -750,7 +750,7 @@ extern MTS_EXPORT_CORE bool eig3(Matrix3x3 &m, Float lambda[3]);
 
 /**
  * \brief Fast non-iterative 3x3 eigenvalue decomposition
- * 
+ *
  * \param m
  *    Matrix in question -- will be replaced with the eigenvectors
  * \param lambda

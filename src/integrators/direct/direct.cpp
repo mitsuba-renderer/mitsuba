@@ -23,8 +23,8 @@ MTS_NAMESPACE_BEGIN
 /*! \plugin{direct}{Direct illumination integrator}
  * \order{1}
  * \parameters{
- *     \parameter{shadingSamples}{\Integer}{This convenience parameter can be 
- *         used to set both \code{emitterSamples} and \code{bsdfSamples} at 
+ *     \parameter{shadingSamples}{\Integer}{This convenience parameter can be
+ *         used to set both \code{emitterSamples} and \code{bsdfSamples} at
  *         the same time.}
  *     \parameter{emitterSamples}{\Integer}{Optional more fine-grained
  *        parameter: specifies the number of samples that should be generated
@@ -46,30 +46,30 @@ MTS_NAMESPACE_BEGIN
  *     \caption{
  *         \label{fig:integrator-direct}
  *         This plugin implements two different strategies for computing the
- *         direct illumination on surfaces. Both of them are dynamically 
+ *         direct illumination on surfaces. Both of them are dynamically
  *         combined then obtain a robust rendering algorithm.
  *     }
  * }
  *
  * This integrator implements a direct illumination technique that makes use
- * of \emph{multiple importance sampling}: for each pixel sample, the 
+ * of \emph{multiple importance sampling}: for each pixel sample, the
  * integrator generates a user-specifiable number of BSDF and emitter
  * samples and combines them using the power heuristic. Usually, the BSDF
- * sampling technique works very well on glossy objects but does badly 
+ * sampling technique works very well on glossy objects but does badly
  * everywhere else (\subfigref{integrator-direct}{a}), while the opposite
- * is true for the emitter sampling technique 
+ * is true for the emitter sampling technique
  * (\subfigref{integrator-direct}{b}). By combining these approaches, one
  * can obtain a rendering technique that works well in both cases
  * (\subfigref{integrator-direct}{c}).
  *
- * The number of samples spent on either technique is configurable, hence 
- * it is also possible to turn this plugin into an emitter sampling-only 
+ * The number of samples spent on either technique is configurable, hence
+ * it is also possible to turn this plugin into an emitter sampling-only
  * or BSDF sampling-only integrator.
  *
  * For best results, combine the direct illumination integrator with the
  * low-discrepancy sample generator (\code{ldsampler}). Generally, the number
- * of pixel samples of the sample generator can be kept relatively 
- * low (e.g. \code{sampleCount=4}), whereas the \code{shadingSamples} 
+ * of pixel samples of the sample generator can be kept relatively
+ * low (e.g. \code{sampleCount=4}), whereas the \code{shadingSamples}
  * parameter of this integrator should be increased until the variance in
  * the output renderings is acceptable.
  *
@@ -137,10 +137,10 @@ public:
 		Spectrum Li(0.0f);
 		Point2 sample;
 
-		/* Perform the first ray intersection (or ignore if the 
+		/* Perform the first ray intersection (or ignore if the
 		   intersection has already been provided). */
 		if (!rRec.rayIntersect(ray)) {
-			/* If no intersection could be found, possibly return 
+			/* If no intersection could be found, possibly return
 			   radiance from a background emitter */
 			if (rRec.type & RadianceQueryRecord::EEmittedRadiance)
 				return scene->evalEnvironment(ray);
@@ -162,7 +162,7 @@ public:
 			|| (m_strictNormals && dot(ray.d, its.geoFrame.n)
 				* Frame::cosTheta(its.wi) >= 0)) {
 			/* Only render the direct illumination component if
-			 * 
+			 *
 			 * 1. It was requested
 			 * 2. The surface has an associated BSDF (i.e. it isn't an index-
 			 *    matched medium transition -- this is not supported by 'direct')
@@ -198,7 +198,7 @@ public:
 		} else {
 			sample = rRec.nextSample2D(); sampleArray = &sample;
 		}
-	
+
 		DirectSamplingRecord dRec(its);
 		if (bsdf->getType() & BSDF::ESmooth) {
 			/* Only use direct illumination sampling when the surface's
@@ -208,7 +208,7 @@ public:
 				Spectrum value = scene->sampleEmitterDirect(dRec, sampleArray[i]);
 				if (!value.isZero()) {
 					const Emitter *emitter = static_cast<const Emitter *>(dRec.object);
-		
+
 					/* Allocate a record for querying the BSDF */
 					BSDFSamplingRecord bRec(its, its.toLocal(dRec.d));
 
@@ -221,7 +221,7 @@ public:
 						Float bsdfPdf = emitter->isOnSurface() ? bsdf->pdf(bRec) : 0;
 
 						/* Weight using the power heuristic */
-						const Float weight = miWeight(dRec.pdf * fracLum, 
+						const Float weight = miWeight(dRec.pdf * fracLum,
 								bsdfPdf * fracBSDF) * weightLum;
 
 						Li += value * bsdfVal * weight;
@@ -270,7 +270,7 @@ public:
 			} else {
 				/* Intersected nothing -- perhaps there is an environment map? */
 				const Emitter *env = scene->getEnvironmentEmitter();
-	
+
 				if (!env)
 					continue;
 
@@ -279,13 +279,13 @@ public:
 					continue;
 			}
 
-			/* Compute the prob. of generating that direction using the 
+			/* Compute the prob. of generating that direction using the
 			   implemented direct illumination sampling technique */
-			const Float lumPdf = (!(bRec.sampledType & BSDF::EDelta)) ? 
+			const Float lumPdf = (!(bRec.sampledType & BSDF::EDelta)) ?
 				scene->pdfEmitterDirect(dRec) : 0;
-	
+
 			/* Weight using the power heuristic */
-			const Float weight = miWeight(bsdfPdf * fracBSDF, 
+			const Float weight = miWeight(bsdfPdf * fracBSDF,
 				lumPdf * fracLum) * weightBSDF;
 
 			Li += value * bsdfVal * weight;

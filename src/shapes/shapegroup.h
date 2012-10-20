@@ -27,8 +27,8 @@ MTS_NAMESPACE_BEGIN
  * \brief "Fake" shape that groups sub-shapes into a
  * separate KD-tree.
  *
- * This shape doesn't actually generate any intersectable 
- * geometry on its own. Instead, the "instance" plugin must 
+ * This shape doesn't actually generate any intersectable
+ * geometry on its own. Instead, the "instance" plugin must
  * be used to create references to the geometry stored inside it.
  */
 class ShapeGroup : public Shape {
@@ -64,7 +64,7 @@ public:
 
 	/// Return the primitive count of the nested shapes
 	size_t getPrimitiveCount() const;
-	
+
 	/// Return the effective primitive count of this shape (always zero)
 	size_t getEffectivePrimitiveCount() const;
 

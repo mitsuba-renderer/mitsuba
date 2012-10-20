@@ -26,7 +26,7 @@
 
 class MethodModel : public QStringListModel {
 public:
-	MethodModel(QObject *parent, bool supportsSinglePass) 
+	MethodModel(QObject *parent, bool supportsSinglePass)
 		: QStringListModel(parent), m_supportsSinglePass(supportsSinglePass) {
 		QStringList tmp;
 		tmp << "Disable"
@@ -74,12 +74,12 @@ PreviewSettingsDialog::PreviewSettingsDialog(QWidget *parent, SceneContext *ctx,
 	ui->sRGBCheckBox->setCheckState(ctx->srgb ? Qt::Checked : Qt::Unchecked);
 	ui->diffuseSourcesBox->setCheckState(ctx->diffuseSources ? Qt::Checked : Qt::Unchecked);
 	ui->diffuseReceiversBox->setCheckState(ctx->diffuseReceivers ? Qt::Checked : Qt::Unchecked);
-	ui->previewMethodCombo->setModel(new MethodModel(this, 
+	ui->previewMethodCombo->setModel(new MethodModel(this,
 		cap->isSupported(RendererCapabilities::EGeometryShaders)));
 	ui->previewMethodCombo->setCurrentIndex(ctx->previewMethod);
 	ui->toneMappingMethodCombo->setCurrentIndex(ctx->toneMappingMethod);
 	m_ignoreEvent = false;
-	ui->exposureSlider->setValue((int) ((ctx->toneMappingMethod == EGamma 
+	ui->exposureSlider->setValue((int) ((ctx->toneMappingMethod == EGamma
 		? ctx->exposure : ctx->reinhardBurn)*100));
 	ui->keySlider->setValue((int) ((ctx->reinhardKey-REINHARD_MIN)/REINHARD_RANGE * 100));
 	ui->diffuseReceiversBox->setEnabled(ui->diffuseSourcesBox->isChecked());
@@ -184,7 +184,7 @@ void PreviewSettingsDialog::on_toneMappingMethodCombo_activated(int index) {
 		ui->exposureLabel->setText("Burn :");
 		ui->exposureSlider->setValue((int) (m_context->reinhardBurn*100));
 	} else {
-		ui->exposureLabel->setText("E&xposure : 2 ^");	
+		ui->exposureLabel->setText("E&xposure : 2 ^");
 		ui->exposureSlider->setValue((int) (m_context->exposure*100));
 	}
 

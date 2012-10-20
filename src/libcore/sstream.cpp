@@ -49,7 +49,7 @@ const char *inet_ntop(int af, const void *src, char *dst, socklen_t len) {
 		memset(&in, 0, sizeof(in));
 		in.sin_family = AF_INET;
 		memcpy(&in.sin_addr, src, sizeof(struct in_addr));
-		if (getnameinfo((struct sockaddr *)&in, 
+		if (getnameinfo((struct sockaddr *)&in,
 			sizeof(struct sockaddr_in), dst, len, NULL, 0, NI_NUMERICHOST) != 0)
 			return NULL;
 		return dst;
@@ -58,7 +58,7 @@ const char *inet_ntop(int af, const void *src, char *dst, socklen_t len) {
 		memset(&in, 0, sizeof(in));
 		in.sin6_family = AF_INET6;
 		memcpy(&in.sin6_addr, src, sizeof(struct in_addr6));
-		if (getnameinfo((struct sockaddr *)&in, 
+		if (getnameinfo((struct sockaddr *)&in,
 			sizeof(struct sockaddr_in6), dst, len, NULL, 0, NI_NUMERICHOST) != 0)
 			return NULL;
 		return dst;
@@ -69,7 +69,7 @@ const char *inet_ntop(int af, const void *src, char *dst, socklen_t len) {
 
 void *get_in_addr(struct sockaddr_storage *sa)
 {
-	if (sa->ss_family == AF_INET) 
+	if (sa->ss_family == AF_INET)
 		return &(((struct sockaddr_in*)sa)->sin_addr);
 	return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
@@ -83,10 +83,10 @@ SocketStream::SocketStream(socket_t socket)
 	socklen_t addrlen = sizeof(sockaddr);
 	char s[INET6_ADDRSTRLEN];
 
-	if (getpeername(m_socket, (struct sockaddr *) &sockaddr, &addrlen) == SOCKET_ERROR) 
+	if (getpeername(m_socket, (struct sockaddr *) &sockaddr, &addrlen) == SOCKET_ERROR)
 		handleError("getpeername");
 
-	if (inet_ntop(sockaddr.ss_family, get_in_addr(&sockaddr), s, sizeof(s)) == NULL) 
+	if (inet_ntop(sockaddr.ss_family, get_in_addr(&sockaddr), s, sizeof(s)) == NULL)
 		handleError("inet_ntop");
 
 	m_peer = s;
@@ -101,10 +101,10 @@ SocketStream::SocketStream(const std::string &host, int port)
 	memset(&hints, 0, sizeof(addrinfo));
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
-	snprintf(portName, sizeof(portName), "%i", port); 
+	snprintf(portName, sizeof(portName), "%i", port);
 
 	Log(EInfo, "Connecting to \"%s:%i\"", host.c_str(), port);
-	if ((rv = getaddrinfo(host.c_str(), portName, &hints, &servinfo)) != 0) 
+	if ((rv = getaddrinfo(host.c_str(), portName, &hints, &servinfo)) != 0)
 		Log(EError, "Error in getaddrinfo(): %s", gai_strerror(rv));
 
 	if (servinfo == NULL)
@@ -112,26 +112,26 @@ SocketStream::SocketStream(const std::string &host, int port)
 
 	m_socket = socket(servinfo->ai_family, servinfo->ai_socktype, servinfo->ai_protocol);
 	if (m_socket == INVALID_SOCKET) {
-		freeaddrinfo(servinfo);	
+		freeaddrinfo(servinfo);
 		handleError("socket");
 	}
 
 	if (connect(m_socket, servinfo->ai_addr, (socklen_t) servinfo->ai_addrlen) == SOCKET_ERROR) {
-		freeaddrinfo(servinfo);	
+		freeaddrinfo(servinfo);
 		handleError("connect");
 	}
 
-	freeaddrinfo(servinfo);	
-	
+	freeaddrinfo(servinfo);
+
 	setByteOrder(ENetworkByteOrder);
 	struct sockaddr_storage sockaddr;
 	socklen_t addrlen = sizeof(sockaddr);
 	char s[INET6_ADDRSTRLEN];
 
-	if (getpeername(m_socket, (struct sockaddr *) &sockaddr, &addrlen) == SOCKET_ERROR) 
+	if (getpeername(m_socket, (struct sockaddr *) &sockaddr, &addrlen) == SOCKET_ERROR)
 		handleError("getpeername");
 
-	if (inet_ntop(sockaddr.ss_family, get_in_addr(&sockaddr), s, sizeof(s)) == NULL) 
+	if (inet_ntop(sockaddr.ss_family, get_in_addr(&sockaddr), s, sizeof(s)) == NULL)
 		handleError("inet_ntop");
 
 #if defined(__OSX__)
@@ -240,7 +240,7 @@ void SocketStream::truncate(size_t size) {
 void SocketStream::flush() {
 	/* Ignore */
 }
-	
+
 void SocketStream::handleError(const std::string &cmd, ELogLevel level) {
 #ifndef WIN32
 	if (cmd.find("(") == std::string::npos)

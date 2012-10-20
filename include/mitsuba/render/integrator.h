@@ -28,16 +28,16 @@ MTS_NAMESPACE_BEGIN
 
 /**
  * \brief Abstract integrator base-class; does not make any assumptions on
- * how radiance is computed. 
+ * how radiance is computed.
  *
- * In Mitsuba, the different rendering techniques are collectively referred to as 
+ * In Mitsuba, the different rendering techniques are collectively referred to as
  * \a integrators, since they perform integration over a high-dimensional
  * space. Each integrator represents a specific approach for solving
  * the light transport equation---usually favored in certain scenarios, but
  * at the same time affected by its own set of intrinsic limitations.
- * Therefore, it is important to carefully select an integrator based on 
- * user-specified accuracy requirements and properties of the scene to be 
- * rendered. 
+ * Therefore, it is important to carefully select an integrator based on
+ * user-specified accuracy requirements and properties of the scene to be
+ * rendered.
  *
  * This is the base class of all integrators; it does not make any assumptions on
  * how radiance is computed, which allows for many different kinds of implementations
@@ -49,51 +49,51 @@ MTS_NAMESPACE_BEGIN
 class MTS_EXPORT_RENDER Integrator : public NetworkedObject {
 public:
 	/**
-	 * \brief Possibly perform a pre-process task. 
+	 * \brief Possibly perform a pre-process task.
 	 *
 	 * This function is called automatically before the main rendering process;
 	 * the default implementation does nothing.
 	 *
-	 * The last three parameters are resource IDs of the associated scene, 
-	 * sensor and sample generator, which have been made available to all 
+	 * The last three parameters are resource IDs of the associated scene,
+	 * sensor and sample generator, which have been made available to all
 	 * local and remote workers.i
 	 */
-	virtual bool preprocess(const Scene *scene, RenderQueue *queue, 
-		const RenderJob *job, int sceneResID, int sensorResID, 
+	virtual bool preprocess(const Scene *scene, RenderQueue *queue,
+		const RenderJob *job, int sceneResID, int sensorResID,
 		int samplerResID);
 
 	/**
-	 * \brief Render the scene as seen by the default sensor. 
+	 * \brief Render the scene as seen by the default sensor.
 	 *
-	 * Progress is tracked by sending status messages to a provided render queue. 
-	 * The parameter \c job is required to discern multiple render jobs occurring in 
-	 * parallel. The last three parameters are resource IDs of the associated 
-	 * scene, sensor and sample generator, which have been made available to 
+	 * Progress is tracked by sending status messages to a provided render queue.
+	 * The parameter \c job is required to discern multiple render jobs occurring in
+	 * parallel. The last three parameters are resource IDs of the associated
+	 * scene, sensor and sample generator, which have been made available to
 	 * all local and remote workers. Returns true upon successful completion.
 	 */
-	virtual bool render(Scene *scene, RenderQueue *queue, const RenderJob *job, 
+	virtual bool render(Scene *scene, RenderQueue *queue, const RenderJob *job,
 		int sceneResID, int sensorResID, int samplerResID) = 0;
 
 	/**
 	 * \brief Cancel a running render job
 	 *
-	 * This function can be called asynchronously to cancel a running render 
-	 * job. In this case, \ref render() will quit with a return value of 
+	 * This function can be called asynchronously to cancel a running render
+	 * job. In this case, \ref render() will quit with a return value of
 	 * \c false.
 	 */
 	virtual void cancel() = 0;
 
 	/**
-	 * \brief Possibly perform a post-process task. 
+	 * \brief Possibly perform a post-process task.
 	 *
 	 * This function is called automatically before the main rendering process;
 	 * the default implementation does nothing.
 	 *
-	 * The last three parameters are resource IDs of the associated scene, 
-	 * sensor and sample generator, which have been made available to all 
+	 * The last three parameters are resource IDs of the associated scene,
+	 * sensor and sample generator, which have been made available to all
 	 * local and remote workers.i
 	 */
-	virtual void postprocess(const Scene *scene, RenderQueue *queue, 
+	virtual void postprocess(const Scene *scene, RenderQueue *queue,
 		const RenderJob *job, int sceneResID, int sensorResID,
 		int samplerResID);
 
@@ -123,7 +123,7 @@ protected:
 	Integrator(const Properties &props);
 
 	/// Unserialize an integrator
-	Integrator(Stream *stream, InstanceManager *manager); 
+	Integrator(Stream *stream, InstanceManager *manager);
 
 	/// Virtual destructor
 	virtual ~Integrator() { }
@@ -164,12 +164,12 @@ public:
 		EDistance                 = 0x0080,
 
 		/*! \brief Store an opacity value, which is equal to 1 when a shape
-		   was intersected and 0 when the ray passes through empty space. 
+		   was intersected and 0 when the ray passes through empty space.
 		   When there is a participating medium, it can also take on fractional
 		   values. */
 		EOpacity                  = 0x0100,
 
-		/*! \brief A ray intersection may need to be performed. This can be set to 
+		/*! \brief A ray intersection may need to be performed. This can be set to
 		   zero if the caller has already provided the intersection */
 		EIntersection             = 0x0200,
 
@@ -177,7 +177,7 @@ public:
 		EVolumeRadiance           = EDirectMediumRadiance | EIndirectMediumRadiance,
 
 		/// Radiance query without emitted radiance, ray intersection required
-		ERadianceNoEmission       = ESubsurfaceRadiance | EDirectSurfaceRadiance 
+		ERadianceNoEmission       = ESubsurfaceRadiance | EDirectSurfaceRadiance
 			| EIndirectSurfaceRadiance | ECausticRadiance | EDirectMediumRadiance
 			| EIndirectMediumRadiance | EIntersection,
 
@@ -197,19 +197,19 @@ public:
 	};
 
 	/// Construct an invalid radiance query record
-	inline RadianceQueryRecord() 
+	inline RadianceQueryRecord()
 	 : type(0), scene(NULL), sampler(NULL), medium(NULL),
 	   depth(0), alpha(0), dist(-1), extra(0) {
 	}
 
 	/// Construct a radiance query record for the given scene and sampler
-	inline RadianceQueryRecord(const Scene *scene, Sampler *sampler) 
+	inline RadianceQueryRecord(const Scene *scene, Sampler *sampler)
 	 : type(0), scene(scene), sampler(sampler), medium(NULL),
 	   depth(0), alpha(0), dist(-1), extra(0) {
 	}
-	
+
 	/// Copy constructor
-	inline RadianceQueryRecord(const RadianceQueryRecord &rRec) 
+	inline RadianceQueryRecord(const RadianceQueryRecord &rRec)
 	 : type(rRec.type), scene(rRec.scene), sampler(rRec.sampler), medium(rRec.medium),
 	   depth(rRec.depth), alpha(rRec.alpha), dist(rRec.dist), extra(rRec.extra) {
 	}
@@ -255,7 +255,7 @@ public:
 	 * 3. sets the alpha value (if \c EAlpha is set in \c type)
 	 * 4. sets the distance value (if \c EDistance is set in \c type)
 	 * 5. clears the \c EIntersection flag in \c type
-	 * 
+	 *
 	 * \return \c true if there is a valid intersection.
 	 */
 	inline bool rayIntersect(const RayDifferential &ray);
@@ -294,13 +294,13 @@ public:
 	Float alpha;
 
 	/**
-	 * Ray distance to the first surface interaction 
+	 * Ray distance to the first surface interaction
 	 * (if requested by the query type EDistance) (*)
 	 */
 	Float dist;
 
 	/**
-	 * Internal flag, which can be used to pass additional information 
+	 * Internal flag, which can be used to pass additional information
 	 * amonst recursive calls inside an integrator. The use
 	 * is dependent on the particular integrator implementation. (*)
 	 */
@@ -333,8 +333,8 @@ public:
 	 * \param its
 	 *     Describes the surface location where the irradiance is to be computed
 	 * \param medium
-	 *     Const pointer to the medium that encloses the ray 
-	 *     <tt>(its.p, its.shFrame.n)</tt>. A value of \c NULL corresponds 
+	 *     Const pointer to the medium that encloses the ray
+	 *     <tt>(its.p, its.shFrame.n)</tt>. A value of \c NULL corresponds
 	 *     to vacuum.
 	 * \param sampler
 	 *     A pointer to a sample generator
@@ -344,26 +344,26 @@ public:
 	 *     Include indirect illumination in the estimate?
 	 */
 	virtual Spectrum E(const Scene *scene, const Intersection &its,
-		const Medium *medium, Sampler *sampler, int nSamples, 
-		bool includeIndirect) const; 
+		const Medium *medium, Sampler *sampler, int nSamples,
+		bool includeIndirect) const;
 
 	/**
 	 * \brief Perform the main rendering task
 	 *
-	 * The work is automatically parallelized to multiple cores and 
-	 * remote machines. The default implementation uniformly generates 
-	 * samples on the sensor aperture and image plane as specified by 
-	 * the used sampler. The average of the estimated radiance along the 
-	 * associated rays in a pixel region is then taken as an approximation 
-	 * of that pixel's radiance value. For adaptive strategies, have a look at 
+	 * The work is automatically parallelized to multiple cores and
+	 * remote machines. The default implementation uniformly generates
+	 * samples on the sensor aperture and image plane as specified by
+	 * the used sampler. The average of the estimated radiance along the
+	 * associated rays in a pixel region is then taken as an approximation
+	 * of that pixel's radiance value. For adaptive strategies, have a look at
 	 * the \c adaptive plugin, which is an extension of this class.
 	 */
-	bool render(Scene *scene, RenderQueue *queue, const RenderJob *job, 
+	bool render(Scene *scene, RenderQueue *queue, const RenderJob *job,
 		int sceneResID, int sensorResID, int samplerResID);
 
 	/**
 	 * This can be called asynchronously to cancel a running render job.
-	 * In this case, <tt>render()</tt> will quit with a return value of 
+	 * In this case, <tt>render()</tt> will quit with a return value of
 	 * <tt>false</tt>.
 	 */
 	void cancel();
@@ -380,25 +380,25 @@ public:
 	 * \param sampler
 	 *    Pointer to the sampler used to render the image
 	 * \param block
-	 *    Pointer to the image block to be filled 
+	 *    Pointer to the image block to be filled
 	 * \param points
-	 *    Specifies the traversal order, i.e. using a space-filling 
+	 *    Specifies the traversal order, i.e. using a space-filling
 	 *    curve. To limit the size of the array, it is currently assumed
 	 *    that the block size is smaller than 256x256
 	 * \param stop
 	 *    Reference to a boolean, which will be set to true when
 	 *    the user has requested that the program be stopped
 	 */
-	virtual void renderBlock(const Scene *scene, const Sensor *sensor, 
+	virtual void renderBlock(const Scene *scene, const Sensor *sensor,
 		Sampler *sampler, ImageBlock *block, const bool &stop,
 		const std::vector< TPoint2<uint8_t> > &points) const;
 
 	/**
 	 * <tt>NetworkedObject</tt> implementation:
-	 * When a parallel rendering process starts, the integrator is 
-	 * given the opportunity to attach globally shared resources to 
-	 * the process. This is useful for distributing heavy data 
-	 * structures (e.g. photon maps) without having to re-transmit 
+	 * When a parallel rendering process starts, the integrator is
+	 * given the opportunity to attach globally shared resources to
+	 * the process. This is useful for distributing heavy data
+	 * structures (e.g. photon maps) without having to re-transmit
 	 * them every time an image is rendered.
 	 */
 	virtual void bindUsedResources(ParallelProcess *proc) const;
@@ -408,8 +408,8 @@ public:
 	 * Called once just before this integrator instance is asked
 	 * to process an image block. In comparison to <tt>preprocess()</tt>
 	 * this will be executed on _every_ instance of this class, which is
-	 * useful for connecting to globally shared resources (photon maps, 
-	 * irradiance caches, ..) after having been unserialized on a 
+	 * useful for connecting to globally shared resources (photon maps,
+	 * irradiance caches, ..) after having been unserialized on a
 	 * remote machine. A list of resources bound to the associated
 	 * parallel process is given as a parameter.
 	 */

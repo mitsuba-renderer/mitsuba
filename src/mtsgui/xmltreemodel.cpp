@@ -23,7 +23,7 @@
 // ====================================================================
 
 TreeItem::TreeItem(const QString &name, const QString &readableName,
-				   const QVariant &data, const QVariant &defaultValue, 
+				   const QVariant &data, const QVariant &defaultValue,
 				   TreeItem *parent, int importance) {
 	m_parentItem = parent;
 	m_itemName = name;
@@ -97,7 +97,7 @@ bool TreeItem::setData(int column, const QVariant &value) {
 	m_itemValue = value;
 	return true;
 }
-	
+
 void TreeItem::setProperty(const std::string &name, const Properties &props) {
 	QVariant data;
 	switch (props.getType(name)) {
@@ -114,7 +114,7 @@ void TreeItem::setProperty(const std::string &name, const Properties &props) {
 			data = QVariant(props.getString(name).c_str());
 			break;
 		default:
-			SLog(EError, "TreeItem::getProperties(): \"%s\": Unable to handle elements of type %i", 
+			SLog(EError, "TreeItem::getProperties(): \"%s\": Unable to handle elements of type %i",
 				name.c_str(), props.getType(name));
 	}
 
@@ -135,7 +135,7 @@ void TreeItem::setProperties(const Properties &props) {
 	props.putPropertyNames(propertyNames);
 
 	for (std::vector<std::string>::const_iterator it = propertyNames.begin();
-		it != propertyNames.end(); ++it) 
+		it != propertyNames.end(); ++it)
 		setProperty(*it, props);
 }
 
@@ -147,7 +147,7 @@ void TreeItem::putProperties(Properties &props) const {
 
 		if (value == item->m_itemDefault)
 			continue;
-		
+
 		switch (value.type()) {
 			case QVariant::Int:
 				props.setInteger(name, value.toInt());
@@ -162,7 +162,7 @@ void TreeItem::putProperties(Properties &props) const {
 				props.setBoolean(name, value.toBool());
 				break;
 			default:
-				SLog(EError, "TreeItem::putProperties(): \"%s\": Unable to handle elements of type %i", 
+				SLog(EError, "TreeItem::putProperties(): \"%s\": Unable to handle elements of type %i",
 					name.c_str(), value.type());
 		}
 	}
@@ -185,7 +185,7 @@ TreeItem *XMLTreeModel::registerClass(const QString &_className, const QString &
 	if (className == "")
 		return NULL;
 
-	TreeItem *parent = new TreeItem(className, readableName, 
+	TreeItem *parent = new TreeItem(className, readableName,
 		QVariant(), QVariant(), m_rootItem);
 	populate(className, parent);
 
@@ -226,7 +226,7 @@ void XMLTreeModel::setProperties(TreeItem *item, const Properties &props) {
 	item->setProperties(props);
 	int childCount = item->childCount();
 	if (childCount > 0) {
-		emit dataChanged(createIndex(0, 0, item->child(0)), 
+		emit dataChanged(createIndex(0, 0, item->child(0)),
 			createIndex(item->row(), 1, item->child(childCount-1)));
 	}
 }
@@ -291,7 +291,7 @@ void XMLTreeModel::populate(const QString &className, TreeItem *parent) {
 		if (importanceValue != "")
 			importance = importanceValue.toInt();
 
-		TreeItem *item = new TreeItem(name, readableName, 
+		TreeItem *item = new TreeItem(name, readableName,
 			variantValue, variantValue, parent, importance);
 
 		item->setToolTip(toolTip);

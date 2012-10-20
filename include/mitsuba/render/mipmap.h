@@ -50,7 +50,7 @@ namespace stats {
 	extern MTS_EXPORT_RENDER StatsCounter filteredLookups;
 };
 
-/// Specifies the desired antialiasing filter 
+/// Specifies the desired antialiasing filter
 enum EMIPFilterType {
 	/// No filtering (i.e. nearest neighbor lookups)
 	ENearest = 0,
@@ -60,23 +60,23 @@ enum EMIPFilterType {
 	EEWA = 2,
 };
 
-/** 
+/**
  * \brief MIP map class with support for elliptically weighted averages
  *
  * This class stores a precomputed collection of images that provide
  * a hierarchy of resolution levels of an input image. These are used
- * to prefilter texture lookups at render time, reducing aliasing 
- * artifacts. The implementation here supports non-power-of two images, 
- * different data types and quantizations thereof, as well as the 
- * computation of elliptically weighted averages that account for the 
+ * to prefilter texture lookups at render time, reducing aliasing
+ * artifacts. The implementation here supports non-power-of two images,
+ * different data types and quantizations thereof, as well as the
+ * computation of elliptically weighted averages that account for the
  * anisotropy of texture lookups in UV space.
  *
  * Generating good mip maps is costly, and therefore this class provides
  * the means to cache them on disk if desired.
  *
  * \tparam Value
- *    This class can be parameterized to yield MIP map classes for 
- *    RGB values, color spectra, or just plain floats. This parameter 
+ *    This class can be parameterized to yield MIP map classes for
+ *    RGB values, color spectra, or just plain floats. This parameter
  *    specifies the underlying type.
  *
  * \tparam QuantizedValue
@@ -95,7 +95,7 @@ public:
 	/// Use a non-blocked array to store MIP map data
 	typedef LinearArray<QuantizedValue> Array2DType;
 #endif
-	
+
 	/// Shortcut
 	typedef ReconstructionFilter::EBoundaryCondition EBoundaryCondition;
 
@@ -103,28 +103,28 @@ public:
 	 * \brief Construct a new MIP map from the given bitmap
 	 *
 	 * \param bitmap
-	 *    An arbitrary input bitmap that will (if necessary) be 
+	 *    An arbitrary input bitmap that will (if necessary) be
 	 *    transformed into a representation that is compatible
 	 *    with the desired MIP map pixel format.
 	 *
-	 * \ref pixelFormat 
-	 *    A pixel format that is compatible with the 
+	 * \ref pixelFormat
+	 *    A pixel format that is compatible with the
 	 *    \c Value and \c QuantizedValue types
 	 *
-	 * \ref componentFormat 
-	 *    A component format that is compatible with the 
+	 * \ref componentFormat
+	 *    A component format that is compatible with the
 	 *    \c Value type.
 	 *
 	 * \param rfilter
-	 *    An image reconstruction filter that is used to create 
+	 *    An image reconstruction filter that is used to create
 	 *    progressively lower-resolution versions of the input image.
 	 *
 	 * \param bcu
-	 *    Specifies how to handle texture lookups outside of the 
+	 *    Specifies how to handle texture lookups outside of the
 	 *    horizontal range [0, 1]
 	 *
 	 * \param bcv
-	 *    Specifies how to handle texture lookups outside of the 
+	 *    Specifies how to handle texture lookups outside of the
 	 *    vertical range [0, 1]
 	 *
 	 * \param filterType
@@ -132,13 +132,13 @@ public:
 	 *    the default is to use elliptically weighted averages.
 	 *
 	 * \param maxAnisotropy
-	 *    Denotes the highest tolerated anisotropy of the lookup 
-	 *    kernel. This is necessary to bound the computational 
+	 *    Denotes the highest tolerated anisotropy of the lookup
+	 *    kernel. This is necessary to bound the computational
 	 *    cost of filtered lookups.
 	 *
 	 * \param cacheFilename
-	 *    Optional filename of a memory-mapped cache file that is used to keep 
-	 *    MIP map data out of core, and to avoid having to load and 
+	 *    Optional filename of a memory-mapped cache file that is used to keep
+	 *    MIP map data out of core, and to avoid having to load and
 	 *    downsample textures over and over again in subsequent Mitsuba runs.
 	 *
 	 * \param maxValue
@@ -150,19 +150,19 @@ public:
 	 *    this parameter specifies what conversion method should be used.
 	 *    See \ref Spectrum::EConversionIntent for further details.
 	 */
-	TMIPMap(Bitmap *bitmap_, 
+	TMIPMap(Bitmap *bitmap_,
 			Bitmap::EPixelFormat pixelFormat,
 			Bitmap::EComponentFormat componentFormat,
 			const ReconstructionFilter *rfilter,
 			EBoundaryCondition bcu = ReconstructionFilter::ERepeat,
 			EBoundaryCondition bcv = ReconstructionFilter::ERepeat,
-			EMIPFilterType filterType = EEWA, 
+			EMIPFilterType filterType = EEWA,
 			Float maxAnisotropy = 20.0f,
 			fs::path cacheFilename = fs::path(),
 			uint64_t timestamp = 0,
 			Float maxValue = 1.0f,
-			Spectrum::EConversionIntent intent = Spectrum::EReflectance) 
-		: m_pixelFormat(pixelFormat), m_bcu(bcu), m_bcv(bcv), m_filterType(filterType), 
+			Spectrum::EConversionIntent intent = Spectrum::EReflectance)
+		: m_pixelFormat(pixelFormat), m_bcu(bcu), m_bcv(bcv), m_filterType(filterType),
 		  m_weightLut(NULL), m_maxAnisotropy(maxAnisotropy) {
 
 		/* Keep track of time */
@@ -212,9 +212,9 @@ public:
 			m_pyramid[0].alloc(bitmap_->getSize());
 		}
 
-		/* Initialize the first mip map level and extract some general 
+		/* Initialize the first mip map level and extract some general
 		   information (i.e. the minimum, maximum, and average texture value) */
-		ref<Bitmap> bitmap = bitmap_->expand()->convert(pixelFormat, 
+		ref<Bitmap> bitmap = bitmap_->expand()->convert(pixelFormat,
 			componentFormat, 1.0f, 1.0f, intent);
 
 		m_pyramid[0].cleanup();
@@ -224,7 +224,7 @@ public:
 			Log(EWarn, "The texture contains negative pixel values! These will be clamped!");
 			Value *value = (Value *) bitmap->getData();
 
-			for (size_t i=0, count=bitmap->getPixelCount(); i<count; ++i) 
+			for (size_t i=0, count=bitmap->getPixelCount(); i<count; ++i)
 				(*value++).clampNegative();
 
 			m_pyramid[0].init((Value *) bitmap->getData(), m_minimum, m_maximum, m_average);
@@ -261,7 +261,7 @@ public:
 		}
 
 		if (mmapData) {
-			/* If a cache file was requested, create a header that 
+			/* If a cache file was requested, create a header that
 			   describes the current MIP map configuration */
 			MIPMapHeader header;
 			memcpy(header.identifier, "MIP", 3);
@@ -297,23 +297,23 @@ public:
 	 * \brief Construct a new MIP map from a previously created cache file
 	 *
 	 * \param cacheFilename
-	 *    Filename of a memory-mapped cache file that is used to keep 
-	 *    MIP map data out of core, and to avoid having to load and 
+	 *    Filename of a memory-mapped cache file that is used to keep
+	 *    MIP map data out of core, and to avoid having to load and
 	 *    downsample textures over and over again in subsequent Mitsuba runs.
 	 *
 	 * \param maxAnisotropy
-	 *    Denotes the highest tolerated anisotropy of the lookup 
-	 *    kernel. This is necessary to bound the computational 
+	 *    Denotes the highest tolerated anisotropy of the lookup
+	 *    kernel. This is necessary to bound the computational
 	 *    cost of filtered lookups. This parameter is independent of the
 	 *    cache file that was previously created.
 	 */
-	TMIPMap(fs::path cacheFilename, Float maxAnisotropy = 20.0f) 
+	TMIPMap(fs::path cacheFilename, Float maxAnisotropy = 20.0f)
 			: m_weightLut(NULL), m_maxAnisotropy(maxAnisotropy) {
 		m_mmap = new MemoryMappedFile(cacheFilename);
 		uint8_t *mmapPtr = (uint8_t *) m_mmap->getData();
 		Log(EInfo, "Mapped MIP map cache file \"%s\" into memory (%s).", cacheFilename.c_str(),
 			memString(m_mmap->getSize()).c_str());
-		
+
 		stats::mipStorage += m_mmap->getSize();
 
 		/* Load the file header, and run some santity checks */
@@ -377,7 +377,7 @@ public:
 	}
 
 	/**
-	 * \brief Check if a MIP map cache is up-to-date and matches the 
+	 * \brief Check if a MIP map cache is up-to-date and matches the
 	 * desired configuration
 	 *
 	 * \param path
@@ -394,7 +394,7 @@ public:
 	 * \return \c true if the texture file is good for use
 	 */
 	static bool validateCacheFile(const fs::path &path, uint64_t timestamp,
-			Bitmap::EPixelFormat pixelFormat, EBoundaryCondition bcu, 
+			Bitmap::EPixelFormat pixelFormat, EBoundaryCondition bcu,
 			EBoundaryCondition bcv, EMIPFilterType filterType, Float gamma) {
 		fs::ifstream is(path);
 		if (!is.good())
@@ -405,14 +405,14 @@ public:
 		if (is.fail())
 			return false;
 
-		if (header.identifier[0] != 'M' || header.identifier[1] != 'I' 
-			|| header.identifier[2] != 'P' || header.version != MTS_MIPMAP_CACHE_VERSION 
-			|| header.timestamp != timestamp 
+		if (header.identifier[0] != 'M' || header.identifier[1] != 'I'
+			|| header.identifier[2] != 'P' || header.version != MTS_MIPMAP_CACHE_VERSION
+			|| header.timestamp != timestamp
 			|| header.bcu != (uint8_t) bcu || header.bcv != (uint8_t) bcv
 			|| header.pixelFormat != (uint8_t) pixelFormat
 			|| header.filterType != (uint8_t) filterType)
 			return false;
-			
+
 		if (gamma != 0 && (float) gamma != header.gamma)
 			return false;
 
@@ -422,7 +422,7 @@ public:
 			padding = MTS_MIPMAP_CACHE_ALIGNMENT - padding;
 
 		Vector2i size(header.width, header.height);
-		size_t expectedFileSize = sizeof(MIPMapHeader) + padding 
+		size_t expectedFileSize = sizeof(MIPMapHeader) + padding
 			+ Array2DType::bufferSize(size);
 
 		if (filterType != ENearest) {
@@ -512,11 +512,11 @@ public:
 						x = 2*size.x - x - 1;
 					break;
 				case ReconstructionFilter::EZero:
-					// Assume that the input function is zero 
+					// Assume that the input function is zero
 					// outside of the defined domain
 					return Value(0.0f);
 				case ReconstructionFilter::EOne:
-					// Assume that the input function is equal 
+					// Assume that the input function is equal
 					// to one outside of the defined domain
 					return Value(1.0f);
 			}
@@ -540,16 +540,16 @@ public:
 						y = 2*size.y - y - 1;
 					break;
 				case ReconstructionFilter::EZero:
-					// Assume that the input function is zero 
+					// Assume that the input function is zero
 					// outside of the defined domain
 					return Value(0.0f);
 				case ReconstructionFilter::EOne:
-					// Assume that the input function is equal 
+					// Assume that the input function is equal
 					// to one outside of the defined domain
 					return Value(1.0f);
 			}
 		}
-	
+
 		return Value(m_pyramid[level](x, y));
 	}
 
@@ -596,7 +596,7 @@ public:
 		Float du0 = d0.x * size.x, dv0 = d0.y * size.y,
 			  du1 = d1.x * size.x, dv1 = d1.y * size.y;
 
-		/* Turn the texture-space Jacobian into the coefficients of an 
+		/* Turn the texture-space Jacobian into the coefficients of an
 		   implicitly defined ellipse. */
 		Float A = dv0*dv0 + dv1*dv1,
 		      B = -2.0f * (du0*dv0 + du1*dv1),
@@ -633,13 +633,13 @@ public:
 				minorRadius = majorRadius / m_maxAnisotropy;
 
 				/* We need to find the coefficients of the adjusted ellipse, which
-				   unfortunately involves expensive trig and arctrig functions. 
+				   unfortunately involves expensive trig and arctrig functions.
 				   Fortunately, this is somewhat of a corner case and won't
 				   happen overly often in practice. */
 				Float theta = 0.5f * std::atan(B / (A-C)), sinTheta, cosTheta;
 				math::sincos(theta, &sinTheta, &cosTheta);
 
-				Float a2 = majorRadius*majorRadius, 
+				Float a2 = majorRadius*majorRadius,
 				      b2 = minorRadius*minorRadius,
 				      sinTheta2 = sinTheta*sinTheta,
 				      cosTheta2 = cosTheta*cosTheta,
@@ -649,7 +649,7 @@ public:
 				B = (a2-b2) * sin2Theta;
 				C = a2*sinTheta2 + b2*cosTheta2;
 				F = a2*b2;
-	
+
 				++stats::clampedAnisotropy;
 			}
 			stats::clampedAnisotropy.incrementBase();
@@ -731,7 +731,7 @@ protected:
 
 		/* Convert to fractional pixel coordinates on the specified level */
 		const Vector2i &size = m_pyramid[level].getSize();
-		Float u = uv.x * size.x - 0.5f; 
+		Float u = uv.x * size.x - 0.5f;
 		Float v = uv.y * size.y - 0.5f;
 
 		/* Do the same to the ellipse coefficients */
@@ -806,7 +806,7 @@ private:
 };
 
 template <typename Value, typename QuantizedValue>
-	Class *TMIPMap<Value, QuantizedValue>::m_theClass 
+	Class *TMIPMap<Value, QuantizedValue>::m_theClass
 		= new Class("MIPMap", false, "Object");
 
 template <typename Value, typename QuantizedValue>

@@ -51,7 +51,7 @@ class MTS_EXPORT_CORE RemoteWorker : public Worker {
 	friend class RemoteWorkerReader;
 public:
 	/**
-	 * \brief Construct a new remote worker with the given name and 
+	 * \brief Construct a new remote worker with the given name and
 	 * communication stream
 	 */
 	RemoteWorker(const std::string &name, Stream *stream);
@@ -68,7 +68,7 @@ protected:
 	virtual void clear();
 	virtual void signalResourceExpiration(int id);
 	virtual void signalProcessCancellation(int id);
-	virtual void signalProcessTermination(int id);	
+	virtual void signalProcessTermination(int id);
 	virtual void start(Scheduler *scheduler, int workerIndex, int coreOffset);
 	void flush();
 
@@ -95,7 +95,7 @@ protected:
 
 /**
  * \brief Communication helper thread required by \ref RemoteWorker.
- * 
+ *
  * Constantly waits for finished work units sent by the processing node.
  */
 class MTS_EXPORT_CORE RemoteWorkerReader : public Thread {
@@ -136,12 +136,12 @@ public:
 	 * \param backend   The responsible server-side communication backend
 	 * \param proc      Work processor instance for use with this process
 	 */
-	RemoteProcess(int id, ELogLevel logLevel, 
+	RemoteProcess(int id, ELogLevel logLevel,
 		StreamBackend *backend, WorkProcessor *proc);
 
 	/* ParallelProcess interface implementation */
 	EStatus generateWork(WorkUnit *unit, int worker);
-	void processResult(const WorkResult *result,	
+	void processResult(const WorkResult *result,
 		bool cancelled);
 	ref<WorkProcessor> createWorkProcessor() const;
 	void handleCancellation();
@@ -189,7 +189,7 @@ private:
 /**
  * \brief Network processing communication backend
  *
- * Attaches to the end of a stream, accepts work units and forwards 
+ * Attaches to the end of a stream, accepts work units and forwards
  * them to the local scheduler. Can be used to create network processing nodes.
  *
  * \ingroup libcore
@@ -229,7 +229,7 @@ public:
 	 * \param detach
 	 *    Should the associated thread be joinable or detach instead?
 	 */
-	StreamBackend(const std::string &name, Scheduler *scheduler, 
+	StreamBackend(const std::string &name, Scheduler *scheduler,
 		const std::string &nodeName, Stream *stream, bool detach);
 
 	MTS_DECLARE_CLASS()

@@ -26,15 +26,15 @@ MTS_NAMESPACE_BEGIN
  * \order{6}
  * \icon{bsdf_conductor}
  * \parameters{
- *     \parameter{material}{\String}{Name of a material preset, see 
+ *     \parameter{material}{\String}{Name of a material preset, see
  *           \tblref{conductor-iors}.\!\default{\texttt{Cu} / copper}}
- *     \parameter{eta}{\Spectrum}{Real part of the material's index 
+ *     \parameter{eta}{\Spectrum}{Real part of the material's index
  *           of refraction \default{based on the value of \texttt{material}}}
- *     \parameter{k}{\Spectrum}{Imaginary part of the material's index of 
+ *     \parameter{k}{\Spectrum}{Imaginary part of the material's index of
  *             refraction, also known as absorption coefficient.
  *             \default{based on the value of \texttt{material}}}
  *     \parameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
- *         factor that can be used to modulate the specular reflection component. Note 
+ *         factor that can be used to modulate the specular reflection component. Note
  *         that for physical realism, this parameter should never be touched. \default{1.0}}
  * }
  * \renderings{
@@ -44,41 +44,41 @@ MTS_NAMESPACE_BEGIN
  *     \rendering{Measured gold material (\lstref{conductor-gold})}
  *         {bsdf_conductor_gold.jpg}
  * }
- * 
- * This plugin implements a perfectly smooth interface to a conducting material, 
- * such as a metal. For a similar model that instead describes a rough surface 
- * microstructure, take a look at the separately available 
+ *
+ * This plugin implements a perfectly smooth interface to a conducting material,
+ * such as a metal. For a similar model that instead describes a rough surface
+ * microstructure, take a look at the separately available
  * \pluginref{roughconductor} plugin.
 
- * In contrast to dielectric materials, conductors do not transmit 
+ * In contrast to dielectric materials, conductors do not transmit
  * any light. Their index of refraction is complex-valued and tends to undergo
- * considerable changes throughout the visible color spectrum. 
- * 
- * To facilitate the tedious task of specifying spectrally-varying index of 
- * refraction information, Mitsuba ships with a set of measured data for  
- * several materials, where visible-spectrum information was publicly 
+ * considerable changes throughout the visible color spectrum.
+ *
+ * To facilitate the tedious task of specifying spectrally-varying index of
+ * refraction information, Mitsuba ships with a set of measured data for
+ * several materials, where visible-spectrum information was publicly
  * available\footnote{
- *   These index of refraction values are identical to the data distributed 
+ *   These index of refraction values are identical to the data distributed
  *   with PBRT. They are originally from the Luxpop database
- *   (\url{www.luxpop.com}) and are based on data by Palik et al. 
- *   \cite{Palik1998Handbook} and measurements of atomic scattering factors 
- *   made by the Center For X-Ray Optics (CXRO) at Berkeley and the 
+ *   (\url{www.luxpop.com}) and are based on data by Palik et al.
+ *   \cite{Palik1998Handbook} and measurements of atomic scattering factors
+ *   made by the Center For X-Ray Optics (CXRO) at Berkeley and the
  *   Lawrence Livermore National Laboratory (LLNL).
- * }. 
- * 
- * Note that \tblref{conductor-iors} also includes several popular optical 
- * coatings, which are not actually conductors. These materials can also 
- * be used with this plugin, though note that the plugin will ignore any 
+ * }.
+ *
+ * Note that \tblref{conductor-iors} also includes several popular optical
+ * coatings, which are not actually conductors. These materials can also
+ * be used with this plugin, though note that the plugin will ignore any
  * refraction component that the actual material might have had.
  *
- * When using this plugin, you should ideally compile Mitsuba with support for 
- * spectral rendering to get the most accurate results. While it also works 
+ * When using this plugin, you should ideally compile Mitsuba with support for
+ * spectral rendering to get the most accurate results. While it also works
  * in RGB mode, the computations will be more approximate in nature.
- * Also note that this material is one-sided---that is, observed from the 
- * back side, it will be completely black. If this is undesirable, 
+ * Also note that this material is one-sided---that is, observed from the
+ * back side, it will be completely black. If this is undesirable,
  * consider using the \pluginref{twosided} BRDF adapter plugin.\vspace{4mm}
  *
- * \begin{xml}[caption=A material configuration for a smooth conductor with 
+ * \begin{xml}[caption=A material configuration for a smooth conductor with
  *    measured gold data, label=lst:conductor-gold]
  * <shape type="...">
  *     <bsdf type="conductor">
@@ -87,9 +87,9 @@ MTS_NAMESPACE_BEGIN
  * <shape>
  * \end{xml}
  * \vspace{5mm}
- * It is also possible to load spectrally varying index of refraction data from 
+ * It is also possible to load spectrally varying index of refraction data from
  * two external files containing the real and imaginary components,
- * respectively (see \secref{format-spectra} for details on the file 
+ * respectively (see \secref{format-spectra} for details on the file
  * format):
  * \begin{xml}[caption=Rendering a smooth conductor with custom data]
  * <shape type="...">
@@ -134,10 +134,10 @@ MTS_NAMESPACE_BEGIN
  *     \label{tbl:conductor-iors}
  *      This table lists all supported materials that can be passed into the
  *      \pluginref{conductor} and \pluginref{roughconductor} plugins. Note that
- *      some of them are not actually conductors---this is not a problem, 
+ *      some of them are not actually conductors---this is not a problem,
  *      they can be used regardless (though only the reflection component and
- *      no transmission will be simulated). In most cases, there are 
- *      multiple entries for each material, which represent measurements by 
+ *      no transmission will be simulated). In most cases, there are
+ *      multiple entries for each material, which represent measurements by
  *      different authors.
  * }
  * \end{table}
@@ -161,7 +161,7 @@ public:
 		m_k = props.getSpectrum("k", materialK);
 	}
 
-	SmoothConductor(Stream *stream, InstanceManager *manager) 
+	SmoothConductor(Stream *stream, InstanceManager *manager)
 			: BSDF(stream, manager) {
 		m_specularReflectance = static_cast<Texture *>(manager->getInstance(stream));
 		m_eta = Spectrum(stream);
@@ -174,8 +174,8 @@ public:
 		/* Verify the input parameters and fix them if necessary */
 		m_specularReflectance = ensureEnergyConservation(
 			m_specularReflectance, "specularReflectance", 1.0f);
-		
-		m_usesRayDifferentials = 
+
+		m_usesRayDifferentials =
 			m_specularReflectance->usesRayDifferentials();
 
 		m_components.clear();
@@ -240,7 +240,7 @@ public:
 	Spectrum sample(BSDFSamplingRecord &bRec, const Point2 &sample) const {
 		bool sampleReflection   = (bRec.typeMask & EDeltaReflection)
 				&& (bRec.component == -1 || bRec.component == 0);
-		
+
 		if (!sampleReflection || Frame::cosTheta(bRec.wi) <= 0)
 			return Spectrum(0.0f);
 
@@ -256,7 +256,7 @@ public:
 	Spectrum sample(BSDFSamplingRecord &bRec, Float &pdf, const Point2 &sample) const {
 		bool sampleReflection   = (bRec.typeMask & EDeltaReflection)
 				&& (bRec.component == -1 || bRec.component == 0);
-		
+
 		if (!sampleReflection || Frame::cosTheta(bRec.wi) <= 0)
 			return Spectrum(0.0f);
 
@@ -285,7 +285,7 @@ public:
 		return oss.str();
 	}
 
-	Shader *createShader(Renderer *renderer) const; 
+	Shader *createShader(Renderer *renderer) const;
 
 	MTS_DECLARE_CLASS()
 private:
@@ -295,7 +295,7 @@ private:
 };
 
 /* Smooth conductor shader -- it is really hopeless to visualize
-   this material in the VPL renderer, so let's try to do at least 
+   this material in the VPL renderer, so let's try to do at least
    something that suggests the presence of a specularly-reflecting
    conductor.
 
@@ -305,7 +305,7 @@ private:
 class SmoothConductorShader : public Shader {
 public:
 	SmoothConductorShader(Renderer *renderer, const Texture *specularReflectance,
-			const Spectrum &eta, const Spectrum &k) : Shader(renderer, EBSDFShader), 
+			const Spectrum &eta, const Spectrum &k) : Shader(renderer, EBSDFShader),
 			m_specularReflectance(specularReflectance) {
 		m_specularReflectanceShader = renderer->registerShaderForResource(m_specularReflectance.get());
 
@@ -385,7 +385,7 @@ private:
 	Float m_alpha;
 };
 
-Shader *SmoothConductor::createShader(Renderer *renderer) const { 
+Shader *SmoothConductor::createShader(Renderer *renderer) const {
 	return new SmoothConductorShader(renderer,
 		m_specularReflectance.get(), m_eta, m_k);
 }

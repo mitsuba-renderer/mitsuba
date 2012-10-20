@@ -21,9 +21,9 @@
 
 MTS_NAMESPACE_BEGIN
 
-static StatsCounter statsAccepted("Multi-chain perturbation", 
+static StatsCounter statsAccepted("Multi-chain perturbation",
 		"Acceptance rate", EPercentage);
-static StatsCounter statsGenerated("Multi-chain perturbation", 
+static StatsCounter statsGenerated("Multi-chain perturbation",
 		"Successful generation rate", EPercentage);
 
 MultiChainPerturbation::MultiChainPerturbation(const Scene *scene, Sampler *sampler,
@@ -51,11 +51,11 @@ MultiChainPerturbation::~MultiChainPerturbation() { }
 Mutator::EMutationType MultiChainPerturbation::getType() const {
 	return EMultiChainPerturbation;
 }
-	
+
 Float MultiChainPerturbation::suitability(const Path &path) const {
 	int k = path.length(), m = k - 1, l = m-1, nChains = 1;
 
-	while (l-1 >= 0 && (!path.vertex(l)->isConnectable() 
+	while (l-1 >= 0 && (!path.vertex(l)->isConnectable()
 			|| !path.vertex(l-1)->isConnectable())) {
 		if (path.vertex(l)->isConnectable())
 			++nChains;
@@ -69,7 +69,7 @@ bool MultiChainPerturbation::sampleMutation(
 		Path &source, Path &proposal, MutationRecord &muRec) {
 	int k = source.length(), m = k - 1, l = m-1, nChains = 1;
 
-	while (l-1 >= 0 && (!source.vertex(l)->isConnectable() 
+	while (l-1 >= 0 && (!source.vertex(l)->isConnectable()
 			|| !source.vertex(l-1)->isConnectable())) {
 		if (source.vertex(l)->isConnectable())
 			++nChains;
@@ -79,7 +79,7 @@ bool MultiChainPerturbation::sampleMutation(
 	if (l < 0 || nChains < 2)
 		return false;
 
-	muRec = MutationRecord(EMultiChainPerturbation, l, m, m-l, 
+	muRec = MutationRecord(EMultiChainPerturbation, l, m, m-l,
 		source.getPrefixSuffixWeight(l, m));
 	statsAccepted.incrementBase();
 	statsGenerated.incrementBase();
@@ -101,7 +101,7 @@ bool MultiChainPerturbation::sampleMutation(
 	Ray ray;
 	if (sensor->sampleRay(ray, proposalSamplePosition, Point2(0.5f), 0.0f).isZero())
 		return false;
-	
+
 	Float focusDistance = sensor->getFocusDistance() /
 		absDot(sensor->getInverseViewTransform(0)(Vector(0,0,1)), ray.d);
 
@@ -129,11 +129,11 @@ bool MultiChainPerturbation::sampleMutation(
 
 	Float dist = source.edge(m-1)->length
 		+ perturbMediumDistance(m_sampler, source.vertex(m-1));
-	
+
 	/* Sample a perturbation and propagate it through specular interactions */
-	if (!proposal.vertex(m)->perturbDirection(m_scene, 
+	if (!proposal.vertex(m)->perturbDirection(m_scene,
 			proposal.vertex(k), proposal.edge(m),
-			proposal.edge(m-1), proposal.vertex(m-1), d, dist, 
+			proposal.edge(m-1), proposal.vertex(m-1), d, dist,
 			source.vertex(m-1)->getType(), ERadiance)) {
 		proposal.release(l, m+1, m_pool);
 		return false;
@@ -146,10 +146,10 @@ bool MultiChainPerturbation::sampleMutation(
 			Float dist = source.edge(i-1)->length +
 				perturbMediumDistance(m_sampler, source.vertex(i-1));
 
-			if (!proposal.vertex(i)->propagatePerturbation(m_scene, 
-					proposal.vertex(i+1), proposal.edge(i), 
-					proposal.edge(i-1), proposal.vertex(i-1), 
-					source.vertex(i)->getComponentType(), dist, 
+			if (!proposal.vertex(i)->propagatePerturbation(m_scene,
+					proposal.vertex(i+1), proposal.edge(i),
+					proposal.edge(i-1), proposal.vertex(i-1),
+					source.vertex(i)->getComponentType(), dist,
 					source.vertex(i-1)->getType(), ERadiance)) {
 				proposal.release(l, m+1, m_pool);
 				return false;
@@ -163,12 +163,12 @@ bool MultiChainPerturbation::sampleMutation(
 			Float theta = m_theta2 * math::fastexp(m_thetaLogRatio * m_sampler->next1D());
 			Float phi = 2 * M_PI * m_sampler->next1D();
 			Vector newD = Frame(oldD).toWorld(sphericalDirection(theta, phi));
-			
+
 			dist += perturbMediumDistance(m_sampler, source.vertex(i-1));
 
-			if (!proposal.vertex(i)->perturbDirection(m_scene, 
-					proposal.vertex(i+1), proposal.edge(i), 
-					proposal.edge(i-1), proposal.vertex(i-1), 
+			if (!proposal.vertex(i)->perturbDirection(m_scene,
+					proposal.vertex(i+1), proposal.edge(i),
+					proposal.edge(i-1), proposal.vertex(i-1),
 					newD, dist, source.vertex(i-1)->getType(),
 					ERadiance)) {
 				proposal.release(l, m+1, m_pool);
@@ -177,7 +177,7 @@ bool MultiChainPerturbation::sampleMutation(
 		}
 	}
 
-	if (!PathVertex::connect(m_scene, 
+	if (!PathVertex::connect(m_scene,
 			l > 0 ? proposal.vertex(l-1) : NULL,
 			l > 0 ? proposal.edge(l-1) : NULL,
 			proposal.vertex(l),
@@ -195,7 +195,7 @@ bool MultiChainPerturbation::sampleMutation(
 	BDAssert(proposal.matchesConfiguration(source));
 
 	++statsGenerated;
-	
+
 	return true;
 }
 
@@ -208,11 +208,11 @@ Float MultiChainPerturbation::Q(const Path &source, const Path &proposal,
 				PathEdge::EEverything);
 
 	for (int i=m; i>l+1; --i) {
-		const PathVertex *v0 = proposal.vertex(i-1), 
+		const PathVertex *v0 = proposal.vertex(i-1),
 			  *v1 = proposal.vertex(i);
 		const PathEdge *edge = proposal.edge(i-1);
 
-		weight *= edge->evalCached(v0, v1, 
+		weight *= edge->evalCached(v0, v1,
 				PathEdge::ETransmittance | (i != m ? PathEdge::EValueCosineRad : 0));
 
 		if (v0->isMediumInteraction())

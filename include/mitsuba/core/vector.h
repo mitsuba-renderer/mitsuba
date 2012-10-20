@@ -38,7 +38,7 @@ template <typename T> struct TVector1 {
 	const static int dim = 1;
 
 	/** \brief Construct a new vector without initializing it.
-	 * 
+	 *
 	 * This construtor is useful when the vector will either not
 	 * be used at all (it might be part of a larger data structure)
 	 * or initialized at a later point in time. Always make sure
@@ -52,15 +52,15 @@ template <typename T> struct TVector1 {
 	TVector1() { x = std::numeric_limits<T>::quiet_NaN(); }
 #endif
 
-	/// Initialize the vector with the specified value 
+	/// Initialize the vector with the specified value
 	TVector1(T x) : x(x) {  }
 
 	/// Initialize the vector with the components of another vector data structure
-	template <typename T1> explicit TVector1(const TVector1<T1> &v) 
+	template <typename T1> explicit TVector1(const TVector1<T1> &v)
 		: x((T) v.x) { }
 
 	/// Initialize the vector with the components of a point data structure
-	template <typename T1> explicit TVector1(const TPoint1<T1> &p) 
+	template <typename T1> explicit TVector1(const TPoint1<T1> &p)
 		: x((T) p.x) { }
 
 	/// Unserialize a vector from a binary data stream
@@ -80,7 +80,7 @@ template <typename T> struct TVector1 {
 
 	/// Add another vector to the current one
 	TVector1& operator+=(const TVector1 &v) {
-		x += v.x; 
+		x += v.x;
 		return *this;
 	}
 
@@ -97,7 +97,7 @@ template <typename T> struct TVector1 {
 
 	/// Multiply the vector by the given scalar
 	TVector1 &operator*=(T f) {
-		x *= f; 
+		x *= f;
 		return *this;
 	}
 
@@ -191,7 +191,7 @@ template <typename T> inline TVector1<T> normalize(const TVector1<T> &v) {
 
 template <> inline TVector1<int> TVector1<int>::operator/(int s) const {
 #ifdef MTS_DEBUG
-	if (s == 0) 
+	if (s == 0)
 		SLog(EWarn, "Vector1i: Division by zero!");
 #endif
 	return TVector1(x/s);
@@ -199,7 +199,7 @@ template <> inline TVector1<int> TVector1<int>::operator/(int s) const {
 
 template <> inline TVector1<int> &TVector1<int>::operator/=(int s) {
 #ifdef MTS_DEBUG
-	if (s == 0) 
+	if (s == 0)
 		SLog(EWarn, "Vector1i: Division by zero!");
 #endif
 
@@ -222,7 +222,7 @@ template <typename T> struct TVector2 {
 	const static int dim = 2;
 
 	/** \brief Construct a new vector without initializing it.
-	 * 
+	 *
 	 * This construtor is useful when the vector will either not
 	 * be used at all (it might be part of a larger data structure)
 	 * or initialized at a later point in time. Always make sure
@@ -243,11 +243,11 @@ template <typename T> struct TVector2 {
 	explicit TVector2(T val) : x(val), y(val) { }
 
 	/// Initialize the vector with the components of another vector data structure
-	template <typename T2> explicit TVector2(const TVector2<T2> &v) 
+	template <typename T2> explicit TVector2(const TVector2<T2> &v)
 		: x((T) v.x), y((T) v.y) { }
 
 	/// Initialize the vector with the components of a point data structure
-	template <typename T2> explicit TVector2(const TPoint2<T2> &p) 
+	template <typename T2> explicit TVector2(const TPoint2<T2> &p)
 		: x((T) p.x), y((T) p.y) { }
 
 	/// Unserialize a vector from a binary data stream
@@ -268,7 +268,7 @@ template <typename T> struct TVector2 {
 
 	/// Add another vector to the current one
 	TVector2& operator+=(const TVector2 &v) {
-		x += v.x; y += v.y; 
+		x += v.x; y += v.y;
 		return *this;
 	}
 
@@ -285,7 +285,7 @@ template <typename T> struct TVector2 {
 
 	/// Multiply the vector by the given scalar
 	TVector2 &operator*=(T f) {
-		x *= f; y *= f; 
+		x *= f; y *= f;
 		return *this;
 	}
 
@@ -311,7 +311,7 @@ template <typename T> struct TVector2 {
 			SLog(EWarn, "Vector2: Division by zero!");
 #endif
 		T recip = (T) 1 / f;
-		x *= recip; y *= recip; 
+		x *= recip; y *= recip;
 		return *this;
 	}
 
@@ -382,7 +382,7 @@ template <typename T> inline TVector2<T> normalize(const TVector2<T> &v) {
 
 template <> inline TVector2<int> TVector2<int>::operator/(int s) const {
 #ifdef MTS_DEBUG
-	if (s == 0) 
+	if (s == 0)
 		SLog(EWarn, "Vector2i: Division by zero!");
 #endif
 	return TVector2(x/s, y/s);
@@ -390,7 +390,7 @@ template <> inline TVector2<int> TVector2<int>::operator/(int s) const {
 
 template <> inline TVector2<int> &TVector2<int>::operator/=(int s) {
 #ifdef MTS_DEBUG
-	if (s == 0) 
+	if (s == 0)
 		SLog(EWarn, "Vector2i: Division by zero!");
 #endif
 
@@ -409,12 +409,12 @@ template <typename T> struct TVector3 {
 	typedef TPoint3<T> PointType;
 
 	T x, y, z;
-	
+
 	/// Number of dimensions
 	const static int dim = 3;
 
 	/** \brief Construct a new vector without initializing it.
-	 * 
+	 *
 	 * This construtor is useful when the vector will either not
 	 * be used at all (it might be part of a larger data structure)
 	 * or initialized at a later point in time. Always make sure
@@ -435,11 +435,11 @@ template <typename T> struct TVector3 {
 	explicit TVector3(T val) : x(val), y(val), z(val) { }
 
 	/// Initialize the vector with the components of another vector data structure
-	template <typename T2> explicit TVector3(const TVector3<T2> &v) 
+	template <typename T2> explicit TVector3(const TVector3<T2> &v)
 		: x((T) v.x), y((T) v.y), z((T) v.z) { }
 
 	/// Initialize the vector with the components of a point data structure
-	template <typename T2> explicit TVector3(const TPoint3<T2> &p) 
+	template <typename T2> explicit TVector3(const TPoint3<T2> &p)
 		: x((T) p.x), y((T) p.y), z((T) p.z) { }
 
 	/// Unserialize a vector from a binary data stream
@@ -572,7 +572,7 @@ template <typename T> inline T absDot(const TVector3<T> &v1, const TVector3<T> &
 
 template <typename T> inline TVector3<T> cross(const TVector3<T> &v1, const TVector3<T> &v2) {
 	return TVector3<T>(
-		(v1.y * v2.z) - (v1.z * v2.y), 
+		(v1.y * v2.z) - (v1.z * v2.y),
 		(v1.z * v2.x) - (v1.x * v2.z),
 		(v1.x * v2.y) - (v1.y * v2.x)
 	);
@@ -584,7 +584,7 @@ template <typename T> inline TVector3<T> normalize(const TVector3<T> &v) {
 
 template <> inline TVector3<int> TVector3<int>::operator/(int s) const {
 #ifdef MTS_DEBUG
-	if (s == 0) 
+	if (s == 0)
 		SLog(EWarn, "Vector3i: Division by zero!");
 #endif
 	return TVector3(x/s, y/s, z/s);
@@ -592,7 +592,7 @@ template <> inline TVector3<int> TVector3<int>::operator/(int s) const {
 
 template <> inline TVector3<int> &TVector3<int>::operator/=(int s) {
 #ifdef MTS_DEBUG
-	if (s == 0) 
+	if (s == 0)
 		SLog(EWarn, "Vector3i: Division by zero!");
 #endif
 
@@ -613,13 +613,13 @@ template <typename T> struct TVector4 {
 	typedef TPoint4<T> PointType;
 
 	T x, y, z, w;
-	
+
 	/// Number of dimensions
 	const static int dim = 3;
 
 
 	/** \brief Construct a new vector without initializing it.
-	 * 
+	 *
 	 * This construtor is useful when the vector will either not
 	 * be used at all (it might be part of a larger data structure)
 	 * or initialized at a later point in time. Always make sure
@@ -640,11 +640,11 @@ template <typename T> struct TVector4 {
 	explicit TVector4(T val) : x(val), y(val), z(val), w(val) { }
 
 	/// Initialize the vector with the components of another vector data structure
-	template <typename T2> explicit TVector4(const TVector4<T2> &v) 
+	template <typename T2> explicit TVector4(const TVector4<T2> &v)
 		: x((T) v.x), y((T) v.y), z((T) v.z), w((T) v.w) { }
 
 	/// Initialize the vector with the components of a point data structure
-	template <typename T2> explicit TVector4(const TPoint4<T2> &p) 
+	template <typename T2> explicit TVector4(const TPoint4<T2> &p)
 		: x((T) p.x), y((T) p.y), z((T) p.z), w((T) p.w) { }
 
 	/// Unserialize a vector from a binary data stream
@@ -783,7 +783,7 @@ template <typename T> inline TVector4<T> normalize(const TVector4<T> &v) {
 
 template <> inline TVector4<int> TVector4<int>::operator/(int s) const {
 #ifdef MTS_DEBUG
-	if (s == 0) 
+	if (s == 0)
 		SLog(EWarn, "Vector4i: Division by zero!");
 #endif
 	return TVector4(x/s, y/s, z/s, w/s);
@@ -791,7 +791,7 @@ template <> inline TVector4<int> TVector4<int>::operator/(int s) const {
 
 template <> inline TVector4<int> &TVector4<int>::operator/=(int s) {
 #ifdef MTS_DEBUG
-	if (s == 0) 
+	if (s == 0)
 		SLog(EWarn, "Vector4i: Division by zero!");
 #endif
 

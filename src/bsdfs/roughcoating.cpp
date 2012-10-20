@@ -29,37 +29,37 @@ MTS_NAMESPACE_BEGIN
  * \icon{bsdf_roughcoating}
  * \parameters{
  *     \parameter{distribution}{\String}{
- *          Specifies the type of microfacet normal distribution 
+ *          Specifies the type of microfacet normal distribution
  *          used to model the surface roughness.
  *       \begin{enumerate}[(i)]
  *           \item \code{beckmann}: Physically-based distribution derived from
  *               Gaussian random surfaces. This is the default.
  *           \item \code{ggx}: New distribution proposed by
- *              Walter et al. \cite{Walter07Microfacet}, which is meant to better handle 
- *              the long tails observed in measurements of ground surfaces. 
+ *              Walter et al. \cite{Walter07Microfacet}, which is meant to better handle
+ *              the long tails observed in measurements of ground surfaces.
  *              Renderings with this distribution may converge slowly.
  *           \item \code{phong}: Classical $\cos^p\theta$ distribution.
- *              Due to the underlying microfacet theory, 
- *              the use of this distribution here leads to more realistic 
+ *              Due to the underlying microfacet theory,
+ *              the use of this distribution here leads to more realistic
  *              behavior than the separately available \pluginref{phong} plugin.
  *       \end{enumerate}
  *     }
  *     \parameter{alpha}{\Float\Or\Texture}{
- *         Specifies the roughness of the unresolved surface micro-geometry. 
- *         When the Beckmann distribution is used, this parameter is equal to the 
- *         \emph{root mean square} (RMS) slope of the microfacets. 
- *         \default{0.1}. 
+ *         Specifies the roughness of the unresolved surface micro-geometry.
+ *         When the Beckmann distribution is used, this parameter is equal to the
+ *         \emph{root mean square} (RMS) slope of the microfacets.
+ *         \default{0.1}.
  *     }
  *     \parameter{intIOR}{\Float\Or\String}{Interior index of refraction specified
  *      numerically or using a known material name. \default{\texttt{bk7} / 1.5046}}
  *     \parameter{extIOR}{\Float\Or\String}{Exterior index of refraction specified
  *      numerically or using a known material name. \default{\texttt{air} / 1.000277}}
- *     \parameter{thickness}{\Float}{Denotes the thickness of the layer (to 
+ *     \parameter{thickness}{\Float}{Denotes the thickness of the layer (to
  *      model absorption --- should be specified in inverse units of \code{sigmaA})\default{1}}
- *     \parameter{sigmaA}{\Spectrum\Or\Texture}{The absorption coefficient of the 
+ *     \parameter{sigmaA}{\Spectrum\Or\Texture}{The absorption coefficient of the
  *      coating layer. \default{0, i.e. there is no absorption}}
  *     \parameter{specular\showbreak Transmittance}{\Spectrum\Or\Texture}{Optional
- *         factor that can be used to modulate the specular transmission component. Note 
+ *         factor that can be used to modulate the specular transmission component. Note
  *         that for physical realism, this parameter should never be touched. \default{1.0}}
  *     \parameter{\Unnamed}{\BSDF}{A nested BSDF model that should be coated.}
  * }
@@ -71,27 +71,27 @@ MTS_NAMESPACE_BEGIN
  * }
  *
  * This plugin implements a \emph{very} approximate\footnote{
- * The model only accounts for roughness 
+ * The model only accounts for roughness
  * in the specular reflection and Fresnel transmittance through the interface.
  * The interior model receives incident illumination
  * that is transformed \emph{as if} the coating was smooth. While
- * that's not quite correct, it is a convenient workaround when the 
+ * that's not quite correct, it is a convenient workaround when the
  * \pluginref{coating} plugin produces specular highlights that are too sharp.}
- * model that simulates a rough dielectric coating. It is essentially the 
- * roughened version of \pluginref{coating}. 
- * Any BSDF in Mitsuba can be coated using this plugin and multiple coating 
- * layers can even be applied in sequence, which allows designing interesting 
- * custom materials. The coating layer can optionally be tinted (i.e. filled 
- * with an absorbing medium), in which case this model also accounts for the 
+ * model that simulates a rough dielectric coating. It is essentially the
+ * roughened version of \pluginref{coating}.
+ * Any BSDF in Mitsuba can be coated using this plugin and multiple coating
+ * layers can even be applied in sequence, which allows designing interesting
+ * custom materials. The coating layer can optionally be tinted (i.e. filled
+ * with an absorbing medium), in which case this model also accounts for the
  * directionally dependent absorption within the layer.
  *
  * Note that the plugin discards illumination that undergoes internal
  * reflection within the coating. This can lead to a noticeable energy
  * loss for materials that reflect much of their energy near or below the critical
- * angle (i.e. diffuse or very rough materials). 
+ * angle (i.e. diffuse or very rough materials).
  *
- * The implementation here is influenced by the paper 
- * ``Arbitrarily Layered Micro-Facet Surfaces'' by Weidlich and 
+ * The implementation here is influenced by the paper
+ * ``Arbitrarily Layered Micro-Facet Surfaces'' by Weidlich and
  * Wilkie \cite{Weidlich2007Arbitrarily}.
  */
 class RoughCoating : public BSDF {
@@ -108,7 +108,7 @@ public:
 
 		/* Specifies the external index of refraction at the interface */
 		Float extIOR = lookupIOR(props, "extIOR", "air");
-		
+
 		if (intIOR < 0 || extIOR < 0 || intIOR == extIOR)
 			Log(EError, "The interior and exterior indices of "
 				"refraction must be positive and differ!");
@@ -141,7 +141,7 @@ public:
 		m_specularSamplingWeight = 0.0f;
 	}
 
-	RoughCoating(Stream *stream, InstanceManager *manager) 
+	RoughCoating(Stream *stream, InstanceManager *manager)
 	 : BSDF(stream, manager) {
 		m_distribution = MicrofacetDistribution(
 			(MicrofacetDistribution::EType) stream->readUInt()
@@ -175,7 +175,7 @@ public:
 			extraFlags |= ESpatiallyVarying;
 
 		m_components.clear();
-		for (int i=0; i<m_nested->getComponentCount(); ++i) 
+		for (int i=0; i<m_nested->getComponentCount(); ++i)
 			m_components.push_back(m_nested->getType(i) | extraFlags);
 
 		m_components.push_back(EGlossyReflection | EFrontSide | EBackSide
@@ -202,16 +202,16 @@ public:
 			   transmittance through the dielectric interface */
 			m_roughTransmittance = new RoughTransmittance(
 				m_distribution.getType());
-			
+
 			m_roughTransmittance->checkEta(m_eta);
 			m_roughTransmittance->checkAlpha(m_alpha->getMinimum().average());
 			m_roughTransmittance->checkAlpha(m_alpha->getMaximum().average());
-			
+
 			/* Reduce the rough transmittance data to a 2D slice */
 			m_roughTransmittance->setEta(m_eta);
 
 			/* If possible, even reduce it to a 1D slice */
-			if (m_alpha->isConstant()) 
+			if (m_alpha->isConstant())
 				m_roughTransmittance->setAlpha(
 					m_alpha->eval(Intersection()).average());
 		}
@@ -224,7 +224,7 @@ public:
 		return 2 * dot(wi, m) * Vector(m) - wi;
 	}
 
-	/// Refraction in local coordinates 
+	/// Refraction in local coordinates
 	Vector refractTo(EDestination dest, const Vector &wi) const {
 		Float cosThetaI = Frame::cosTheta(wi);
 		Float invEta = (dest == EInterior) ? m_invEta : m_eta;
@@ -242,7 +242,7 @@ public:
 			Float cosThetaT = std::sqrt(1.0f - sinThetaTSqr);
 
 			/* Retain the directionality of the vector */
-			return Vector(invEta*wi.x, invEta*wi.y, 
+			return Vector(invEta*wi.x, invEta*wi.y,
 				entering ? cosThetaT : -cosThetaT);
 		}
 	}
@@ -274,7 +274,7 @@ public:
 			const Float G = m_distribution.G(bRec.wi, bRec.wo, H, alphaT);
 
 			/* Calculate the specular reflection component */
-			Float value = F * D * G / 
+			Float value = F * D * G /
 				(4.0f * std::abs(Frame::cosTheta(bRec.wi)));
 
 			result += m_specularReflectance->eval(bRec.its) * value;
@@ -290,7 +290,7 @@ public:
 				m_roughTransmittance->eval(std::abs(Frame::cosTheta(bRec.wo)), alpha);
 
 			Spectrum sigmaA = m_sigmaA->eval(bRec.its) * m_thickness;
-			if (!sigmaA.isZero()) 
+			if (!sigmaA.isZero())
 				nestedResult *= (-sigmaA *
 					(1/std::abs(Frame::cosTheta(bRecInt.wi)) +
 					 1/std::abs(Frame::cosTheta(bRecInt.wo)))).exp();
@@ -331,7 +331,7 @@ public:
 
 			/* Reallocate samples */
 			probSpecular = (probSpecular*m_specularSamplingWeight) /
-				(probSpecular*m_specularSamplingWeight + 
+				(probSpecular*m_specularSamplingWeight +
 				(1-probSpecular) * (1-m_specularSamplingWeight));
 
 			probNested = 1 - probSpecular;
@@ -388,7 +388,7 @@ public:
 
 			/* Reallocate samples */
 			probSpecular = (probSpecular*m_specularSamplingWeight) /
-				(probSpecular*m_specularSamplingWeight + 
+				(probSpecular*m_specularSamplingWeight +
 				(1-probSpecular) * (1-m_specularSamplingWeight));
 
 			if (sample.y <= probSpecular) {
@@ -415,7 +415,7 @@ public:
 			bRec.wi = refractTo(EInterior, bRec.wi);
 			Spectrum result = m_nested->sample(bRec, _pdf, sample);
 			bRec.wi = wiBackup;
-			if (result.isZero()) 
+			if (result.isZero())
 				return Spectrum(0.0f);
 			bRec.wo = refractTo(EExterior, bRec.wo);
 			if (bRec.wo.isZero())
@@ -426,7 +426,7 @@ public:
 		EMeasure measure = getMeasure(bRec.sampledType);
 		_pdf = pdf(bRec, measure);
 
-		if (_pdf == 0) 
+		if (_pdf == 0)
 			return Spectrum(0.0f);
 		else
 			return eval(bRec, measure) / _pdf;
@@ -493,18 +493,18 @@ private:
 
 /**
  * GLSL port of the rough coating shader. This version is much more
- * approximate -- it only supports the Beckmann distribution, 
- * does everything in RGB, uses a cheaper shadowing-masking term, and 
- * it also makes use of the Schlick approximation to the Fresnel 
- * reflectance of dielectrics. When the roughness is lower than 
+ * approximate -- it only supports the Beckmann distribution,
+ * does everything in RGB, uses a cheaper shadowing-masking term, and
+ * it also makes use of the Schlick approximation to the Fresnel
+ * reflectance of dielectrics. When the roughness is lower than
  * \alpha < 0.2, the shader clamps it to 0.2 so that it will still perform
  * reasonably well in a VPL-based preview.
  */
 class RoughCoatingShader : public Shader {
 public:
 	RoughCoatingShader(Renderer *renderer, const BSDF *nested,
-				const Texture *sigmaA, const Texture *alpha, 
-				Float eta) : Shader(renderer, EBSDFShader), 
+				const Texture *sigmaA, const Texture *alpha,
+				Float eta) : Shader(renderer, EBSDFShader),
 			m_nested(nested), m_sigmaA(sigmaA), m_alpha(alpha), m_eta(eta) {
 		m_nestedShader = renderer->registerShaderForResource(m_nested.get());
 		m_sigmaAShader = renderer->registerShaderForResource(m_sigmaA.get());
@@ -624,8 +624,8 @@ private:
 	Float m_R0, m_eta;
 };
 
-Shader *RoughCoating::createShader(Renderer *renderer) const { 
-	return new RoughCoatingShader(renderer, m_nested.get(), 
+Shader *RoughCoating::createShader(Renderer *renderer) const {
+	return new RoughCoatingShader(renderer, m_nested.get(),
 		m_sigmaA.get(), m_alpha.get(), m_eta);
 }
 

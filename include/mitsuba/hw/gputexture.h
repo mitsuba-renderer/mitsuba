@@ -49,14 +49,14 @@ public:
 		ETextureCubeMap
 	};
 
-	/** \brief If the texture type is set to EFrameBuffer, the 
+	/** \brief If the texture type is set to EFrameBuffer, the
 	 * configuration must be one of the following constants */
 	enum EFrameBufferType {
 		/// This is not a framebuffer
 		ENone = 0x00,
 
 		/**
-		 * \brief Color framebuffer (\a including an internal depth 
+		 * \brief Color framebuffer (\a including an internal depth
 		 * buffer that cannot be accessed as a texture)
 		 */
 		EColorBuffer = 0x01,
@@ -81,10 +81,10 @@ public:
 
 		/// 16-bit floating point (\c half) HDR component encoding
 		EFloat16,
-		
+
 		/// 32-bit floating point (\c float) HDR component encoding
 		EFloat32,
-		
+
 		/// 64-bit floating point (\c float) HDR component encoding
 		EFloat64
 	};
@@ -148,7 +148,7 @@ public:
 	enum EFilterType {
 		/// Use the color value of the closest pixel
 		ENearest = 0,
-		/// Use 4 surrounding pixels and weigh them 
+		/// Use 4 surrounding pixels and weigh them
 		ELinear,
 		/**
 		 * Blend the color values of the closest matching
@@ -168,7 +168,7 @@ public:
 	 * associated texture unit. 'ENormal' means that texture
 	 * values are returned as with any other texture, whereas
 	 * 'ECompare' causes a depth comparison to take place
-	 * (this is the default).  
+	 * (this is the default).
 	 */
 	enum EDepthMode {
 		ENormal,
@@ -177,7 +177,7 @@ public:
 
 	/** \brief Construct a new texture.
 	 *
-	 * If bitmap is non-NULL, the texture type, format 
+	 * If bitmap is non-NULL, the texture type, format
 	 * will be automatically set
 	 *
 	 * \param name A human-readable name (for debugging)
@@ -229,7 +229,7 @@ public:
 
 	/// Set the wrap type along the U axis
 	inline void setWrapTypeU(EWrapType wrapType) { m_wrapTypeU = wrapType; }
-	
+
 	/// Return the wrap type along the U axis
 	inline EWrapType getWrapTypeU() { return m_wrapTypeU; }
 
@@ -249,7 +249,7 @@ public:
 	inline Float getMaxAnisotropy() const { return m_maxAnisotropy; }
 
 	/** \brief Set the maximal anisotropy.
-	 * 
+	 *
 	 * A value of 1 will result in isotropic
 	 * texture filtering. A value of 0 (default) will
 	 * use the global max. anisotropy value
@@ -264,7 +264,7 @@ public:
 
 	/// Return the depth map read mode
 	inline EDepthMode getDepthMode() const { return m_depthMode; }
-	
+
 	/// Set the depth map read mode
 	inline void setDepthMode(EDepthMode mode) { m_depthMode = mode; }
 
@@ -291,7 +291,7 @@ public:
 
 	/// Refresh (re-upload) the texture
 	virtual void refresh() = 0;
-	
+
 	/**
 	 * \brief Refresh (re-upload) a subregion of the texture
 	 *
@@ -301,7 +301,7 @@ public:
 
 	/// Free the texture from GPU memory
 	virtual void cleanup() = 0;
-	
+
 	/**
 	 * \brief Bind the texture and enable texturing
 	 *
@@ -309,7 +309,7 @@ public:
 	 *     Specifies the unit to which this texture should be bound
 	 * \param textureIndex
 	 *     When this texture has multiple sub-textures (e.g.
-	 *     a color and depth map in the case of a 
+	 *     a color and depth map in the case of a
 	 *     \ref EColorAndDepthBuffer texture), this parameter
 	 *     specifies the one to be bound
 	 */
@@ -342,14 +342,14 @@ public:
 
 	/// Set the number of samples (for multisample color render targets)
 	inline void setSampleCount(int samples) { m_samples = samples; }
-	
+
 	/// Return the number of samples (for multisample color render targets)
 	inline int getSampleCount() const { return m_samples; }
 
 	/// Set the border color (applicable if <tt>wrapMode=EClamp/EClampToBorder</tt>)
 	inline void setBorderColor(const Color3 &borderColor) { m_borderColor = borderColor; }
-	
-	/// Return the border color 
+
+	/// Return the border color
 	inline const Color3 &getBorderColor() const { return m_borderColor; }
 
 	/**
@@ -358,7 +358,7 @@ public:
 	 * \param target
 	 *     Specifies the target render buffer
 	 * \param what
-	 *     A bitwise-OR of the components in \ref EFrameBufferType to copy 
+	 *     A bitwise-OR of the components in \ref EFrameBufferType to copy
 	 */
 	virtual void blit(GPUTexture *target, int what) const = 0;
 
@@ -368,14 +368,14 @@ public:
 	 * \param target
 	 *     Specifies the target render buffer (or NULL for the framebuffer)
 	 * \param what
-	 *     A bitwise-OR of the components in \ref EFrameBufferType to copy 
-	 * \param sourceOffset 
+	 *     A bitwise-OR of the components in \ref EFrameBufferType to copy
+	 * \param sourceOffset
 	 *     Offset in the source render buffer
-	 * \param sourceOffset 
+	 * \param sourceOffset
 	 *     Size of the region to be copied from the source render buffer
-	 * \param destOffset 
+	 * \param destOffset
 	 *     Offset in the destination render buffer
-	 * \param destOffset 
+	 * \param destOffset
 	 *     Size of the region to be copied into the dest destination buffer
 	 */
 	virtual void blit(GPUTexture *target, int what, const Point2i &sourceOffset,

@@ -48,7 +48,7 @@ public:
 	 *     A memory pool used to allocate new path vertices and edges
 	 */
 	ManifoldPerturbation(const Scene *scene, Sampler *sampler,
-		MemoryPool &pool, 
+		MemoryPool &pool,
 		Float probFactor,
 		bool enableOffsetManifolds,
 		bool enableSpecularMedia,
@@ -60,9 +60,9 @@ public:
 
 	EMutationType getType() const;
 	Float suitability(const Path &path) const;
-	bool sampleMutation(Path &source, Path &proposal, 
+	bool sampleMutation(Path &source, Path &proposal,
 			MutationRecord &muRec);
-	Float Q(const Path &source, const Path &proposal, 
+	Float Q(const Path &source, const Path &proposal,
 			const MutationRecord &muRec) const;
 	void accept(const MutationRecord &muRec);
 
@@ -75,7 +75,7 @@ protected:
 	virtual ~ManifoldPerturbation();
 
 	/// Helper function for choosing mutation strategies
-	bool sampleMutationRecord(const Path &source, 
+	bool sampleMutationRecord(const Path &source,
 		int &a, int &b, int &c, int &step);
 
 	Float nonspecularProbSurface(Float alpha) const;

@@ -40,13 +40,13 @@ MTS_NAMESPACE_BEGIN
  *         An optional texture to be projected along the spot light
  *     }
  *     \parameter{samplingWeight}{\Float}{
- *         Specifies the relative amount of samples 
+ *         Specifies the relative amount of samples
  *         allocated to this emitter. \default{1}
  *     }
  * }
  *
  * This plugin provides a spot light with a linear falloff.
- * In its local coordinate system, the spot light is positioned at the origin 
+ * In its local coordinate system, the spot light is positioned at the origin
  * and points along the positive Z direction. It can be conveniently
  * reoriented using the \code{lookat} tag, e.g.:
  * \begin{xml}
@@ -59,7 +59,7 @@ MTS_NAMESPACE_BEGIN
  * \end{xml}
  *
  * The intensity linearly ramps up from \code{cutoffAngle}
- * to \code{beamWidth} (both specified in degrees), after which it remains at 
+ * to \code{beamWidth} (both specified in degrees), after which it remains at
  * the maximum value. A projection texture may optionally be supplied.
  */
 
@@ -77,7 +77,7 @@ public:
 			props.getSpectrum("texture", Spectrum(1.0f)));
 	}
 
-	SpotEmitter(Stream *stream, InstanceManager *manager) 
+	SpotEmitter(Stream *stream, InstanceManager *manager)
 		: Emitter(stream, manager) {
 		m_texture = static_cast<Texture *>(manager->getInstance(stream));
 		m_intensity = Spectrum(stream);
@@ -104,7 +104,7 @@ public:
 
 	inline Spectrum falloffCurve(const Vector &d) const {
 		const Float cosTheta = Frame::cosTheta(d);
-		
+
 		if (cosTheta <= m_cosCutoffAngle)
 			return Spectrum(0.0f);
 
@@ -142,7 +142,7 @@ public:
 		return (pRec.measure == EDiscrete) ? 1.0f : 0.0f;
 	}
 
-	Spectrum sampleDirection(DirectionSamplingRecord &dRec, 
+	Spectrum sampleDirection(DirectionSamplingRecord &dRec,
 			PositionSamplingRecord &pRec,
 			const Point2 &sample,
 			const Point2 *extra) const {
@@ -162,7 +162,7 @@ public:
 	Spectrum evalDirection(const DirectionSamplingRecord &dRec,
 			const PositionSamplingRecord &pRec) const {
 		const Transform &trafo = m_worldTransform->eval(pRec.time);
-		return (dRec.measure == ESolidAngle) ? 
+		return (dRec.measure == ESolidAngle) ?
 			falloffCurve(trafo.inverse()(dRec.d)) * INV_FOURPI : Spectrum(0.0f);
 	}
 
@@ -236,16 +236,16 @@ private:
 	Float m_cosBeamWidth, m_cosCutoffAngle, m_invTransitionWidth;
 };
 
-// ================ Hardware shader implementation ================ 
+// ================ Hardware shader implementation ================
 
 class SpotEmitterShader : public Shader {
 public:
-	SpotEmitterShader(Renderer *renderer, Transform worldToEmitter, 
-		Float invTransitionWidth, Float cutoffAngle, Float cosCutoffAngle, 
-		Float cosBeamWidth, Float uvFactor, const Texture *texture) 
+	SpotEmitterShader(Renderer *renderer, Transform worldToEmitter,
+		Float invTransitionWidth, Float cutoffAngle, Float cosCutoffAngle,
+		Float cosBeamWidth, Float uvFactor, const Texture *texture)
 		: Shader(renderer, EEmitterShader), m_worldToEmitter(worldToEmitter),
-		  m_invTransitionWidth(invTransitionWidth), m_cutoffAngle(cutoffAngle), 
-		  m_cosCutoffAngle(cosCutoffAngle), m_cosBeamWidth(cosBeamWidth), 
+		  m_invTransitionWidth(invTransitionWidth), m_cutoffAngle(cutoffAngle),
+		  m_cosCutoffAngle(cosCutoffAngle), m_cosBeamWidth(cosBeamWidth),
 		  m_uvFactor(uvFactor), m_texture(texture) {
 		m_textureShader = renderer->registerShaderForResource(m_texture.get());
 	}
@@ -311,8 +311,8 @@ private:
 	ref<const Texture> m_texture;
 	ref<Shader> m_textureShader;
 };
-	
-Shader *SpotEmitter::createShader(Renderer *renderer) const { 
+
+Shader *SpotEmitter::createShader(Renderer *renderer) const {
 	const Transform &trafo = m_worldTransform->eval(0.0f);
 
 	return new SpotEmitterShader(renderer, trafo.inverse(),

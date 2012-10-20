@@ -1,8 +1,8 @@
 /**
  * Mitsuba COLLADA 1.4 and Wavefront OBJ -> XML converter
- * 
+ *
  * Takes a DAE, ZAE or OBJ file and turns it into a scene description and separate mesh files
- * using a compact binary format. All associated files are copied into newly created 
+ * using a compact binary format. All associated files are copied into newly created
  * 'textures' and 'meshes' directories
  *
  * Currently supports the following subset of the COLLADA specification:
@@ -15,12 +15,12 @@
  * "Software Render Meshes". Triangulation is not required (the code below does this
  * automatically for arbitrary polygonal meshes). The Light and camera export options
  * should be activated, since they are off by default. While modeling the scene, it is
- * advisable to use light sources with an inverse square falloff. Otherwise, the 
- * illumination will be competely different when rendering in Mitsuba (the image might 
+ * advisable to use light sources with an inverse square falloff. Otherwise, the
+ * illumination will be competely different when rendering in Mitsuba (the image might
  * be pitch black). Note that most BRDFs in Mitsuba treat surfaces as one-sided, thus they
  * will appear black when seen from the back.
  *
- * The conversion barfs when it gets more than 10MB in one single XML string 
+ * The conversion barfs when it gets more than 10MB in one single XML string
  * (error: xmlSAX2Characters: huge text node: out of memory). In this case, split the
  * mesh into smaller pieces or recompile libxml with a higher limit.
  */
@@ -49,7 +49,7 @@ public:
 	}
 
 	fs::path locateResource(const fs::path &resource) {
-		return fs::path(); 
+		return fs::path();
 	}
 };
 
@@ -86,7 +86,7 @@ int importMain(int argc, char **argv) {
 		switch (optchar) {
 			case 'a': {
 					std::vector<std::string> paths = tokenize(optarg, ";");
-					for (int i=(int) paths.size()-1; i>=0; --i) 
+					for (int i=(int) paths.size()-1; i>=0; --i)
 						fileResolver->prependPath(paths[i]);
 				}
 				break;
@@ -134,7 +134,7 @@ int importMain(int argc, char **argv) {
 		help();
 		return -1;
 	}
-		
+
 	ref<Logger> log = Thread::getThread()->getLogger();
 	log->setLogLevel(logLevel);
 
@@ -161,7 +161,7 @@ int importMain(int argc, char **argv) {
 
 int mts_main(int argc, char **argv) {
 	int retval;
-	
+
 	/* Initialize Xerces-C */
 	try {
 		XMLPlatformUtils::Initialize();
@@ -212,11 +212,11 @@ int mts_main(int argc, char **argv) {
 		device->shutdown();
 		session->shutdown();
 	} catch(const XMLException &toCatch) {
-		cout << "Caught a Xerces exception: " << 
+		cout << "Caught a Xerces exception: " <<
 			XMLString::transcode(toCatch.getMessage()) << endl;
 		retval = -1;
 	} catch(const DOMException &toCatch) {
-		cout << "Caught a Xerces exception: " << 
+		cout << "Caught a Xerces exception: " <<
 			XMLString::transcode(toCatch.getMessage()) << endl;
 		retval = -1;
 	} catch (const std::exception &e) {
@@ -226,7 +226,7 @@ int mts_main(int argc, char **argv) {
 		std::cerr << "Caught a critical exeption of unknown type!" << endl;
 		retval = -1;
 	}
-	
+
 	XMLPlatformUtils::Terminate();
 
 	/* Shutdown the core framework */
@@ -238,7 +238,7 @@ int mts_main(int argc, char **argv) {
 	PluginManager::staticShutdown();
 	Object::staticShutdown();
 	Class::staticShutdown();
-	
+
 	return retval;
 }
 

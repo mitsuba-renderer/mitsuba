@@ -51,7 +51,7 @@ MTS_NAMESPACE_BEGIN
  *     }
  * }
  *
- * This class implements access to memory-mapped volume data stored on a 
+ * This class implements access to memory-mapped volume data stored on a
  * 3D grid using a simple binary exchange format.
  * The format uses a little endian encoding and is specified as
  * follows:\vspace{3mm}
@@ -69,7 +69,7 @@ MTS_NAMESPACE_BEGIN
  * \item Dense \code{float32}-based representation
  * \item Dense \code{float16}-based representation (\emph{currently not supported by this implementation})
  * \item Dense \code{uint8}-based representation (The range 0..255 will be mapped to 0..1)
- * \item Dense quantized directions. The directions are stored in spherical 
+ * \item Dense quantized directions. The directions are stored in spherical
  * coordinates with a total storage cost of 16 bit per entry.
  * \end{enumerate}\\
  * Bytes 9-12 &  Number of cells along the X axis (32 bit integer)\\
@@ -91,10 +91,10 @@ MTS_NAMESPACE_BEGIN
  * Note that Mitsuba expects that entries in direction volumes are either
  * zero or valid unit vectors.
  *
- * When using this data source to represent floating point density volumes, 
- * please ensure that the values are all normalized to lie in the 
+ * When using this data source to represent floating point density volumes,
+ * please ensure that the values are all normalized to lie in the
  * range $[0, 1]$---otherwise, the Woocock-Tracking integration method in
- * \pluginref{heterogeneous} will produce incorrect results. 
+ * \pluginref{heterogeneous} will produce incorrect results.
  */
 class GridDataSource : public VolumeDataSource {
 public:
@@ -105,35 +105,35 @@ public:
 		EQuantizedDirections = 4
 	};
 
-	GridDataSource(const Properties &props) 
+	GridDataSource(const Properties &props)
 		: VolumeDataSource(props) {
 		m_volumeToWorld = props.getTransform("toWorld", Transform());
 
 		if (props.hasProperty("min") && props.hasProperty("max")) {
-			/* Optionally allow to use an AABB other than 
+			/* Optionally allow to use an AABB other than
 			   the one specified by the grid file */
 			m_dataAABB.min = props.getPoint("min");
 			m_dataAABB.max = props.getPoint("max");
 		}
 
 		/**
-		 * When 'sendData' is set to false, only the filename 
-		 * is transmitted. A following unserialization of the 
-		 * stream causes the implementation to then look for 
-		 * the file (which had better exist if unserialization 
-		 * occurs on a remote machine). 
+		 * When 'sendData' is set to false, only the filename
+		 * is transmitted. A following unserialization of the
+		 * stream causes the implementation to then look for
+		 * the file (which had better exist if unserialization
+		 * occurs on a remote machine).
 		 */
 		 m_sendData = props.getBoolean("sendData", false);
 
 		 loadFromFile(props.getString("filename"));
 	}
 
-	GridDataSource(Stream *stream, InstanceManager *manager) 
+	GridDataSource(Stream *stream, InstanceManager *manager)
 			: VolumeDataSource(stream, manager) {
 		m_volumeToWorld = Transform(stream);
 		m_dataAABB = AABB(stream);
 		m_sendData = stream->readBool();
-		if (m_sendData) { 
+		if (m_sendData) {
 			m_volumeType = (EVolumeType) stream->readInt();
 			m_res = Vector3i(stream);
 			m_channels = stream->readInt();
@@ -154,7 +154,7 @@ public:
 	}
 
 	size_t getVolumeSize() const {
-		size_t nEntries = (size_t) m_res.x 
+		size_t nEntries = (size_t) m_res.x
 			* (size_t) m_res.y * (size_t) m_res.z;
 		switch (m_volumeType) {
 			case EFloat32: return 4 * nEntries * m_channels;
@@ -280,14 +280,14 @@ public:
 			m_dataAABB = AABB(Point(xmin, ymin, zmin), Point(xmax, ymax, zmax));
 		}
 
-		Log(EDebug, "Mapped \"%s\" into memory: %ix%ix%i (%i channels, format = %s), %s, %s", 
+		Log(EDebug, "Mapped \"%s\" into memory: %ix%ix%i (%i channels, format = %s), %s, %s",
 			resolved.filename().string().c_str(), m_res.x, m_res.y, m_res.z, m_channels, format.c_str(),
 			memString(m_mmap->getSize()).c_str(), m_dataAABB.toString().c_str());
 		m_data = (uint8_t *) (((float *) m_mmap->getData()) + 12);
 	}
 
 	/**
-	 * This is needed since Mitsuba might be 
+	 * This is needed since Mitsuba might be
 	 * compiled with either single/double precision
 	 */
 	struct float3 {
@@ -302,7 +302,7 @@ public:
 		inline float3 operator*(Float v) const {
 			return float3(value[0]*v, value[1]*v, value[2]*v);
 		}
-		
+
 		inline float3 operator+(const float3 &f2) const {
 			return float3(value[0]+f2.value[0], value[1]+f2.value[1], value[2]+f2.value[2]);
 		}
@@ -312,11 +312,11 @@ public:
 			result.fromLinearRGB(value[0], value[1], value[2]);
 			return result;
 		}
-		
+
 		inline Vector toVector() const {
 			return Vector(value[0], value[1], value[2]);
 		}
-	
+
 		float operator[](int i) const {
 			return value[i];
 		}
@@ -338,7 +338,7 @@ public:
 			  x2 = x1+1, y2 = y1+1, z2 = z1+1;
 
 		if (x1 < 0 || y1 < 0 || z1 < 0 || x2 >= m_res.x ||
-		    y2 >= m_res.y || z2 >= m_res.z) 
+		    y2 >= m_res.y || z2 >= m_res.z)
 			return 0;
 
 		const Float fx = p.x - x1, fy = p.y - y1, fz = p.z - z1,
@@ -391,7 +391,7 @@ public:
 			  x2 = x1+1, y2 = y1+1, z2 = z1+1;
 
 		if (x1 < 0 || y1 < 0 || z1 < 0 || x2 >= m_res.x ||
-		    y2 >= m_res.y || z2 >= m_res.z) 
+		    y2 >= m_res.y || z2 >= m_res.z)
 			return Spectrum(0.0f);
 
 		const Float fx = p.x - x1, fy = p.y - y1, fz = p.z - z1,
@@ -468,7 +468,7 @@ public:
 			  x2 = x1+1, y2 = y1+1, z2 = z1+1;
 
 		if (x1 < 0 || y1 < 0 || z1 < 0 || x2 >= m_res.x ||
-		    y2 >= m_res.y || z2 >= m_res.z) 
+		    y2 >= m_res.y || z2 >= m_res.z)
 			return Vector(0.0f);
 
 		const Float fx = p.x - x1, fy = p.y - y1, fz = p.z - z1;
@@ -503,9 +503,9 @@ public:
 				case EFloat32: {
 						const float3 *vectorData = (float3 *) m_data;
 						for (int k=0; k<8; ++k) {
-							uint32_t index = (((k & 4) ? z2 : z1) * m_res.y + 
+							uint32_t index = (((k & 4) ? z2 : z1) * m_res.y +
 								((k & 2) ? y2 : y1)) * m_res.x + ((k & 1) ? x2 : x1);
-							Float factor = ((k & 1) ? fx : _fx) * ((k & 2) ? fy : _fy) 
+							Float factor = ((k & 1) ? fx : _fx) * ((k & 2) ? fy : _fy)
 								* ((k & 4) ? fz : _fz);
 							Vector d = vectorData[index].toVector();
 							tensor(0, 0) += factor * d.x * d.x;
@@ -519,9 +519,9 @@ public:
 					break;
 				case EQuantizedDirections: {
 						for (int k=0; k<8; ++k) {
-							uint32_t index = (((k & 4) ? z2 : z1) * m_res.y + 
+							uint32_t index = (((k & 4) ? z2 : z1) * m_res.y +
 								((k & 2) ? y2 : y1)) * m_res.x + ((k & 1) ? x2 : x1);
-							Float factor = ((k & 1) ? fx : _fx) * ((k & 2) ? fy : _fy) 
+							Float factor = ((k & 1) ? fx : _fx) * ((k & 2) ? fy : _fy)
 								* ((k & 4) ? fz : _fz);
 							Vector d = lookupQuantizedDirection(index);
 							tensor(0, 0) += factor * d.x * d.x;
@@ -591,7 +591,7 @@ public:
 	}
 
 	MTS_DECLARE_CLASS()
-protected: 
+protected:
 	FINLINE Vector lookupQuantizedDirection(size_t index) const {
 		uint8_t theta = m_data[2*index], phi = m_data[2*index+1];
 		return Vector(

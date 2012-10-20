@@ -26,7 +26,7 @@
 #define MAX_RECENT_FILES 10
 
 // amount of time that a rendering thread will wait for the GUI to accept a
-// render view refresh request to show intermediate progress (in ms) 
+// render view refresh request to show intermediate progress (in ms)
 #define REFRESH_TIMEOUT 50
 
 namespace Ui {
@@ -77,7 +77,7 @@ public:
 		/* Asynchronously signal the GUI */
 		emit refresh();
 
-		/* Wait for the GUI to draw the image (or another 
+		/* Wait for the GUI to draw the image (or another
 		   thread to overwrite the refresh request) */
 		m_cond->wait(REFRESH_TIMEOUT);
 
@@ -184,7 +184,7 @@ private slots:
 	void onWorkCanceled(const RenderJob *job, const Point2i &offset, const Vector2i &size);
 	void onRefresh();
 	void onJobFinished(const RenderJob *job, bool cancelled);
-	void onProgressMessage(const RenderJob *job, const QString &name, 
+	void onProgressMessage(const RenderJob *job, const QString &name,
 		float progress, const QString &eta);
 	void onStatusMessage(const QString &status);
 	void onNetworkFinished(QNetworkReply *reply);
@@ -199,7 +199,7 @@ private slots:
 	void onImportDialogClose(int reason);
 	void onSceneInformationClose(int reason);
 	void onActivateCamera();
-	void on_glView_crop(int type, int x=0, int y=0, 
+	void on_glView_crop(int type, int x=0, int y=0,
 		int width=0, int height=0);
 	void onSelectionChanged();
 

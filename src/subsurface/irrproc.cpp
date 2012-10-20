@@ -26,7 +26,7 @@ MTS_NAMESPACE_BEGIN
 /* Parallel irradiance sampling implementation (worker) */
 class IrradianceSamplingWorker : public WorkProcessor {
 public:
-	IrradianceSamplingWorker(int irrSamples, bool irrIndirect, Float time) 
+	IrradianceSamplingWorker(int irrSamples, bool irrIndirect, Float time)
 		: m_irrSamples(irrSamples), m_irrIndirect(irrIndirect), m_time(time) {
 	}
 
@@ -57,7 +57,7 @@ public:
 		m_scene->wakeup(NULL, m_resources);
 	}
 
-	void process(const WorkUnit *workUnit, WorkResult *workResult, 
+	void process(const WorkUnit *workUnit, WorkResult *workResult,
 		const bool &stop) {
 		const PositionSampleVector &positions = *static_cast<const PositionSampleVector *>(workUnit);
 		IrradianceSampleVector *result = static_cast<IrradianceSampleVector *>(workResult);
@@ -147,14 +147,14 @@ std::string IrradianceSampleVector::toString() const {
 
 IrradianceSamplingProcess::IrradianceSamplingProcess(PositionSampleVector *positions,
 		size_t granularity, int irrSamples, bool irrIndirect, Float time,
-		const void *data) 
+		const void *data)
 	: m_positionSamples(positions), m_granularity(granularity),
 	  m_irrSamples(irrSamples), m_irrIndirect(irrIndirect), m_time(time) {
 	m_resultMutex = new Mutex();
 	m_irradianceSamples = new IrradianceSampleVector();
 	m_irradianceSamples->reserve(positions->size());
 	m_samplesRequested = 0;
-	m_progress = new ProgressReporter("Sampling irradiance", positions->size(), data); 
+	m_progress = new ProgressReporter("Sampling irradiance", positions->size(), data);
 }
 
 IrradianceSamplingProcess::~IrradianceSamplingProcess() {
@@ -177,7 +177,7 @@ ParallelProcess::EStatus IrradianceSamplingProcess::generateWork(WorkUnit *unit,
 	const std::vector<PositionSample> &source = m_positionSamples->get();
 
 	samples.clear();
-	samples.insert(samples.begin(), 
+	samples.insert(samples.begin(),
 			source.begin() + m_samplesRequested,
 			source.begin() + m_samplesRequested + workSize);
 	m_samplesRequested += workSize;

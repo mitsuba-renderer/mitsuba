@@ -46,7 +46,7 @@ public:
 	void start();
 
 	/**
-	 * \brief Reset the timer, including the total elapsed time across 
+	 * \brief Reset the timer, including the total elapsed time across
 	 * all intervals (and restart it by default)
 	 */
 	void reset(bool restart = true);
@@ -81,7 +81,7 @@ public:
 	/**
 	 * \brief "Lap"-style interface
 	 *
-	 * This function is the atomic equivalent to stopping the 
+	 * This function is the atomic equivalent to stopping the
 	 * timer, recording the time passed since it was started,
 	 * and restarting it. The resulting time value in seconds
 	 * is returned.

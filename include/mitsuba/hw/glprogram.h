@@ -48,7 +48,7 @@ public:
 
 	/// Determine the ID number of a named parameter
 	int getParameterID(const std::string &name, bool failIfMissing = true) const;
-	
+
 	/// Set a boolean parameter
 	void setParameter(int id, bool value);
 
@@ -57,7 +57,7 @@ public:
 
 	/// Set a integer parameter
 	void setParameter(int id, int value);
-	
+
 	/// Set a unsigned integer parameter
 	void setParameter(int id, uint32_t value);
 
@@ -108,7 +108,7 @@ public:
 
 	/** Set a GPUTexture parameter. Must be executed after
 	    binding the texture to a texture unit */
-	void setParameter(int id, const GPUTexture *value); 
+	void setParameter(int id, const GPUTexture *value);
 
 	MTS_DECLARE_CLASS()
 protected:

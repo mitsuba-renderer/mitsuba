@@ -51,7 +51,7 @@ public:
 		m_color1 = props.getSpectrum("color1", Spectrum(.2f));
 	}
 
-	Checkerboard(Stream *stream, InstanceManager *manager) 
+	Checkerboard(Stream *stream, InstanceManager *manager)
 	 : Texture2D(stream, manager) {
 		m_color0 = Spectrum(stream);
 		m_color1 = Spectrum(stream);
@@ -64,7 +64,7 @@ public:
 	}
 
 	inline Spectrum eval(const Point2 &uv) const {
-		int x = 2*modulo((int) (uv.x * 2), 2) - 1, 
+		int x = 2*modulo((int) (uv.x * 2), 2) - 1,
 			y = 2*modulo((int) (uv.y * 2), 2) - 1;
 
 		if (x*y == 1)
@@ -113,7 +113,7 @@ public:
 			<< "]";
 		return oss.str();
 	}
-	
+
 	Shader *createShader(Renderer *renderer) const;
 
 	MTS_DECLARE_CLASS()
@@ -122,14 +122,14 @@ protected:
 	Spectrum m_color0;
 };
 
-// ================ Hardware shader implementation ================ 
+// ================ Hardware shader implementation ================
 
 class CheckerboardShader : public Shader {
 public:
-	CheckerboardShader(Renderer *renderer, const Spectrum &color0, 
+	CheckerboardShader(Renderer *renderer, const Spectrum &color0,
 		const Spectrum &color1, const Point2 &uvOffset,
 		const Vector2 &uvScale) : Shader(renderer, ETextureShader),
-		m_color0(color0), m_color1(color1), 
+		m_color0(color0), m_color1(color1),
 		m_uvOffset(uvOffset), m_uvScale(uvScale) {
 	}
 
@@ -160,14 +160,14 @@ public:
 		parameterIDs.push_back(program->getParameterID(evalName + "_uvScale", false));
 	}
 
-	void bind(GPUProgram *program, const std::vector<int> &parameterIDs, 
+	void bind(GPUProgram *program, const std::vector<int> &parameterIDs,
 		int &textureUnitOffset) const {
 		program->setParameter(parameterIDs[0], m_color0);
 		program->setParameter(parameterIDs[1], m_color1);
 		program->setParameter(parameterIDs[2], m_uvOffset);
 		program->setParameter(parameterIDs[3], m_uvScale);
 	}
-	
+
 	MTS_DECLARE_CLASS()
 private:
 	Spectrum m_color0;
@@ -177,10 +177,10 @@ private:
 };
 
 Shader *Checkerboard::createShader(Renderer *renderer) const {
-	return new CheckerboardShader(renderer, m_color0, m_color1, 
+	return new CheckerboardShader(renderer, m_color0, m_color1,
 		m_uvOffset, m_uvScale);
 }
-	
+
 MTS_IMPLEMENT_CLASS(CheckerboardShader, false, Shader)
 MTS_IMPLEMENT_CLASS_S(Checkerboard, false, Texture2D)
 MTS_EXPORT_PLUGIN(Checkerboard, "Checkerboard texture");

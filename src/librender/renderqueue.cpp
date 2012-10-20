@@ -27,7 +27,7 @@ RenderQueue::RenderQueue() {
 	m_cond = new ConditionVariable(m_mutex);
 	m_timer = new Timer();
 }
-	
+
 RenderQueue::~RenderQueue() {
 	for (size_t i=0; i<m_listeners.size(); ++i)
 		m_listeners[i]->decRef();
@@ -53,7 +53,7 @@ void RenderQueue::unregisterListener(RenderListener *listener) {
 	}
 	listener->decRef();
 }
-	
+
 void RenderQueue::flush() {
 	LockGuard lock(m_mutex);
 	std::map<RenderJob *, JobRecord>::iterator it = m_jobs.begin();
@@ -79,10 +79,10 @@ void RenderQueue::removeJob(RenderJob *job, bool cancelled) {
 	}
 	signalFinishJob(job, cancelled);
 }
-	
+
 void RenderQueue::waitLeft(size_t njobs) const {
 	UniqueLock lock(m_mutex);
-	while (m_jobs.size() > njobs) 
+	while (m_jobs.size() > njobs)
 		m_cond->wait();
 	lock.unlock();
 	join();

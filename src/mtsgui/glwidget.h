@@ -164,9 +164,9 @@ protected:
 
 	inline void setInverseViewTransform(const Transform &trafo) {
 		/* Preserve the handedness of the current camera transformation */
-		if (getInverseViewTransform().det3x3() * trafo.det3x3() > 0)		
+		if (getInverseViewTransform().det3x3() * trafo.det3x3() > 0)
 			getProjectiveCamera()->setInverseViewTransform(trafo);
-		else 
+		else
 			getProjectiveCamera()->setInverseViewTransform(trafo *
 				Transform::scale(Vector(-1,1,1)));
 	}
@@ -176,7 +176,7 @@ protected:
 	class QtDevice : public WGLDevice {
 	public:
 		QtDevice(QGLWidget *widget) : WGLDevice(NULL), m_widget(widget) { }
-		void init(Device *other = NULL) { 
+		void init(Device *other = NULL) {
 			m_hwnd = m_widget->winId();
 			m_hdc = wglGetCurrentDC();
 		}
@@ -196,7 +196,7 @@ protected:
 private:
 	static void setSourceFromResource(GPUProgram *program,
 		GPUProgram::EType type, const QString &resourceName);
-	
+
 	GPUProgram* createGPUProgram(const std::string &name,
 		const QString &vertexResource, const QString &fragmentResource);
 

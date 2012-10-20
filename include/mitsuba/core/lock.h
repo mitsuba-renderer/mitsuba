@@ -79,7 +79,7 @@ public:
 
 	/**
 	 * \brief Temporarily wait for the flag to be set to true
-	 * 
+	 *
 	 * Similar to \ref wait(), but also uses a time value given
 	 * in milliseconds. A return value of \c false signals
 	 * that a timeout has occurred.
@@ -106,31 +106,31 @@ private:
 class MTS_EXPORT_CORE ConditionVariable : public Object {
 public:
 	/**
-	 * \brief Create a new condition variable. Also takes a 
+	 * \brief Create a new condition variable. Also takes a
 	 * mutex, which is later used by wait(). If none is specified,
 	 * a new mutex instance will be created.
 	 */
 	ConditionVariable(Mutex *mutex = NULL);
 
 	/**
-	 * \brief Send a signal, which wakes up at least one of 
-	 * the waiting threads. 
-	 * 
-	 * The calling thread does not have to hold the lock, 
-	 * but more predictable scheduling will occur if this is the 
+	 * \brief Send a signal, which wakes up at least one of
+	 * the waiting threads.
+	 *
+	 * The calling thread does not have to hold the lock,
+	 * but more predictable scheduling will occur if this is the
 	 * case.
 	 */
 	void signal();
 
 	/**
-	 * \brief Send a signal, which wakes up any waiting threads. 
+	 * \brief Send a signal, which wakes up any waiting threads.
 	 *
 	 * The calling thread does not have to hold the lock, but more
 	 * predictable scheduling will occur if this is the case.
 	 */
 	void broadcast();
 
-	/** 
+	/**
 	 * \brief Wait for a signal and release the lock in the meanwhile.
 	 *
 	 * Assumes that the lock specified in the constructor has
@@ -224,7 +224,7 @@ public:
 	inline bool operator!() const {
 		return !ownsLock();
 	}
-	
+
 	inline bool ownsLock() const {
 		return is_locked;
 	}

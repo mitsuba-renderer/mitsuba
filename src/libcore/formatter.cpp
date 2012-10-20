@@ -23,7 +23,7 @@
 
 MTS_NAMESPACE_BEGIN
 
-DefaultFormatter::DefaultFormatter() 
+DefaultFormatter::DefaultFormatter()
  : m_haveDate(true), m_haveLogLevel(true), m_haveThread(true), m_haveClass(true) {
 }
 

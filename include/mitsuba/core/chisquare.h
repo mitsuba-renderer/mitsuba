@@ -59,7 +59,7 @@ MTS_NAMESPACE_BEGIN
  * \endcode
  *
  * the code in this class might be used as follows
- * 
+ *
  * \code
  * MyDistribution myDistrInstance;
  * ChiSquare chiSqr;
@@ -109,9 +109,9 @@ public:
 	 *    Number of samples to be used when computing the bin
 	 *    values. The default is \c thetaBins*phiBins*5000
 	 */
-	ChiSquare(int thetaBins = 10, int phiBins = 0, 
+	ChiSquare(int thetaBins = 10, int phiBins = 0,
 			int numTests = 1, size_t sampleCount = 0);
-	
+
 	/// Get the log level
 	inline ELogLevel getLogLevel() const { return m_logLevel; }
 
@@ -119,17 +119,17 @@ public:
 	inline void setLogLevel(ELogLevel logLevel) { m_logLevel = logLevel; }
 
 	/**
-	 * \brief Set the tolerance threshold for bins with very low 
+	 * \brief Set the tolerance threshold for bins with very low
 	 * aggregate probabilities
 	 *
-	 * When the Chi-square test integrates the supplied probability 
+	 * When the Chi-square test integrates the supplied probability
 	 * density function over the support of a bin and determines that
-	 * the aggregate bin probability is zero, the test would ordinarily 
-	 * fail if as much as one sample is placed in that bin in the 
-	 * subsequent sampling step. However, due to various numerical 
-	 * errors in a system based on finite-precision arithmetic, it 
-	 * may be a good idea to tolerate at least a few samples without 
-	 * immediately rejecting the null hypothesis. This parameter 
+	 * the aggregate bin probability is zero, the test would ordinarily
+	 * fail if as much as one sample is placed in that bin in the
+	 * subsequent sampling step. However, due to various numerical
+	 * errors in a system based on finite-precision arithmetic, it
+	 * may be a good idea to tolerate at least a few samples without
+	 * immediately rejecting the null hypothesis. This parameter
 	 * sets this threshold. The default value is \c number-of-samples*1e-4f
 	 */
 	inline void setTolerance(Float tolerance) { m_tolerance = tolerance; }

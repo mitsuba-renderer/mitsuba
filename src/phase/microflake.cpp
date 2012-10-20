@@ -39,7 +39,7 @@ static StatsCounter avgSampleIterations("Micro-flake model",
  * \parameters{
  *     \parameter{stddev}{\Float}{
  *       Standard deviation of the micro-flake normals. This
- *       specifies the roughness of the fibers in the medium. 
+ *       specifies the roughness of the fibers in the medium.
  *     }
  * }
  *
@@ -48,19 +48,19 @@ static StatsCounter avgSampleIterations("Micro-flake model",
  *     \rendering{\code{stddev}=0.05}{phase_microflakes_005}
  * }
  *
- * This plugin implements the anisotropic micro-flake phase function 
+ * This plugin implements the anisotropic micro-flake phase function
  * described in
  * ``A radiative transfer framework for rendering materials with
- * anisotropic structure'' by Wenzel Jakob, Adam Arbree, 
- * Jonathan T. Moon, Kavita Bala, and Steve Marschner 
+ * anisotropic structure'' by Wenzel Jakob, Adam Arbree,
+ * Jonathan T. Moon, Kavita Bala, and Steve Marschner
  * \cite{Jakob2010Radiative}.
  *
  * The implementation in this plugin is specific to rough fibers
  * and uses a Gaussian-type flake distribution. It is much faster
- * than the spherical harmonics approach proposed in the original 
- * paper. This distribution, as well as the implemented sampling 
+ * than the spherical harmonics approach proposed in the original
+ * paper. This distribution, as well as the implemented sampling
  * method, are described in the paper
- * ``Building Volumetric Appearance Models of Fabric using 
+ * ``Building Volumetric Appearance Models of Fabric using
  * Micro CT Imaging'' by Shuang Zhao, Wenzel Jakob, Steve Marschner,
  * and Kavita Bala \cite{Zhao2011Building}.
  *
@@ -84,7 +84,7 @@ public:
 		m_fiberDistr = GaussianFiberDistribution(props.getFloat("stddev"));
 	}
 
-	MicroflakePhaseFunction(Stream *stream, InstanceManager *manager) 
+	MicroflakePhaseFunction(Stream *stream, InstanceManager *manager)
 		: PhaseFunction(stream, manager) {
 		m_fiberDistr = GaussianFiberDistribution(stream->readFloat());
 		configure();
@@ -170,7 +170,7 @@ public:
 		return 1.0f;
 	}
 
-	Float sample(PhaseFunctionSamplingRecord &pRec, 
+	Float sample(PhaseFunctionSamplingRecord &pRec,
 			Float &pdf, Sampler *sampler) const {
 		if (sample(pRec, sampler) == 0) {
 			pdf = 0; return 0.0f;

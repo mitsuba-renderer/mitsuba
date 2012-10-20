@@ -21,7 +21,7 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * \brief This work result implementation stores a sequence of photons, which can be 
+ * \brief This work result implementation stores a sequence of photons, which can be
  * sent over the wire as needed.
  *
  * It is used to implement parallel networked photon tracing passes.
@@ -41,7 +41,7 @@ public:
 	inline size_t size() const {
 		return m_photons.size();
 	}
-	
+
 	inline size_t getParticleCount() const {
 		return m_particleIndices.size()-1;
 	}
@@ -102,7 +102,7 @@ public:
 		int maxDepth, int rrDepth) : ParticleTracer(maxDepth, rrDepth, false),
 		m_type(type), m_granularity(granularity) { }
 
-	GatherPhotonWorker(Stream *stream, InstanceManager *manager) 
+	GatherPhotonWorker(Stream *stream, InstanceManager *manager)
 	 : ParticleTracer(stream, manager) {
 		m_type = (GatherPhotonProcess::EGatherType) stream->readInt();
 		m_granularity = stream->readSize();
@@ -123,7 +123,7 @@ public:
 		return new PhotonVector();
 	}
 
-	void process(const WorkUnit *workUnit, WorkResult *workResult, 
+	void process(const WorkUnit *workUnit, WorkResult *workResult,
 		const bool &stop) {
 		m_workResult = static_cast<PhotonVector *>(workResult);
 		m_workResult->clear();
@@ -145,7 +145,7 @@ public:
 
 		if ((m_type == GatherPhotonProcess::ECausticPhotons && depth > 1 && delta)
 		 || (m_type == GatherPhotonProcess::ESurfacePhotons && depth > 1 && !delta)
-		 || (m_type == GatherPhotonProcess::EAllSurfacePhotons)) 
+		 || (m_type == GatherPhotonProcess::EAllSurfacePhotons))
 			m_workResult->put(Photon(its.p, its.geoFrame.n, -its.toWorld(its.wi), weight, depth));
 	}
 
@@ -166,10 +166,10 @@ protected:
 	ref<PhotonVector> m_workResult;
 };
 
-GatherPhotonProcess::GatherPhotonProcess(EGatherType type, size_t photonCount, 
+GatherPhotonProcess::GatherPhotonProcess(EGatherType type, size_t photonCount,
 	size_t granularity, int maxDepth, int rrDepth, bool isLocal, bool autoCancel,
 	const void *progressReporterPayload)
-	: ParticleProcess(ParticleProcess::EGather, photonCount, granularity, "Gathering photons", 
+	: ParticleProcess(ParticleProcess::EGather, photonCount, granularity, "Gathering photons",
 	  progressReporterPayload), m_type(type), m_photonCount(photonCount), m_maxDepth(maxDepth),
 	  m_rrDepth(rrDepth),  m_isLocal(isLocal), m_autoCancel(autoCancel), m_excess(0), m_numShot(0) {
 	m_photonMap = new PhotonMap(photonCount);
@@ -221,7 +221,7 @@ ParallelProcess::EStatus GatherPhotonProcess::generateWork(WorkUnit *unit, int w
 	return ParticleProcess::generateWork(unit, worker);
 }
 
-MTS_IMPLEMENT_CLASS(GatherPhotonProcess, false, ParticleProcess) 
-MTS_IMPLEMENT_CLASS_S(GatherPhotonWorker, false, ParticleTracer) 
-MTS_IMPLEMENT_CLASS(PhotonVector, false, WorkResult) 
+MTS_IMPLEMENT_CLASS(GatherPhotonProcess, false, ParticleProcess)
+MTS_IMPLEMENT_CLASS_S(GatherPhotonWorker, false, ParticleTracer)
+MTS_IMPLEMENT_CLASS(PhotonVector, false, WorkResult)
 MTS_NAMESPACE_END

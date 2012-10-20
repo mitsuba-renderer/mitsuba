@@ -67,7 +67,7 @@ RemoteWorker::RemoteWorker(const std::string &name, Stream *stream) : Worker(nam
 	m_reader->start();
 	m_inFlight = 0;
 	m_isRemote = true;
-	Log(EDebug, "Connection to \"%s\" established (%i cores).", 
+	Log(EDebug, "Connection to \"%s\" established (%i cores).",
 		m_nodeName.c_str(), m_coreCount);
 }
 
@@ -83,7 +83,7 @@ RemoteWorker::~RemoteWorker() {
 	}
 	m_reader->join();
 }
-	
+
 void RemoteWorker::start(Scheduler *scheduler, int workerIndex, int coreOffset) {
 	Worker::start(scheduler, workerIndex, coreOffset);
 	m_reader->m_schedItem.coreOffset = coreOffset;
@@ -110,8 +110,8 @@ void RemoteWorker::run() {
 
 		const int id = m_schedItem.rec->id;
 		if (m_processes.find(id) == m_processes.end()) {
-			/* The backend has not yet seen this process - submit 
-			   all information required to receive and execute work 
+			/* The backend has not yet seen this process - submit
+			   all information required to receive and execute work
 			   units on the other side */
 			std::vector<std::pair<int, const MemoryStream *> > resources;
 			std::vector<std::pair<int, const SerializableObject *> > multiResources;
@@ -125,11 +125,11 @@ void RemoteWorker::run() {
 
 				if (m_resources.find(resID) == m_resources.end()) {
 					if (!m_scheduler->isMultiResource(resID)) {
-						resources.push_back(std::pair<int, const MemoryStream *>(resID, 
+						resources.push_back(std::pair<int, const MemoryStream *>(resID,
 							m_scheduler->getResourceStream(resID)));
 					} else {
 						for (size_t i=0; i<m_coreCount; ++i)
-							multiResources.push_back(std::pair<int, const SerializableObject *>(resID, 
+							multiResources.push_back(std::pair<int, const SerializableObject *>(resID,
 								m_scheduler->getResource(resID, (int) (m_schedItem.coreOffset + i))));
 					}
 				}
@@ -168,13 +168,13 @@ void RemoteWorker::run() {
 				m_memStream->writeUInt((unsigned int) resStream->getPos());
 				m_memStream->write(resStream->getData(), resStream->getPos());
 			}
-			
+
 			for (size_t i=0; i<multiResources.size(); i += m_coreCount) {
 				int resID = multiResources[i].first;
 				ref<MemoryStream> resStream = new MemoryStream();
 				ref<InstanceManager> manager = new InstanceManager();
 				resStream->setByteOrder(Stream::ENetworkByteOrder);
-				for (size_t j=0; j<m_coreCount; ++j) 
+				for (size_t j=0; j<m_coreCount; ++j)
 					manager->serialize(resStream, multiResources[i+j].second);
 				Log(EDebug, "Sending multi resource %i to \"%s\" (%i KB)", resID, m_nodeName.c_str(),
 					resStream->getPos() / 1024);
@@ -204,7 +204,7 @@ void RemoteWorker::run() {
 			/* There are now too many packets in transit. Wait
 			   until this clears up a bit before attempting to
 			   send more work */
-			while (m_inFlight > MTS_CONTINUE_FACTOR * m_coreCount) 
+			while (m_inFlight > MTS_CONTINUE_FACTOR * m_coreCount)
 				m_finishCond->wait();
 		}
 	}
@@ -254,8 +254,8 @@ void RemoteWorker::clear() {
 }
 
 
-RemoteWorkerReader::RemoteWorkerReader(RemoteWorker *worker) 
- : Thread(formatString("%s_r", worker->getName().c_str())), 
+RemoteWorkerReader::RemoteWorkerReader(RemoteWorker *worker)
+ : Thread(formatString("%s_r", worker->getName().c_str())),
  	m_parent(worker), m_shutdown(false), m_currentID(-1) {
 	m_stream = m_parent->m_stream;
 	setCritical(true);
@@ -268,7 +268,7 @@ void RemoteWorkerReader::run() {
 		try {
 			msg = m_stream->readShort();
 			id = m_stream->readInt();
-	
+
 			if (id != m_currentID) {
 				m_parent->setProcessByID(m_schedItem, id);
 				m_currentID = id;
@@ -318,7 +318,7 @@ void RemoteWorkerReader::run() {
 /* ==================================================================== */
 
 StreamBackend::StreamBackend(const std::string &thrName, Scheduler *scheduler,
-		const std::string &nodeName, Stream *stream, bool detach) : Thread(thrName), 
+		const std::string &nodeName, Stream *stream, bool detach) : Thread(thrName),
 		m_scheduler(scheduler), m_nodeName(nodeName), m_stream(stream), m_detach(detach) {
 	m_sendMutex = new Mutex();
 	m_memStream = new MemoryStream();
@@ -350,7 +350,7 @@ void StreamBackend::run() {
 	}
 
 	const size_t dataLength = strlen(MTS_VERSION)+3;
-	char *data    = (char *) alloca(dataLength), 
+	char *data    = (char *) alloca(dataLength),
 		 *refData = (char *) alloca(dataLength);
 	strncpy(refData, MTS_VERSION, strlen(MTS_VERSION)+1);
 	refData[dataLength-2] = SPECTRUM_SAMPLES;
@@ -377,7 +377,7 @@ void StreamBackend::run() {
 	m_memStream->copyTo(m_stream);
 	m_stream->flush();
 	bool running = true;
-	
+
 	try {
 		while (running) {
 			msg = m_stream->readShort();
@@ -535,7 +535,7 @@ void StreamBackend::sendWorkResult(int id, const WorkResult *result, bool cancel
 /*                            Remote process                            */
 /* ==================================================================== */
 
-RemoteProcess::RemoteProcess(int id, ELogLevel logLevel, 
+RemoteProcess::RemoteProcess(int id, ELogLevel logLevel,
 		StreamBackend *backend, WorkProcessor *wp)
 		: m_id(id), m_backend(backend), m_wp(wp) {
 	m_mutex = new Mutex();
@@ -578,7 +578,7 @@ ref<WorkProcessor> RemoteProcess::createWorkProcessor() const {
 
 /* Executed while the main scheduler lock is held. */
 void RemoteProcess::handleCancellation() {
-	/* Also acquire the local queue mutex, purge all queued 
+	/* Also acquire the local queue mutex, purge all queued
 	   work units and inform the remote side how many were lost */
 	LockGuard lock(m_mutex);
 	m_backend->sendCancellation(m_id, (int) m_full.size());

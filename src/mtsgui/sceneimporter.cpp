@@ -24,12 +24,12 @@ fs::path GUIGeometryConverter::locateResource(const fs::path &resource) {
 	return result;
 }
 
-SceneImporter::SceneImporter(FileResolver *resolver, 
+SceneImporter::SceneImporter(FileResolver *resolver,
 		const fs::path &sourceFile, const fs::path &directory,
 		const fs::path &targetScene, const fs::path &adjustmentFile,
 		bool sRGB)
-	: Thread("impt"), m_resolver(resolver), 
-	  m_sourceFile(sourceFile), m_directory(directory), 
+	: Thread("impt"), m_resolver(resolver),
+	  m_sourceFile(sourceFile), m_directory(directory),
 	  m_targetScene(targetScene), m_adjustmentFile(adjustmentFile), m_srgb(sRGB) {
 	m_wait = new WaitFlag();
 }

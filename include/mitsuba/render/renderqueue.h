@@ -25,8 +25,8 @@
 
 MTS_NAMESPACE_BEGIN
 
-/** 
- * \brief Abstract render listener - can be used to react to 
+/**
+ * \brief Abstract render listener - can be used to react to
  * progress messages (e.g. in a GUI)
  * \ingroup librender
  */
@@ -34,10 +34,10 @@ class MTS_EXPORT_RENDER RenderListener : public Object {
 public:
 	/// Called when work has begun in a rectangular image region
 	virtual void workBeginEvent(const RenderJob *job, const RectangularWorkUnit *wu, int worker) = 0;
-	
+
 	/// Called when work has finished in a rectangular image region
 	virtual void workEndEvent(const RenderJob *job, const ImageBlock *wr) = 0;
-	
+
 	/// Called when work has been canceled in a rectangular image region
 	virtual void workCanceledEvent(const RenderJob *job, const Point2i &offset,
 			const Vector2i &size) = 0;
@@ -53,7 +53,7 @@ protected:
 	virtual ~RenderListener() { }
 };
 
-/** 
+/**
  * \brief Render queue - used to keep track of a number of scenes
  * that are simultaneously being rendered.
  *
@@ -82,7 +82,7 @@ public:
 	/// Unregister a render listener
 	void unregisterListener(RenderListener *listener);
 
-	/** 
+	/**
 	 * Wait until the queue contains a certain number
 	 * of scenes (or less).
 	 */

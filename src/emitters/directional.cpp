@@ -40,12 +40,12 @@ MTS_NAMESPACE_BEGIN
  *         \default{1}
  *     }
  *     \parameter{samplingWeight}{\Float}{
- *         Specifies the relative amount of samples 
+ *         Specifies the relative amount of samples
  *         allocated to this emitter. \default{1}
  *     }
  * }
  *
- * This emitter plugin implements a distant directional source, which 
+ * This emitter plugin implements a distant directional source, which
  * radiates a specified power per unit area along a fixed direction.
  * By default, the emitter radiates in the direction of the postive Z axis.
  */
@@ -66,13 +66,13 @@ public:
 			m_worldTransform = new AnimatedTransform(
 				Transform::lookAt(Point(0.0f), Point(d), u));
 		} else {
-			if (props.getTransform("toWorld", Transform()).hasScale()) 
+			if (props.getTransform("toWorld", Transform()).hasScale())
 				Log(EError, "Scale factors in the emitter-to-world "
 					"transformation are not allowed!");
 		}
 	}
 
-	DirectionalEmitter(Stream *stream, InstanceManager *manager) 
+	DirectionalEmitter(Stream *stream, InstanceManager *manager)
 	 : Emitter(stream, manager) {
 		m_normalIrradiance = Spectrum(stream);
 		m_bsphere = BSphere(stream);
@@ -104,7 +104,7 @@ public:
 		const Transform &trafo = m_worldTransform->eval(pRec.time);
 
 		Point2 p = Warp::squareToUniformDiskConcentric(sample);
-		
+
 		Vector perpOffset = trafo(Vector(p.x, p.y, 0) * m_bsphere.radius);
 		Vector d = trafo(Vector(0, 0, 1));
 
@@ -123,7 +123,7 @@ public:
 		return (pRec.measure == EArea) ? m_invSurfaceArea : 0.0f;
 	}
 
-	Spectrum sampleDirection(DirectionSamplingRecord &dRec, 
+	Spectrum sampleDirection(DirectionSamplingRecord &dRec,
 			PositionSamplingRecord &pRec,
 			const Point2 &sample, const Point2 *extra) const {
 		dRec.d = pRec.n;
@@ -157,7 +157,7 @@ public:
 	}
 
 	Spectrum sampleDirect(DirectSamplingRecord &dRec, const Point2 &sample) const {
-		const Transform &trafo = m_worldTransform->eval(dRec.time);	
+		const Transform &trafo = m_worldTransform->eval(dRec.time);
 		Vector d = trafo(Vector(0,0,1));
 		Point diskCenter = m_bsphere.center - d*m_bsphere.radius;
 
@@ -173,7 +173,7 @@ public:
 		dRec.d = -d;
 		dRec.n = Normal(d);
 		dRec.dist = distance;
-		
+
 		dRec.pdf = 1.0f;
 		dRec.measure = EDiscrete;
 		return m_normalIrradiance;
@@ -207,11 +207,11 @@ private:
 	Float m_invSurfaceArea;
 };
 
-// ================ Hardware shader implementation ================ 
+// ================ Hardware shader implementation ================
 
 class DirectionalEmitterShader : public Shader {
 public:
-	DirectionalEmitterShader(Renderer *renderer) 
+	DirectionalEmitterShader(Renderer *renderer)
 		: Shader(renderer, EEmitterShader) { }
 
 	void generateCode(std::ostringstream &oss, const std::string &evalName,
@@ -224,7 +224,7 @@ public:
 	MTS_DECLARE_CLASS()
 };
 
-Shader *DirectionalEmitter::createShader(Renderer *renderer) const { 
+Shader *DirectionalEmitter::createShader(Renderer *renderer) const {
 	return new DirectionalEmitterShader(renderer);
 }
 

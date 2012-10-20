@@ -25,12 +25,12 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * \brief Specialized sampler implementation used to seed MLT-style algorithm. 
+ * \brief Specialized sampler implementation used to seed MLT-style algorithm.
  *
  * Allows to query for the current sample index, which can later be used to rewind
- * back to this state. In the case of MLT, this makes it possible to sample paths 
+ * back to this state. In the case of MLT, this makes it possible to sample paths
  * approximately proportional to their contribution without actually having
- * to store millions of path. Note that `rewinding' is naive -- it just 
+ * to store millions of path. Note that `rewinding' is naive -- it just
  * resets & regenerates the whole random number sequence, which might be slow.
  *
  * \ingroup libbidir

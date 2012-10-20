@@ -37,12 +37,12 @@ public:
 	PreviewThread(Device *parentDevice, Renderer *parentRenderer);
 
 	/**
-	 * Change the scene context. 
+	 * Change the scene context.
 	 */
 	void setSceneContext(SceneContext *context, bool swapContext, bool motion);
 
 	/**
-	 * Resume rendering 
+	 * Resume rendering
 	 */
 	void resume();
 
@@ -59,7 +59,7 @@ public:
 
 	/// Return the buffer to the renderer
 	void releaseBuffer(PreviewQueueEntry &entry);
-	
+
 	/// Terminate the preview thread
 	void quit();
 signals:

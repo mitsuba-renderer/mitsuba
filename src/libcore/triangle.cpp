@@ -29,7 +29,7 @@ Point Triangle::sample(const Point *positions, const Normal *normals,
 
 	Point2 bary = Warp::squareToUniformTriangle(sample);
 	Vector sideA = p1 - p0, sideB = p2 - p0;
-	Point p = p0 + (sideA * bary.x) + (sideB * bary.y);	
+	Point p = p0 + (sideA * bary.x) + (sideB * bary.y);
 
 	if (normals) {
 		const Normal &n0 = normals[idx[0]];
@@ -57,7 +57,7 @@ Float Triangle::surfaceArea(const Point *positions) const {
 
 #define MAX_VERTS 10
 
-static int sutherlandHodgman(Point3d *input, int inCount, Point3d *output, int axis, 
+static int sutherlandHodgman(Point3d *input, int inCount, Point3d *output, int axis,
 		double splitPos, bool isMinimum) {
 	if (inCount < 3)
 		return 0;
@@ -114,7 +114,7 @@ AABB Triangle::getClippedAABB(const Point *positions, const AABB &aabb) const {
 	   errors in such cases, otherwise the resulting tree will incorrectly
 	   remove triangles from the associated nodes. Hence, do the
 	   following computation in double precision! */
-	for (int i=0; i<3; ++i) 
+	for (int i=0; i<3; ++i)
 		vertices1[i] = Point3d(positions[idx[i]]);
 
 	for (int axis=0; axis<3; ++axis) {
@@ -133,12 +133,12 @@ AABB Triangle::getClippedAABB(const Point *positions, const AABB &aabb) const {
 			if (pos_f < pos_d) {
 				/* Float value is too small */
 				pos_roundedDown = pos_f;
-				pos_roundedUp = nextafterf(pos_f, 
+				pos_roundedUp = nextafterf(pos_f,
 					std::numeric_limits<float>::infinity());
 			} else if (pos_f > pos_d) {
 				/* Float value is too large */
 				pos_roundedUp = pos_f;
-				pos_roundedDown = nextafterf(pos_f, 
+				pos_roundedDown = nextafterf(pos_f,
 					-std::numeric_limits<float>::infinity());
 			} else {
 				/* Double value is exactly representable */
