@@ -47,26 +47,34 @@ void initializeFramework() {
 	SHVector::staticInitialization();
 	SceneHandler::staticInitialization();
 
-	fs::path sharedLibraryPath;
+	fs::path basePath;
 
-	/* Try to detect the python plugin path */
+	/* Try to detect the base path of the Mitsuba installation */
 	#if defined(__LINUX__)
 		Dl_info info;
 		dladdr((void *) &initializeFramework, &info);
-		if (info.dli_fname)
-			sharedLibraryPath = fs::path(info.dli_fname);
+		if (info.dli_fname) {
+			/* Try to detect a few default setups */
+			if (boost::starts_with(info.dli_fname, "/usr/lib")) {
+				basePath = fs::path("/usr/share/mitsuba");
+			} else if (boost::starts_with(info.dli_fname, "/usr/local/lib")) {
+				basePath = fs::path("/usr/local/share/mitsuba");
+			} else {
+				/* This is a locally-compiled repository */
+				basePath = fs::path(info.dli_fname).parent_path().parent_path().parent_path();
+			}
+		}
 	#elif defined(__OSX__)
 		uint32_t imageCount = _dyld_image_count();
 		for (uint32_t i=0; i<imageCount; ++i) {
 			const char *imageName = _dyld_get_image_name(i);
 			if (boost::ends_with(imageName, "mitsuba.so"))
-				sharedLibraryPath = fs::path(imageName);
+				basePath = fs::path(imageName).parent_path().parent_path().parent_path();
 		}
 	#endif
 
-	if (!sharedLibraryPath.empty())
-		Thread::getThread()->getFileResolver()->prependPath(
-			sharedLibraryPath.parent_path().parent_path().parent_path());
+	if (!basePath.empty())
+		Thread::getThread()->getFileResolver()->prependPath(basePath);
 }
 
 void shutdownFramework() {

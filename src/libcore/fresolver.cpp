@@ -10,16 +10,19 @@ MTS_NAMESPACE_BEGIN
 FileResolver::FileResolver() {
 	m_paths.push_back(fs::current_path());
 #if defined(__LINUX__)
-	char exePath[PATH_MAX];
-	memset(exePath, 0, PATH_MAX);
-	if (readlink("/proc/self/exe", exePath, PATH_MAX) != -1) {
-		const fs::path exeParentPath = fs::path(exePath).parent_path();
-		prependPath(exeParentPath);
-		// Handle local installs: ~/local/bin/:~/local/share/mitsuba/*
-		fs::path sharedDir = exeParentPath.parent_path();
-		sharedDir /= fs::path("share/mitsuba");
-		if (fs::exists(sharedDir)) {
-			prependPath(sharedDir);
+	char exePathTemp[PATH_MAX];
+	memset(exePathTemp, 0, PATH_MAX);
+	if (readlink("/proc/self/exe", exePathTemp, PATH_MAX) != -1) {
+		fs::path exePath(exePathTemp);
+
+		/* Make sure that we're not running inside a Python interpreter */
+		if (exePath.filename().string().find("python") == std::string::npos) {
+			prependPath(exePath.parent_path());
+			// Handle local installs: ~/local/bin/:~/local/share/mitsuba/*
+			fs::path sharedDir = exePath.parent_path().parent_path()
+				/ fs::path("share") / fs::path("mitsuba");
+			if (fs::exists(sharedDir))
+				prependPath(sharedDir);
 		}
 	} else {
 		Log(EError, "Could not detect the executable path!");

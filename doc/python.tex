@@ -66,10 +66,7 @@ from mitsuba.render import SceneHandler
 # Get a reference to the thread's file resolver
 fileResolver = Thread.getThread().getFileResolver()
 
-# Register the search path needed to load plugins
-fileResolver.appendPath('<path to mitsuba directory>')
-
-# Register the search path needed to load scene resources
+# Register any searchs path needed to load scene resources (optional)
 fileResolver.appendPath('<path to scene directory>')
 
 # Optional: supply parameters that can be accessed 
