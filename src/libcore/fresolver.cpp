@@ -1,4 +1,5 @@
 #include <mitsuba/core/fresolver.h>
+#include <boost/algorithm/string.hpp>
 
 #if defined(__WINDOWS__)
 # include <windows.h>
@@ -47,9 +48,10 @@ FileResolver::FileResolver() {
 
 	// There is an error if and only if the function returns 0
 	if (nSize != 0) {
-		prependPath(fs::path(lpFilename).parent_path());
-	}
-	else {
+		fs::path path(lpFilename);
+		if (boost::to_lower_copy(path.filename().string()).find("python") == std::string::npos)
+			prependPath(path.parent_path());
+	} else {
 		const std::string msg(lastErrorText());
 		Log(EError, "Could not detect the executable path! (%s)", msg.c_str());
 	}
