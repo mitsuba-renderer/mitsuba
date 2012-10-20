@@ -20,6 +20,13 @@
 #include <mitsuba/render/scenehandler.h>
 #include <mitsuba/render/scene.h>
 
+#if defined(__LINUX__)
+# if !defined(_GNU_SOURCE)
+#  define _GNU_SOURCE
+# endif
+# include <dlfcn.h>
+#endif
+
 using namespace mitsuba;
 
 void initializeFramework() {
@@ -28,12 +35,26 @@ void initializeFramework() {
 	Object::staticInitialization();
 	PluginManager::staticInitialization();
 	Statistics::staticInitialization();
+	FileStream::staticInitialization();
 	Thread::staticInitialization();
 	Logger::staticInitialization();
 	Spectrum::staticInitialization();
+	Bitmap::staticInitialization();
 	Scheduler::staticInitialization();
 	SHVector::staticInitialization();
 	SceneHandler::staticInitialization();
+
+	fs::path sharedLibraryPath;
+
+	/* Try to detect the python plugin path */
+	#if defined(__LINUX__)
+		Dl_info info;
+		dladdr((void *) &initializeFramework, &info);
+		if (info.dli_fname)
+			sharedLibraryPath = fs::path(info.dli_fname);
+	#elif defined(__OSX__)
+
+	#endif
 }
 
 void shutdownFramework() {
@@ -41,9 +62,11 @@ void shutdownFramework() {
 	SceneHandler::staticShutdown();
 	SHVector::staticShutdown();
 	Scheduler::staticShutdown();
+	Bitmap::staticShutdown();
 	Spectrum::staticShutdown();
 	Logger::staticShutdown();
 	Thread::staticShutdown();
+	FileStream::staticShutdown();
 	Statistics::staticShutdown();
 	PluginManager::staticShutdown();
 	Object::staticShutdown();
@@ -316,6 +339,7 @@ bp::object cast(ConfigurableObject *obj) {
 	#define TryCast(ClassName) if (cls->derivesFrom(MTS_CLASS(ClassName))) \
 		return bp::object(ref<ClassName>(static_cast<ClassName *>(obj)))
 	TryCast(BSDF);
+	TryCast(TriMesh);
 	TryCast(Shape);
 	TryCast(PhaseFunction);
 	TryCast(Integrator);
@@ -1207,12 +1231,14 @@ void export_core() {
 	/* Functions from qmc.h */
 	bp::def("radicalInverse2Single", radicalInverse2Single);
 	bp::def("radicalInverse2Double", radicalInverse2Double);
+	bp::def("radicalInverse2", radicalInverse2Double);
 	bp::def("sobol2Single", sobol2Single);
 	bp::def("sobol2Double", sobol2Double);
-	bp::def("sampleTEA", sobol2Double);
-	bp::def("radicalInverse", sobol2Double);
-	bp::def("radicalInverseFast", sobol2Double);
-	bp::def("radicalInverseIncremental", sobol2Double);
+	bp::def("sobol2", sobol2Double);
+	bp::def("sampleTEA", sampleTEA);
+	bp::def("radicalInverse", radicalInverse);
+	bp::def("radicalInverseFast", radicalInverseFast);
+	bp::def("radicalInverseIncremental", radicalInverseIncremental);
 
 	bp::detail::current_scope = oldScope;
 }

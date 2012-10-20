@@ -30,6 +30,34 @@ bp::tuple bsdf_sample(const BSDF *bsdf, BSDFSamplingRecord &bRec, const Point2 &
 	return bp::make_tuple(result, pdf);
 }
 
+bp::object shape_rayIntersect(const Shape *shape, const Ray &ray, Float mint, Float maxt) {
+	uint8_t temp[MTS_KD_INTERSECTION_TEMP];
+	Float t;
+
+	if (!shape->rayIntersect(ray, mint, maxt, t, temp))
+		return bp::object();
+
+	Intersection its;
+	its.shape = shape;
+	its.t = t;
+	shape->fillIntersectionRecord(ray, temp, its);
+
+	return bp::object(its);
+}
+
+bp::tuple shape_getCurvature(const Shape *shape, const Intersection &its, bool shadingFrame) {
+	Float H, K;
+	shape->getCurvature(its, H, K, shadingFrame);
+	return bp::make_tuple(H, K);
+}
+
+bp::tuple shape_getNormalDerivative(const Shape *shape, const Intersection &its, bool shadingFrame) {
+	Vector dpdu, dpdv;
+	shape->getNormalDerivative(its, dpdu, dpdv, shadingFrame);
+	return bp::make_tuple(dpdu, dpdv);
+}
+
+
 ref<Scene> loadScene(const fs::path &filename, const StringMap &params) {
 	SceneHandler::ParameterMap pmap;
 	for (StringMap::const_iterator it = params.begin(); it != params.end(); ++it)
@@ -133,6 +161,7 @@ void export_render() {
 		.def_readwrite("color", &Intersection::color)
 		.def_readwrite("wi", &Intersection::wi)
 		.def_readwrite("shape", &Intersection::shape)
+		.def_readwrite("instance", &Intersection::instance)
 		.add_property("hasUVPartials", &intersection_get_hasUVPartials, &intersection_set_hasUVPartials)
 		.add_property("primIndex", &intersection_get_primIndex, &intersection_set_primIndex)
 		.def("toWorld", &Intersection::toWorld, BP_RETURN_VALUE)
@@ -145,6 +174,42 @@ void export_render() {
 		.def("Le", &Intersection::Le)
 		.def("LoSub", &Intersection::LoSub)
 		.def("__repr__", &Intersection::toString);
+
+	Medium *(Shape::*shape_getInteriorMedium)(void) = &Shape::getInteriorMedium;
+	Medium *(Shape::*shape_getExteriorMedium)(void) = &Shape::getExteriorMedium;
+	Sensor *(Shape::*shape_getSensor)(void) = &Shape::getSensor;
+	Emitter *(Shape::*shape_getEmitter)(void) = &Shape::getEmitter;
+	Subsurface *(Shape::*shape_getSubsurface)(void) = &Shape::getSubsurface;
+	BSDF *(Shape::*shape_getBSDF)(void) = &Shape::getBSDF;
+
+	BP_CLASS(Shape, ConfigurableObject, bp::no_init)
+		.def("getName", &Shape::getName, BP_RETURN_VALUE)
+		.def("isCompound", &Shape::isCompound)
+		.def("getElement", &Shape::getElement, BP_RETURN_VALUE)
+		.def("getSurfaceArea", &Shape::getSurfaceArea)
+		.def("getAABB", &Shape::getAABB, BP_RETURN_VALUE)
+		.def("getClippedAABB", &Shape::getClippedAABB, BP_RETURN_VALUE)
+		.def("createTriMesh", &Shape::createTriMesh, BP_RETURN_VALUE)
+		.def("rayIntersect", &shape_rayIntersect)
+		.def("getNormalDerivative", &shape_getNormalDerivative)
+		.def("getCurvature", &shape_getCurvature)
+		.def("samplePosition", &Shape::samplePosition)
+		.def("pdfPosition", &Shape::pdfPosition)
+		.def("sampleDirect", &Shape::sampleDirect)
+		.def("pdfDirect", &Shape::pdfDirect)
+		.def("getInteriorMedium", shape_getInteriorMedium, BP_RETURN_VALUE)
+		.def("getExteriorMedium", shape_getExteriorMedium, BP_RETURN_VALUE)
+		.def("isMediumTransition", &Shape::isMediumTransition)
+		.def("hasSubsurface", &Shape::hasSubsurface)
+		.def("getSubsurface", shape_getSubsurface, BP_RETURN_VALUE)
+		.def("isEmitter", &Shape::isEmitter)
+		.def("getEmitter", shape_getEmitter, BP_RETURN_VALUE)
+		.def("isSensor", &Shape::isSensor)
+		.def("getSensor", shape_getSensor, BP_RETURN_VALUE)
+		.def("hasBSDF", &Shape::hasBSDF)
+		.def("getBSDF", shape_getBSDF, BP_RETURN_VALUE)
+		.def("getPrimitiveCount", &Shape::getPrimitiveCount)
+		.def("getEffectivePrimitiveCount", &Shape::getEffectivePrimitiveCount);
 
 	BP_STRUCT(BSDFSamplingRecord, (bp::init<const Intersection &, Sampler *, ETransportMode>()))
 		.def(bp::init<const Intersection &, const Vector &, ETransportMode>())
@@ -217,8 +282,8 @@ void export_render() {
 
 	bp::class_<Noise>("Noise")
 		.def("perlinNoise", &Noise::perlinNoise)
-		.def("fbm", &Noise::fbm)
-		.def("turbulence", &Noise::turbulence);
+		.def("turbulence", &Noise::turbulence)
+		.def("fbm", &Noise::fbm);
 
 	bp::detail::current_scope = oldScope;
 }

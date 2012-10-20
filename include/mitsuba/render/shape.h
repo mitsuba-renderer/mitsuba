@@ -166,6 +166,7 @@ public:
 
 /** \brief Abstract base class of all shapes
  * \ingroup librender
+ * \ingroup libpython
  */
 class MTS_EXPORT_RENDER Shape : public ConfigurableObject {
 public:
@@ -235,6 +236,10 @@ public:
 	 * intersection. The function \ref fillIntersectionRecord()
 	 * can later use this information to fill in a detailed
 	 * intersection record.
+	 *
+	 * \remark In Python, this function also calls \c fillIntersectionRecord
+	 * and has the signature
+	 * <tt>intersection = shape.rayIntersect(ray, mint, maxt)</tt>
 	 */
 	virtual bool rayIntersect(const Ray &ray, Float mint,
 			Float maxt, Float &t, void *temp) const;
@@ -248,12 +253,17 @@ public:
 	 * shapes, this will simply call forward the call to \ref
 	 * rayIntersect. When the shape actually contains a nested
 	 * kd-tree, some optimizations are possible.
+	 *
+	 * \remark This function is not exposed in Python
 	 */
 	virtual bool rayIntersect(const Ray &ray, Float mint, Float maxt) const;
 
 	/**
 	 * \brief Given that an intersection has been found, create a
 	 * detailed intersection record
+	 *
+	 * \remark This function is not directly exposed in Python.
+	 * It is implicitly called as part of \c rayIntersect.
 	 */
 	virtual void fillIntersectionRecord(const Ray &ray,
 			const void *temp, Intersection &its) const;
@@ -276,6 +286,9 @@ public:
 	 * \param shadingFrame
 	 *     Specifies whether to compute the derivative of the
 	 *     geometric normal \a or the shading normal of the surface
+	 *
+	 * \remark In Python, the signature of this function is
+	 * <tt>dndu, dndv = shape.getNormalDerivative(its, shadingFrame)</tt>
 	 */
 	virtual void getNormalDerivative(const Intersection &its,
 		Vector &dndu, Vector &dndv, bool shadingFrame = true) const;
@@ -293,6 +306,9 @@ public:
 	 * \param shadingFrame
 	 *     Specifies whether to compute the curvature based on the
 	 *     geometric normal \a or the shading normal of the surface
+	 *
+	 * \remark In Python, the signature of this function is
+	 * <tt>H, K = shape.getCurvature(its, shadingFrame)</tt>
 	 */
 	void getCurvature(const Intersection &its, Float &H, Float &K,
 		bool shadingFrame = true) const;
@@ -303,6 +319,8 @@ public:
 	 * This function is used by the kd-tree visualization in
 	 * the interactive walkthrough. The default implementation
 	 * simply returns NULL.
+	 *
+	 * \remark This function is not exposed in Python
 	 */
 	virtual const KDTreeBase<AABB> *getKDTree() const;
 
