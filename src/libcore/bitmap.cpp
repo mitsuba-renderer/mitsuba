@@ -754,7 +754,7 @@ template <typename T> void tonemapReinhard(T *data, size_t pixels, Bitmap::EPixe
 		maxLuminance = 0;
 		logAvgLuminance = 0;
 
-		if (fmt == Bitmap::ERGB || channels == Bitmap::ERGBA) {
+		if (fmt == Bitmap::ERGB || fmt == Bitmap::ERGBA) {
 			/* RGB[A] version */
 			for (size_t i=0; i < pixels; ++i) {
 				Float luminance = (Float) (ptr[0] * (Float) 0.212671 + ptr[1] * (Float) 0.715160 + ptr[2] * (Float) 0.072169);
@@ -764,7 +764,7 @@ template <typename T> void tonemapReinhard(T *data, size_t pixels, Bitmap::EPixe
 				logAvgLuminance += math::fastlog(1e-3f + luminance);
 				ptr += channels;
 			}
-		} else if (fmt == Bitmap::EXYZ || channels == Bitmap::EXYZA) {
+		} else if (fmt == Bitmap::EXYZ || fmt == Bitmap::EXYZA) {
 			for (size_t i=0; i < pixels; ++i) {
 				Float luminance = (Float) ptr[1];
 				if (luminance == 1024) // ignore the "rendered by mitsuba banner.."
@@ -799,7 +799,7 @@ template <typename T> void tonemapReinhard(T *data, size_t pixels, Bitmap::EPixe
 	/* Having the 'burn' parameter scale as 1/b^4 provides a nicely behaved knob */
 	Float invWp2 = 1 / (Lwhite * Lwhite * std::pow(burn, (Float) 4));
 
-	if (fmt == Bitmap::ERGB || channels == Bitmap::ERGBA) {
+	if (fmt == Bitmap::ERGB || fmt == Bitmap::ERGBA) {
 		/* RGB[A] version */
 		for (size_t i=0; i < pixels; ++i) {
 			/* Convert ITU-R Rec. BT.709 linear RGB to XYZ tristimulus values */
@@ -828,7 +828,7 @@ template <typename T> void tonemapReinhard(T *data, size_t pixels, Bitmap::EPixe
 
 			data += channels;
 		}
-	} else if (fmt == Bitmap::EXYZ || channels == Bitmap::EXYZA) {
+	} else if (fmt == Bitmap::EXYZ || fmt == Bitmap::EXYZA) {
 		/* XYZ[A] version */
 		for (size_t i=0; i < pixels; ++i) {
 			Float X = static_cast<Float>(data[0]),
