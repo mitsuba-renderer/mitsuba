@@ -211,6 +211,25 @@ void export_render() {
 		.def("getPrimitiveCount", &Shape::getPrimitiveCount)
 		.def("getEffectivePrimitiveCount", &Shape::getEffectivePrimitiveCount);
 
+	void (TriMesh::*triMesh_serialize1)(Stream *stream) const = &TriMesh::serialize;
+	void (TriMesh::*triMesh_serialize2)(Stream *stream, InstanceManager *) const = &TriMesh::serialize;
+
+	BP_CLASS(TriMesh, Shape, (bp::init<std::string, size_t, size_t, bool, bool, bool, bool, bool>()))
+		.def(bp::init<Stream *, InstanceManager *>())
+		.def(bp::init<Stream *, int>())
+		.def("getTriangleCount", &TriMesh::getTriangleCount)
+		.def("getVertexCount", &TriMesh::getVertexCount)
+		.def("hasVertexNormals", &TriMesh::hasVertexNormals)
+		.def("hasVertexColors", &TriMesh::hasVertexColors)
+		.def("hasVertexTexcoords", &TriMesh::hasVertexTexcoords)
+		.def("hasUVTangents", &TriMesh::hasUVTangents)
+		.def("computeUVTangents", &TriMesh::computeUVTangents)
+		.def("computeNormals", &TriMesh::computeNormals)
+		.def("rebuildTopology", &TriMesh::rebuildTopology)
+		.def("serialize", triMesh_serialize1)
+		.def("serialize", triMesh_serialize2)
+		.def("writeOBJ", &TriMesh::writeOBJ);
+
 	BP_STRUCT(BSDFSamplingRecord, (bp::init<const Intersection &, Sampler *, ETransportMode>()))
 		.def(bp::init<const Intersection &, const Vector &, ETransportMode>())
 		.def(bp::init<const Intersection &, const Vector &, const Vector &, ETransportMode>())

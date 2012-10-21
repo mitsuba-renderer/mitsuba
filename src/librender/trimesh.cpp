@@ -818,9 +818,10 @@ void TriMesh::writeOBJ(const fs::path &path) const {
 	}
 
 	for (size_t i=0; i<m_triangleCount; ++i) {
-		int i0 = m_triangles[i].idx[0] + 1,
-			i1 = m_triangles[i].idx[1] + 1,
-			i2 = m_triangles[i].idx[2] + 1;
+		uint32_t i0 = m_triangles[i].idx[0] + 1,
+		         i1 = m_triangles[i].idx[1] + 1,
+		         i2 = m_triangles[i].idx[2] + 1;
+
 		if (m_normals && m_texcoords) {
 			os << "f " << i0 << "/" << i0 << "/" << i0 << " "
 			   <<  i1 << "/" << i1 << "/" << i1 << " "
