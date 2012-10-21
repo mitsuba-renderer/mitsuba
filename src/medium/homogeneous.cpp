@@ -99,27 +99,41 @@ MTS_NAMESPACE_BEGIN
  *
  * \begin{table}[h!]
  *     \centering
- *     \begin{tabular}{>{\ttfamily}p{2cm}p{.8cm}>{\ttfamily}p{2cm}}
+ *     \vspace{3mm}
+ *     {\footnotesize
+ *     \begin{tabular}{>{\ttfamily}p{3.8cm}p{.4cm}>{\ttfamily}p{3.8cm}p{.4cm}>{\ttfamily}p{3.8cm}}
  *         \toprule
- *         \rmfamily \textbf{Name} &&
- *         \rmfamily \textbf{Name} \\
- *         \cmidrule{1-1} \cmidrule{3-3}
- *         apple&&potato\\
- *         chicken1&&skimmilk\\
- *         chicken2&&skin1\\
- *         cream&&skin2\\
- *         ketchup&&spectralon\\
- *         marble&&wholemilk\\
+ *         \rmfamily \small\textbf{Name} &&
+ *         \rmfamily \small\textbf{Name} &&
+ *         \rmfamily \small\textbf{Name} \\
+ *         \cmidrule{1-1} \cmidrule{3-3} \cmidrule{5-5}
+ *         Apple && Chicken1 && Chicken2 \\
+ *         Cream && Ketchup  && Potato \\
+ *         Skimmilk && Skin1 && Skin2 \\
+ *         Spectralon && Wholemilk && \\
+ *         \cmidrule{1-1} \cmidrule{3-3} \cmidrule{5-5}
+ *         Lowfat Milk              &&  Gatorade                &&    White Grapefruit Juice     \\
+ *         Reduced Milk             &&  Chardonnay              &&    Shampoo                    \\
+ *         Regular Milk             &&  White Zinfandel         &&    Strawberry Shampoo         \\
+ *         Espresso                 &&  Merlot                  &&    \mbox{Head \& Shoulders Shampoo}  \\
+ *         Mint Mocha Coffee        &&  Budweiser Beer          &&    Lemon Tea Powder           \\
+ *         Lowfat Soy Milk          &&  Coors Light Beer        &&    Orange Juice Powder        \\
+ *         Regular Soy Milk         &&  Clorox                  &&    Pink Lemonade Powder       \\
+ *         Lowfat Chocolate Milk    &&  Apple Juice             &&    Cappuccino Powder          \\
+ *         Regular Chocolate Milk   &&  Cranberry Juice         &&    Salt Powder                \\
+ *         Coke                     &&  Grape Juice             &&    Sugar Powder               \\
+ *         Pepsi                    &&  Ruby Grapefruit Juice   &&    Suisse Mocha               \\
+ *         Sprite                   &&                          &&                               \\
  *         \bottomrule
- *     \end{tabular}
- *     \caption{
- *         \label{tbl:medium-coefficients}
- *          This table lists all supported medium material presets. The
- *          values are from Jensen et al. \cite{Jensen2001Practical} using
- *          units of $\frac{1}{mm}$, so remember to set
+ *     \end{tabular}}
+ *     \caption{\label{tbl:medium-coefficients}This
+ *          table lists all supported medium material presets. The
+ *          top entries are from Jensen et al. \cite{Jensen2001Practical}, and the
+ *          bottom ones are from Narasimhan et al. \cite{Narasimhan2006Acquiring}.
+ *          They all use units of $\frac{1}{mm}$, so remember to set
  *          \code{scale} appropriately when your scene is not
  *          in units of millimeters.
- *          These material names can be used with the plugins
+ *          These material presets can be used with the plugins
  *          \pluginref{homogeneous},\
  *          \pluginref{dipole}, and \
  *          \pluginref{hk}

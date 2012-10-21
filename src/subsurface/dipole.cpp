@@ -289,18 +289,17 @@ public:
 		m_quality = props.getFloat("quality", 0.2f);
 
 		/* Asymmetry parameter of the phase function */
-		m_g = props.getFloat("g", 0);
 		m_ready = false;
 		m_octreeResID = -1;
 
-		lookupMaterial(props, m_sigmaS, m_sigmaA, &m_eta);
+		lookupMaterial(props, m_sigmaS, m_sigmaA, m_g, &m_eta);
 	}
 
 	IsotropicDipole(Stream *stream, InstanceManager *manager)
 	 : Subsurface(stream, manager) {
 		m_sigmaS = Spectrum(stream);
 		m_sigmaA = Spectrum(stream);
-		m_g = stream->readFloat();
+		m_g = Spectrum(stream);
 		m_eta = stream->readFloat();
 		m_sampleMultiplier = stream->readFloat();
 		m_quality = stream->readFloat();
@@ -326,7 +325,7 @@ public:
 		Subsurface::serialize(stream, manager);
 		m_sigmaS.serialize(stream);
 		m_sigmaA.serialize(stream);
-		stream->writeFloat(m_g);
+		m_g.serialize(stream);
 		stream->writeFloat(m_eta);
 		stream->writeFloat(m_sampleMultiplier);
 		stream->writeFloat(m_quality);
@@ -351,7 +350,7 @@ public:
 	}
 
 	void configure() {
-		m_sigmaSPrime = m_sigmaS * (1 - m_g);
+		m_sigmaSPrime = m_sigmaS * (Spectrum(1.0f) - m_g);
 		m_sigmaTPrime = m_sigmaSPrime + m_sigmaA;
 
 		/* Find the smallest mean-free path over all wavelengths */
@@ -466,8 +465,8 @@ public:
 	MTS_DECLARE_CLASS()
 private:
 	Float m_radius, m_sampleMultiplier;
-	Float m_Fdr, m_quality, m_g, m_eta;
-	Spectrum m_sigmaS, m_sigmaA;
+	Float m_Fdr, m_quality, m_eta;
+	Spectrum m_sigmaS, m_sigmaA, m_g;
 	Spectrum m_sigmaTr, m_zr, m_zv;
 	Spectrum m_sigmaSPrime, m_sigmaTPrime;
 	ref<IrradianceOctree> m_octree;

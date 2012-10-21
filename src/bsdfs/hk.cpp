@@ -114,8 +114,9 @@ MTS_NAMESPACE_BEGIN
 class HanrahanKrueger : public BSDF {
 public:
 	HanrahanKrueger(const Properties &props) : BSDF(props) {
-		Spectrum sigmaS, sigmaA;
-		lookupMaterial(props, sigmaS, sigmaA, NULL);
+		Spectrum sigmaS, sigmaA, g;
+		lookupMaterial(props, sigmaS, sigmaA, g, NULL);
+		sigmaS *= Spectrum(1.0f) - g;
 
 		/* Scattering coefficient of the layer */
 		m_sigmaS = new ConstantSpectrumTexture(

@@ -104,7 +104,7 @@ void ShapeKDTree::build() {
 		}
 	}
 	Log(EDebug, "Finished -- took %i ms.", timer->getMilliseconds());
-	Log(EDebug, "");
+	Log(m_logLevel, "");
 	KDAssert(idx == primCount);
 #endif
 }
