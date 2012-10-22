@@ -85,11 +85,32 @@ void FileResolver::appendPath(const fs::path &path) {
 }
 
 fs::path FileResolver::resolve(const fs::path &path) const {
+	/* First, try to resolve in case-sensitive mode */
 	for (size_t i=0; i<m_paths.size(); i++) {
 		fs::path newPath = m_paths[i] / path;
 		if (fs::exists(newPath))
 			return newPath;
 	}
+
+	#if defined(__LINUX__)
+		/* On Linux, also try case-insensitive mode if the above failed */
+		fs::path parentPath = path.parent_path();
+		std::string filename = boost::to_lower_copy(path.filename().string());
+
+		for (size_t i=0; i<m_paths.size(); i++) {
+			fs::path path = m_paths[i] / parentPath;
+
+			if (!fs::is_directory(path))
+				continue;
+
+			fs::directory_iterator end, it(path);
+			for (; it != end; ++it) {
+				if (boost::algorithm::to_lower_copy(it->path().filename().string()) == filename)
+					return it->path();
+			}
+		}
+	#endif
+
 	return path;
 }
 
