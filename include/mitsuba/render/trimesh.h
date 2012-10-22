@@ -54,7 +54,7 @@ struct TangentSpace {
 
 /** \brief Abstract triangle mesh base class
  * \ingroup librender
- e \ingroup libpython
+ * \ingroup libpython
  */
 class MTS_EXPORT_RENDER TriMesh : public Shape {
 public:

@@ -42,13 +42,23 @@ static StatsCounter avgPathLength("Volumetric path tracer", "Average path length
  * }
  *
  * This plugin provides a basic volumetric path tracer that can be used to
- * compute approximate solutions to the radiative transfer equation. This
+ * compute approximate solutions of the radiative transfer equation. This
  * particular integrator is named ``simple'' because it does not make use of
  * multiple importance sampling. This results in a potentially
  * faster execution time. On the other hand, it also means that this
  * plugin will likely not perform well when given a scene that contains
  * highly glossy materials. In this case, please use \pluginref{volpath}
  * or one of the bidirectional techniques.
+ *
+ * This integrator has special support for \emph{index-matched} transmission
+ * events (i.e. surface scattering events that do not change the direction
+ * of light). As a consequence, particating media enclosed by a stencil shape (see
+ * \secref{shapes} for details) are rendered considerably more efficiently when this
+ * shape has \emph{no}\footnote{this is what signals to Mitsuba that the boundary is
+ * index-matched and does not interact with light in any way. Alternatively,
+ * the \pluginref{mask} and \pluginref{thindielectric} BSDF can be used to specify
+ * index-matched boundaries that involve some amount of interaction.} BSDF assigned
+ * to it (as compared to, say, a \pluginref{dielectric} or \pluginref{roughdielectric} BSDF).
  *
  * \remarks{
  *    \item This integrator performs poorly when rendering
