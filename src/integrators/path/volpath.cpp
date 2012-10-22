@@ -42,19 +42,29 @@ static StatsCounter avgPathLength("Volumetric path tracer", "Average path length
  * }
  *
  * This plugin provides a volumetric path tracer that can be used to
- * compute approximate solutions to the radiative transfer equation.
+ * compute approximate solutions of the radiative transfer equation.
  * Its implementation makes use of multiple importance sampling to
  * combine BSDF and phase function sampling with direct illumination
- * sampling strategies. On surfaces, this integrator behaves exactly
+ * sampling strategies. On surfaces, it behaves exactly
  * like the standard path tracer.
+ *
+ * This integrator has special support for \emph{index-matched} transmission
+ * events (i.e. surface scattering events that do not change the direction
+ * of light). As a consequence, particating media enclosed by a stencil shape (see
+ * \secref{shapes} for details) are rendered considerably more efficiently when this
+ * shape has \emph{no}\footnote{this is what signals to Mitsuba that the boundary is
+ * index-matched and does not interact with light in any way. Alternatively,
+ * the \pluginref{mask} and \pluginref{thindielectric} BSDF can be used to specify
+ * index-matched boundaries that involve some amount of interaction.} BSDF assigned
+ * to it (as compared to, say, a \pluginref{dielectric} or \pluginref{roughdielectric} BSDF).
  *
  * \remarks{
  *    \item This integrator will generally perform poorly when rendering
  *      participating media that have a different index of refraction compared
  *      to the surrounding medium.
  *    \item This integrator has poor convergence properties when rendering
- *    caustics and similar effects. In this case, \pluginref{bdpt} or
- *    one of the photon mappers may be preferable.
+ *      caustics and similar effects. In this case, \pluginref{bdpt} or
+ *      one of the photon mappers may be preferable.
  * }
  */
 class VolumetricPathTracer : public MonteCarloIntegrator {
@@ -72,7 +82,6 @@ public:
 		MediumSamplingRecord mRec;
 		RayDifferential ray(r);
 		Spectrum Li(0.0f);
-		bool scattered = false;
 		Float eta = 1.0f;
 
 		/* Perform the first ray intersection (or ignore if the
@@ -80,6 +89,7 @@ public:
 		rRec.rayIntersect(ray);
 
 		Spectrum throughput(1.0f);
+		bool scattered = false;
 
 		while (rRec.depth <= m_maxDepth || m_maxDepth < 0) {
 			/* ==================================================================== */
@@ -140,43 +150,22 @@ public:
 				Float phaseVal = phase->sample(pRec, phasePdf, rRec.sampler);
 				if (phaseVal == 0)
 					break;
+				throughput *= phaseVal;
 
-				bool hitEmitter = false;
-				Spectrum value;
 
 				/* Trace a ray in this direction */
 				ray = Ray(mRec.p, pRec.wo, ray.time);
 				ray.mint = 0;
 
-				if (scene->rayIntersect(ray, its)) {
-					/* Intersected something - check if it was a luminaire */
-					if (its.isEmitter()) {
-						value = its.Le(-ray.d);
-						dRec.setQuery(ray, its);
-						hitEmitter = true;
-					}
-				} else {
-					/* Intersected nothing -- perhaps there is an environment map? */
-					const Emitter *env = scene->getEnvironmentEmitter();
-
-					if (env) {
-						value = env->evalEnvironment(ray);
-						if (!env->fillDirectSamplingRecord(dRec, ray))
-							break;
-						hitEmitter = true;
-					} else {
-						break;
-					}
-				}
-
-				throughput *= phaseVal;
+				Spectrum value(0.0f);
+				rayIntersectAndLookForEmitter(scene, rRec.sampler, rRec.medium,
+					m_maxDepth - rRec.depth - 1, ray, its, dRec, value);
 
 				/* If a luminaire was hit, estimate the local illumination and
 				   weight using the power heuristic */
-				if (hitEmitter && (rRec.type & RadianceQueryRecord::EDirectMediumRadiance)) {
-					Spectrum transmittance = rRec.medium->evalTransmittance(Ray(ray, 0, its.t));
+				if (!value.isZero() && (rRec.type & RadianceQueryRecord::EDirectMediumRadiance)) {
 					const Float emitterPdf = scene->pdfEmitterDirect(dRec);
-					Li += throughput * value * transmittance * miWeight(phasePdf, emitterPdf);
+					Li += throughput * value * miWeight(phasePdf, emitterPdf);
 				}
 
 				/* ==================================================================== */
@@ -187,8 +176,6 @@ public:
 				if (!(rRec.type & RadianceQueryRecord::EIndirectMediumRadiance))
 					break;
 				rRec.type = RadianceQueryRecord::ERadianceNoEmission;
-
-				scattered = true;
 			} else {
 				/* Sample
 					tau(x, y) (Surface integral). This happens with probability mRec.pdfFailure
@@ -230,8 +217,8 @@ public:
 				DirectSamplingRecord dRec(its);
 
 				/* Estimate the direct illumination if this is requested */
-				if (rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance &&
-						(bsdf->getType() & BSDF::ESmooth)) {
+				if ((rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance) &&
+				    (bsdf->getType() & BSDF::ESmooth)) {
 					int interactions = m_maxDepth - rRec.depth - 1;
 
 					Spectrum value = scene->sampleAttenuatedEmitterDirect(
@@ -253,8 +240,7 @@ public:
 							/* Calculate prob. of having generated that direction
 							   using BSDF sampling */
 							Float bsdfPdf = (emitter->isOnSurface()
-									&& dRec.measure == ESolidAngle
-									&& interactions == 0)
+									&& dRec.measure == ESolidAngle)
 									? bsdf->pdf(bRec) : (Float) 0.0f;
 
 							/* Weight using the power heuristic */
@@ -292,39 +278,27 @@ public:
 				if (its.isMediumTransition())
 					rRec.medium = its.getTargetMedium(ray.d);
 
-				bool hitEmitter = false;
-				Spectrum value;
-
-				if (scene->rayIntersect(ray, its)) {
-					/* Intersected something - check if it was a luminaire */
-					if (its.isEmitter()) {
-						value = its.Le(-ray.d);
-						dRec.setQuery(ray, its);
-						hitEmitter = true;
-					}
-				} else {
-					/* Intersected nothing -- perhaps there is an environment map? */
-					const Emitter *env = scene->getEnvironmentEmitter();
-
-					if (env) {
-						value = env->evalEnvironment(ray);
-						if (!env->fillDirectSamplingRecord(dRec, ray))
-							break;
-						hitEmitter = true;
-					} else {
+				/* Handle index-matched medium transitions specially */
+				if (bRec.sampledType == BSDF::ENull) {
+					if (!(rRec.type & RadianceQueryRecord::EIndirectSurfaceRadiance))
 						break;
-					}
+					rRec.type = scattered ? RadianceQueryRecord::ERadianceNoEmission
+						: RadianceQueryRecord::ERadiance;
+					scene->rayIntersect(ray, its);
+					rRec.depth++;
+					continue;
 				}
+
+				Spectrum value(0.0f);
+				rayIntersectAndLookForEmitter(scene, rRec.sampler, rRec.medium,
+					m_maxDepth - rRec.depth - 1, ray, its, dRec, value);
 
 				/* If a luminaire was hit, estimate the local illumination and
 				   weight using the power heuristic */
-				if (hitEmitter && (rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance)
-						&& !((bRec.sampledType & BSDF::ENull) && scattered)) {
-					Spectrum transmittance = rRec.medium ?
-						rRec.medium->evalTransmittance(Ray(ray, 0, its.t)) : Spectrum(1.0f);
+				if (!value.isZero() && (rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance)) {
 					const Float emitterPdf = (!(bRec.sampledType & BSDF::EDelta)) ?
 						scene->pdfEmitterDirect(dRec) : 0;
-					Li += throughput * value * transmittance * miWeight(bsdfPdf, emitterPdf);
+					Li += throughput * value * miWeight(bsdfPdf, emitterPdf);
 				}
 
 				/* ==================================================================== */
@@ -334,9 +308,8 @@ public:
 				/* Stop if indirect illumination was not requested */
 				if (!(rRec.type & RadianceQueryRecord::EIndirectSurfaceRadiance))
 					break;
-				rRec.type = RadianceQueryRecord::ERadianceNoEmission;
 
-				scattered |= bRec.sampledType != BSDF::ENull;
+				rRec.type = RadianceQueryRecord::ERadianceNoEmission;
 			}
 
 			if (rRec.depth++ >= m_rrDepth) {
@@ -350,10 +323,95 @@ public:
 					break;
 				throughput /= q;
 			}
+
+			scattered = true;
 		}
 		avgPathLength.incrementBase();
 		avgPathLength += rRec.depth;
 		return Li;
+	}
+
+	/**
+	 * This function is called by the recursive ray tracing above after
+	 * having sampled a direction from a BSDF/phase function. Due to the
+	 * way in which this integrator deals with index-matched boundaries,
+	 * it is necessarily a bit complicated (though the improved performance
+	 * easily pays for the extra effort).
+	 *
+	 * This function
+	 *
+	 * 1. Intersects 'ray' against the scene geometry and returns the
+	 *    *first* intersection via the '_its' argument.
+	 *
+	 * 2. It checks whether the intersected shape was an emitter, or if
+	 *    the ray intersects nothing and there is an environment emitter.
+	 *    In this case, it returns the attenuated emittance, as well as
+	 *    a DirectSamplingRecord that can be used to query the hypothetical
+	 *    sampling density at the emitter.
+	 *
+	 * 3. If current shape is an index-matched medium transition, the
+	 *    integrator keeps on looking on whether a light source eventually
+	 *    follows after a potential chain of index-matched medium transitions,
+	 *    while respecting the specified 'maxDepth' limits. It then returns
+	 *    the attenuated emittance of this light source, while accounting for
+	 *    all attenuation that occurs on the wya.
+	 */
+	void rayIntersectAndLookForEmitter(const Scene *scene, Sampler *sampler,
+			const Medium *medium, int maxInteractions, Ray ray, Intersection &_its,
+			DirectSamplingRecord &dRec, Spectrum &value) const {
+		Intersection its2, *its = &_its;
+		Spectrum transmittance(1.0f);
+		bool surface = false;
+		int interactions = 0;
+
+		while (true) {
+			surface = scene->rayIntersect(ray, *its);
+
+			if (surface && (interactions == maxInteractions ||
+				!(its->getBSDF()->getType() & BSDF::ENull)))
+				/* Encountered an occluder -- zero transmittance. */
+				break;
+
+			if (medium)
+				transmittance *= medium->evalTransmittance(Ray(ray, 0, its->t), sampler);
+
+			if (!surface)
+				break;
+
+			if (transmittance.isZero())
+				return;
+
+			if (its->isMediumTransition())
+				medium = its->getTargetMedium(ray.d);
+
+			Vector wo = its->shFrame.toLocal(ray.d);
+			BSDFSamplingRecord bRec(*its, -wo, wo, ERadiance);
+			bRec.typeMask = BSDF::ENull;
+			transmittance *= its->getBSDF()->eval(bRec, EDiscrete);
+
+			ray.o = ray(its->t);
+			ray.mint = Epsilon;
+			its = &its2;
+
+			if (++interactions > 100) { /// Just a precaution..
+				Log(EWarn, "rayIntersectAndLookForEmitter(): round-off error issues?");
+				return;
+			}
+		}
+
+		if (surface) {
+			/* Intersected something - check if it was a luminaire */
+			if (its->isEmitter()) {
+				dRec.setQuery(ray, *its);
+				value = transmittance * its->Le(-ray.d);
+			}
+		} else {
+			/* Intersected nothing -- perhaps there is an environment map? */
+			const Emitter *env = scene->getEnvironmentEmitter();
+
+			if (env && env->fillDirectSamplingRecord(dRec, ray))
+				value = transmittance * env->evalEnvironment(RayDifferential(ray));
+		}
 	}
 
 	inline Float miWeight(Float pdfA, Float pdfB) const {
