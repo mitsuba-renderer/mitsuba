@@ -473,7 +473,7 @@
 			This improves the effectiveness of bidirectional path tracing
 			but severely increases the local and remote communication
 			overhead, since large <em>light images</em> must be transferred between threads
-			or over the network. See the text below for a more detailed explanation.
+			or over the network. See the main documentation for a more detailed explanation.
 		</param>
 		<param name="sampleDirect" readableName="Use direct sampling methods" type="boolean" default="true">
 			Enable direct sampling strategies? This is a generalization of direct illumination sampling that works with both emitters

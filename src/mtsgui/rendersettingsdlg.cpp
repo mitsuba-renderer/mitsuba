@@ -152,7 +152,11 @@ void RenderSettingsDialog::setDocumentation(const QString &text) {
 		ui->groupBox->setTitle(tr("Documentation"));
 	}
 
+#if defined(__OSX__)
+	ui->helpViewer->setHtml(comments + "<div style='font-size:12pt'>" + m_currentDocumentation + "</div>");
+#else
 	ui->helpViewer->setHtml(comments + "<div style='font-size:10pt'>" + m_currentDocumentation + "</div>");
+#endif
    	ui->buttonBox->button(QDialogButtonBox::Ok)->setEnabled(!hasErrors);
 }
 
