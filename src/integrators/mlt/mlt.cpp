@@ -290,11 +290,6 @@ public:
 				m_config, directImage, pathSeeds);
 
 		m_config.luminance = pathSampler->generateSeeds(m_config.luminanceSamples,
-			m_config.workUnits, false, pathSeeds);
-
-		pathSeeds.clear();
-
-		m_config.luminance = pathSampler->generateSeeds(m_config.luminanceSamples,
 			m_config.workUnits, true, pathSeeds);
 
 		if (!nested)
