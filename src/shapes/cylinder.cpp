@@ -210,12 +210,12 @@ public:
 
 		Vector dpdu = Vector(-local.y, local.x, 0) * (2*M_PI);
 		Vector dpdv = Vector(0, 0, m_length);
-		if (m_flipNormals)
-			dpdu *= -1;
 		its.shape = this;
 		its.dpdu = m_objectToWorld(dpdu);
 		its.dpdv = m_objectToWorld(dpdv);
 		its.geoFrame.n = Normal(normalize(cross(its.dpdu, its.dpdv)));
+		if (m_flipNormals)
+			its.geoFrame.n *= -1;
 		its.geoFrame.s = normalize(its.dpdu);
 		its.geoFrame.t = normalize(its.dpdv);
 		its.shFrame = its.geoFrame;

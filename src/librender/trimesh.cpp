@@ -367,7 +367,8 @@ void TriMesh::samplePosition(PositionSamplingRecord &pRec,
 
 	Point2 sample(_sample);
 	size_t index = m_areaDistr.sampleReuse(sample.y);
-	pRec.p = m_triangles[index].sample(m_positions, m_normals, pRec.n, sample);
+	pRec.p = m_triangles[index].sample(m_positions, m_normals,
+		m_texcoords, pRec.n, pRec.uv, sample);
 	pRec.pdf = m_invSurfaceArea;
 	pRec.measure = EArea;
 }

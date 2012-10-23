@@ -58,9 +58,10 @@ struct MTS_EXPORT_CORE Triangle {
 	 */
 	AABB getClippedAABB(const Point *positions, const AABB &aabb) const;
 
-	/// Uniformly sample a point on the triangle and return its normal
+	/// Uniformly sample a point on the triangle and return its normal and UV coordinates
 	Point sample(const Point *positions, const Normal *normals,
-			Normal &n, const Point2 &seed) const;
+			const Point2 *texCoords, Normal &n, Point2 &uv,
+			const Point2 &seed) const;
 
 	/// Calculate the surface area of this triangle
 	Float surfaceArea(const Point *positions) const;
