@@ -102,6 +102,9 @@ MTS_NAMESPACE_BEGIN
  * refraction information, this plugin can access a set of measured materials
  * for which visible-spectrum information was publicly available
  * (see \tblref{conductor-iors} for the full list).
+ * There is also a special material profile named \code{none}, which disables
+ * the computation of Fresnel reflectances and produces an idealized
+ * 100% reflecting mirror.
  *
  * When no parameters are given, the plugin activates the default settings,
  * which describe copper with a light amount of roughness modeled using a
@@ -157,10 +160,16 @@ public:
 
 		std::string material = props.getString("material", "Cu");
 		Spectrum materialEta, materialK;
-		materialEta.fromContinuousSpectrum(InterpolatedSpectrum(
-			fResolver->resolve("data/ior/" + material + ".eta.spd")));
-		materialK.fromContinuousSpectrum(InterpolatedSpectrum(
-			fResolver->resolve("data/ior/" + material + ".k.spd")));
+
+		if (boost::to_lower_copy(material) == "none") {
+			materialEta = Spectrum(0.0f);
+			materialK = Spectrum(1.0f);
+		} else {
+			materialEta.fromContinuousSpectrum(InterpolatedSpectrum(
+				fResolver->resolve("data/ior/" + material + ".eta.spd")));
+			materialK.fromContinuousSpectrum(InterpolatedSpectrum(
+				fResolver->resolve("data/ior/" + material + ".k.spd")));
+		}
 
 		m_eta = props.getSpectrum("eta", materialEta);
 		m_k = props.getSpectrum("k", materialK);

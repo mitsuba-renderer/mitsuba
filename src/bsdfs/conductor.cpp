@@ -19,6 +19,7 @@
 #include <mitsuba/render/bsdf.h>
 #include <mitsuba/core/fresolver.h>
 #include <mitsuba/hw/basicshader.h>
+#include <boost/algorithm/string.hpp>
 
 MTS_NAMESPACE_BEGIN
 
@@ -70,6 +71,9 @@ MTS_NAMESPACE_BEGIN
  * coatings, which are not actually conductors. These materials can also
  * be used with this plugin, though note that the plugin will ignore any
  * refraction component that the actual material might have had.
+ * There is also a special material profile named \code{none}, which disables
+ * the computation of Fresnel reflectances and produces an idealized
+ * 100% reflecting mirror.
  *
  * When using this plugin, you should ideally compile Mitsuba with support for
  * spectral rendering to get the most accurate results. While it also works
@@ -127,7 +131,7 @@ MTS_NAMESPACE_BEGIN
  * K, K\_palik           & Polycrystalline potassium &&   W                     & Tungsten \\
  * Li, Li\_palik         & Lithium &&                     \\
  * MgO, MgO\_palik       & Magnesium oxide &&             \\
- * Mo, Mo\_palik         & Molybdenum &&                  \\
+ * Mo, Mo\_palik         & Molybdenum &&                  none & No mat. profile ($\to$ 100% reflecting mirror)\\
  * \bottomrule
  * \end{tabular}
  * \caption{
@@ -151,11 +155,17 @@ public:
 			props.getSpectrum("specularReflectance", Spectrum(1.0f)));
 
 		std::string material = props.getString("material", "Cu");
+
 		Spectrum materialEta, materialK;
-		materialEta.fromContinuousSpectrum(InterpolatedSpectrum(
-			fResolver->resolve("data/ior/" + material + ".eta.spd")));
-		materialK.fromContinuousSpectrum(InterpolatedSpectrum(
-			fResolver->resolve("data/ior/" + material + ".k.spd")));
+		if (boost::to_lower_copy(material) == "none") {
+			materialEta = Spectrum(0.0f);
+			materialK = Spectrum(1.0f);
+		} else {
+			materialEta.fromContinuousSpectrum(InterpolatedSpectrum(
+				fResolver->resolve("data/ior/" + material + ".eta.spd")));
+			materialK.fromContinuousSpectrum(InterpolatedSpectrum(
+				fResolver->resolve("data/ior/" + material + ".k.spd")));
+		}
 
 		m_eta = props.getSpectrum("eta", materialEta);
 		m_k = props.getSpectrum("k", materialK);
