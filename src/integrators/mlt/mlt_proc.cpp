@@ -122,7 +122,7 @@ public:
 		result->clear();
 
 		/// Reconstruct the seed path
-		m_pathSampler->reconstructPath(wu->getSeed(), *current);
+		m_pathSampler->reconstructPath(wu->getSeed(), m_config.importanceMap, *current);
 		relWeight = current->getRelativeWeight();
 		BDAssert(!relWeight.isZero());
 
@@ -367,6 +367,7 @@ void MLTProcess::develop() {
 			value += direct[i];
 		target[i] = value;
 	}
+
 	m_film->setBitmap(m_developBuffer);
 	m_refreshTimer->reset();
 

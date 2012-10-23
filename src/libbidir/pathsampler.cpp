@@ -579,12 +579,24 @@ Float PathSampler::computeAverageLuminance(size_t sampleCount) {
 	return mean;
 }
 
-static void seedCallback(std::vector<PathSeed> &output, int s, int t, Float weight, Path &) {
+static void seedCallback(std::vector<PathSeed> &output, const Bitmap *importanceMap,
+		int s, int t, Float weight, Path &path) {
+	if (importanceMap) {
+		const Float *luminanceValues = importanceMap->getFloatData();
+		Vector2i size = importanceMap->getSize();
+
+		const Point2 &pos = path.getSamplePosition();
+		Point2i intPos(
+			std::min(std::max(0, (int) pos.x), size.x-1),
+			std::min(std::max(0, (int) pos.y), size.y-1));
+		weight /= luminanceValues[intPos.x + intPos.y * size.x];
+	}
+
 	output.push_back(PathSeed(0, weight, s, t));
 }
 
 Float PathSampler::generateSeeds(size_t sampleCount, size_t seedCount,
-		bool fineGrained, std::vector<PathSeed> &seeds) {
+		bool fineGrained, const Bitmap *importanceMap, std::vector<PathSeed> &seeds) {
 	Log(EInfo, "Integrating luminance values over the image plane ("
 			SIZE_T_FMT " samples)..", sampleCount);
 
@@ -597,7 +609,7 @@ Float PathSampler::generateSeeds(size_t sampleCount, size_t seedCount,
 
 	SplatList splatList;
 	PathCallback callback = boost::bind(&seedCallback,
-		boost::ref(tempSeeds), _1, _2, _3, _4);
+		boost::ref(tempSeeds), importanceMap, _1, _2, _3, _4);
 
 	Float mean = 0.0f, variance = 0.0f;
 	for (size_t i=0; i<sampleCount; ++i) {
@@ -617,6 +629,7 @@ Float PathSampler::generateSeeds(size_t sampleCount, size_t seedCount,
 		} else {
 			/* Run the path sampling strategy */
 			sampleSplats(Point2i(-1), splatList);
+			splatList.normalize(importanceMap);
 			lum = splatList.luminance;
 
 			/* Coarse seed granularity (e.g. for PSSMLT) */
@@ -659,9 +672,20 @@ Float PathSampler::generateSeeds(size_t sampleCount, size_t seedCount,
 	return mean;
 }
 
-static void reconstructCallback(const PathSeed &seed, Path &result, MemoryPool &pool,
-	int s, int t, Float weight, Path &path) {
+static void reconstructCallback(const PathSeed &seed, const Bitmap *importanceMap,
+		Path &result, MemoryPool &pool, int s, int t, Float weight, Path &path) {
 	if (s == seed.s && t == seed.t) {
+		if (importanceMap) {
+			const Float *luminanceValues = importanceMap->getFloatData();
+			Vector2i size = importanceMap->getSize();
+
+			const Point2 &pos = path.getSamplePosition();
+			Point2i intPos(
+				std::min(std::max(0, (int) pos.x), size.x-1),
+				std::min(std::max(0, (int) pos.y), size.y-1));
+			weight /= luminanceValues[intPos.x + intPos.y * size.x];
+		}
+
 		if (seed.luminance != weight)
 			SLog(EError, "Internal error in reconstructPath(): luminances "
 				"don't match (%f vs %f)!", weight, seed.luminance);
@@ -669,7 +693,7 @@ static void reconstructCallback(const PathSeed &seed, Path &result, MemoryPool &
 	}
 }
 
-void PathSampler::reconstructPath(const PathSeed &seed, Path &result) {
+void PathSampler::reconstructPath(const PathSeed &seed, const Bitmap *importanceMap, Path &result) {
 	ReplayableSampler *rplSampler = static_cast<ReplayableSampler *>(m_sensorSampler.get());
 	Assert(result.length() == 0);
 
@@ -678,7 +702,8 @@ void PathSampler::reconstructPath(const PathSeed &seed, Path &result) {
 	rplSampler->setSampleIndex(seed.sampleIndex);
 
 	PathCallback callback = boost::bind(&reconstructCallback,
-		boost::cref(seed), boost::ref(result), boost::ref(m_pool), _1, _2, _3, _4);
+		boost::cref(seed), importanceMap,
+		boost::ref(result), boost::ref(m_pool), _1, _2, _3, _4);
 
 	samplePaths(Point2i(-1), callback);
 

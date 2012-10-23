@@ -165,7 +165,8 @@ public:
 	 * \return The average luminance over the image plane
 	 */
 	Float generateSeeds(size_t sampleCount, size_t seedCount,
-			bool fineGrained, std::vector<PathSeed> &seeds);
+			bool fineGrained, const Bitmap *importanceMap,
+			std::vector<PathSeed> &seeds);
 
 	/**
 	 * \brief Compute the average luminance over the image plane
@@ -181,7 +182,8 @@ public:
 	 * the random number stream of the underlying \ref ReplayableSampler
 	 * to the indicated position and recreates the associated path.
 	 */
-	void reconstructPath(const PathSeed &seed, Path &result);
+	void reconstructPath(const PathSeed &seed, 
+		const Bitmap *importanceMap, Path &result);
 
 	/// Return the underlying memory pool
 	inline MemoryPool &getMemoryPool() { return m_pool; }
