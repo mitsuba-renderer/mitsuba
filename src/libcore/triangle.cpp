@@ -22,7 +22,7 @@
 MTS_NAMESPACE_BEGIN
 
 Point Triangle::sample(const Point *positions, const Normal *normals,
-		Normal &normal, const Point2 &sample) const {
+		const Point2 *texCoords, Normal &normal, Point2 &uv, const Point2 &sample) const {
 	const Point &p0 = positions[idx[0]];
 	const Point &p1 = positions[idx[1]];
 	const Point &p2 = positions[idx[2]];
@@ -42,6 +42,17 @@ Point Triangle::sample(const Point *positions, const Normal *normals,
 		));
 	} else {
 		normal = Normal(normalize(cross(sideA, sideB)));
+	}
+
+	if (texCoords) {
+		const Point2 &uv0 = texCoords[idx[0]];
+		const Point2 &uv1 = texCoords[idx[1]];
+		const Point2 &uv2 = texCoords[idx[2]];
+
+		uv = uv0 * (1.0f - bary.x - bary.y) +
+			uv1 * bary.x + uv2 * bary.y;
+	} else {
+		uv = bary;
 	}
 
 	return p;

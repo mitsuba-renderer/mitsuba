@@ -273,7 +273,7 @@ public:
 
 	void getNormalDerivative(const Intersection &its,
 			Vector &dndu, Vector &dndv, bool shadingFrame) const {
-		Float invRadius = 1.0f / m_radius;
+		Float invRadius = (m_flipNormals ? -1.0f : 1.0f) / m_radius;
 		dndu = its.dpdu * invRadius;
 		dndv = its.dpdv * invRadius;
 	}
