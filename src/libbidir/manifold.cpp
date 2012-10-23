@@ -915,7 +915,7 @@ Float SpecularManifold::G(const Path &path, int a, int b) {
 
 	SimpleVertex &last = m_vertices[m_vertices.size()-1];
 	const PathVertex *vb = path.vertex(b);
-	if (vb->isMediumInteraction()) {
+	if (!vb->isOnSurface()) {
 		last.n = Vector(path.edge(a < b ? (b-1) : b)->d);
 	} else {
 		last.n = vb->getShadingNormal();
