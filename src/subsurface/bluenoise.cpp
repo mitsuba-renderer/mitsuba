@@ -145,7 +145,7 @@ void blueNoisePointSet(const Scene *scene, const std::vector<Shape *> &shapes,
 
 	Vector3i cellCount;
 	for (int i=0; i<3; ++i)
-		cellCount[i] = ceilToInt(extents[i] * invCellWidth);
+		cellCount[i] = std::max(1, ceilToInt(extents[i] * invCellWidth));
 
 	SLog(EInfo, "  phase 2: computing cell indices ..");
 	#if defined(MTS_OPENMP)
