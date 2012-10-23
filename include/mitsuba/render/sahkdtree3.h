@@ -63,7 +63,8 @@ public:
 	 * Given a split on axis \a axis that produces children having extents
 	 * \a leftWidth and \a rightWidth along \a axis, compute the probability
 	 * of traversing the left and right child during a typical query
-	 * operation.
+	 * operation. In the case of the surface area heuristic, this is simply
+	 * the ratio of surface areas.
 	 */
 	inline std::pair<Float, Float> operator()(int axis, Float leftWidth, Float rightWidth) const {
 		return std::pair<Float, Float>(
