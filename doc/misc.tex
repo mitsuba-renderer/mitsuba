@@ -2,9 +2,9 @@
 \label{sec:miscellaneous}
 \subsection{A word about color spaces}
 \label{sec:colorspaces}
-When using one of the downloadable release builds of Mitsuba, or a version 
+When using one of the downloadable release builds of Mitsuba, or a version
 that was compiled with the default settings, the renderer internally
-operates in \emph{RGB mode}: all computations are performed using a representation 
+operates in \emph{RGB mode}: all computations are performed using a representation
 that is based on the three colors red, green, and blue.
 
 More specifically, these are the intensities of the red, green, and blue primaries
@@ -14,20 +14,20 @@ rendering. This is an intuitive default which yields fast computations and
 satisfactory results for most applications.
 
 Low dynamic range images exported using the \pluginref{ldrfilm} will be stored in a
-sRGB-compatible format that accounts for the custom gamma curves mandated by this 
+sRGB-compatible format that accounts for the custom gamma curves mandated by this
 standard. They should display as intended across a wide range of display devices.
 
 When saving high dynamic range output (e.g. OpenEXR, RGBE, or PFM), the computed radiance
 values are exported in a linear form (i.e. without having the sRGB gamma curve applied to it),
 which is the most common way of storing high dynamic range data.
-It is important to keep in mind that other applications may not support this 
+It is important to keep in mind that other applications may not support this
 ``linearized sRGB'' space---in particular, the Mac OS preview currently
 does not display images with this encoding correctly.
 
 \subsubsection{Spectral mode}
 Some predictive rendering applications will require a more realistic space for
 interreflection computations. In such cases, Mitsuba can be switched to \emph{spectral mode}.
-This can be done by compiling it with the \code{SPECTRUM\_SAMPLES=}$n$ parameter 
+This can be done by compiling it with the \code{SPECTRUM\_SAMPLES=}$n$ parameter
 (\secref{compiling}), where $n$ is usually between 15 and 30.
 
 Now, all input parameters are converted into color spectra with the specified
