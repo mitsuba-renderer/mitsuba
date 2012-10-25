@@ -185,6 +185,9 @@ extern MTS_EXPORT_CORE int mts_omp_get_thread_num();
 #define mts_omp_get_max_threads omp_get_max_threads
 #define mts_omp_get_thread_num omp_get_thread_num
 #endif
+#else
+#define mts_omp_get_max_threads() 1
+#define mts_omp_get_thread_num() 0
 #endif
 
 MTS_NAMESPACE_END
