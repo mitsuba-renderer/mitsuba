@@ -618,7 +618,7 @@ void TriMesh::computeNormals(bool force) {
 }
 
 void TriMesh::computeUVTangents() {
-	int degenerate = 0;
+	// int degenerate = 0;
 	if (!m_texcoords) {
 		bool anisotropic = hasBSDF() && m_bsdf->getType() & BSDF::EAnisotropic;
 		if (anisotropic)
@@ -655,7 +655,7 @@ void TriMesh::computeUVTangents() {
 		Normal n = Normal(cross(dP1, dP2));
 		Float length = n.length();
 		if (length == 0) {
-			++degenerate;
+			// ++degenerate;
 			continue;
 		}
 
@@ -671,9 +671,12 @@ void TriMesh::computeUVTangents() {
 		}
 	}
 
-	if (degenerate > 0)
-		Log(EWarn, "\"%s\": computeTangentSpace(): Mesh contains %i "
-			"degenerate triangles!", getName().c_str(), degenerate);
+	#if 0
+		/* Don't be so noisy -- this isn't usually a problem.. */
+		if (degenerate > 0)
+			Log(EWarn, "\"%s\": computeTangentSpace(): Mesh contains %i "
+				"degenerate triangles!", getName().c_str(), degenerate);
+	#endif
 }
 
 void TriMesh::getNormalDerivative(const Intersection &its,
