@@ -358,11 +358,14 @@ extern MTS_EXPORT_CORE bool solveQuadraticDouble(double a, double b,
  *      Position of the last knot
  * \param size
  *      Denotes the size of the \c data array
+ * \param extrapolate
+ *      Extrapolate data values when \c x is out of range? (default: \c false)
  * \return
- *      The interpolated value or zero when \c x lies outside of [\c min, \c max]
+ *      The interpolated value or zero when <tt>extrapolate=false</tt>tt>
+ *      and \c x lies outside of [\c min, \c max]
  */
 extern MTS_EXPORT_CORE Float interpCubic1D(Float x, const Float *data,
-		Float min, Float max, size_t size);
+		Float min, Float max, size_t size, bool extrapolate = false);
 
 /**
  * \brief Evaluate a cubic spline interpolant of an \a irregularly sampled 1D function
@@ -382,11 +385,14 @@ extern MTS_EXPORT_CORE Float interpCubic1D(Float x, const Float *data,
  *      the entries of \c nodes.
  * \param size
  *      Denotes the size of the \c data array
+ * \param extrapolate
+ *      Extrapolate data values when \c x is out of range? (default: \c false)
  * \return
- *      The interpolated value or zero when \c x lies outside of \a [\c min, \c max]
+ *      The interpolated value or zero when <tt>extrapolate=false</tt>tt>
+ *      and \c x lies outside of \a [\c min, \c max]
  */
 extern MTS_EXPORT Float interpCubic1DIrregular(Float x, const Float *nodes,
-		const Float *data, size_t size);
+		const Float *data, size_t size, bool extrapolate = false);
 
 /**
  * \brief Evaluate a cubic spline interpolant of a regularly sampled 2D function
@@ -407,11 +413,14 @@ extern MTS_EXPORT Float interpCubic1DIrregular(Float x, const Float *nodes,
  *      Position of the last knot on each dimension
  * \param size
  *      Denotes the size of the \c data array (along each dimension)
+ * \param extrapolate
+ *      Extrapolate data values when \c p is out of range? (default: \c false)
  * \return
- *      The interpolated value or zero when \c p lies outside of the knot range
+ *      The interpolated value or zero when <tt>extrapolate=false</tt>tt> and
+ *      \c p lies outside of the knot range
  */
 extern MTS_EXPORT_CORE Float interpCubic2D(const Point2 &p, const Float *data,
-		const Point2 &min, const Point2 &max, const Size2 &size);
+		const Point2 &min, const Point2 &max, const Size2 &size, bool extrapolate = false);
 
 /**
  * \brief Evaluate a cubic spline interpolant of an \a irregularly sampled 2D function
@@ -435,11 +444,14 @@ extern MTS_EXPORT_CORE Float interpCubic2D(const Point2 &p, const Float *data,
  *      Consecutive entries of this array correspond to increments in the 'x' coordinate.
  * \param size
  *      Denotes the size of the \c data array (along each dimension)
+ * \param extrapolate
+ *      Extrapolate data values when \c p is out of range? (default: \c false)
  * \return
- *      The interpolated value or zero when \c p lies outside of the knot range
+ *      The interpolated value or zero when <tt>extrapolate=false</tt>tt> and
+ *      \c p lies outside of the knot range
  */
 extern MTS_EXPORT_CORE Float interpCubic2DIrregular(const Point2 &p, const Float **nodes,
-		const Float *data, const Size2 &size);
+		const Float *data, const Size2 &size, bool extrapolate = false);
 
 /**
  * \brief Evaluate a cubic spline interpolant of a regularly sampled 3D function
@@ -461,11 +473,14 @@ extern MTS_EXPORT_CORE Float interpCubic2DIrregular(const Point2 &p, const Float
  *      Position of the last knot on each dimension
  * \param size
  *      Denotes the size of the \c data array (along each dimension)
+ * \param extrapolate
+ *      Extrapolate data values when \c p is out of range? (default: \c false)
  * \return
- *      The interpolated value or zero when \c p lies outside of the knot range
+ *      The interpolated value or zero when <tt>extrapolate=false</tt>tt> and
+ *      \c p lies outside of the knot range
  */
 extern MTS_EXPORT_CORE Float interpCubic3D(const Point3 &p, const Float *data,
-		const Point3 &min, const Point3 &max, const Size3 &size);
+		const Point3 &min, const Point3 &max, const Size3 &size, bool extrapolate = false);
 
 /**
  * \brief Evaluate a cubic spline interpolant of an \a irregularly sampled 3D function
@@ -490,11 +505,14 @@ extern MTS_EXPORT_CORE Float interpCubic3D(const Point3 &p, const Float *data,
  *      then 'y', and finally 'z' increments.
  * \param size
  *      Denotes the size of the \c data array (along each dimension)
+ * \param extrapolate
+ *      Extrapolate data values when \c p is out of range? (default: \c false)
  * \return
- *      The interpolated value or zero when \c p lies outside of the knot range
+ *      The interpolated value or zero when <tt>extrapolate=false</tt>tt> and
+ *      \c p lies outside of the knot range
  */
 extern MTS_EXPORT_CORE Float interpCubic3DIrregular(const Point3 &p, const Float **nodes,
-		const Float *data, const Size3 &size);
+		const Float *data, const Size3 &size, bool extrapolate = false);
 
 //// Convert radians to degrees
 inline Float radToDeg(Float value) { return value * (180.0f / M_PI); }

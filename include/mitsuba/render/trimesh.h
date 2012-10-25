@@ -206,8 +206,15 @@ public:
 	 */
 	void computeUVTangents();
 
-	/// Generate surface normals
-	void computeNormals();
+	/**
+	 * \brief Generate smooth vertex normals?
+	 *
+	 * \param force
+	 *   When this parameter is set to true, the function
+	 *   generates normals <em>even</em> when there are
+	 *   already existing ones.
+	 */
+	void computeNormals(bool force = false);
 
 	/**
 	 * \brief Rebuild the mesh so that adjacent faces

@@ -542,7 +542,7 @@ void TriMesh::rebuildTopology(Float maxAngle) {
 	configure();
 }
 
-void TriMesh::computeNormals() {
+void TriMesh::computeNormals(bool force) {
 	int invalidNormals = 0;
 	if (m_faceNormals) {
 		if (m_normals) {
@@ -558,7 +558,7 @@ void TriMesh::computeNormals() {
 			}
 		}
 	} else {
-		if (m_normals) {
+		if (m_normals && !force) {
 			if (m_flipNormals) {
 				for (size_t i=0; i<m_vertexCount; i++)
 					m_normals[i] *= -1;
@@ -566,7 +566,8 @@ void TriMesh::computeNormals() {
 				/* Do nothing */
 			}
 		} else {
-			m_normals = new Normal[m_vertexCount];
+			if (!m_normals)
+				m_normals = new Normal[m_vertexCount];
 			memset(m_normals, 0, sizeof(Normal)*m_vertexCount);
 
 			/* Well-behaved vertex normal computation based on
