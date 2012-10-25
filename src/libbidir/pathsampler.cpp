@@ -580,7 +580,9 @@ Float PathSampler::computeAverageLuminance(size_t sampleCount) {
 }
 
 static void seedCallback(std::vector<PathSeed> &output, const Bitmap *importanceMap,
-		int s, int t, Float weight, Path &path) {
+		Float &accum, int s, int t, Float weight, Path &path) {
+	accum += weight;
+
 	if (importanceMap) {
 		const Float *luminanceValues = importanceMap->getFloatData();
 		Vector2i size = importanceMap->getSize();
@@ -608,40 +610,40 @@ Float PathSampler::generateSeeds(size_t sampleCount, size_t seedCount,
 	tempSeeds.reserve(sampleCount);
 
 	SplatList splatList;
+	Float luminance;
 	PathCallback callback = boost::bind(&seedCallback,
-		boost::ref(tempSeeds), importanceMap, _1, _2, _3, _4);
+		boost::ref(tempSeeds), importanceMap, boost::ref(luminance),
+		_1, _2, _3, _4);
 
 	Float mean = 0.0f, variance = 0.0f;
 	for (size_t i=0; i<sampleCount; ++i) {
 		size_t seedIndex = tempSeeds.size();
 		size_t sampleIndex = m_sensorSampler->getSampleIndex();
-		Float lum = 0.0f;
+		luminance = 0.0f;
 
 		if (fineGrained) {
 			samplePaths(Point2i(-1), callback);
 
 			/* Fine seed granularity (e.g. for Veach-MLT).
 			   Set the correct the sample index value */
-			for (size_t j = seedIndex; j<tempSeeds.size(); ++j) {
+			for (size_t j = seedIndex; j<tempSeeds.size(); ++j)
 				tempSeeds[j].sampleIndex = sampleIndex;
-				lum += tempSeeds[j].luminance;
-			}
 		} else {
 			/* Run the path sampling strategy */
 			sampleSplats(Point2i(-1), splatList);
+			luminance = splatList.luminance;
 			splatList.normalize(importanceMap);
-			lum = splatList.luminance;
 
 			/* Coarse seed granularity (e.g. for PSSMLT) */
-			if (lum != 0)
-				tempSeeds.push_back(PathSeed(sampleIndex, lum));
+			if (luminance != 0)
+				tempSeeds.push_back(PathSeed(sampleIndex, luminance));
 		}
 
 		/* Numerically robust online variance estimation using an
 		   algorithm proposed by Donald Knuth (TAOCP vol.2, 3rd ed., p.232) */
-		Float delta = lum - mean;
+		Float delta = luminance - mean;
 		mean += delta / (Float) (i+1);
-		variance += delta * (lum - mean);
+		variance += delta * (luminance - mean);
 	}
 	BDAssert(m_pool.unused());
 	Float stddev = std::sqrt(variance / (sampleCount-1));
