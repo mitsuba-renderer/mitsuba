@@ -11,7 +11,7 @@ else
 endif
 set MITSUBA_DIR=`cd $reldir && pwd`
 
-if ("$0" == "Darwin") then
+if ("`uname`" == "Darwin") then
 	setenv PATH "$MITSUBA_DIR/Mitsuba.app/Contents/MacOS:$PATH"
 else
 	if (! ($?LD_LIBRARY_PATH) ) then
