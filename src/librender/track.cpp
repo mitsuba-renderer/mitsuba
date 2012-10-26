@@ -48,16 +48,7 @@ void AnimatedTransform::addTrack(AbstractAnimationTrack *track) {
 
 AABB1 AnimatedTransform::getTimeBounds() const {
 	if (m_tracks.size() == 0)
-#if !defined(__clang__)
 		return AABB1(0.0f, 0.0f);
-#else
-	// HACK Workaround for clang
-	{
-		AABB1 b;
-		b.min = b.max = 0.0f;
-		return b;
-	}
-#endif
 
 	Float min = std::numeric_limits<Float>::infinity();
 	Float max = -std::numeric_limits<Float>::infinity();
@@ -70,15 +61,7 @@ AABB1 AnimatedTransform::getTimeBounds() const {
 		max = std::max(max, track->getTime(size-1));
 	}
 
-#if !defined(__clang__)
 	return AABB1(min, max);
-#else
-	// HACK Workaround for clang
-	AABB1 b;
-	b.min = min;
-	b.max = max;
-	return b;
-#endif
 }
 
 AABB AnimatedTransform::getTranslationBounds() const {
@@ -150,6 +133,53 @@ AABB AnimatedTransform::getSpatialBounds(const AABB &aabb) const {
 AnimatedTransform::~AnimatedTransform() {
 	for (size_t i=0; i<m_tracks.size(); ++i)
 		m_tracks[i]->decRef();
+}
+
+void AnimatedTransform::sortAndSimplify() {
+	bool isStatic = true;
+
+	for (size_t i=0; i<m_tracks.size(); ++i) {
+		AbstractAnimationTrack *track = m_tracks[i];
+		bool success = false;
+		switch (track->getType()) {
+			case AbstractAnimationTrack::ETranslationX:
+			case AbstractAnimationTrack::ETranslationY:
+			case AbstractAnimationTrack::ETranslationZ:
+			case AbstractAnimationTrack::ERotationX:
+			case AbstractAnimationTrack::ERotationY:
+			case AbstractAnimationTrack::ERotationZ:
+			case AbstractAnimationTrack::EScaleX:
+			case AbstractAnimationTrack::EScaleY:
+			case AbstractAnimationTrack::EScaleZ:
+				success = static_cast<FloatTrack *>(track)->sortAndSimplify();
+				break;
+			case AbstractAnimationTrack::ETranslationXYZ:
+			case AbstractAnimationTrack::EScaleXYZ:
+				success = static_cast<VectorTrack *>(track)->sortAndSimplify();
+				break;
+			case AbstractAnimationTrack::ERotationQuat:
+				success = static_cast<QuatTrack *>(track)->sortAndSimplify();
+				break;
+			default:
+				Log(EError, "Encountered an unsupported "
+					"animation track type: %i!", track->getType());
+		}
+		if (success) {
+			isStatic &= track->getSize() == 1;
+		} else {
+			m_tracks.erase(m_tracks.begin() + i);
+			track->decRef();
+		}
+	}
+
+	if (isStatic) {
+		Transform temp;
+		temp = eval(0);
+		m_transform = temp;
+		for (size_t i=0; i<m_tracks.size(); ++i)
+			m_tracks[i]->decRef();
+		m_tracks.clear();
+	}
 }
 
 void AnimatedTransform::serialize(Stream *stream) const {

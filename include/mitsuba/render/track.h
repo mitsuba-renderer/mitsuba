@@ -82,9 +82,9 @@ protected:
  */
 template <typename T> class AnimationTrack : public AbstractAnimationTrack {
 public:
-	typedef T value_type;
+	typedef T ValueType;
 
-	AnimationTrack(EType type, size_t nKeyframes)
+	AnimationTrack(EType type, size_t nKeyframes = 0)
 		: AbstractAnimationTrack(type, nKeyframes), m_values(nKeyframes) { }
 
 	AnimationTrack(EType type, Stream *stream)
@@ -96,10 +96,19 @@ public:
 	}
 
 	/// Set the value of a certain keyframe
-	inline void setValue(size_t idx, const value_type &value) { m_values[idx] = value; }
+	inline void setValue(size_t idx, const ValueType &value) { m_values[idx] = value; }
 
 	/// Return the value of a certain keyframe
-	inline const value_type &getValue(size_t idx) const { return m_values[idx]; }
+	inline const ValueType &getValue(size_t idx) const { return m_values[idx]; }
+
+	/// Reserve space for a certain number of entries
+	inline void reserve(size_t count) { m_times.reserve(count); m_values.reserve(count); }
+
+	/// Append a value
+	inline void append(Float time, const ValueType &value) {
+		m_times.push_back(time);
+		m_values.push_back(value);
+	}
 
 	/// Serialize to a binary data stream
 	inline void serialize(Stream *stream) const {
@@ -111,7 +120,7 @@ public:
 	}
 
 	/// Evaluate the animation track at an arbitrary time value
-	inline value_type eval(Float time) const {
+	inline ValueType eval(Float time) const {
 		SAssert(m_times.size() > 0);
 		std::vector<Float>::const_iterator entry =
 				std::lower_bound(m_times.begin(), m_times.end(), time);
@@ -126,19 +135,61 @@ public:
 		}
 		return lerp(idx0, idx1, t);
 	}
+
+private:
+	struct SortPredicate {
+		inline bool operator()(const std::pair<Float, ValueType> &p1,
+		                       const std::pair<Float, ValueType> &p2) const {
+			return p1.first < p2.first;
+		}
+	};
+
+	struct MatchPredicate {
+		inline bool operator()(const std::pair<Float, ValueType> &p1,
+		                       const std::pair<Float, ValueType> &p2) const {
+			return p1.first == p2.first || p1.second == p2.second;
+		}
+	};
+
+public:
+	/**
+	 * \brief Sort all animation tracks and remove
+	 * unnecessary data (for user-provided input)
+	 *
+	 * \return \c false if this animation track was deemed to be unnecessary
+	 * after the cleanup (for instance, it only contains (0,0,0) translation operations)
+	 */
+	bool sortAndSimplify() {
+		SAssert(m_values.size() == m_times.size());
+		std::vector< std::pair<Float, ValueType> > temp(m_values.size());
+		for (size_t i=0; i<m_values.size(); ++i)
+			temp[i] = std::make_pair(m_times[i], m_values[i]);
+		std::sort(temp.begin(), temp.end(), SortPredicate());
+		temp.erase(std::unique(temp.begin(), temp.end(), MatchPredicate()));
+		m_times.resize(temp.size()); m_values.resize(temp.size());
+		for (size_t i=0; i<temp.size(); ++i) {
+			m_times[i] = temp[i].first;
+			m_values[i] = temp[i].second;
+		}
+
+		return m_values.size() > 0 || !isNoOp(m_values[0]);
+	}
 protected:
 	/// Evaluate the animation track using linear interpolation
-	inline value_type lerp(size_t idx0, size_t idx1, Float t) const;
+	inline ValueType lerp(size_t idx0, size_t idx1, Float t) const;
 
-	inline void unserialize(Stream *stream, value_type &value) {
-		value = stream->readElement<value_type>();
+	/// Is this a "no-op" transformation?
+	inline bool isNoOp(const ValueType &value) const;
+
+	inline void unserialize(Stream *stream, ValueType &value) {
+		value = stream->readElement<ValueType>();
 	}
 
-	inline void serialize(Stream *stream, const value_type &value) const {
-		stream->writeElement<value_type>(value);
+	inline void serialize(Stream *stream, const ValueType &value) const {
+		stream->writeElement<ValueType>(value);
 	}
 private:
-	std::vector<value_type> m_values;
+	std::vector<ValueType> m_values;
 };
 
 template<typename T> inline T AnimationTrack<T>::lerp(size_t idx0, size_t idx1, Float t) const {
@@ -148,6 +199,32 @@ template<typename T> inline T AnimationTrack<T>::lerp(size_t idx0, size_t idx1, 
 /// Partial specialization for quaternions (uses \ref slerp())
 template<> inline Quaternion AnimationTrack<Quaternion>::lerp(size_t idx0, size_t idx1, Float t) const {
 	return slerp(m_values[idx0], m_values[idx1], t);
+}
+
+template<typename T> inline bool AnimationTrack<T>::isNoOp(const ValueType &value) const {
+	return false;
+}
+
+template<> inline bool AnimationTrack<Float>::isNoOp(const Float &value) const {
+	if ((m_type == ETranslationX || m_type == ETranslationY || m_type == ETranslationZ) && value == 0)
+		return true;
+	else if ((m_type == ERotationX || m_type == ERotationY || m_type == ERotationZ) && value == 0)
+		return true;
+	else if ((m_type == EScaleX || m_type == EScaleY || m_type == EScaleZ) && value == 1)
+		return true;
+	return false;
+}
+
+template<> inline bool AnimationTrack<Vector>::isNoOp(const Vector &value) const {
+	if (m_type == ETranslationXYZ && value.isZero())
+		return true;
+	else if (m_type == EScaleXYZ && (value.x == 1 && value.y == 1 && value.z == 1))
+		return true;
+	return false;
+}
+
+template<> inline bool AnimationTrack<Quaternion>::isNoOp(const Quaternion &value) const {
+	return value.isIdentity();
 }
 
 template<> inline void AnimationTrack<Point>::unserialize(Stream *stream, Point &value) {
@@ -179,7 +256,7 @@ template<> inline void AnimationTrack<Quaternion>::serialize(Stream *stream, con
  * \ingroup librender
  */
 class MTS_EXPORT_RENDER AnimatedTransform : public Object {
-protected:
+private:
 	/// Internal functor used by \ref eval() and \ref SimpleCache
 	struct MTS_EXPORT_RENDER TransformFunctor {
 	public:
@@ -221,7 +298,7 @@ public:
 	 * to this function.
 	 */
 	inline const Transform &eval(Float t) const {
-		if (m_tracks.size() == 0)
+		if (EXPECT_TAKEN(m_tracks.size() == 0))
 			return m_transform;
 		else
 			return m_cache.get(TransformFunctor(m_tracks), t);
@@ -229,6 +306,12 @@ public:
 
 	/// Is the animation static?
 	inline bool isStatic() const { return m_tracks.size() == 0; }
+
+	/**
+	 * \brief Sort all animation tracks and remove unnecessary
+	 * data (for user-provided input)
+	 */
+	void sortAndSimplify();
 
 	/// Transform a point by an affine / non-projective matrix
 	inline Point transformAffine(Float t, const Point &p) const {
