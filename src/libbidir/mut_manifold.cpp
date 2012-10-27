@@ -272,8 +272,10 @@ bool ManifoldPerturbation::sampleMutation(
 	for (int i=l+1; i<m; ++i) {
 		proposal.append(m_pool.allocVertex());
 		proposal.append(m_pool.allocEdge());
+		memset(proposal.vertex(proposal.vertexCount()-1), 0, sizeof(PathVertex)); /// XXX
 	}
 	proposal.append(source, m, k+1);
+
 	proposal.vertex(a) = proposal.vertex(a)->clone(m_pool);
 	proposal.vertex(c) = proposal.vertex(c)->clone(m_pool);
 
@@ -521,8 +523,8 @@ bool ManifoldPerturbation::sampleMutation(
 		}
 	}
 
-	if ((vb_old->isSurfaceInteraction() && m_thetaDiffSurfaceSamples < DIFF_SAMPLES) ||
-		(vb_old->isMediumInteraction() && m_thetaDiffMediumSamples < DIFF_SAMPLES)) {
+	if (((vb_old->isSurfaceInteraction() && m_thetaDiffSurfaceSamples < DIFF_SAMPLES) ||
+		(vb_old->isMediumInteraction() && m_thetaDiffMediumSamples < DIFF_SAMPLES)) && b+1 != k && b-1 != 0) {
 		LockGuard guard(m_thetaDiffMutex);
 
 		if ((vb_old->isSurfaceInteraction() && m_thetaDiffSurfaceSamples < DIFF_SAMPLES) ||
@@ -586,6 +588,7 @@ bool ManifoldPerturbation::sampleMutation(
 			}
 		}
 	}
+
 	if (!PathVertex::connect(m_scene,
 			proposal.vertexOrNull(q-1),
 			proposal.edgeOrNull(q-1),

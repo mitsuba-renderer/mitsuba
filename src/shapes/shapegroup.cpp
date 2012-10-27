@@ -170,7 +170,7 @@ size_t ShapeGroup::getEffectivePrimitiveCount() const {
 std::string ShapeGroup::toString() const {
 	std::ostringstream oss;
 		oss << "ShapeGroup[" << endl
-			<< "  name = \"" << m_name << "\", " << endl
+			<< "  name = \"" << m_name << "\"," << endl
 			<< "  primCount = " << m_kdtree->getPrimitiveCount() << endl
 			<< "]";
 	return oss.str();
