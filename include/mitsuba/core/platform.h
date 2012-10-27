@@ -189,6 +189,55 @@ extern MTS_EXPORT_CORE void __mts_set_appdefaults();
 #define MTS_AUTORELEASE_BEGIN()
 #define MTS_AUTORELEASE_END()
 #endif
+
 MTS_NAMESPACE_END
+
+
+/// \cond
+// Try to make MSVC++ behave a bit more like C++
+// with an underlying C99 implementation
+// (and dn't include this in the documentation)
+#if defined(_MSC_VER)
+
+#include <float.h>
+
+#define snprintf _snprintf
+#define vsnprintf _vsnprintf
+
+namespace std {
+
+	inline char tolower(char c) {
+		return ::tolower(c);
+	}
+
+	inline char toupper(char c) {
+		return ::toupper(c);
+	}
+
+	inline bool isnan(float f) {
+		return _isnan(f);
+	}
+
+	inline bool isnan(double f) {
+		return _isnan(f);
+	}
+
+	inline bool isfinite(float f) {
+		return _finite(f);
+	}
+
+	inline bool isfinite(double f) {
+		return _finite(f);
+	}
+
+	inline bool isinf(float f) {
+		return !_finite(f);
+	}
+
+	inline bool isinf(double f) {
+		return !_finite(f);
+	}
+};
+#endif
 
 #endif /* __MITSUBA_CORE_PLATFORM_H_ */
