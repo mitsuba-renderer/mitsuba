@@ -37,7 +37,7 @@ MTS_NAMESPACE_BEGIN
  *	     Filename of the OBJ file that should be loaded
  *	   }
  *     \parameter{faceNormals}{\Boolean}{
- *       When set to \code{true}, any existing or computed vertex normals are 
+ *       When set to \code{true}, any existing or computed vertex normals are
  *       discarded and \emph{face normals} will instead be used during rendering.
  *       This gives the rendered object a faceted apperance.\default{\code{false}}
  *	   }
@@ -68,8 +68,8 @@ MTS_NAMESPACE_BEGIN
  * }
  *
  * This plugin implements a simple loader for Wavefront OBJ files. It handles
- * meshes containing triangles and quadrilaterals, and it also imports vertex normals 
- * and texture coordinates. 
+ * meshes containing triangles and quadrilaterals, and it also imports vertex normals
+ * and texture coordinates.
  *
  * Loading an ordinary OBJ file is as simple as writing:
  * \begin{xml}
@@ -79,9 +79,9 @@ MTS_NAMESPACE_BEGIN
  * \end{xml}
  * \paragraph{Material import:}
  * When the OBJ file references a Wavefront material description (a \code{.mtl} file),
- * Mitsuba attempts to reproduce the material within and associate it with the shape. 
+ * Mitsuba attempts to reproduce the material within and associate it with the shape.
  * This is restricted to fairly basic materials and textures, hence in most cases
- * it will be preferable to override this behavior by specifying an 
+ * it will be preferable to override this behavior by specifying an
  * explicit Mitsuba BSDF that should be used instead.
  * This can be done by passing it as a child argument, e.g.
  * \begin{xml}
@@ -117,15 +117,15 @@ MTS_NAMESPACE_BEGIN
  * \end{xml}
  * \paragraph{The \code{maxSmoothAngle} parameter:}
  * \label{sec:maxSmoothAngle}
- * When given a mesh without vertex normals, Mitsuba will by default 
+ * When given a mesh without vertex normals, Mitsuba will by default
  * create a smoothly varying normal field over the entire shape. This can produce
  * undesirable output when the input mesh contains regions that are intentionally
  * not smooth (i.e. corners, creases). Meshes that do include vertex
- * normals sometimes incorrectly interpolate normals over such regions, leading to 
+ * normals sometimes incorrectly interpolate normals over such regions, leading to
  * much the same problem.
  *
- * The \code{maxSmoothAngle} parameter can be issued to force inspection of the dihedral angle associated with 
- * each edge in the input mesh and disable normal interpolation locally where this angle exceeds 
+ * The \code{maxSmoothAngle} parameter can be issued to force inspection of the dihedral angle associated with
+ * each edge in the input mesh and disable normal interpolation locally where this angle exceeds
  * a certain threshold value. A reasonable value might be something like \code{30} (degrees).
  * The underlying analysis is somewhat costly and hence this parameter should only be used when it is
  * actually needed (i.e. when the mesh contains creases or edges and does not come with
@@ -137,9 +137,9 @@ MTS_NAMESPACE_BEGIN
  * last resort. Due to inherent limitations of this format, the files tend to be unreasonably
  * large, and parsing them requires significant amounts of memory and processing power. What's worse
  * is that the internally stored data is often truncated, causing a loss of precision.
- * 
+ *
  * If possible, use the \pluginref{ply} or \pluginref{serialized} plugins instead. For convenience, it
- * is also possible to convert legacy OBJ files into \code{.serialized} files using the \code{mtsimport} 
+ * is also possible to convert legacy OBJ files into \code{.serialized} files using the \code{mtsimport}
  * utility. Using the resulting output will significantly accelerate the scene loading time.
  * }
  */
@@ -162,7 +162,7 @@ public:
 		if (line == "")
 			return true;
 		int lastCharacter = (int) line.size() - 1;
-		while (lastCharacter >= 0 && 
+		while (lastCharacter >= 0 &&
 				(line[lastCharacter] == '\r' ||
 					line[lastCharacter] == '\n' ||
 					line[lastCharacter] == '\t' ||
@@ -184,10 +184,10 @@ public:
 		fs::path path = fileResolver->resolve(props.getString("filename"));
 
 		m_name = path.stem().string();
-	
+
 		/* By default, any existing normals will be used for
 		   rendering. If no normals are found, Mitsuba will
-		   automatically generate smooth vertex normals. 
+		   automatically generate smooth vertex normals.
 		   Setting the 'faceNormals' parameter instead forces
 		   the use of face normals, which will result in a faceted
 		   appearance.
@@ -196,7 +196,7 @@ public:
 
 		/* Causes all normals to be flipped */
 		m_flipNormals = props.getBoolean("flipNormals", false);
-		
+
 		/* Causes all texture coordinates to be vertically flipped */
 		bool flipTexCoords = props.getBoolean("flipTexCoords", true);
 
@@ -257,7 +257,7 @@ public:
 					if (geomNames.find(targetName) != geomNames.end())
 						targetName = formatString("%s_%i", targetName.c_str(), geomIdx++);
 					geomNames.insert(targetName);
-					createMesh(targetName, vertices, normals, texcoords, 
+					createMesh(targetName, vertices, normals, texcoords,
 						triangles, materialName, objectToWorld, vertexBuffer);
 					triangles.clear();
 				} else {
@@ -271,7 +271,7 @@ public:
 					if (geomNames.find(name) != geomNames.end())
 						name = formatString("%s_%i", name.c_str(), geomIdx++);
 					geomNames.insert(name);
-					createMesh(name, vertices, normals, texcoords, 
+					createMesh(name, vertices, normals, texcoords,
 						triangles, materialName, objectToWorld, vertexBuffer);
 					triangles.clear();
 					name = m_name;
@@ -283,7 +283,7 @@ public:
 			} else if (buf == "vt") {
 				Float u, v;
 				iss >> u >> v;
-				if (flipTexCoords) 
+				if (flipTexCoords)
 					v = 1-v;
 				texcoords.push_back(Point2(u, v));
 			} else if (buf == "f") {
@@ -298,7 +298,7 @@ public:
 					t.uv[1] = t.uv[0];
 					t.n[1] = t.n[0];
 					parse(t, 0, tmp);
-					
+
 					triangles.push_back(t);
 				}
 				if (iss >> tmp)
@@ -312,7 +312,7 @@ public:
 			/// make sure that we have unique names
 			name = formatString("%s_%i", m_name.c_str(), geomIdx);
 
-		createMesh(name, vertices, normals, texcoords, 
+		createMesh(name, vertices, normals, texcoords,
 			triangles, materialName, objectToWorld, vertexBuffer);
 
 		if (props.hasProperty("maxSmoothAngle")) {
@@ -335,7 +335,7 @@ public:
 		m_name = stream->readString();
 		uint32_t meshCount = stream->readUInt();
 		m_meshes.resize(meshCount);
-	
+
 		for (uint32_t i=0; i<meshCount; ++i) {
 			m_meshes[i] = static_cast<TriMesh *>(manager->getInstance(stream));
 			m_meshes[i]->incRef();
@@ -373,8 +373,8 @@ public:
 		}
 	}
 
-	Texture *loadTexture(const FileResolver *fileResolver, 
-			std::map<std::string, Texture *> &cache, 
+	Texture *loadTexture(const FileResolver *fileResolver,
+			std::map<std::string, Texture *> &cache,
 			const fs::path &mtlPath, std::string filename) {
 		/* Prevent Linux/OSX fs::path handling issues for DAE files created on Windows */
 		for (size_t i=0; i<filename.length(); ++i) {
@@ -389,7 +389,7 @@ public:
 		if (!fs::exists(path)) {
 			path = fileResolver->resolve(fs::path(filename).filename());
 			if (!fs::exists(path)) {
-				Log(EWarn, "Unable to find texture \"%s\" referenced from \"%s\"!", 
+				Log(EWarn, "Unable to find texture \"%s\" referenced from \"%s\"!",
 					path.string().c_str(), mtlPath.string().c_str());
 				return new ConstantSpectrumTexture(Spectrum(0.0f));
 			}
@@ -406,7 +406,7 @@ public:
 
 	void loadMaterialLibrary(const FileResolver *fileResolver, const fs::path &mtlPath) {
 		if (!fs::exists(mtlPath)) {
-			Log(EWarn, "Could not find referenced material library '%s'", 
+			Log(EWarn, "Could not find referenced material library '%s'",
 				mtlPath.string().c_str());
 			return;
 		}
@@ -414,7 +414,7 @@ public:
 		Log(EInfo, "Loading OBJ materials from \"%s\" ..", mtlPath.filename().string().c_str());
 		fs::ifstream is(mtlPath);
 		if (is.bad() || is.fail())
-			Log(EError, "Unexpected I/O error while accessing material file '%s'!", 
+			Log(EError, "Unexpected I/O error while accessing material file '%s'!",
 				mtlPath.string().c_str());
 		std::string buf, line;
 		std::string mtlName;
@@ -431,11 +431,11 @@ public:
 				continue;
 
 			if (buf == "newmtl") {
-				if (mtlName != "") 
+				if (mtlName != "")
 					addMaterial(mtlName, diffuse, specular, exponent, bump, mask, illum);
 
 				mtlName = trim(line.substr(6, line.length()-6));
-		
+
 				specular = new ConstantSpectrumTexture(Spectrum(0.0f));
 				diffuse = new ConstantSpectrumTexture(Spectrum(0.0f));
 				exponent = new ConstantFloatTexture(0.0f);
@@ -487,7 +487,7 @@ public:
 				/* Ignore */
 			}
 		}
-		
+
 		addMaterial(mtlName, diffuse, specular, exponent, bump, mask, illum);
 
 		for (std::map<std::string, Texture *>::iterator it = cache.begin();
@@ -505,7 +505,7 @@ public:
 
 		if (model == 2) {
 			props.setPluginName("phong");
-	
+
 			bsdf = static_cast<BSDF *> (PluginManager::getInstance()->
 				createObject(MTS_CLASS(BSDF), props));
 			bsdf->addChild("diffuseReflectance", diffuse);
@@ -562,7 +562,7 @@ public:
 	};
 
 	/// For using vertices as keys in an associative structure
-	struct vertex_key_order : public 
+	struct vertex_key_order : public
 		std::binary_function<Vertex, Vertex, bool> {
 	public:
 		bool operator()(const Vertex &v1, const Vertex &v2) const {
@@ -690,11 +690,11 @@ public:
 		mesh->incRef();
 		m_materialAssignment.push_back(materialName);
 		m_meshes.push_back(mesh);
-		Log(EInfo, "%s: " SIZE_T_FMT " triangles, " SIZE_T_FMT 
+		Log(EInfo, "%s: " SIZE_T_FMT " triangles, " SIZE_T_FMT
 			" vertices (merged " SIZE_T_FMT " vertices).", name.c_str(),
 			triangles.size(), vertexBuffer.size(), numMerged);
 	}
-	
+
 	virtual ~WavefrontOBJ() {
 		for (size_t i=0; i<m_meshes.size(); ++i)
 			m_meshes[i]->decRef();
@@ -716,7 +716,7 @@ public:
 			Shape::addChild(name, child);
 			Assert(m_meshes.size() > 0);
 			if (name == "") {
-				for (size_t i=0; i<m_meshes.size(); ++i) 
+				for (size_t i=0; i<m_meshes.size(); ++i)
 					m_meshes[i]->addChild(name, child);
 			} else {
 				bool found = false;
@@ -748,13 +748,13 @@ public:
 		} else if (cClass->derivesFrom(MTS_CLASS(Subsurface))) {
 			Assert(m_subsurface == NULL);
 			m_subsurface = static_cast<Subsurface *>(child);
-			for (size_t i=0; i<m_meshes.size(); ++i) { 
+			for (size_t i=0; i<m_meshes.size(); ++i) {
 				child->setParent(m_meshes[i]);
 				m_meshes[i]->addChild(name, child);
 			}
 		} else if (cClass->derivesFrom(MTS_CLASS(Medium))) {
 			Shape::addChild(name, child);
-			for (size_t i=0; i<m_meshes.size(); ++i) 
+			for (size_t i=0; i<m_meshes.size(); ++i)
 				m_meshes[i]->addChild(name, child);
 		} else {
 			Shape::addChild(name, child);

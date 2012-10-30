@@ -5,7 +5,7 @@ void *__mts_init_breakpad_osx() {
   BreakpadRef breakpad = 0;
   NSDictionary *plist = [[NSBundle mainBundle] infoDictionary];
   if (plist) {
-    // Note: version 1.0.0.4 of the framework changed the type of the argument 
+    // Note: version 1.0.0.4 of the framework changed the type of the argument
     // from CFDictionaryRef to NSDictionary * on the next line:
     breakpad = BreakpadCreate(plist);
   }

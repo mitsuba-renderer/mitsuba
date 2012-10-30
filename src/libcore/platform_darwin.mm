@@ -23,7 +23,7 @@ MTS_NAMESPACE_BEGIN
 
 static pthread_key_t __mts_autorelease_key;
 static bool __mts_cocoa_initialized = false;
-	
+
 void __mts_autorelease_init() {
 	pthread_key_create(&__mts_autorelease_key, NULL);
 }
@@ -38,9 +38,9 @@ void __mts_autorelease_begin() {
 }
 
 void __mts_autorelease_end() {
-	NSAutoreleasePool *pool = 
+	NSAutoreleasePool *pool =
 		static_cast<NSAutoreleasePool *>(pthread_getspecific(__mts_autorelease_key));
-	[pool release]; 
+	[pool release];
 }
 
 void __mts_chdir_to_bundlepath() {

@@ -44,13 +44,13 @@ public:
 
 	/// Add a child ConfigurableObject
 	void addChild(const std::string &name, ConfigurableObject *child);
-	
+
 	/// Return a pointer to the associated \ref ShapeGroup
 	inline ShapeGroup* getShapeGroup() { return m_shapeGroup; }
 
 	/// Return a pointer to the associated \ref ShapeGroup (const version)
 	inline const ShapeGroup* getShapeGroup() const { return m_shapeGroup.get(); }
-	
+
 	// =============================================================
 	//! @{ \name Implementation of the Shape interface
 	// =============================================================
@@ -59,14 +59,14 @@ public:
 
 	Float getSurfaceArea() const;
 
-	bool rayIntersect(const Ray &_ray, Float mint, 
+	bool rayIntersect(const Ray &_ray, Float mint,
 			Float maxt, Float &t, void *temp) const;
 
 	bool rayIntersect(const Ray &_ray, Float mint, Float maxt) const;
 
-	void fillIntersectionRecord(const Ray &ray, 
+	void fillIntersectionRecord(const Ray &ray,
 		const void *temp, Intersection &its) const;
-	
+
 	void getNormalDerivative(const Intersection &its,
 		Vector &dndu, Vector &dndv, bool shadingFrame) const;
 

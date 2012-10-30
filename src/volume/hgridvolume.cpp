@@ -31,7 +31,7 @@ MTS_NAMESPACE_BEGIN
  */
 class HierarchicalGridDataSource : public VolumeDataSource {
 public:
-	HierarchicalGridDataSource(const Properties &props) 
+	HierarchicalGridDataSource(const Properties &props)
 		: VolumeDataSource(props) {
 		m_volumeToWorld = props.getTransform("toWorld", Transform());
 		m_prefix = props.getString("prefix");
@@ -40,7 +40,7 @@ public:
 		loadDictionary(filename);
 	}
 
-	HierarchicalGridDataSource(Stream *stream, InstanceManager *manager) 
+	HierarchicalGridDataSource(Stream *stream, InstanceManager *manager)
 	: VolumeDataSource(stream, manager) {
 		m_volumeToWorld = Transform(stream);
 		std::string filename = stream->readString();
@@ -96,10 +96,10 @@ public:
 		int numBlocks = 0;
 		while (!stream->isEOF()) {
 			Vector3i block = Vector3i(stream);
-			Assert(block.x >= 0 && block.y >= 0 && block.z >= 0 
+			Assert(block.x >= 0 && block.y >= 0 && block.z >= 0
 					&& block.x < m_res.x && block.y < m_res.y && block.z < m_res.z);
 			Properties props("gridvolume");
-			props.setString("filename", formatString("%s%03i_%03i_%03i%s", 
+			props.setString("filename", formatString("%s%03i_%03i_%03i%s",
 						m_prefix.c_str(), block.x, block.y, block.z, m_postfix.c_str()));
 			props.setTransform("toWorld", m_volumeToWorld);
 			props.setBoolean("sendData", false);
@@ -117,7 +117,7 @@ public:
 			content->incRef();
 			++numBlocks;
 		}
-		Log(EInfo, "%i blocks total, %s, stepSize=%f, resolution=%s", numBlocks, 
+		Log(EInfo, "%i blocks total, %s, stepSize=%f, resolution=%s", numBlocks,
 				aabb.toString().c_str(), m_stepSize, m_res.toString().c_str());
 
 		m_aabb.reset();
@@ -148,7 +148,7 @@ public:
 			  z = floorToInt(p.z);
 		if (x < 0 || x >= m_res.x ||
 			y < 0 || y >= m_res.y ||
-			z < 0 || z >= m_res.z) 
+			z < 0 || z >= m_res.z)
 			return 0.0f;
 
 		VolumeDataSource *block = m_blocks[((z * m_res.y) + y) * m_res.x + x];

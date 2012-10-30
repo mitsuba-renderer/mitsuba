@@ -25,11 +25,11 @@
 
 MTS_NAMESPACE_BEGIN
 
-PathSampler::PathSampler(ETechnique technique, const Scene *scene, Sampler *sensorSampler, 
-		Sampler *emitterSampler, Sampler *directSampler, int maxDepth, int rrDepth, 
+PathSampler::PathSampler(ETechnique technique, const Scene *scene, Sampler *sensorSampler,
+		Sampler *emitterSampler, Sampler *directSampler, int maxDepth, int rrDepth,
 		bool excludeDirectIllum,  bool sampleDirect, bool lightImage)
 	: m_technique(technique), m_scene(scene), m_emitterSampler(emitterSampler),
-	  m_sensorSampler(sensorSampler), m_directSampler(directSampler), m_maxDepth(maxDepth), 
+	  m_sensorSampler(sensorSampler), m_directSampler(directSampler), m_maxDepth(maxDepth),
 	  m_rrDepth(rrDepth), m_excludeDirectIllum(excludeDirectIllum), m_sampleDirect(sampleDirect),
       m_lightImage(lightImage) {
 
@@ -46,11 +46,11 @@ PathSampler::PathSampler(ETechnique technique, const Scene *scene, Sampler *sens
 	m_emitterDepth = m_sensorDepth = maxDepth;
 
 	/* Go one extra step if the sensor can be intersected */
-	if (!m_scene->hasDegenerateSensor() && m_emitterDepth != -1) 
+	if (!m_scene->hasDegenerateSensor() && m_emitterDepth != -1)
 		++m_emitterDepth;
 
 	/* Go one extra step if there are emitters that can be intersected */
-	if (!m_scene->hasDegenerateEmitters() && m_sensorDepth != -1) 
+	if (!m_scene->hasDegenerateEmitters() && m_sensorDepth != -1)
 		++m_sensorDepth;
 }
 
@@ -75,14 +75,14 @@ void PathSampler::sampleSplats(const Point2i &offset, SplatList &list) {
 				m_sensorSubpath.initialize(m_scene, time, ERadiance, m_pool);
 
 				/* Perform two random walks from the sensor and emitter side */
-				m_emitterSubpath.randomWalk(m_scene, m_emitterSampler, m_emitterDepth, 
+				m_emitterSubpath.randomWalk(m_scene, m_emitterSampler, m_emitterDepth,
 						m_rrDepth, EImportance, m_pool);
 
 				if (offset == Point2i(-1))
-					m_sensorSubpath.randomWalk(m_scene, m_sensorSampler, 
+					m_sensorSubpath.randomWalk(m_scene, m_sensorSampler,
 						m_sensorDepth, m_rrDepth, ERadiance, m_pool);
 				else
-					m_sensorSubpath.randomWalkFromPixel(m_scene, m_sensorSampler, 
+					m_sensorSubpath.randomWalkFromPixel(m_scene, m_sensorSampler,
 						m_sensorDepth, offset, m_rrDepth, m_pool);
 
 				/* Compute the combined weights along the two subpaths */
@@ -90,7 +90,7 @@ void PathSampler::sampleSplats(const Point2i &offset, SplatList &list) {
 						 *radianceWeights  = (Spectrum *) alloca(m_sensorSubpath.vertexCount()  * sizeof(Spectrum));
 
 				importanceWeights[0] = radianceWeights[0] = Spectrum(1.0f);
-				for (size_t i=1; i<m_emitterSubpath.vertexCount(); ++i) 
+				for (size_t i=1; i<m_emitterSubpath.vertexCount(); ++i)
 					importanceWeights[i] = importanceWeights[i-1] *
 						m_emitterSubpath.vertex(i-1)->weight[EImportance] *
 						m_emitterSubpath.vertex(i-1)->rrWeight *
@@ -115,18 +115,18 @@ void PathSampler::sampleSplats(const Point2i &offset, SplatList &list) {
 				for (int s = (int) m_emitterSubpath.vertexCount()-1; s >= 0; --s) {
 					/* Determine the range of sensor vertices to be traversed,
 					   while respecting the specified maximum path length */
-					int minT = std::max(2-s, m_lightImage ? 0 : 2), 
+					int minT = std::max(2-s, m_lightImage ? 0 : 2),
 					    maxT = (int) m_sensorSubpath.vertexCount() - 1;
 					if (m_maxDepth != -1)
 						maxT = std::min(maxT, m_maxDepth + 1 - s);
 
 					for (int t = maxT; t >= minT; --t) {
-						PathVertex 
+						PathVertex
 							*vsPred = m_emitterSubpath.vertexOrNull(s-1),
 							*vtPred = m_sensorSubpath.vertexOrNull(t-1),
 							*vs = m_emitterSubpath.vertex(s),
 							*vt = m_sensorSubpath.vertex(t);
-						PathEdge   
+						PathEdge
 							*vsEdge = m_emitterSubpath.edgeOrNull(s-1),
 							*vtEdge = m_sensorSubpath.edgeOrNull(t-1);
 
@@ -145,7 +145,7 @@ void PathSampler::sampleSplats(const Point2i &offset, SplatList &list) {
 						/* Will receive the path weight of the (s, t)-connection */
 						Spectrum value;
 
-						/* Account for the terms of the measurement contribution 
+						/* Account for the terms of the measurement contribution
 						   function that are coupled to the connection endpoints */
 						if (vs->isEmitterSupernode()) {
 							/* If possible, convert 'vt' into an emitter sample */
@@ -174,7 +174,7 @@ void PathSampler::sampleSplats(const Point2i &offset, SplatList &list) {
 									continue;
 
 								/* Generate a position on an emitter using direct sampling */
-								value = radianceWeights[t] * vt->sampleDirect(m_scene, m_directSampler, 
+								value = radianceWeights[t] * vt->sampleDirect(m_scene, m_directSampler,
 									&tempEndpoint, &tempEdge, &tempSample, EImportance);
 
 								if (value.isZero())
@@ -186,7 +186,7 @@ void PathSampler::sampleSplats(const Point2i &offset, SplatList &list) {
 								if (vs->isDegenerate())
 									continue;
 								/* Generate a position on the sensor using direct sampling */
-								value = importanceWeights[s] * vs->sampleDirect(m_scene, m_directSampler, 
+								value = importanceWeights[s] * vs->sampleDirect(m_scene, m_directSampler,
 									&tempEndpoint, &tempEdge, &tempSample, ERadiance);
 								if (value.isZero())
 									continue;
@@ -214,15 +214,15 @@ void PathSampler::sampleSplats(const Point2i &offset, SplatList &list) {
 						   the creation of additional vertices (index-matched boundaries etc.) */
 						int interactions = remaining;
 						if (value.isZero() || !connectionEdge.pathConnectAndCollapse(
-								m_scene, vsEdge, vs, vt, vtEdge, interactions)) 
+								m_scene, vsEdge, vs, vt, vtEdge, interactions))
 							continue;
 
 						depth += interactions;
 
-						if (m_excludeDirectIllum && depth <= 2) 
+						if (m_excludeDirectIllum && depth <= 2)
 							continue;
 
-						/* Account for the terms of the measurement contribution 
+						/* Account for the terms of the measurement contribution
 						   function that are coupled to the connection edge */
 						if (!sampleDirect)
 							value *= connectionEdge.evalCached(vs, vt, PathEdge::EGeneralizedGeometricTerm);
@@ -247,7 +247,7 @@ void PathSampler::sampleSplats(const Point2i &offset, SplatList &list) {
 						if (sampleDirect) {
 							/* Now undo the previous change */
 							if (t == 1)
-								m_sensorSubpath.swapEndpoints(vtPred, vtEdge, vt); 
+								m_sensorSubpath.swapEndpoints(vtPred, vtEdge, vt);
 							else
 								m_emitterSubpath.swapEndpoints(vsPred, vsEdge, vs);
 						}
@@ -297,7 +297,7 @@ void PathSampler::sampleSplats(const Point2i &offset, SplatList &list) {
 
 				RadianceQueryRecord rRec(m_scene, m_sensorSampler);
 				rRec.newQuery(
-					m_excludeDirectIllum ? (RadianceQueryRecord::ERadiance 
+					m_excludeDirectIllum ? (RadianceQueryRecord::ERadiance
 					& ~(RadianceQueryRecord::EDirectSurfaceRadiance | RadianceQueryRecord::EEmittedRadiance))
 					: RadianceQueryRecord::ERadiance, sensor->getMedium());
 
@@ -325,14 +325,14 @@ void PathSampler::samplePaths(const Point2i &offset, PathCallback &callback) {
 	m_sensorSubpath.initialize(m_scene, time, ERadiance, m_pool);
 
 	/* Perform two random walks from the sensor and emitter side */
-	m_emitterSubpath.randomWalk(m_scene, m_emitterSampler, m_emitterDepth, 
+	m_emitterSubpath.randomWalk(m_scene, m_emitterSampler, m_emitterDepth,
 			m_rrDepth, EImportance, m_pool);
 
 	if (offset == Point2i(-1))
-		m_sensorSubpath.randomWalk(m_scene, m_sensorSampler, 
+		m_sensorSubpath.randomWalk(m_scene, m_sensorSampler,
 			m_sensorDepth, m_rrDepth, ERadiance, m_pool);
 	else
-		m_sensorSubpath.randomWalkFromPixel(m_scene, m_sensorSampler, 
+		m_sensorSubpath.randomWalkFromPixel(m_scene, m_sensorSampler,
 			m_sensorDepth, offset, m_rrDepth, m_pool);
 
 	/* Compute the combined weights along the two subpaths */
@@ -340,7 +340,7 @@ void PathSampler::samplePaths(const Point2i &offset, PathCallback &callback) {
 			 *radianceWeights  = (Spectrum *) alloca(m_sensorSubpath.vertexCount()  * sizeof(Spectrum));
 
 	importanceWeights[0] = radianceWeights[0] = Spectrum(1.0f);
-	for (size_t i=1; i<m_emitterSubpath.vertexCount(); ++i) 
+	for (size_t i=1; i<m_emitterSubpath.vertexCount(); ++i)
 		importanceWeights[i] = importanceWeights[i-1] *
 			m_emitterSubpath.vertex(i-1)->weight[EImportance] *
 			m_emitterSubpath.vertex(i-1)->rrWeight *
@@ -359,21 +359,21 @@ void PathSampler::samplePaths(const Point2i &offset, PathCallback &callback) {
 	for (int s = (int) m_emitterSubpath.vertexCount()-1; s >= 0; --s) {
 		/* Determine the range of sensor vertices to be traversed,
 		   while respecting the specified maximum path length */
-		int minT = std::max(2-s, m_lightImage ? 0 : 2), 
+		int minT = std::max(2-s, m_lightImage ? 0 : 2),
 		    maxT = (int) m_sensorSubpath.vertexCount() - 1;
 		if (m_maxDepth != -1)
 			maxT = std::min(maxT, m_maxDepth + 1 - s);
 
 		for (int t = maxT; t >= minT; --t) {
-			PathVertex 
+			PathVertex
 				*vsPred = m_emitterSubpath.vertexOrNull(s-1),
 				*vtPred = m_sensorSubpath.vertexOrNull(t-1),
 				*vs = m_emitterSubpath.vertex(s),
 				*vt = m_sensorSubpath.vertex(t);
-			PathEdge   
+			PathEdge
 				*vsEdge = m_emitterSubpath.edgeOrNull(s-1),
 				*vtEdge = m_sensorSubpath.edgeOrNull(t-1);
-			
+
 			RestoreMeasureHelper rmh0(vs), rmh1(vt);
 
 			/* Will be set to true if direct sampling was used */
@@ -392,7 +392,7 @@ void PathSampler::samplePaths(const Point2i &offset, PathCallback &callback) {
 			/* Measure associated with the connection vertices */
 			EMeasure vsMeasure = EArea, vtMeasure = EArea;
 
-			/* Account for the terms of the measurement contribution 
+			/* Account for the terms of the measurement contribution
 			   function that are coupled to the connection endpoints */
 			if (vs->isEmitterSupernode()) {
 				/* If possible, convert 'vt' into an emitter sample */
@@ -421,7 +421,7 @@ void PathSampler::samplePaths(const Point2i &offset, PathCallback &callback) {
 						continue;
 
 					/* Generate a position on an emitter using direct sampling */
-					value = radianceWeights[t] * vt->sampleDirect(m_scene, m_directSampler, 
+					value = radianceWeights[t] * vt->sampleDirect(m_scene, m_directSampler,
 						&tempEndpoint, &tempEdge, &tempSample, EImportance);
 
 					if (value.isZero())
@@ -434,7 +434,7 @@ void PathSampler::samplePaths(const Point2i &offset, PathCallback &callback) {
 					if (vs->isDegenerate())
 						continue;
 					/* Generate a position on the sensor using direct sampling */
-					value = importanceWeights[s] * vs->sampleDirect(m_scene, m_directSampler, 
+					value = importanceWeights[s] * vs->sampleDirect(m_scene, m_directSampler,
 						&tempEndpoint, &tempEdge, &tempSample, ERadiance);
 					if (value.isZero())
 						continue;
@@ -462,19 +462,19 @@ void PathSampler::samplePaths(const Point2i &offset, PathCallback &callback) {
 			/* Attempt to connect the two endpoints, which could result in
 			   the creation of additional vertices (index-matched boundaries etc.) */
 			m_connectionSubpath.release(m_pool);
-			if (value.isZero() || !PathEdge::pathConnect(m_scene, vsEdge, 
-					vs, m_connectionSubpath, vt, vtEdge, remaining, m_pool)) 
+			if (value.isZero() || !PathEdge::pathConnect(m_scene, vsEdge,
+					vs, m_connectionSubpath, vt, vtEdge, remaining, m_pool))
 				continue;
 
 			depth += (int) m_connectionSubpath.vertexCount();
 
-			if (m_excludeDirectIllum && depth <= 2) 
+			if (m_excludeDirectIllum && depth <= 2)
 				continue;
 
 			PathEdge connectionEdge;
 			m_connectionSubpath.collapseTo(connectionEdge);
 
-			/* Account for the terms of the measurement contribution 
+			/* Account for the terms of the measurement contribution
 			   function that are coupled to the connection edge */
 			if (!sampleDirect)
 				value *= connectionEdge.evalCached(vs, vt, PathEdge::EGeneralizedGeometricTerm);
@@ -505,13 +505,13 @@ void PathSampler::samplePaths(const Point2i &offset, PathCallback &callback) {
 				m_fullPath.append(m_sensorSubpath, 0, t+1, true);
 				m_fullPath.vertex(s)     = &vsTemp;
 				m_fullPath.vertex(s+k+1) = &vtTemp;
-				vsTemp = *m_emitterSubpath.vertex(s); 
-				vtTemp = *m_sensorSubpath.vertex(t); 
+				vsTemp = *m_emitterSubpath.vertex(s);
+				vtTemp = *m_sensorSubpath.vertex(t);
 
 				if (vsTemp.update(m_scene, m_fullPath.vertexOrNull(s-1),   m_fullPath.vertex(s+1), EImportance, vsMeasure) &&
 				    vtTemp.update(m_scene, m_fullPath.vertexOrNull(s+k+2), m_fullPath.vertex(s+k), ERadiance, vtMeasure)) {
 
-					if (vtTemp.isSensorSample()) 
+					if (vtTemp.isSensorSample())
 						vtTemp.updateSamplePosition(&vsTemp);
 
 					callback(s, t, value.getLuminance(), m_fullPath);
@@ -524,7 +524,7 @@ void PathSampler::samplePaths(const Point2i &offset, PathCallback &callback) {
 			if (sampleDirect) {
 				/* Now undo the previous change */
 				if (t == 1)
-					m_sensorSubpath.swapEndpoints(vtPred, vtEdge, vt); 
+					m_sensorSubpath.swapEndpoints(vtPred, vtEdge, vt);
 				else
 					m_emitterSubpath.swapEndpoints(vsPred, vsEdge, vs);
 			}
@@ -548,7 +548,7 @@ struct PathSeedSortPredicate {
 };
 
 Float PathSampler::computeAverageLuminance(size_t sampleCount) {
-	Log(EInfo, "Integrating luminance values over the image plane (" 
+	Log(EInfo, "Integrating luminance values over the image plane ("
 			SIZE_T_FMT " samples)..", sampleCount);
 
 	ref<Timer> timer = new Timer();
@@ -579,13 +579,27 @@ Float PathSampler::computeAverageLuminance(size_t sampleCount) {
 	return mean;
 }
 
-static void seedCallback(std::vector<PathSeed> &output, int s, int t, Float weight, Path &) {
+static void seedCallback(std::vector<PathSeed> &output, const Bitmap *importanceMap,
+		Float &accum, int s, int t, Float weight, Path &path) {
+	accum += weight;
+
+	if (importanceMap) {
+		const Float *luminanceValues = importanceMap->getFloatData();
+		Vector2i size = importanceMap->getSize();
+
+		const Point2 &pos = path.getSamplePosition();
+		Point2i intPos(
+			std::min(std::max(0, (int) pos.x), size.x-1),
+			std::min(std::max(0, (int) pos.y), size.y-1));
+		weight /= luminanceValues[intPos.x + intPos.y * size.x];
+	}
+
 	output.push_back(PathSeed(0, weight, s, t));
 }
 
 Float PathSampler::generateSeeds(size_t sampleCount, size_t seedCount,
-		bool fineGrained, std::vector<PathSeed> &seeds) {
-	Log(EInfo, "Integrating luminance values over the image plane (" 
+		bool fineGrained, const Bitmap *importanceMap, std::vector<PathSeed> &seeds) {
+	Log(EInfo, "Integrating luminance values over the image plane ("
 			SIZE_T_FMT " samples)..", sampleCount);
 
 	BDAssert(m_sensorSampler == m_emitterSampler);
@@ -596,39 +610,40 @@ Float PathSampler::generateSeeds(size_t sampleCount, size_t seedCount,
 	tempSeeds.reserve(sampleCount);
 
 	SplatList splatList;
-	PathCallback callback = boost::bind(&seedCallback, 
-		boost::ref(tempSeeds), _1, _2, _3, _4);
+	Float luminance;
+	PathCallback callback = boost::bind(&seedCallback,
+		boost::ref(tempSeeds), importanceMap, boost::ref(luminance),
+		_1, _2, _3, _4);
 
 	Float mean = 0.0f, variance = 0.0f;
 	for (size_t i=0; i<sampleCount; ++i) {
 		size_t seedIndex = tempSeeds.size();
 		size_t sampleIndex = m_sensorSampler->getSampleIndex();
-		Float lum = 0.0f;
+		luminance = 0.0f;
 
 		if (fineGrained) {
 			samplePaths(Point2i(-1), callback);
 
-			/* Fine seed granularity (e.g. for Veach-MLT). 
+			/* Fine seed granularity (e.g. for Veach-MLT).
 			   Set the correct the sample index value */
-			for (size_t j = seedIndex; j<tempSeeds.size(); ++j) {
+			for (size_t j = seedIndex; j<tempSeeds.size(); ++j)
 				tempSeeds[j].sampleIndex = sampleIndex;
-				lum += tempSeeds[j].luminance;
-			}
 		} else {
 			/* Run the path sampling strategy */
 			sampleSplats(Point2i(-1), splatList);
-			lum = splatList.luminance;
+			luminance = splatList.luminance;
+			splatList.normalize(importanceMap);
 
 			/* Coarse seed granularity (e.g. for PSSMLT) */
-			if (lum != 0)
-				tempSeeds.push_back(PathSeed(sampleIndex, lum));
+			if (luminance != 0)
+				tempSeeds.push_back(PathSeed(sampleIndex, luminance));
 		}
 
 		/* Numerically robust online variance estimation using an
 		   algorithm proposed by Donald Knuth (TAOCP vol.2, 3rd ed., p.232) */
-		Float delta = lum - mean;
+		Float delta = luminance - mean;
 		mean += delta / (Float) (i+1);
-		variance += delta * (lum - mean);
+		variance += delta * (luminance - mean);
 	}
 	BDAssert(m_pool.unused());
 	Float stddev = std::sqrt(variance / (sampleCount-1));
@@ -640,7 +655,7 @@ Float PathSampler::generateSeeds(size_t sampleCount, size_t seedCount,
 		Log(EError, "The average image luminance appears to be zero! This could indicate "
 			"a problem with the scene setup. Aborting the MLT rendering process.");
 
-	Log(EDebug, "Sampling " SIZE_T_FMT "/" SIZE_T_FMT " MLT seeds", 
+	Log(EDebug, "Sampling " SIZE_T_FMT "/" SIZE_T_FMT " MLT seeds",
 		seedCount, tempSeeds.size());
 
 	DiscreteDistribution seedPDF(tempSeeds.size());
@@ -650,7 +665,7 @@ Float PathSampler::generateSeeds(size_t sampleCount, size_t seedCount,
 
 	seeds.clear();
 	seeds.reserve(seedCount);
-	for (size_t i=0; i<seedCount; ++i) 
+	for (size_t i=0; i<seedCount; ++i)
 		seeds.push_back(tempSeeds.at(seedPDF.sample(m_sensorSampler->next1D())));
 
 	/* Sort the seeds to avoid unnecessary rewinds in the ReplayableSampler */
@@ -659,9 +674,20 @@ Float PathSampler::generateSeeds(size_t sampleCount, size_t seedCount,
 	return mean;
 }
 
-static void reconstructCallback(const PathSeed &seed, Path &result, MemoryPool &pool,
-	int s, int t, Float weight, Path &path) {
+static void reconstructCallback(const PathSeed &seed, const Bitmap *importanceMap,
+		Path &result, MemoryPool &pool, int s, int t, Float weight, Path &path) {
 	if (s == seed.s && t == seed.t) {
+		if (importanceMap) {
+			const Float *luminanceValues = importanceMap->getFloatData();
+			Vector2i size = importanceMap->getSize();
+
+			const Point2 &pos = path.getSamplePosition();
+			Point2i intPos(
+				std::min(std::max(0, (int) pos.x), size.x-1),
+				std::min(std::max(0, (int) pos.y), size.y-1));
+			weight /= luminanceValues[intPos.x + intPos.y * size.x];
+		}
+
 		if (seed.luminance != weight)
 			SLog(EError, "Internal error in reconstructPath(): luminances "
 				"don't match (%f vs %f)!", weight, seed.luminance);
@@ -669,16 +695,17 @@ static void reconstructCallback(const PathSeed &seed, Path &result, MemoryPool &
 	}
 }
 
-void PathSampler::reconstructPath(const PathSeed &seed, Path &result) {
+void PathSampler::reconstructPath(const PathSeed &seed, const Bitmap *importanceMap, Path &result) {
 	ReplayableSampler *rplSampler = static_cast<ReplayableSampler *>(m_sensorSampler.get());
 	Assert(result.length() == 0);
 
 	/* Generate the initial sample by replaying the seeding random
 	   number stream at the appropriate position. */
 	rplSampler->setSampleIndex(seed.sampleIndex);
-			
-	PathCallback callback = boost::bind(&reconstructCallback, 
-		boost::cref(seed), boost::ref(result), boost::ref(m_pool), _1, _2, _3, _4);
+
+	PathCallback callback = boost::bind(&reconstructCallback,
+		boost::cref(seed), importanceMap,
+		boost::ref(result), boost::ref(m_pool), _1, _2, _3, _4);
 
 	samplePaths(Point2i(-1), callback);
 
@@ -721,7 +748,7 @@ std::string SplatList::toString() const {
 		<< "  luminance = " << luminance << "," << endl
 		<< "  splats = {" << endl;
 	for (size_t i=0; i<splats.size(); ++i) {
-			oss << "      " << splats[i].first.toString() 
+			oss << "      " << splats[i].first.toString()
 				<< " => " << splats[i].second.toString();
 		if (i+1 < splats.size())
 			oss << ",";

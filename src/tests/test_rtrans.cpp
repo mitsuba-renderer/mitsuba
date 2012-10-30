@@ -36,7 +36,7 @@ void transmittanceIntegrand(const BSDF *bsdf, const Vector &wi, size_t nPts, con
 }
 
 void diffTransmittanceIntegrand(Float *data, size_t resolution, size_t nPts, const Float *in, Float *out) {
-	for (size_t i=0; i<nPts; ++i) 
+	for (size_t i=0; i<nPts; ++i)
 		out[i] = 2 * in[i] * interpCubic1D(in[i], data, 0, 1, resolution);
 }
 
@@ -47,7 +47,7 @@ public:
 	MTS_DECLARE_TEST(test02_roughTransmittance)
 	MTS_DECLARE_TEST(test03_roughTransmittanceFixedEta)
 	MTS_DECLARE_TEST(test04_roughTransmittanceFixedEtaFixedAlpha)
-	MTS_END_TESTCASE()	
+	MTS_END_TESTCASE()
 
 	Float computeDiffuseTransmittance(const char *name, Float eta, Float alpha, size_t resolution = 100) {
 		Properties bsdfProps("roughdielectric");
@@ -127,7 +127,7 @@ public:
 		/* Smooth diffuse transmittance - compare polynomial approximations to ground truth */
 		for (int i=0; i<=10; ++i) {
 			Float eta = 1 + i/10.0f;
-			
+
 			Float f1 = fresnelDiffuseReflectance(eta, false);
 			Float f2 = fresnelDiffuseReflectance(eta, true);
 			Float f3 = fresnelDiffuseReflectance(1/eta, false);
@@ -150,7 +150,7 @@ public:
 			if (eta < 1+1e-5)
 				eta = 1+1e-5f;
 			//eta = 1/eta;
-	
+
 			Float refD = computeDiffuseTransmittance("beckmann", eta, alpha);
 			Float datD = rtr.evalDiffuse(alpha, eta);
 
@@ -175,7 +175,7 @@ public:
 			if (eta < 1+1e-5)
 				eta = 1+1e-5f;
 			//eta = 1/eta;
-	
+
 			Float ref = computeTransmittance("beckmann", eta, alpha, cosTheta);
 			Float dat = rtr.eval(cosTheta, alpha, eta);
 
@@ -207,7 +207,7 @@ public:
 			Float alpha = std::pow(random->nextFloat(), (Float) 4.0f)*4;
 			if (alpha < 1e-5)
 				alpha = 1e-5f;
-	
+
 			Float refD = computeDiffuseTransmittance("beckmann", eta, alpha);
 			Float datD = rtr.evalDiffuse(alpha, eta);
 
@@ -227,7 +227,7 @@ public:
 				cosTheta = 1e-5f;
 			if (alpha < 1e-5)
 				alpha = 1e-5f;
-	
+
 			Float ref = computeTransmittance("beckmann", eta, alpha, cosTheta);
 			Float dat = rtr.eval(cosTheta, alpha, eta);
 
@@ -272,7 +272,7 @@ public:
 			Float cosTheta = random->nextFloat();
 			if (cosTheta < 1e-5)
 				cosTheta = 1e-5f;
-	
+
 			Float ref = computeTransmittance("beckmann", eta, alpha, cosTheta);
 			Float dat = rtr.eval(cosTheta, alpha, eta);
 

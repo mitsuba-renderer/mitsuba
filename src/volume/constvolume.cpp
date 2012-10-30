@@ -45,14 +45,14 @@ MTS_NAMESPACE_BEGIN
  *         <vector name="value" x="0" y="1" z="0"/>
  *     </volume>
  *
- *     <!-- .... remaining parameters for 
+ *     <!-- .... remaining parameters for
  *          the 'heterogeneous' plugin .... -->
  * </medium>
  * \end{xml}
  */
 class ConstantDataSource : public VolumeDataSource {
 public:
-	ConstantDataSource(const Properties &props) 
+	ConstantDataSource(const Properties &props)
 		: VolumeDataSource(props) {
 		m_type = props.getType("value");
 
@@ -103,7 +103,7 @@ public:
 	Spectrum lookupSpectrum(const Point &p) const {
 		return m_spectrum;
 	}
-	
+
 	Vector lookupVector(const Point &p) const {
 		return m_vector;
 	}

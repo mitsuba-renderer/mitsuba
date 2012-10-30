@@ -60,7 +60,7 @@ public:
 	 * \brief Integrate the spectral power distribution
 	 * over a given interval and return the average value
 	 *
-	 * Unless overridden in a subclass, the integration is done 
+	 * Unless overridden in a subclass, the integration is done
 	 * using adaptive Gauss-Lobatto quadrature.
 	 *
 	 * \param lambdaMin
@@ -73,7 +73,7 @@ public:
 	 *     implementation will return zero.
 	 */
 	virtual Float average(Float lambdaMin, Float lambdaMax) const;
-	
+
 	/// \brief Return a string representation
 	virtual std::string toString() const = 0;
 
@@ -84,7 +84,7 @@ public:
 /**
  * \brief Spectral power distribution based on Planck's black body law
  *
- * Computes the spectral power distribution of a black body of the 
+ * Computes the spectral power distribution of a black body of the
  * specified temperature.
  *
  * \ingroup libcore
@@ -104,11 +104,11 @@ public:
 	/** \brief Return the value of the spectral power distribution
 	 * at the given wavelength.
 	 *
-	 * The units are Watts per unit surface area (m^-2) 
+	 * The units are Watts per unit surface area (m^-2)
 	 * per unit wavelength (nm^-1) per steradian (sr^-1)
 	 */
 	virtual Float eval(Float lambda) const;
-	
+
 	/// Return a string representation
 	std::string toString() const;
 private:
@@ -119,7 +119,7 @@ private:
  * \brief Spectral distribution for rendering participating media
  * with Rayleigh scattering.
  *
- * This distribution captures the 1/lambda^4 wavelength dependence 
+ * This distribution captures the 1/lambda^4 wavelength dependence
  * of Rayleigh scattering. It can provide both the scattering and
  * extinction coefficient needed for simulating planetary
  * atmospheres with participating media.
@@ -138,7 +138,7 @@ public:
 	/**
 	 * \brief Create a Rayleigh spectrum instance
 	 *
-	 * \param mode        Specifies the requested type of spectrum 
+	 * \param mode        Specifies the requested type of spectrum
 	 * \param eta         Refractive index of the medium (e.g. air)
 	 * \param height      Height above sea level (in meters)
 	 */
@@ -147,12 +147,12 @@ public:
 	virtual ~RayleighSpectrum() { }
 
 	/** \brief Evaluate the extinction/scattering coefficient for
-	 * a specified wavelength. 
+	 * a specified wavelength.
 	 *
 	 * The returned value is in units of 1/meter.
 	 */
 	virtual Float eval(Float lambda) const;
-	
+
 	/// Return a string representation
 	std::string toString() const;
 private:
@@ -168,7 +168,7 @@ public:
 	/** \brief Return the value of the spectral power distribution
 	 * at the given wavelength.
 	 */
-	ProductSpectrum(const ContinuousSpectrum &s1, 
+	ProductSpectrum(const ContinuousSpectrum &s1,
 		const ContinuousSpectrum &s2) : m_spec1(s1),
 	    m_spec2(s2) { }
 
@@ -179,7 +179,7 @@ public:
 
 	/// Virtual destructor
 	virtual ~ProductSpectrum() { }
-	
+
 	/// Return a string representation
 	std::string toString() const;
 private:
@@ -191,19 +191,19 @@ private:
  * \brief Linearly interpolated spectral power distribution
  *
  * This class implements a linearly interpolated spectral
- * power distribution that is defined over a discrete set of 
+ * power distribution that is defined over a discrete set of
  * measurements at different wavelengths. Outside of the
  * specified range, the spectrum is assumed to be zero. Hence,
- * at least two entries are required to produce a nonzero 
+ * at least two entries are required to produce a nonzero
  * spectrum.
  *
  * \ingroup libcore
- * \ingroup libpython 
+ * \ingroup libpython
  */
 class MTS_EXPORT_CORE InterpolatedSpectrum : public ContinuousSpectrum {
 public:
 	/**
-	 * \brief Create a new interpolated spectrum with space 
+	 * \brief Create a new interpolated spectrum with space
 	 * for the specified number of samples
 	 */
 	InterpolatedSpectrum(size_t size = 0);
@@ -235,7 +235,7 @@ public:
 	void append(Float lambda, Float value);
 
 	/**
-	 * \brief This function adds a zero entry before and after 
+	 * \brief This function adds a zero entry before and after
 	 * the stored wavelength range.
 	 *
 	 * This is useful when handling datasets that don't fall
@@ -258,7 +258,7 @@ public:
 	 * \brief Integrate the spectral power distribution
 	 * over a given interval and return the average value
 	 *
-	 * This method overrides the implementation in 
+	 * This method overrides the implementation in
 	 * \ref ContinousSpectrum, since the integral can be
 	 * analytically computed for linearly interpolated spectra.
 	 *
@@ -285,7 +285,7 @@ protected:
 /**
  * \brief Abstract spectral power distribution data type
  *
- * This class defines a vector-like data type that can be used for 
+ * This class defines a vector-like data type that can be used for
  * computations involving radiance. A concrete instantiation for the
  * precision and spectral discretization chosen at compile time is
  * given by the \ref Spectrum data type.
@@ -402,7 +402,7 @@ public:
 			s[i] /= spec.s[i];
 		return *this;
 	}
-	
+
 	/// Perform a component-wise division by another spectrum
 	inline TSpectrum operator/(const TSpectrum &spec) const {
 		TSpectrum value = *this;
@@ -554,7 +554,7 @@ public:
 		for (int i=0; i<N; i++) {
 			if (s[i] != 0.0f)
 				return false;
-		}	
+		}
 		return true;
 	}
 
@@ -574,7 +574,7 @@ public:
 		oss << "]";
 		return oss.str();
 	}
-	
+
 protected:
 	Scalar s[N];
 };
@@ -611,15 +611,15 @@ public:
 };
 
 
-/** \brief Discrete spectral power distribution based on a number 
- * of wavelength bins over the 360-830 nm range. 
+/** \brief Discrete spectral power distribution based on a number
+ * of wavelength bins over the 360-830 nm range.
  *
- * This class defines a vector-like data type that can be used for 
+ * This class defines a vector-like data type that can be used for
  * computations involving radiance.
  *
  * When configured for spectral rendering (i.e. when the compile-time flag
- * \c SPECTRUM_SAMPLES is set to a value != 3), the implementation discretizes 
- * the visible spectrum of light into a set of intervals, where the 
+ * \c SPECTRUM_SAMPLES is set to a value != 3), the implementation discretizes
+ * the visible spectrum of light into a set of intervals, where the
  * distribution within each bin is modeled as being uniform.
  *
  * When SPECTRUM_SAMPLES == 3, the class reverts to a simple linear
@@ -628,7 +628,7 @@ public:
  * The implementation of this class is based on PBRT.
  *
  * \ingroup libcore
- * \ingroup libpython 
+ * \ingroup libpython
  */
 struct MTS_EXPORT_CORE Spectrum : public TSpectrum<Float, SPECTRUM_SAMPLES> {
 public:
@@ -700,7 +700,7 @@ public:
 #endif
 
 	/**
-	 * \brief Convert from a spectral power distribution to XYZ 
+	 * \brief Convert from a spectral power distribution to XYZ
 	 * tristimulus values
 	 *
 	 * In the Python API, this function returns a 3-tuple
@@ -712,11 +712,11 @@ public:
 	 * \brief Convert XYZ tristimulus into a plausible spectral
 	 * power distribution
 	 *
-	 * The \ref EConversionIntent parameter can be used to provide more 
+	 * The \ref EConversionIntent parameter can be used to provide more
 	 * information on how to solve this highly under-constrained problem.
 	 * The default is \ref EReflectance.
 	 */
-	void fromXYZ(Float x, Float y, Float z, 
+	void fromXYZ(Float x, Float y, Float z,
 			EConversionIntent intent = EReflectance);
 
 #if SPECTRUM_SAMPLES == 3
@@ -750,12 +750,12 @@ public:
 	 * \brief Convert linear RGB colors into a plausible
 	 * spectral power distribution
 	 *
-	 * The \ref EConversionIntent parameter can be used to provide more 
+	 * The \ref EConversionIntent parameter can be used to provide more
 	 * information on how to solve this highly under-constrained problem.
 	 * The default is \ref EReflectance.
 	 */
-	void fromLinearRGB(Float r, Float g, Float b, 
-			EConversionIntent intent = EReflectance);	
+	void fromLinearRGB(Float r, Float g, Float b,
+			EConversionIntent intent = EReflectance);
 #endif
 
 	/**
@@ -771,7 +771,7 @@ public:
 	 * power distribution
 	 *
 	 * Note that compared to \ref fromLinearRGB, no \c intent parameter
-	 * is available. For sRGB colors, it is assumed that the intent is 
+	 * is available. For sRGB colors, it is assumed that the intent is
 	 * always \ref EReflectance.
 	 */
 	void fromSRGB(Float r, Float g, Float b);
@@ -782,13 +782,13 @@ public:
 	 *
 	 * Based on code by Bruce Walter and Greg ward.
 	 *
-	 * The \ref EConversionIntent parameter can be used to provide more 
+	 * The \ref EConversionIntent parameter can be used to provide more
 	 * information on how to solve this highly under-constrained problem.
 	 * For RGBE values, the default is \ref EIlluminant.
 	 */
 	void fromRGBE(const uint8_t rgbe[4], EConversionIntent intent = EIlluminant);
 
-	/// Linear RGBE conversion based on Bruce Walter's and Greg Ward's code 
+	/// Linear RGBE conversion based on Bruce Walter's and Greg Ward's code
 	void toRGBE(uint8_t rgbe[4]) const;
 
 	/// Initialize with spectral values from a smooth spectrum representation
@@ -811,10 +811,10 @@ public:
 	/// Return a string representation
 	std::string toString() const;
 
-	/** 
+	/**
 	 * \brief Static initialization (should be called once during the
 	 * application's initialization phase)
-	 * 
+	 *
 	 * This function is responsible for choosing the wavelengths
 	 * that will be used during rendering. It also pre-integrates
 	 * the CIE matching curves so that sampled spectra can
@@ -828,8 +828,8 @@ protected:
 	#if SPECTRUM_SAMPLES != 3
 	/// Configured wavelengths bins in nanometers
 	static Float m_wavelengths[SPECTRUM_SAMPLES+1];
-	
-	/// @{ \name Pre-integrated CIE 1931 XYZ color matching functions. 
+
+	/// @{ \name Pre-integrated CIE 1931 XYZ color matching functions.
 	static Spectrum CIE_X;
 	static Spectrum CIE_Y;
 	static Spectrum CIE_Z;

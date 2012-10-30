@@ -35,7 +35,7 @@ ParticleProcess::ParticleProcess(EMode mode, size_t workCount, size_t granularit
 			(16 * Scheduler::getInstance()->getWorkerCount()));
 
 	/* Create a visual progress reporter */
-	m_progress = new ProgressReporter(progressText, workCount, 
+	m_progress = new ProgressReporter(progressText, workCount,
 		progressReporterPayload);
 	m_resultMutex = new Mutex();
 }
@@ -78,9 +78,9 @@ ParticleTracer::ParticleTracer(int maxDepth, int rrDepth, bool emissionEvents)
 ParticleTracer::ParticleTracer(Stream *stream, InstanceManager *manager)
 	: WorkProcessor(stream, manager) {
 
-	m_maxDepth = stream->readInt();	
-	m_rrDepth = stream->readInt();	
-	m_emissionEvents = stream->readBool();	
+	m_maxDepth = stream->readInt();
+	m_rrDepth = stream->readInt();
+	m_emissionEvents = stream->readBool();
 }
 
 void ParticleTracer::serialize(Stream *stream, InstanceManager *manager) const {
@@ -104,8 +104,8 @@ void ParticleTracer::prepare() {
 	m_scene->initializeBidirectional();
 }
 
-void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult, 
-		const bool &stop) {	
+void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
+		const bool &stop) {
 	const RangeWorkUnit *range = static_cast<const RangeWorkUnit *>(workUnit);
 	MediumSamplingRecord mRec;
 	Intersection its;
@@ -141,16 +141,16 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 			handleEmission(pRec, medium, power);
 
 			DirectionSamplingRecord dRec;
-			power *= emitter->sampleDirection(dRec, pRec, 
+			power *= emitter->sampleDirection(dRec, pRec,
 					emitter->needsDirectionSample() ? m_sampler->next2D() : Point2(0.5f));
 			ray.setTime(pRec.time);
 			ray.setOrigin(pRec.p);
 			ray.setDirection(dRec.d);
 		} else {
-			/* Sample both components together, which is potentially 
+			/* Sample both components together, which is potentially
 			   faster / uses a better sampling strategy */
 
-			power = m_scene->sampleEmitterRay(ray, emitter, 
+			power = m_scene->sampleEmitterRay(ray, emitter,
 				m_sampler->next2D(), m_sampler->next2D(), pRec.time);
 			medium = emitter->getMedium();
 			handleNewParticle();
@@ -161,7 +161,7 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 
 		Spectrum throughput(1.0f); // unitless path throughput (used for russian roulette)
 		while (!throughput.isZero() && (depth <= m_maxDepth || m_maxDepth < 0)) {
-			m_scene->rayIntersectAll(ray, its); 
+			m_scene->rayIntersectAll(ray, its);
 
             /* ==================================================================== */
             /*                 Radiative Transfer Equation sampling                 */
@@ -174,9 +174,9 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 				throughput *= mRec.sigmaS * mRec.transmittance / mRec.pdfSuccess;
 
 				/* Forward the medium scattering event to the attached handler */
-				handleMediumInteraction(depth, 
+				handleMediumInteraction(depth,
 						delta, mRec, medium, -ray.d, throughput*power);
-	
+
 				PhaseFunctionSamplingRecord pRec(mRec, -ray.d, EImportance);
 
 				throughput *= medium->getPhaseFunction()->sample(pRec, m_sampler);
@@ -188,7 +188,7 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 				/* There is no surface in this direction */
 				break;
 			} else {
-				/* Sample 
+				/* Sample
 					tau(x, y) (Surface integral). This happens with probability mRec.pdfFailure
 					Account for this and multiply by the proper per-color-channel transmittance.
 				*/
@@ -209,7 +209,7 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 				Vector wi = -ray.d, wo = its.toWorld(bRec.wo);
 				Float wiDotGeoN = dot(its.geoFrame.n, wi),
 				      woDotGeoN = dot(its.geoFrame.n, wo);
-				if (wiDotGeoN * Frame::cosTheta(bRec.wi) <= 0 || 
+				if (wiDotGeoN * Frame::cosTheta(bRec.wi) <= 0 ||
 					woDotGeoN * Frame::cosTheta(bRec.wo) <= 0)
 					break;
 
@@ -221,18 +221,18 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 
 #if 0
 				/* This is somewhat unfortunate: for accuracy, we'd really want the
-				   correction factor below to match the path tracing interpretation 
-				   of a scene with surface normals. However, this factor can become
+				   correction factor below to match the path tracing interpretation
+				   of a scene with shading normals. However, this factor can become
 				   extremely large, which adds unacceptable variance to output
 				   renderings.
 
 				   So for now, it is disabled. The adjoint particle tracer and the
-				   photon mapping variants still use this factor for the last 
+				   photon mapping variants still use this factor for the last
 				   bounce -- just not for the intermediate ones, which introduces
-				   a small (though in practice not noticeable) amount of error. This 
+				   a small (though in practice not noticeable) amount of error. This
 				   is also what the implementation of SPPM by Toshiya Hachisuka does.
-	
-				   Ultimately, we'll need better adjoint BSDF sampling strategies 
+
+				   Ultimately, we'll need better adjoint BSDF sampling strategies
 				   that incorporate these extra terms */
 
 				/* Adjoint BSDF for shading normals -- [Veach, p. 155] */
@@ -249,11 +249,11 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 
 			if (depth++ >= m_rrDepth) {
 				/* Russian roulette: try to keep path weights equal to one,
-				   Stop with at least some probability to avoid 
+				   Stop with at least some probability to avoid
 				   getting stuck (e.g. due to total internal reflection) */
 
 				Float q = std::min(throughput.max(), (Float) 0.95f);
-				if (m_sampler->next1D() >= q) 
+				if (m_sampler->next1D() >= q)
 					break;
 				throughput /= q;
 			}
@@ -261,7 +261,7 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 	}
 }
 
-void ParticleTracer::handleEmission(const PositionSamplingRecord &pRec, 
+void ParticleTracer::handleEmission(const PositionSamplingRecord &pRec,
 		const Medium *medium, const Spectrum &weight) { }
 
 void ParticleTracer::handleNewParticle() { }
@@ -270,7 +270,7 @@ void ParticleTracer::handleSurfaceInteraction(int depth, bool delta,
 	const Intersection &its, const Medium *medium, const Spectrum &weight) { }
 
 void ParticleTracer::handleMediumInteraction(int depth, bool delta,
-	const MediumSamplingRecord &mRec, const Medium *medium, 
+	const MediumSamplingRecord &mRec, const Medium *medium,
 	const Vector &wi, const Spectrum &weight) { }
 
 MTS_IMPLEMENT_CLASS(RangeWorkUnit, false, WorkUnit)

@@ -38,12 +38,12 @@ MTS_NAMESPACE_BEGIN
  *
  * This sensor plugin implements a simple radiance meter, which measures
  * the incident power per unit area per unit solid angle along a
- * certain ray. It can be thought of as the limit of a standard 
+ * certain ray. It can be thought of as the limit of a standard
  * perspective camera as its field of view tends to zero.
- * Hence, when this sensor is given a film with multiple pixels, all 
+ * Hence, when this sensor is given a film with multiple pixels, all
  * of them will record the same value.
  *
- * Such a sensor is useful for conducting virtual experiments and 
+ * Such a sensor is useful for conducting virtual experiments and
  * testing the renderer for correctness.
  *
  * By default, the sensor is located at the origin and performs
@@ -82,12 +82,12 @@ public:
 	RadianceMeter(const Properties &props) : Sensor(props) {
 		m_type |= EDeltaPosition | EDeltaDirection;
 
-		if (props.getTransform("toWorld", Transform()).hasScale()) 
+		if (props.getTransform("toWorld", Transform()).hasScale())
 			Log(EError, "Scale factors in the sensor-to-world "
 				"transformation are not allowed!");
 	}
 
-	RadianceMeter(Stream *stream, InstanceManager *manager) 
+	RadianceMeter(Stream *stream, InstanceManager *manager)
 	 : Sensor(stream, manager) {
 		configure();
 	}
@@ -122,7 +122,7 @@ public:
 		return (pRec.measure == EDiscrete) ? 1.0f : 0.0f;
 	}
 
-	Spectrum sampleDirection(DirectionSamplingRecord &dRec, 
+	Spectrum sampleDirection(DirectionSamplingRecord &dRec,
 			PositionSamplingRecord &pRec,
 			const Point2 &sample,
 			const Point2 *extra) const {

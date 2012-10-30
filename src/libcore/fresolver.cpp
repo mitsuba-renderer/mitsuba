@@ -1,4 +1,5 @@
 #include <mitsuba/core/fresolver.h>
+#include <boost/algorithm/string.hpp>
 
 #if defined(__WINDOWS__)
 # include <windows.h>
@@ -10,24 +11,29 @@ MTS_NAMESPACE_BEGIN
 FileResolver::FileResolver() {
 	m_paths.push_back(fs::current_path());
 #if defined(__LINUX__)
-	char exePath[PATH_MAX];
-	memset(exePath, 0, PATH_MAX);
-	if (readlink("/proc/self/exe", exePath, PATH_MAX) != -1) {
-		const fs::path exeParentPath = fs::path(exePath).parent_path();
-		prependPath(exeParentPath);
-		// Handle local installs: ~/local/bin/:~/local/share/mitsuba/*
-		fs::path sharedDir = exeParentPath.parent_path();
-		sharedDir /= fs::path("share/mitsuba");
-		if (fs::exists(sharedDir)) {
-			prependPath(sharedDir);
+	char exePathTemp[PATH_MAX];
+	memset(exePathTemp, 0, PATH_MAX);
+	if (readlink("/proc/self/exe", exePathTemp, PATH_MAX) != -1) {
+		fs::path exePath(exePathTemp);
+
+		/* Make sure that we're not running inside a Python interpreter */
+		if (exePath.filename().string().find("python") == std::string::npos) {
+			prependPath(exePath.parent_path());
+			// Handle local installs: ~/local/bin/:~/local/share/mitsuba/*
+			fs::path sharedDir = exePath.parent_path().parent_path()
+				/ fs::path("share") / fs::path("mitsuba");
+			if (fs::exists(sharedDir))
+				prependPath(sharedDir);
 		}
 	} else {
 		Log(EError, "Could not detect the executable path!");
 	}
 #elif defined(__OSX__)
 	MTS_AUTORELEASE_BEGIN()
-	prependPath(__mts_bundlepath());
-	MTS_AUTORELEASE_END() 
+	fs::path path = __mts_bundlepath();
+	if (path.filename() != fs::path("Python.app"))
+		prependPath(path);
+	MTS_AUTORELEASE_END()
 #elif defined(__WINDOWS__)
 	std::vector<WCHAR> lpFilename(MAX_PATH);
 
@@ -42,9 +48,10 @@ FileResolver::FileResolver() {
 
 	// There is an error if and only if the function returns 0
 	if (nSize != 0) {
-		prependPath(fs::path(lpFilename).parent_path());
-	}
-	else {
+		fs::path path(lpFilename);
+		if (boost::to_lower_copy(path.filename().string()).find("python") == std::string::npos)
+			prependPath(path.parent_path());
+	} else {
 		const std::string msg(lastErrorText());
 		Log(EError, "Could not detect the executable path! (%s)", msg.c_str());
 	}
@@ -78,11 +85,32 @@ void FileResolver::appendPath(const fs::path &path) {
 }
 
 fs::path FileResolver::resolve(const fs::path &path) const {
+	/* First, try to resolve in case-sensitive mode */
 	for (size_t i=0; i<m_paths.size(); i++) {
 		fs::path newPath = m_paths[i] / path;
 		if (fs::exists(newPath))
 			return newPath;
 	}
+
+	#if defined(__LINUX__)
+		/* On Linux, also try case-insensitive mode if the above failed */
+		fs::path parentPath = path.parent_path();
+		std::string filename = boost::to_lower_copy(path.filename().string());
+
+		for (size_t i=0; i<m_paths.size(); i++) {
+			fs::path path = m_paths[i] / parentPath;
+
+			if (!fs::is_directory(path))
+				continue;
+
+			fs::directory_iterator end, it(path);
+			for (; it != end; ++it) {
+				if (boost::algorithm::to_lower_copy(it->path().filename().string()) == filename)
+					return it->path();
+			}
+		}
+	#endif
+
 	return path;
 }
 

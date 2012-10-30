@@ -45,12 +45,12 @@ MTS_NAMESPACE_BEGIN
  *         \code{xyza}, \code{spectrum}, and \code{spectrumAlpha}. In the latter two cases,
  *         the number of written channels depends on the value assigned to
  *         \code{SPECTRUM\_SAMPLES} during compilation (see Section~\ref{sec:compiling}
- *         section for details) 
+ *         section for details)
  *         \default{\code{rgba}}
  *     }
- *     \parameter{componentFormat}{\String}{Specifies the desired floating 
+ *     \parameter{componentFormat}{\String}{Specifies the desired floating
  *         point component format used for OpenEXR output. The options are
- *         \code{float16}, \code{float32}, or \code{uint32}. 
+ *         \code{float16}, \code{float32}, or \code{uint32}.
  *         \default{\code{float16}}
  *     }
  *     \parameter{cropOffsetX, cropOffsetY, cropWidth, cropHeight}{\Integer}{
@@ -63,33 +63,33 @@ MTS_NAMESPACE_BEGIN
  *         information is permanently saved.
  *         \default{\code{true}, i.e. attach it}
  *     }
- *     \parameter{banner}{\Boolean}{Include a small Mitsuba banner in the 
+ *     \parameter{banner}{\Boolean}{Include a small Mitsuba banner in the
  *         output image? \default{\code{true}}
  *     }
  *     \parameter{highQualityEdges}{\Boolean}{
- *        If set to \code{true}, regions slightly outside of the film 
- *        plane will also be sampled. This may improve the image 
- *        quality at the edges, especially when using very large 
- *        reconstruction filters. In general, this is not needed though. 
+ *        If set to \code{true}, regions slightly outside of the film
+ *        plane will also be sampled. This may improve the image
+ *        quality at the edges, especially when using very large
+ *        reconstruction filters. In general, this is not needed though.
  *        \default{\code{false}, i.e. disabled}
  *     }
  *     \parameter{\Unnamed}{\RFilter}{Reconstruction filter that should
  *     be used by the film. \default{\code{gaussian}, a windowed Gaussian filter}}
  * }
- * 
+ *
  * This is the default film plugin that is used when none is explicitly
  * specified. It stores the captured image as a high dynamic range OpenEXR file
- * and tries to preserve the rendering as much as possible by not performing any 
- * kind of post processing, such as gamma correction---the output file 
+ * and tries to preserve the rendering as much as possible by not performing any
+ * kind of post processing, such as gamma correction---the output file
  * will record linear radiance values.
- * 
- * When writing OpenEXR files, the film will either produce a luminance, luminance/alpha, 
- * RGB(A), XYZ(A) tristimulus, or spectrum/spectrum-alpha-based bitmap having a 
- * \code{float16}, \code{float32}, or \code{uint32}-based internal representation 
- * based on the chosen parameters. 
+ *
+ * When writing OpenEXR files, the film will either produce a luminance, luminance/alpha,
+ * RGB(A), XYZ(A) tristimulus, or spectrum/spectrum-alpha-based bitmap having a
+ * \code{float16}, \code{float32}, or \code{uint32}-based internal representation
+ * based on the chosen parameters.
  * The default configuration is RGBA with a \code{float16} component format,
- * which is appropriate for most purposes. Note that the spectral output options 
- * only make sense when using a custom build of Mitsuba that has spectral 
+ * which is appropriate for most purposes. Note that the spectral output options
+ * only make sense when using a custom build of Mitsuba that has spectral
  * rendering enabled. This is not the case for the downloadable release builds.
  *
  * The plugin can also write RLE-compressed files in the Radiance RGBE format
@@ -102,9 +102,9 @@ MTS_NAMESPACE_BEGIN
  * \code{rgb} or \code{luminance} pixel formats.
  * Due to the superior accuracy and adoption of OpenEXR, the use of these
  * two alternative formats is discouraged however.
- * 
- * When RGB output is selected, the measured spectral power distributions are 
- * converted to linear RGB based on the CIE 1931 XYZ color matching curves and 
+ *
+ * When RGB output is selected, the measured spectral power distributions are
+ * converted to linear RGB based on the CIE 1931 XYZ color matching curves and
  * the ITU-R Rec. BT.709-3 primaries with a D65 white point.
  *
  * \begin{xml}[caption=Instantiation of a film that writes a full-HD RGBA OpenEXR file without the Mitsuba banner]
@@ -207,7 +207,7 @@ public:
 		m_storage = new ImageBlock(Bitmap::ESpectrumAlphaWeight, m_cropSize);
 	}
 
-	HDRFilm(Stream *stream, InstanceManager *manager) 
+	HDRFilm(Stream *stream, InstanceManager *manager)
 		: Film(stream, manager) {
 		m_banner = stream->readBool();
 		m_attachLog = stream->readBool();
@@ -224,7 +224,7 @@ public:
 		stream->writeUInt(m_pixelFormat);
 		stream->writeUInt(m_componentFormat);
 	}
-	
+
 	void clear() {
 		m_storage->clear();
 	}
@@ -236,10 +236,10 @@ public:
 	void setBitmap(const Bitmap *bitmap, Float multiplier) {
 		bitmap->convert(m_storage->getBitmap(), multiplier);
 	}
-	
+
 	void addBitmap(const Bitmap *bitmap, Float multiplier) {
 		/* Currently, only accumulating spectrum-valued floating point images
-		   is supported. This function basically just exists to support the 
+		   is supported. This function basically just exists to support the
 		   somewhat peculiar film updates done by BDPT */
 
 		Vector2i size = bitmap->getSize();
@@ -264,7 +264,7 @@ public:
 		}
 	}
 
-	bool develop(const Point2i &sourceOffset, const Vector2i &size, 
+	bool develop(const Point2i &sourceOffset, const Vector2i &size,
 			const Point2i &targetOffset, Bitmap *target) const {
 		const Bitmap *source = m_storage->getBitmap();
 		const FormatConverter *cvt = FormatConverter::getInstance(
@@ -274,9 +274,9 @@ public:
 		size_t sourceBpp = source->getBytesPerPixel();
 		size_t targetBpp = target->getBytesPerPixel();
 
-		const uint8_t *sourceData = source->getUInt8Data() 
+		const uint8_t *sourceData = source->getUInt8Data()
 			+ (sourceOffset.x + sourceOffset.y * source->getWidth()) * sourceBpp;
-		uint8_t *targetData = target->getUInt8Data() 
+		uint8_t *targetData = target->getUInt8Data()
 			+ (targetOffset.x + targetOffset.y * target->getWidth()) * targetBpp;
 
 		if (size.x == m_cropSize.x) {
@@ -310,7 +310,7 @@ public:
 			m_pixelFormat, m_componentFormat);
 
 		if (m_banner && m_cropSize.x > bannerWidth+5 && m_cropSize.y > bannerHeight + 5) {
-			int xoffs = m_cropSize.x - bannerWidth - 5, 
+			int xoffs = m_cropSize.x - bannerWidth - 5,
 			    yoffs = m_cropSize.y - bannerHeight - 5;
 			for (int y=0; y<bannerHeight; y++) {
 				for (int x=0; x<bannerWidth; x++) {
@@ -341,7 +341,7 @@ public:
 
 		bitmap->write(m_fileFormat, stream);
 	}
-	
+
 	bool destinationExists(const fs::path &baseName) const {
 		fs::path filename = baseName;
 		std::string extension = (m_fileFormat == Bitmap::EOpenEXR) ? ".exr" : ".rgbe";

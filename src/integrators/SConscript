@@ -27,7 +27,7 @@ plugins += bidirEnv.SharedLibrary('bdpt',
 
 plugins += bidirEnv.SharedLibrary('pssmlt',
 	['pssmlt/pssmlt.cpp', 'pssmlt/pssmlt_sampler.cpp',
-	 'pssmlt/pssmlt_proc.cpp']);
+    'pssmlt/pssmlt_proc.cpp']);
 
 plugins += bidirEnv.SharedLibrary('mlt',
 	['mlt/mlt.cpp', 'mlt/mlt_proc.cpp']

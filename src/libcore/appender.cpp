@@ -70,7 +70,7 @@ void StreamAppender::append(ELogLevel level, const std::string &text) {
 	(*m_stream) << text << endl;
 	m_lastMessageWasProgress = false;
 }
-	
+
 void StreamAppender::logProgress(Float progress, const std::string &name,
 	const std::string &formatted, const std::string &eta, const void *ptr) {
 	if (!m_isFile) {
@@ -92,7 +92,7 @@ std::string StreamAppender::toString() const {
 	}
 
 	oss << "]";
-	
+
 	return oss.str();
 }
 
@@ -103,7 +103,7 @@ StreamAppender::~StreamAppender() {
 	}
 }
 
-UnbufferedAppender::UnbufferedAppender(int fd) 
+UnbufferedAppender::UnbufferedAppender(int fd)
  : m_fd(fd) {
 	m_lastMessageWasProgress = false;
 }

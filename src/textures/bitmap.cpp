@@ -30,7 +30,7 @@
 #include <boost/algorithm/string.hpp>
 
 MTS_NAMESPACE_BEGIN
-	
+
 /*!\plugin{bitmap}{Bitmap texture}
  * \order{1}
  * \parameters{
@@ -46,13 +46,13 @@ MTS_NAMESPACE_BEGIN
  *           \item \code{zero}: Switch to a zero-valued texture \vspace{-1mm}
  *           \item \code{one}: Switch to a one-valued texture \vspace{-1mm}
  *       \end{enumerate}
- *       Default: \code{repeat}. The parameter \code{wrapMode} is a shortcut for 
+ *       Default: \code{repeat}. The parameter \code{wrapMode} is a shortcut for
  *       setting both \code{wrapModeU} and \code{wrapModeV} at the same time.
  *     }
  *     \parameter{gamma}{\Float}{
  *       Optional parameter to override the gamma value of the source bitmap,
- *       where 1 indicates a linear color space and the special value -1 
- *       corresponds to sRGB. \default{automatically detect based on the 
+ *       where 1 indicates a linear color space and the special value -1
+ *       corresponds to sRGB. \default{automatically detect based on the
  *       image type and metadata}
  *     }
  *     \parameter{filterType}{\String}{
@@ -66,7 +66,7 @@ MTS_NAMESPACE_BEGIN
  *       Default: \code{ewa}.
  *     }
  *     \parameter{maxAnisotropy}{\Float}{
- *        Specific to \code{ewa} filtering, this parameter limits the 
+ *        Specific to \code{ewa} filtering, this parameter limits the
  *        anisotropy (and thus the computational cost) of filtured texture lookups. The
  *        default of 20 is a good compromise.
  *     }
@@ -83,23 +83,23 @@ MTS_NAMESPACE_BEGIN
  *     }
  * }
  * This plugin provides a bitmap-backed texture source that supports \emph{filtered}
- * texture lookups on\footnote{Some of these may not be available depending on how 
- * Mitsuba was compiled.} JPEG, PNG, OpenEXR, RGBE, TGA, and BMP files. Filtered 
- * lookups are useful to avoid aliasing when rendering textures that contain high 
+ * texture lookups on\footnote{Some of these may not be available depending on how
+ * Mitsuba was compiled.} JPEG, PNG, OpenEXR, RGBE, TGA, and BMP files. Filtered
+ * lookups are useful to avoid aliasing when rendering textures that contain high
  * frequencies (see the next page for an example).
  *
- * The plugin operates as follows: when loading a bitmap file, it is first converted 
+ * The plugin operates as follows: when loading a bitmap file, it is first converted
  * into a linear color space. Following this, a MIP map is constructed that is necessary
  * to perform filtered lookups during rendering. A \emph{MIP map} is a hierarchy of
  * progressively lower resolution versions of the input image, where the resolution of
  * adjacent levels differs by a factor of two. Mitsuba creates this hierarchy using
  * Lanczos resampling to obtain very high quality results.
  * Note that textures may have an arbitrary resolution and are not limited to powers of two.
- * Three different filtering modes are supported: 
+ * Three different filtering modes are supported:
  *
  * \begin{enumerate}[(i)]
- * \item Nearest neighbor lookups effectively disable filtering and always query the 
- * highest-resolution version of the texture without any kind of interpolation. This is 
+ * \item Nearest neighbor lookups effectively disable filtering and always query the
+ * highest-resolution version of the texture without any kind of interpolation. This is
  * fast and requires little memory (no MIP map is created), but results in visible aliasing.
  * Only a single pixel value is accessed.
  *
@@ -109,7 +109,7 @@ MTS_NAMESPACE_BEGIN
  * chooses blurring over aliasing (though note that (\textbf{b}) is an extreme case).
  * Only 8 pixel values are accessed.
  *
- * \item The EWA filter performs anisotropicically filtered lookups on two adjacent MIP map levels 
+ * \item The EWA filter performs anisotropicically filtered lookups on two adjacent MIP map levels
  * and blends them. This produces the best quality, but at the expense of computation time.
  * Generally, 20-40 pixel values must be read for a single EWA texture lookup. To limit
  * the number of pixel accesses, the \code{maxAnisotropy} parameter can be used to bound
@@ -125,15 +125,15 @@ MTS_NAMESPACE_BEGIN
  *     \rendering{EWA filter}{tex_bitmap_ewa}
  *     \rendering{Ground truth (512 samples per pixel)}{tex_bitmap_gt}
  *     \caption{A somewhat contrived comparison of the different filters when rendering a high-frequency
- *     checkerboard pattern using four samples per pixel. The EWA method (the default) 
- *     pre-filters the texture anisotropically to limit blurring and aliasing, but has a 
+ *     checkerboard pattern using four samples per pixel. The EWA method (the default)
+ *     pre-filters the texture anisotropically to limit blurring and aliasing, but has a
  *     higher computational cost than the other filters.}
  * }
  * \paragraph{Caching and memory requirements:}
- * When a texture is read, Mitsuba internally converts it into an uncompressed linear format 
+ * When a texture is read, Mitsuba internally converts it into an uncompressed linear format
  * using a half precision (\code{float16})-based representation. This is convenient for
- * rendering but means that textures require copious amounts of memory (in particular, the 
- * size of the occupied memory region might be orders of magnitude greater than that of the 
+ * rendering but means that textures require copious amounts of memory (in particular, the
+ * size of the occupied memory region might be orders of magnitude greater than that of the
  * original input file).
  *
  * For instance, a basic 10 megapixel image requires as much as 76 MiB of memory! Loading,
@@ -146,7 +146,7 @@ MTS_NAMESPACE_BEGIN
  * \begin{enumerate}[(i)]
  *    \item MIP maps do not have to be regenerated in subsequent Mitsuba runs,
  *     which substantially reduces scene loading times.
- *    \item Because the texture storage is entirely disk-backed and can be \emph{memory-mapped}, 
+ *    \item Because the texture storage is entirely disk-backed and can be \emph{memory-mapped},
  *    Mitsuba is able to work with truly massive textures that would otherwise exhaust the main system memory.
  * \end{enumerate}
  *
@@ -161,7 +161,7 @@ MTS_NAMESPACE_BEGIN
 
 class BitmapTexture : public Texture2D {
 public:
-	/* Store texture data using half precision, but perform computations in 
+	/* Store texture data using half precision, but perform computations in
 	   single/double precision based on compilation flags. The following
 	   generates efficient implementations for both luminance and RGB data */
 	typedef TSpectrum<Float, 1> Color1;
@@ -255,7 +255,7 @@ public:
 					return;
 			}
 
-			/* (Re)generate the MIP map hierarchy; downsample using a 
+			/* (Re)generate the MIP map hierarchy; downsample using a
 			    2-lobed Lanczos reconstruction filter */
 			Properties rfilterProps("lanczos");
 			rfilterProps.setInteger("lobes", 2);
@@ -265,16 +265,16 @@ public:
 			rfilter->configure();
 
 			/* Potentially create a new MIP map cache file */
-			bool createCache = !cacheFile.empty() && props.getBoolean("cache", 
+			bool createCache = !cacheFile.empty() && props.getBoolean("cache",
 				bitmap->getSize().x * bitmap->getSize().y > 1024*1024);
 
 			if (pixelFormat == Bitmap::ELuminance)
 				m_mipmap1 = new MIPMap1(bitmap, pixelFormat, Bitmap::EFloat,
-					rfilter, m_wrapModeU, m_wrapModeV, m_filterType, m_maxAnisotropy, 
+					rfilter, m_wrapModeU, m_wrapModeV, m_filterType, m_maxAnisotropy,
 					createCache ? cacheFile : fs::path(), timestamp);
 			else
 				m_mipmap3 = new MIPMap3(bitmap, pixelFormat, Bitmap::EFloat,
-					rfilter, m_wrapModeU, m_wrapModeV, m_filterType, m_maxAnisotropy, 
+					rfilter, m_wrapModeU, m_wrapModeV, m_filterType, m_maxAnisotropy,
 					createCache ? cacheFile : fs::path(), timestamp);
 		}
 	}
@@ -296,7 +296,7 @@ public:
 		return ReconstructionFilter::EZero; // make gcc happy
 	}
 
-	BitmapTexture(Stream *stream, InstanceManager *manager) 
+	BitmapTexture(Stream *stream, InstanceManager *manager)
 	 : Texture2D(stream, manager) {
 		m_filename = stream->readString();
 		Log(EDebug, "Unserializing texture \"%s\"", m_filename.filename().string().c_str());
@@ -339,11 +339,11 @@ public:
 
 		if (pixelFormat == Bitmap::ELuminance)
 			m_mipmap1 = new MIPMap1(bitmap, pixelFormat, Bitmap::EFloat,
-				rfilter, m_wrapModeU, m_wrapModeV, m_filterType, m_maxAnisotropy, 
+				rfilter, m_wrapModeU, m_wrapModeV, m_filterType, m_maxAnisotropy,
 				fs::path(), 0);
 		else
 			m_mipmap3 = new MIPMap3(bitmap, pixelFormat, Bitmap::EFloat,
-				rfilter, m_wrapModeU, m_wrapModeV, m_filterType, m_maxAnisotropy, 
+				rfilter, m_wrapModeU, m_wrapModeV, m_filterType, m_maxAnisotropy,
 				fs::path(), 0);
 	}
 
@@ -357,7 +357,7 @@ public:
 		stream->writeFloat(m_maxAnisotropy);
 
 		if (!m_filename.empty() && fs::exists(m_filename)) {
-			/* We still have access to the original image -- use that, since 
+			/* We still have access to the original image -- use that, since
 			   it is probably much smaller than the in-memory representation */
 			ref<Stream> is = new FileStream(m_filename, FileStream::EReadOnly);
 			stream->writeSize(is->getSize());
@@ -366,7 +366,7 @@ public:
 			/* No access to the original image anymore. Create an EXR image
 			   from the top MIP map level and serialize that */
 			ref<MemoryStream> mStream = new MemoryStream();
-			ref<Bitmap> bitmap = m_mipmap1.get() ? 
+			ref<Bitmap> bitmap = m_mipmap1.get() ?
 				m_mipmap1->toBitmap() : m_mipmap3->toBitmap();
 			bitmap->write(Bitmap::EOpenEXR, mStream);
 
@@ -376,9 +376,9 @@ public:
 	}
 
 	Spectrum eval(const Point2 &uv) const {
-		/* There are no ray differentials to do any kind of 
+		/* There are no ray differentials to do any kind of
 		   prefiltering. Evaluate the full-resolution texture */
-		
+
 		Spectrum result;
 		if (m_mipmap3.get()) {
 			Color3 value;
@@ -484,7 +484,7 @@ public:
 			oss << "  mipmap = " << indent(m_mipmap3.toString()) << endl;
 		else
 			oss << "  mipmap = " << indent(m_mipmap1.toString()) << endl;
-		
+
 		oss << "]";
 		return oss.str();
 	}
@@ -502,36 +502,36 @@ protected:
 	fs::path m_filename;
 };
 
-// ================ Hardware shader implementation ================ 
+// ================ Hardware shader implementation ================
 class BitmapTextureShader : public Shader {
 public:
-	BitmapTextureShader(Renderer *renderer, const std::string &filename, 
+	BitmapTextureShader(Renderer *renderer, const std::string &filename,
 			const BitmapTexture::MIPMap1* mipmap1,
 			const BitmapTexture::MIPMap3* mipmap3,
-			const Point2 &uvOffset, const Vector2 &uvScale, 
-			ReconstructionFilter::EBoundaryCondition wrapModeU, 
-			ReconstructionFilter::EBoundaryCondition wrapModeV, 
-			Float maxAnisotropy) 
+			const Point2 &uvOffset, const Vector2 &uvScale,
+			ReconstructionFilter::EBoundaryCondition wrapModeU,
+			ReconstructionFilter::EBoundaryCondition wrapModeV,
+			Float maxAnisotropy)
 		: Shader(renderer, ETextureShader), m_uvOffset(uvOffset), m_uvScale(uvScale) {
 
 		ref<Bitmap> bitmap = mipmap1 ? mipmap1->toBitmap() : mipmap3->toBitmap();
 		m_gpuTexture = renderer->createGPUTexture(filename, bitmap);
 
 		switch (wrapModeU) {
-			case ReconstructionFilter::EClamp: 
+			case ReconstructionFilter::EClamp:
 				m_gpuTexture->setWrapType(GPUTexture::EClampToEdge);
 				break;
-			case ReconstructionFilter::EMirror: 
+			case ReconstructionFilter::EMirror:
 				m_gpuTexture->setWrapType(GPUTexture::EMirror);
 				break;
-			case ReconstructionFilter::ERepeat: 
+			case ReconstructionFilter::ERepeat:
 				m_gpuTexture->setWrapType(GPUTexture::ERepeat);
 				break;
-			case ReconstructionFilter::EZero: 
+			case ReconstructionFilter::EZero:
 				m_gpuTexture->setWrapType(GPUTexture::EClampToBorder);
 				m_gpuTexture->setBorderColor(Color3(0.0f));
 				break;
-			case ReconstructionFilter::EOne: 
+			case ReconstructionFilter::EOne:
 				m_gpuTexture->setWrapType(GPUTexture::EClampToBorder);
 				m_gpuTexture->setBorderColor(Color3(1.0f));
 				break;
@@ -566,8 +566,8 @@ public:
 			<< endl
 			<< "vec3 " << evalName << "(vec2 uv) {" << endl
 			<< "    return texture2D(" << evalName << "_texture, vec2(" << endl
-			<< "          uv.x * " << evalName << "_uvScale.x + " << evalName << "_uvOffset.x," << endl 
-			<< "          uv.y * " << evalName << "_uvScale.y + " << evalName << "_uvOffset.y)).rgb;" << endl 
+			<< "          uv.x * " << evalName << "_uvScale.x + " << evalName << "_uvOffset.x," << endl
+			<< "          uv.y * " << evalName << "_uvScale.y + " << evalName << "_uvOffset.y)).rgb;" << endl
 			<< "}" << endl;
 	}
 
@@ -577,7 +577,7 @@ public:
 		parameterIDs.push_back(program->getParameterID(evalName + "_uvScale", false));
 	}
 
-	void bind(GPUProgram *program, const std::vector<int> &parameterIDs, 
+	void bind(GPUProgram *program, const std::vector<int> &parameterIDs,
 		int &textureUnitOffset) const {
 		m_gpuTexture->bind(textureUnitOffset++);
 		program->setParameter(parameterIDs[0], m_gpuTexture.get());
@@ -588,7 +588,7 @@ public:
 	void unbind() const {
 		m_gpuTexture->unbind();
 	}
-	
+
 	MTS_DECLARE_CLASS()
 private:
 	ref<GPUTexture> m_gpuTexture;

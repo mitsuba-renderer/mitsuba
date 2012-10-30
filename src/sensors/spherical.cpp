@@ -54,12 +54,12 @@ public:
 	SphericalCamera(const Properties &props) : Sensor(props) {
 		m_type |= EDeltaPosition | EDirectionSampleMapsToPixels;
 
-		if (props.getTransform("toWorld", Transform()).hasScale()) 
+		if (props.getTransform("toWorld", Transform()).hasScale())
 			Log(EError, "Scale factors in the sensor-to-world "
 				"transformation are not allowed!");
 	}
 
-	SphericalCamera(Stream *stream, InstanceManager *manager) 
+	SphericalCamera(Stream *stream, InstanceManager *manager)
 	 : Sensor(stream, manager) {
 		configure();
 	}
@@ -101,7 +101,7 @@ public:
 		return (pRec.measure == EDiscrete) ? 1.0f : 0.0f;
 	}
 
-	Spectrum sampleDirection(DirectionSamplingRecord &dRec, 
+	Spectrum sampleDirection(DirectionSamplingRecord &dRec,
 			PositionSamplingRecord &pRec,
 			const Point2 &sample, const Point2 *extra) const {
 		const Transform &trafo = m_worldTransform->eval(pRec.time);

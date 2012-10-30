@@ -30,8 +30,8 @@ MTS_NAMESPACE_BEGIN
 /* ==================================================================== */
 
 /**
-   Bidirectional path tracing needs its own WorkResult implementation, 
-   since each rendering thread simultaneously renders to a small 'camera 
+   Bidirectional path tracing needs its own WorkResult implementation,
+   since each rendering thread simultaneously renders to a small 'camera
    image' block and potentially a full-resolution 'light image'.
 */
 class BDPTWorkResult : public WorkResult {
@@ -54,10 +54,10 @@ public:
 #if BDPT_DEBUG == 1
 	/* In debug mode, this function allows to dump the contributions of
 	   the individual sampling strategies to a series of images */
-	void dump(const BDPTConfiguration &conf, 
+	void dump(const BDPTConfiguration &conf,
 			const fs::path &prefix, const fs::path &stem) const;
 
-	inline void putDebugSample(int s, int t, const Point2 &sample, 
+	inline void putDebugSample(int s, int t, const Point2 &sample,
 			const Spectrum &spec) {
 		m_debugBlocks[strategyIndex(s, t)]->put(sample, (const Float *) &spec);
 	}
@@ -74,7 +74,7 @@ public:
 	inline const ImageBlock *getImageBlock() const {
 		return m_block.get();
 	}
-	
+
 	inline const ImageBlock *getLightImage() const {
 		return m_lightImage.get();
 	}
@@ -82,7 +82,7 @@ public:
 	inline void setSize(const Vector2i &size) {
 		m_block->setSize(size);
 	}
-	
+
 	inline void setOffset(const Point2i &offset) {
 		m_block->setOffset(offset);
 	}

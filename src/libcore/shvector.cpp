@@ -117,14 +117,14 @@ Float SHVector::eval(const Vector &v) const {
 
 Float SHVector::evalAzimuthallyInvariant(Float theta, Float phi) const {
 	Float result = 0, cosTheta = std::cos(theta);
-	for (int l=0; l<m_bands; ++l) 
+	for (int l=0; l<m_bands; ++l)
 		result += operator()(l, 0) * legendre(l, 0, cosTheta) * normalization(l, 0);
 	return result;
 }
 
 Float SHVector::evalAzimuthallyInvariant(const Vector &v) const {
 	Float result = 0, cosTheta = v.z;
-	for (int l=0; l<m_bands; ++l) 
+	for (int l=0; l<m_bands; ++l)
 		result += operator()(l, 0) * legendre(l, 0, cosTheta) * normalization(l, 0);
 	return result;
 }
@@ -171,7 +171,7 @@ void SHVector::convolve(const SHVector &kernel) {
 
 	for (int l=0; l<m_bands; ++l) {
 		Float alpha = std::sqrt(4 * (Float) M_PI / (2*l + 1));
-		for (int m=-l; m<=l; ++m) 
+		for (int m=-l; m<=l; ++m)
 			operator()(l, m) *= alpha * kernel(l, 0);
 	}
 }
@@ -184,7 +184,7 @@ ublas::matrix<Float> SHVector::mu2() const {
 	SAssert(m_bands > 0);
 
 	result.clear();
-	result(0, 0) = result(1, 1) = 
+	result(0, 0) = result(1, 1) =
 		result(2, 2) = sqrt5o3*operator()(0,0);
 
 	if (m_bands >= 3) {
@@ -201,7 +201,7 @@ ublas::matrix<Float> SHVector::mu2() const {
 
 	return result * (2*std::sqrt((Float) M_PI / 15));
 }
-	
+
 std::string SHVector::toString() const {
 	std::ostringstream oss;
 	oss << "SHVector[bands=" << m_bands << ", {";
@@ -246,8 +246,8 @@ struct RotationBlockHelper {
 	int prevLevel, level;
 
 	inline RotationBlockHelper(
-		const ublas::matrix<Float> &M1, 
-		const ublas::matrix<Float> &Mp, 
+		const ublas::matrix<Float> &M1,
+		const ublas::matrix<Float> &Mp,
 		ublas::matrix<Float> &Mn)
 		: M1(M1), Mp(Mp), Mn(Mn), prevLevel((int) Mp.size1()/2),
 		level((int) Mp.size1()/2+1) { }
@@ -293,7 +293,7 @@ struct RotationBlockHelper {
 		int denom = (std::abs(n) == l) ? (2*l*(2*l-1)) : ((l+n)*(l-n)), absM = std::abs(m);
 		return .5f * (1-2*delta(m, 0)) * std::sqrt(
 			(Float) ((1+delta(m, 0)) * (l+absM-1)*(l+absM)) / (Float) denom
-		);	
+		);
 	}
 
 	inline Float w(int l, int m, int n) const {
@@ -330,7 +330,7 @@ struct RotationBlockHelper {
 		for (int m=-level; m<=level; ++m) {
 			for (int n=-level; n<=level; ++n) {
 				Float uVal = u(level, m, n), vVal = v(level, m, n), wVal = w(level, m, n);
-				Mn(m+level, n+level) = 
+				Mn(m+level, n+level) =
 					  (uVal != 0 ? (uVal * U(level, m, n)) : (Float) 0)
 					+ (vVal != 0 ? (vVal * V(level, m, n)) : (Float) 0)
 					+ (wVal != 0 ? (wVal * W(level, m, n)) : (Float) 0);
@@ -389,7 +389,7 @@ SHSampler::SHSampler(int bands, int depth) : m_bands(bands), m_depth(depth) {
 	m_normalization = new Float[m_bands*(m_bands+1)/2];
 	m_dataSize = m_bands*(m_bands+1)/2;
 	Assert(depth >= 1);
-	
+
 	for (int i=0; i<=depth; ++i) {
 		int res = 1 << i;
 		Float zStep  = -2 / (Float) res;
@@ -417,7 +417,7 @@ SHSampler::SHSampler(int bands, int depth) : m_bands(bands), m_depth(depth) {
 
 std::string SHSampler::toString() const {
 	std::ostringstream oss;
-	oss << "SHSampler[bands=" << m_bands << ", depth=" << m_depth 
+	oss << "SHSampler[bands=" << m_bands << ", depth=" << m_depth
 		<< ", size=" << (m_dataSize*sizeof(double))/1024 << " KiB]";
 	return oss.str();
 }
@@ -492,13 +492,13 @@ SHSampler::~SHSampler() {
 	delete[] m_legendreMap;
 	delete[] m_normalization;
 }
-	
+
 Float SHSampler::integrate(int depth, int zBlock, int phiBlock, const SHVector &f) const {
 	Float result = 0;
 
 	for (int l=0; l<m_bands; ++l) {
 		for (int m=-l; m<=l; ++m) {
-			Float basisIntegral = m_normalization[I(l, std::abs(m))] 
+			Float basisIntegral = m_normalization[I(l, std::abs(m))]
 				* lookupIntegral(depth, zBlock, phiBlock, l, m);
 			result += basisIntegral * f(l, m);
 		}

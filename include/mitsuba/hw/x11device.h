@@ -51,7 +51,7 @@ public:
 
 	/// Set the window title
 	void setTitle(const std::string &title);
-	
+
 	/// Display the X11 cursor?
 	void showCursor(bool enabled);
 

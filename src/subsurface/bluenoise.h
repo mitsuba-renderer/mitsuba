@@ -26,7 +26,7 @@ MTS_NAMESPACE_BEGIN
 /**
  * \brief Generate a point set with blue noise properties
  *
- * Based on the paper "Parallel Poisson Disk Sampling with 
+ * Based on the paper "Parallel Poisson Disk Sampling with
  * Spectrum Analysis on Surfaces" by John Bowers, Rui Wang,
  * Li-Yi Wei and David Maletz.
  *
@@ -46,8 +46,8 @@ MTS_NAMESPACE_BEGIN
  *    Custom pointer that will be sent along with progress messages
  *    (usually contains a pointer to the \ref RenderJob instance)
  */
-extern void blueNoisePointSet(const Scene *scene, 
-	const std::vector<Shape *> &shapes, Float radius, 
+extern void blueNoisePointSet(const Scene *scene,
+	const std::vector<Shape *> &shapes, Float radius,
 	PositionSampleVector *target, Float &sa, AABB &aabb,
 	const void *data);
 

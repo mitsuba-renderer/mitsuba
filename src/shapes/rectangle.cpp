@@ -44,15 +44,15 @@ MTS_NAMESPACE_BEGIN
  *     \rendering{Two rectangles configured as a reflective surface and an
  *     emitter (\lstref{rectangle})}{shape_rectangle}
  * }
- * 
+ *
  * This shape plugin describes a simple rectangular intersection primitive.
  * It is mainly provided as a convenience for those cases when creating and
- * loading an external mesh with two triangles is simply too tedious, e.g. 
+ * loading an external mesh with two triangles is simply too tedious, e.g.
  * when an area light source or a simple ground plane are needed.
  *
  * By default, the rectangle covers the XY-range $[-1,1]\times[-1,1]$
  * and has a surface normal that points into the positive $Z$ direction.
- * To change the rectangle scale, rotation, or translation, use the 
+ * To change the rectangle scale, rotation, or translation, use the
  * \code{toWorld} parameter.
  *
  * \vspace{2mm}
@@ -84,7 +84,7 @@ public:
 		m_worldToObject = m_objectToWorld.inverse();
 	}
 
-	Rectangle(Stream *stream, InstanceManager *manager) 
+	Rectangle(Stream *stream, InstanceManager *manager)
 			: Shape(stream, manager) {
 		m_objectToWorld = Transform(stream);
 		m_worldToObject = m_objectToWorld.inverse();
@@ -152,7 +152,7 @@ public:
 		return Rectangle::rayIntersect(ray, mint, maxt, t, NULL);
 	}
 
-	void fillIntersectionRecord(const Ray &ray, 
+	void fillIntersectionRecord(const Ray &ray,
 			const void *temp, Intersection &its) const {
 		const Float *data = static_cast<const Float *>(temp);
 		its.shFrame = its.geoFrame = m_frame;
@@ -164,6 +164,7 @@ public:
 		its.wi = its.toLocal(-ray.d);
  		its.hasUVPartials = false;
 		its.instance = NULL;
+		its.time = ray.time;
 	}
 
 	ref<TriMesh> createTriMesh() {
@@ -189,7 +190,7 @@ public:
 		triangles[0].idx[0] = 0;
 		triangles[0].idx[1] = 1;
 		triangles[0].idx[2] = 2;
-		
+
 		triangles[1].idx[0] = 2;
 		triangles[1].idx[1] = 3;
 		triangles[1].idx[2] = 0;
@@ -228,8 +229,8 @@ public:
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "Rectangle[" << endl
-			<< "  objectToWorld = " << indent(m_objectToWorld.toString()) << ", " << endl;
-		if (isMediumTransition()) 
+			<< "  objectToWorld = " << indent(m_objectToWorld.toString()) << "," << endl;
+		if (isMediumTransition())
 			oss << "  interiorMedium = " << indent(m_interiorMedium.toString()) << "," << endl
 				<< "  exteriorMedium = " << indent(m_exteriorMedium.toString()) << "," << endl;
 		oss << "  bsdf = " << indent(m_bsdf.toString()) << "," << endl

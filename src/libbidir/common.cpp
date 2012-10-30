@@ -47,8 +47,8 @@ std::string MutationRecord::toString() const {
 	std::ostringstream oss;
 	oss << "MutationRecord["
 		<< "type=" << type
-		<< ", l=" << l 
-		<< ", m=" << m 
+		<< ", l=" << l
+		<< ", m=" << m
 		<< ", kd=" << m-l
 		<< ", ka=" << ka
 		<< ", weight=" << weight.toString()

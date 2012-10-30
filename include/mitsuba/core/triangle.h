@@ -25,9 +25,9 @@
 
 MTS_NAMESPACE_BEGIN
 
-/** 
- * \brief Simple triangle class including a collection of routines 
- * for analysis and transformation. 
+/**
+ * \brief Simple triangle class including a collection of routines
+ * for analysis and transformation.
  *
  * Triangles are stored as indices into a vertex array
  * \ingroup libcore
@@ -45,28 +45,29 @@ struct MTS_EXPORT_CORE Triangle {
 	}
 
 	/**
-	 * \brief Returns the axis-aligned bounding box of a triangle after it has 
-	 * clipped to the extends of another given AABB. 
+	 * \brief Returns the axis-aligned bounding box of a triangle after it has
+	 * clipped to the extends of another given AABB.
 	 *
-	 * This function uses the Sutherland-Hodgman algorithm to calculate the 
-	 * convex polygon that is created when applying all 6 AABB splitting 
-	 * planes to the triangle. Afterwards, the AABB of the newly created 
-	 * convex polygon is returned. This function is an important component 
-	 * for efficiently creating 'Perfect Split' KD-trees. For more detail, 
-	 * see "On building fast kd-Trees for Ray Tracing, and on doing 
+	 * This function uses the Sutherland-Hodgman algorithm to calculate the
+	 * convex polygon that is created when applying all 6 AABB splitting
+	 * planes to the triangle. Afterwards, the AABB of the newly created
+	 * convex polygon is returned. This function is an important component
+	 * for efficiently creating 'Perfect Split' KD-trees. For more detail,
+	 * see "On building fast kd-Trees for Ray Tracing, and on doing
 	 * that in O(N log N)" by Ingo Wald and Vlastimil Havran
 	 */
 	AABB getClippedAABB(const Point *positions, const AABB &aabb) const;
 
-	/// Uniformly sample a point on the triangle and return its normal
+	/// Uniformly sample a point on the triangle and return its normal and UV coordinates
 	Point sample(const Point *positions, const Normal *normals,
-			Normal &n, const Point2 &seed) const;
+			const Point2 *texCoords, Normal &n, Point2 &uv,
+			const Point2 &seed) const;
 
 	/// Calculate the surface area of this triangle
 	Float surfaceArea(const Point *positions) const;
 
 	/** \brief Ray-triangle intersection test
-	 * 
+	 *
 	 * Uses the algorithm by Moeller and Trumbore discussed at
 	 * <tt>http://www.acm.org/jgt/papers/MollerTrumbore97/code.html</tt>.
 	 *
@@ -90,7 +91,7 @@ struct MTS_EXPORT_CORE Triangle {
 	 * \return
 	 *   \c true if an intersection has been detected
 	 */
-	FINLINE static bool rayIntersect(const Point &p0, const Point &p1, const Point &p2, 
+	FINLINE static bool rayIntersect(const Point &p0, const Point &p1, const Point &p2,
 		const Ray &ray, Float &u, Float &v, Float &t) {
 		/* Find vectors for two edges sharing */
 		Vector edge1 = p1 - p0, edge2 = p2 - p0;
@@ -127,9 +128,9 @@ struct MTS_EXPORT_CORE Triangle {
 
 		return false;
 	}
-	
+
 	/** \brief Ray-triangle intersection test
-	 * 
+	 *
 	 * Uses the algorithm by Moeller and Trumbore discussed at
 	 * <tt>http://www.acm.org/jgt/papers/MollerTrumbore97/code.html</tt>.
 	 *
@@ -151,7 +152,7 @@ struct MTS_EXPORT_CORE Triangle {
 	 * \return
 	 *   \c true if an intersection has been detected
 	 */
-	FINLINE bool rayIntersect(const Point *positions, const Ray &ray, Float &u, 
+	FINLINE bool rayIntersect(const Point *positions, const Ray &ray, Float &u,
 		Float &v, Float &t) const {
 		return rayIntersect(
 			positions[idx[0]], positions[idx[1]],

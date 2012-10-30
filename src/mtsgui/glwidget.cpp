@@ -51,9 +51,9 @@ GLWidget::GLWidget(QWidget *parent) :
 	m_renderer = Renderer::create(NULL);
 	m_device = new QtDevice(this);
 	m_preview = new PreviewThread(m_device, m_renderer);
-	connect(m_preview, SIGNAL(caughtException(const QString &)), 
+	connect(m_preview, SIGNAL(caughtException(const QString &)),
 		this, SLOT(onException(const QString &)), Qt::QueuedConnection);
-	connect(m_preview, SIGNAL(statusMessage(const QString &)), 
+	connect(m_preview, SIGNAL(statusMessage(const QString &)),
 		this, SIGNAL(statusMessage(const QString &)), Qt::QueuedConnection);
 	m_invertMouse = false;
 	m_navigationMode = EFlythrough;
@@ -136,7 +136,7 @@ void GLWidget::initializeGL() {
 	std::vector<std::string> missingExtensions;
 
 	if (!m_renderer->getCapabilities()->isSupported(
-		RendererCapabilities::EShadingLanguage)) 
+		RendererCapabilities::EShadingLanguage))
 		missingExtensions.push_back("GLSL");
 	if (!m_renderer->getCapabilities()->isSupported(
 		RendererCapabilities::ERenderToTexture))
@@ -331,11 +331,11 @@ void GLWidget::downloadFramebuffer() {
 	}
 
 	makeCurrent();
-	if (m_framebuffer == NULL || 
+	if (m_framebuffer == NULL ||
 		m_framebuffer->getBitmap() != m_context->framebuffer) {
 		if (m_framebuffer)
 			m_framebuffer->cleanup();
-		m_framebuffer = m_renderer->createGPUTexture("Framebuffer", 
+		m_framebuffer = m_renderer->createGPUTexture("Framebuffer",
 			m_context->framebuffer);
 		m_framebuffer->setMipMapped(false);
 		m_framebuffer->setFilterType(GPUTexture::ENearest);
@@ -353,7 +353,7 @@ void GLWidget::downloadFramebuffer() {
 	m_renderer->finish();
 	entry.buffer->download(m_context->framebuffer);
 
-	// Scale by the number of developed VPLs 
+	// Scale by the number of developed VPLs
 	float *targetData = m_context->framebuffer->getFloat32Data();
 	float factor = 1.0f / entry.vplSampleOffset;
 
@@ -373,7 +373,7 @@ void GLWidget::downloadFramebuffer() {
 QSize GLWidget::sizeHint() const {
 	QSize minimumSize(440, 170);
 	if (m_context) {
-		return QSize(std::max(minimumSize.width(), m_context->framebuffer->getWidth()), 
+		return QSize(std::max(minimumSize.width(), m_context->framebuffer->getWidth()),
 					 std::max(minimumSize.height(), m_context->framebuffer->getHeight()));
 	} else {
 		return minimumSize;
@@ -441,12 +441,12 @@ void GLWidget::timerImpulse() {
 	} else if (m_context->mode != EPreview) {
 		m_context->mode = EPreview;
 		// causes updateUI to be called in the main window
-		emit stopRendering(); 
+		emit stopRendering();
 	}
 
-	if (!(m_leftKeyDown || m_rightKeyDown || m_upKeyDown || m_downKeyDown 
+	if (!(m_leftKeyDown || m_rightKeyDown || m_upKeyDown || m_downKeyDown
 		|| m_wheelTimer->getMilliseconds() < 200 || m_animation)) {
-		if (m_movementTimer->isActive()) 
+		if (m_movementTimer->isActive())
 			m_movementTimer->stop();
 	}
 
@@ -456,7 +456,7 @@ void GLWidget::timerImpulse() {
 void GLWidget::resetPreview() {
 	if (!m_context || !m_context->scene || !m_preview->isRunning())
 		return;
-	bool motion = m_leftKeyDown || m_rightKeyDown || 
+	bool motion = m_leftKeyDown || m_rightKeyDown ||
 		m_upKeyDown || m_downKeyDown || m_mouseDrag ||
 		m_wheelTimer->getMilliseconds() < 200 || m_animation;
 	m_preview->setSceneContext(m_context, false, motion);
@@ -557,7 +557,7 @@ void GLWidget::keyReleaseEvent(QKeyEvent *event) {
 
 void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 	QPoint rel = event->pos() - m_mousePos;
-	if (!m_context || !m_context->scene 
+	if (!m_context || !m_context->scene
 	 || !m_mouseDrag || rel == QPoint(0,0) || m_animation)
 		return;
 
@@ -575,8 +575,8 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 		m_cropEnd.x = std::min(std::max(0, m_mousePos.x()-offset.x), maxCrop.x-1);
 		m_cropEnd.y = std::min(std::max(0, m_mousePos.y()-offset.y), maxCrop.y-1);
 
-		m_statusMessage = 
-			formatString("%s: %i x %i pixels", 
+		m_statusMessage =
+			formatString("%s: %i x %i pixels",
 				m_cropType == ECrop ? "Crop" : "Crop & Magnify",
 				std::abs(m_cropEnd.x-m_cropStart.x), std::abs(m_cropEnd.y-m_cropStart.y));
 		m_statusTimer->reset();
@@ -619,14 +619,14 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 			coords.x -=  0.001f * rel.y() * m_mouseSensitivity * (m_invertMouse ? -1.0f : 1.0f);
 			p = target + focusDistance * frame.toWorld(sphericalDirection(coords.x, coords.y));
 
-			if (coords.x < 0 || coords.x > M_PI) 
+			if (coords.x < 0 || coords.x > M_PI)
 				m_context->up *= -1;
 
 			setInverseViewTransform(Transform::lookAt(p, target, m_context->up));
 		} else {
 			Float yaw = -.03f * rel.x() * m_mouseSensitivity;
 			Float pitch = .03f * rel.y() * m_mouseSensitivity;
-			if (m_invertMouse) 
+			if (m_invertMouse)
 				pitch *= -1;
 
 			Transform trafo = invView
@@ -639,7 +639,7 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 		didMove = true;
 	} else if (event->buttons() & Qt::MidButton) {
 		setInverseViewTransform(invView *
-			Transform::translate(Vector((Float) rel.x(), (Float) rel.y(), 0) 
+			Transform::translate(Vector((Float) rel.x(), (Float) rel.y(), 0)
 				* m_mouseSensitivity * .6f * m_context->movementScale));
 		didMove = true;
 	} else if (event->buttons() & Qt::RightButton) {
@@ -650,9 +650,9 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 			m_context->up = Transform::rotate(d, isRightHanded() ? -roll : roll)(up);
 			setInverseViewTransform(Transform::lookAt(p, p+d, m_context->up));
 
-			camera->setXFov(std::min(std::max((Float) 1.0f, camera->getXFov() 
+			camera->setXFov(std::min(std::max((Float) 1.0f, camera->getXFov()
 				+ fovChange), (Float) 160.0f));
-			m_statusMessage = 
+			m_statusMessage =
 				formatString("Field of view: %.2f degrees", camera->getXFov());
 			m_statusTimer->reset();
 		} else {
@@ -660,7 +660,7 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 				nearClip = camera->getNearClip(),
 				farClip = camera->getFarClip();
 
-			if (focusDistance <= nearClip || focusDistance >= farClip) 
+			if (focusDistance <= nearClip || focusDistance >= farClip)
 				focusDistance = autoFocus();
 
 			Float oldFocusDistance = focusDistance;
@@ -683,7 +683,7 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 	QRect geo = desktop->screenGeometry(global);
 
 	if (global.x() < 50 || global.y() < 50 ||
-		global.x() > desktop->width()-50 || 
+		global.x() > desktop->width()-50 ||
 		global.y() > desktop->height()-50) {
 		QPoint target = geo.center();
 		m_ignoreMouseEvent = target - global;
@@ -708,7 +708,7 @@ void GLWidget::mousePressEvent(QMouseEvent *event) {
 			m_mousePos.y() - offset.y);
 		Vector2i maxCrop = m_context->scene->getFilm()->getCropSize();
 
-		if (event->buttons() != Qt::LeftButton 
+		if (event->buttons() != Qt::LeftButton
 			|| m_cropStart.x < 0 || m_cropStart.y < 0 ||
 			   m_cropStart.x >= maxCrop.x ||
 			   m_cropStart.y >= maxCrop.y) {
@@ -734,7 +734,7 @@ void GLWidget::mousePressEvent(QMouseEvent *event) {
 		camera->sampleRay(ray, sample, Point2(0.5f), 0.5f);
 
 		if (m_context->scene->rayIntersect(ray, its)) {
-			m_statusMessage = 
+			m_statusMessage =
 				formatString("Selected shape \"%s\"", its.shape->getName().c_str());
 			m_statusTimer->reset();
 			m_context->selectedShape = its.instance ? its.instance : its.shape;
@@ -758,7 +758,7 @@ void GLWidget::mouseDoubleClickEvent(QMouseEvent *event) {
 	if (!m_preview->isRunning())
 		return;
 	if (m_navigationMode == EStandard && m_aabb.isValid()
-		&& event->buttons() & Qt::LeftButton) 
+		&& event->buttons() & Qt::LeftButton)
 		reveal(m_aabb);
 }
 
@@ -777,7 +777,7 @@ void GLWidget::mouseReleaseEvent(QMouseEvent *event) {
 			if (width > 1 && height > 1)
 				emit crop(m_cropType, m_cropStart.x,
 					m_cropStart.y, width, height);
-	
+
 			m_cropping = false;
 		}
 		m_mouseDrag = false;
@@ -804,7 +804,7 @@ void GLWidget::wheelEvent(QWheelEvent *event) {
 			bar->setSingleStep(event->delta());
 #endif
 
-		bar->triggerAction(event->delta() > 0 ? 
+		bar->triggerAction(event->delta() > 0 ?
 			QAbstractSlider::SliderSingleStepSub
 			: QAbstractSlider::SliderSingleStepAdd);
 		bar->setSingleStep(oldStep);
@@ -812,7 +812,7 @@ void GLWidget::wheelEvent(QWheelEvent *event) {
 		if (!m_preview->isRunning() || m_context == NULL || m_context->scene == NULL || m_animation)
 			return;
 
-		PerspectiveCamera *camera = getPerspectiveCamera(); 
+		PerspectiveCamera *camera = getPerspectiveCamera();
 		if (!camera)
 			return;
 
@@ -820,15 +820,15 @@ void GLWidget::wheelEvent(QWheelEvent *event) {
 			nearClip = camera->getNearClip(),
 			farClip = camera->getFarClip();
 
-		if (focusDistance <= nearClip || focusDistance >= farClip) 
+		if (focusDistance <= nearClip || focusDistance >= farClip)
 			focusDistance = autoFocus();
 
 		Float oldFocusDistance = focusDistance;
-		focusDistance = std::min(std::max(focusDistance * std::pow((Float) (1 - 1e-3f), 
+		focusDistance = std::min(std::max(focusDistance * std::pow((Float) (1 - 1e-3f),
 				(Float) event->delta()), 1.2f*nearClip), farClip/1.2f);
 
 		camera->setFocusDistance(focusDistance);
-	
+
 		Transform invView = getInverseViewTransform();
 		Point p  = invView(Point(0,0,0));
 		Vector d = invView(Vector(0,0,1));
@@ -904,7 +904,7 @@ void GLWidget::paintGL() {
 		PreviewQueueEntry entry;
 		GPUTexture *buffer = NULL;
 		Point2i upperLeft = this->upperLeft();
-		Point2i lowerRight = upperLeft + 
+		Point2i lowerRight = upperLeft +
 				m_context->framebuffer->getSize();
 
 		if (width() > size.x || height() > size.y) {
@@ -928,7 +928,7 @@ void GLWidget::paintGL() {
 					Point2i cropStart = m_cropStart + upperLeft;
 					Point2i cropEnd = m_cropEnd + upperLeft;
 					m_renderer->setDepthTest(false);
-					glRecti(cropStart.x, cropStart.y, 
+					glRecti(cropStart.x, cropStart.y,
 							cropEnd.x, cropEnd.y);
 					glDisable(GL_COLOR_LOGIC_OP);
 					glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -936,12 +936,12 @@ void GLWidget::paintGL() {
 				swapBuffers();
 				return;
 			}
-			bool motion = m_leftKeyDown || m_rightKeyDown || 
+			bool motion = m_leftKeyDown || m_rightKeyDown ||
 				m_upKeyDown || m_downKeyDown || m_mouseDrag ||
 				m_wheelTimer->getMilliseconds() < 200 || m_animation;
 			entry = m_preview->acquireBuffer(motion ? -1 : 50);
 			if (entry.buffer == NULL) {
-				/* Unsuccessful at acquiring a buffer in the 
+				/* Unsuccessful at acquiring a buffer in the
 				   alloted time - just leave and keep the current display */
 				return;
 			}
@@ -956,13 +956,13 @@ void GLWidget::paintGL() {
 				if (m_framebuffer)
 					m_framebuffer->cleanup();
 				if (!m_softwareFallback) {
-					m_framebuffer = m_renderer->createGPUTexture("Framebuffer", 
+					m_framebuffer = m_renderer->createGPUTexture("Framebuffer",
 						m_context->framebuffer);
 				} else {
 					m_fallbackBitmap = new Bitmap(Bitmap::ERGBA, Bitmap::EUInt8,
 						m_context->framebuffer->getSize());
 					m_fallbackBitmap->clear();
-					m_framebuffer = m_renderer->createGPUTexture("Framebuffer", 
+					m_framebuffer = m_renderer->createGPUTexture("Framebuffer",
 						m_fallbackBitmap);
 #if MTS_SSE
 					m_cpuTonemap = new TonemapCPU;
@@ -982,7 +982,7 @@ void GLWidget::paintGL() {
 					}
 					m_cpuTonemap->setLuminanceInfo(m_context->framebuffer,mult);
 #else
-					/* Manually generate a gamma-corrected image 
+					/* Manually generate a gamma-corrected image
 					   on the CPU (with gamma=2.2) - this will be slow! */
 					Bitmap *source = m_context->framebuffer;
 					float *sourceData = source->getFloat32Data();
@@ -1040,7 +1040,7 @@ void GLWidget::paintGL() {
 				}
 				Float burn = std::min((Float) 1, std::max((Float)1e-8f,
 					1-(m_context->reinhardBurn + 10) / 20.0f));
-				Float scale = m_context->reinhardKey / 
+				Float scale = m_context->reinhardKey /
 				              m_cpuTonemap->logAvgLuminance();
 				Float Lwhite = m_cpuTonemap->maxLuminance() * scale;
 
@@ -1072,7 +1072,7 @@ void GLWidget::paintGL() {
 			m_gammaTonemap->setParameter("invGamma", 1/m_context->gamma);
 			m_gammaTonemap->setParameter("sRGB", m_context->srgb);
 			m_gammaTonemap->setParameter("hasDepth", hasDepth);
-			m_renderer->blitTexture(buffer, m_context->mode == EPreview, 
+			m_renderer->blitTexture(buffer, m_context->mode == EPreview,
 				!m_hScroll->isVisible(), !m_vScroll->isVisible(),
 				-m_context->scrollOffset);
 			m_gammaTonemap->unbind();
@@ -1080,7 +1080,7 @@ void GLWidget::paintGL() {
 			if (m_luminanceBuffer[0] == NULL || m_luminanceBuffer[0]->getSize() != Point3i(size.x, size.y, 1)) {
 				for (int i=0; i<2; ++i) {
 					m_luminanceBuffer[i] = m_renderer->createGPUTexture(formatString("Luminance buffer %i", i),
-							new Bitmap(Bitmap::ERGB, Bitmap::EFloat32, size)); 
+							new Bitmap(Bitmap::ERGB, Bitmap::EFloat32, size));
 					m_luminanceBuffer[i]->setComponentFormat(GPUTexture::EFloat32);
 					m_luminanceBuffer[i]->setPixelFormat(GPUTexture::ERGB);
 					m_luminanceBuffer[i]->setSize(Point3i(size.x, size.y, 1));
@@ -1140,7 +1140,7 @@ void GLWidget::paintGL() {
 				SLog(EWarn, "Could not determine the average log-luminance, since the image contains NaNs/infs/negative values");
 				logAvgLuminance = 1;
 			}
-			
+
 			Float burn = std::min((Float) 1, std::max((Float) 1e-8f, 1-(m_context->reinhardBurn + 10) / 20.0f)),
 			      scale = m_context->reinhardKey / logAvgLuminance,
 			      Lwhite = maxLuminance * scale;
@@ -1157,7 +1157,7 @@ void GLWidget::paintGL() {
 			m_reinhardTonemap->setParameter("invGamma", 1/m_context->gamma);
 			m_reinhardTonemap->setParameter("sRGB", m_context->srgb);
 			m_reinhardTonemap->setParameter("hasDepth", hasDepth);
-			m_renderer->blitTexture(buffer, m_context->mode == EPreview, 
+			m_renderer->blitTexture(buffer, m_context->mode == EPreview,
 				!m_hScroll->isVisible(), !m_vScroll->isVisible(),
 				-m_context->scrollOffset);
 			m_reinhardTonemap->unbind();
@@ -1168,7 +1168,7 @@ void GLWidget::paintGL() {
 			if (m_context->showKDTree) {
 				int pos = m_statusMessage.empty() ? 10 : 30;
 				m_renderer->setColor(Spectrum(1.0f));
-				m_renderer->drawText(Point2i(10, pos), m_font, 
+				m_renderer->drawText(Point2i(10, pos), m_font,
 					formatString("kd-tree visualization mode\nPress '[' "
 					"and ']' to change the shown level"));
 			}
@@ -1182,7 +1182,7 @@ void GLWidget::paintGL() {
 			Point2i cropStart = m_cropStart + upperLeft;
 			Point2i cropEnd = m_cropEnd + upperLeft;
 			m_renderer->setDepthTest(false);
-			glRecti(cropStart.x, cropStart.y, 
+			glRecti(cropStart.x, cropStart.y,
 					cropEnd.x, cropEnd.y);
 			glDisable(GL_COLOR_LOGIC_OP);
 			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -1191,7 +1191,7 @@ void GLWidget::paintGL() {
 		const ProjectiveCamera *camera = NULL;
 		if (m_context->scene) {
 			camera = getProjectiveCamera();
-			if (!camera) 
+			if (!camera)
 				m_statusMessage = "Camera type is incompatible with the OpenGL preview!";
 		}
 
@@ -1215,7 +1215,7 @@ void GLWidget::paintGL() {
 			if (m_context->showKDTree) {
 				oglRenderKDTree(m_context->scene->getKDTree());
 				const ref_vector<Shape> &shapes = m_context->scene->getShapes();
-				for (size_t j=0; j<shapes.size(); ++j) 
+				for (size_t j=0; j<shapes.size(); ++j)
 					if (shapes[j]->getKDTree())
 						oglRenderKDTree(shapes[j]->getKDTree());
 			}
@@ -1382,13 +1382,13 @@ void GLWidget::onUpdateView() {
 Point2i GLWidget::upperLeft(bool flipY) const {
 	if (!m_context)
 		return Point2i(0, 0);
-	Vector2i outputSize(m_context->framebuffer->getWidth(), 
+	Vector2i outputSize(m_context->framebuffer->getWidth(),
 			m_context->framebuffer->getHeight());
 	Vector2i deviceSize = m_device->getSize();
 
 	return Point2i(
 		deviceSize.x < outputSize.x ? (-m_context->scrollOffset.x) : (deviceSize.x - outputSize.x)/2,
-		deviceSize.y < outputSize.y ? (flipY ? (deviceSize.y-outputSize.y 
+		deviceSize.y < outputSize.y ? (flipY ? (deviceSize.y-outputSize.y
 			+ m_context->scrollOffset.y) : -m_context->scrollOffset.y) : (deviceSize.y - outputSize.y)/2);
 }
 
@@ -1399,7 +1399,7 @@ void GLWidget::reveal(const AABB &aabb) {
 	PerspectiveCamera *camera = getPerspectiveCamera();
 	if (!camera)
 		return;
-	
+
 	Transform invView = getInverseViewTransform();
 	Point p  = invView(Point(0,0,0));
 	Vector d = invView(Vector(0,0,1));

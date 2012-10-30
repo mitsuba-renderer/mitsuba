@@ -46,7 +46,7 @@ struct Vector3iKeyOrder : public std::binary_function<Vector3i, Vector3i, bool> 
 /*!\plugin{volcache}{Caching volume data source}
  * \parameters{
  *     \parameter{blockSize}{\Integer}{
- *         Size of the individual cache blocks 
+ *         Size of the individual cache blocks
  *         \default{8, i.e. $8\times8\times 8$}
  *     }
  *     \parameter{voxelWidth}{\Float}{
@@ -58,7 +58,7 @@ struct Vector3iKeyOrder : public std::binary_function<Vector3i, Vector3i, bool> 
  *         Maximum allowed memory usage in MiB. \default{1024, i.e. 1 GiB}
  *     }
  *     \parameter{toWorld}{\Transform}{
- *         Optional linear transformation that should be applied 
+ *         Optional linear transformation that should be applied
  *         to the volume data
  *     }
  *     \parameter{\Unnamed}{\Volume}{
@@ -66,12 +66,12 @@ struct Vector3iKeyOrder : public std::binary_function<Vector3i, Vector3i, bool> 
  *     }
  * }
  *
- * This plugin can be added between the renderer and another 
- * data source, for which it caches all data lookups using a 
- * LRU scheme. This is useful when the nested volume data source 
+ * This plugin can be added between the renderer and another
+ * data source, for which it caches all data lookups using a
+ * LRU scheme. This is useful when the nested volume data source
  * is expensive to evaluate.
  *
- * The cache works by performing on-demand rasterization of subregions 
+ * The cache works by performing on-demand rasterization of subregions
  * of the nested volume into blocks ($8\times 8 \times 8$ by default).
  * These are kept in memory until a user-specifiable threshold is exeeded,
  * after which point a \emph{least recently used} (LRU) policy removes
@@ -81,7 +81,7 @@ class CachingDataSource : public VolumeDataSource {
 public:
 	typedef LRUCache<Vector3i, Vector3iKeyOrder, float *> BlockCache;
 
-	CachingDataSource(const Properties &props) 
+	CachingDataSource(const Properties &props)
 		: VolumeDataSource(props) {
 		/// Size of an individual block (must be a power of 2)
 		m_blockSize = props.getInteger("blockSize", 8);
@@ -89,7 +89,7 @@ public:
 		if (!isPowerOfTwo(m_blockSize))
 			Log(EError, "Block size must be a power of two!");
 
-		/* Width of an individual voxel. Will use the step size of the 
+		/* Width of an individual voxel. Will use the step size of the
 		   nested medium by default */
 		m_voxelWidth = props.getFloat("voxelWidth", -1);
 
@@ -101,7 +101,7 @@ public:
 		m_volumeToWorld = props.getTransform("toWorld", Transform());
 	}
 
-	CachingDataSource(Stream *stream, InstanceManager *manager) 
+	CachingDataSource(Stream *stream, InstanceManager *manager)
 	: VolumeDataSource(stream, manager) {
 		m_nested = static_cast<VolumeDataSource *>(manager->getInstance(stream));
 		configure();
@@ -125,7 +125,7 @@ public:
 		if (m_voxelWidth == -1)
 			m_voxelWidth = m_nested->getStepSize();
 
-		size_t memoryLimitPerCore = m_memoryLimit 
+		size_t memoryLimitPerCore = m_memoryLimit
 			/ std::max((size_t) 1, Scheduler::getInstance()->getLocalWorkerCount());
 
 		Vector totalCells  = m_aabb.getExtents() / m_voxelWidth;
@@ -171,7 +171,7 @@ public:
 		if (EXPECT_NOT_TAKEN(
 			x < 0 || x >= m_cellCount.x ||
 			y < 0 || y >= m_cellCount.y ||
-			z < 0 || z >= m_cellCount.z)) 
+			z < 0 || z >= m_cellCount.z))
 			return 0.0f;
 
 		BlockCache *cache = m_cache.get();
@@ -184,11 +184,11 @@ public:
 
 #if defined(VOLCACHE_DEBUG)
 		if (cache->isFull()) {
-			/* For debugging: when the cache is full, dump locations 
+			/* For debugging: when the cache is full, dump locations
 			   of all cache records into an OBJ file and exit */
 			std::vector<Vector3i> keys;
 			cache->get_keys(std::back_inserter(keys));
-	
+
 			std::ofstream os("keys.obj");
 			os << "o Keys" << endl;
 			for (size_t i=0; i<keys.size(); i++) {
@@ -203,7 +203,7 @@ public:
 			}
 
 			/// Need to generate some fake geometry so that blender will import the points
-			for (size_t i=3; i<=keys.size(); i++) 
+			for (size_t i=3; i<=keys.size(); i++)
 				os << "f " << i << " " << i-1 << " " << i-2 << endl;
 			os.close();
 			_exit(-1);
@@ -217,9 +217,9 @@ public:
 			(z & m_blockMask) >> m_blockShift), hit);
 
 		statsHitRate.incrementBase();
-		if (hit) 
+		if (hit)
 			++statsHitRate;
-		
+
 		if (blockData == NULL)
 			return 0.0f;
 
@@ -254,7 +254,7 @@ public:
 	Vector lookupVector(const Point &_p) const {
 		return Vector(0.0f);
 	}
-	
+
 	bool supportsFloatLookups() const {
 		return m_nested->supportsFloatLookups();
 	}
@@ -279,7 +279,7 @@ public:
 			VolumeDataSource::addChild(name, child);
 		}
 	}
-			
+
 	float *renderBlock(const Vector3i &blockIdx) const {
 		float *result = new float[m_blockRes*m_blockRes*m_blockRes];
 		Point offset = m_aabb.min + Vector(

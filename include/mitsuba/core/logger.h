@@ -63,13 +63,13 @@ MTS_NAMESPACE_BEGIN
 /*! \addtogroup libcore */
 /*! @{ */
 
-/// Assert that a condition is true (to be used \a inside of classes that derive from \ref Object) 
+/// Assert that a condition is true (to be used \a inside of classes that derive from \ref Object)
 #define Assert(cond) do { \
 		if (!(cond)) Log(EError, "Assertion \"%s\" failed in %s:%i", \
 		#cond, __FILE__, __LINE__); \
 	} while (0)
 
-/// ``Static'' assertion (to be used \a outside of classes that derive from \ref Object) 
+/// ``Static'' assertion (to be used \a outside of classes that derive from \ref Object)
 #define SAssert(cond) do { \
 		if (!(cond)) SLog(EError, "Assertion \"%s\" failed in %s:%i", \
 		#cond, __FILE__, __LINE__); \
@@ -95,13 +95,13 @@ MTS_NAMESPACE_BEGIN
 
 /*! @} */
 
-/** 
+/**
  * \headerfile mitsuba/core/logger.h mitsuba/mitsuba.h
  * \brief Responsible for processing log messages
- * 
- * Upon receiving a log message, the Logger class invokes 
+ *
+ * Upon receiving a log message, the Logger class invokes
  * a Formatter to convert it into a human-readable form.
- * Following that, it sends this information to every 
+ * Following that, it sends this information to every
  * registered Appender.
  *
  * \ingroup libcore
@@ -122,8 +122,8 @@ public:
 	 * \note This function is not exposed in the Python bindings.
 	 *       Instead, please use \cc mitsuba.core.Log
 	 */
-	void log(ELogLevel level, const Class *theClass, 
-		const char *fileName, int lineNumber, 
+	void log(ELogLevel level, const Class *theClass,
+		const char *fileName, int lineNumber,
 		const char *fmt, ...);
 
 	/**
@@ -145,7 +145,7 @@ public:
 	void setLogLevel(ELogLevel level);
 
 	/**
-	 * \brief Set the error log level (this level and anything 
+	 * \brief Set the error log level (this level and anything
 	 * above will throw exceptions).
 	 *
 	 * The value provided here can be used for instance to turn
@@ -157,7 +157,7 @@ public:
 
 	/// Return the current log level
 	inline ELogLevel getLogLevel() const { return m_logLevel; }
-	
+
 	/// Return the current error level
 	inline ELogLevel getErrorLevel() const { return m_errorLevel; }
 
@@ -175,7 +175,7 @@ public:
 
 	/// Return one of the appenders
 	inline Appender *getAppender(size_t index) { return m_appenders[index]; }
-	
+
 	/// Return one of the appenders
 	inline const Appender *getAppender(size_t index) const { return m_appenders[index]; }
 
@@ -184,7 +184,7 @@ public:
 
 	/// Return the logger's formatter implementation
 	inline Formatter *getFormatter() { return m_formatter; }
-	
+
 	/**
 	 * \brief Return the contents of the log file as a string (if it exists)
 	 *
@@ -197,7 +197,7 @@ public:
 
 	/// Initialize logging
 	static void staticInitialization();
-	
+
 	/// Shutdown logging
 	static void staticShutdown();
 
@@ -213,7 +213,7 @@ private:
 	std::vector<Appender *> m_appenders;
 	size_t m_warningCount;
 };
-		
+
 MTS_NAMESPACE_END
 
 #endif /* __MITSUBA_CORE_LOGGER_H_ */

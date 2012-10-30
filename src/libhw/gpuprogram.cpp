@@ -23,16 +23,16 @@ MTS_NAMESPACE_BEGIN
 
 GPUProgram::GPUProgram(const std::string &name)
  : m_name(name), m_inputGeometryType(ETriangles),
-   m_outputGeometryType(ETriangleStrips), 
+   m_outputGeometryType(ETriangleStrips),
    m_maxVertices(0), m_bound(false) {
 }
 
 GPUProgram::~GPUProgram() {
 }
-	
+
 void GPUProgram::setSourceFile(EType type, const fs::path &path) {
 	fs::ifstream ifs(path);
-	if (ifs.fail() || ifs.bad()) 
+	if (ifs.fail() || ifs.bad())
 		Log(EError, "Unable to load GPU program \"%s\"",
 			path.string().c_str());
 	std::string code, line;

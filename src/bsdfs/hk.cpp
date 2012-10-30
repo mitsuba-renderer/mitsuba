@@ -30,21 +30,21 @@ MTS_NAMESPACE_BEGIN
  * \icon{bsdf_hk}
  *
  * \parameters{
- *     \parameter{material}{\String}{Name of a material preset, see 
+ *     \parameter{material}{\String}{Name of a material preset, see
  *           \tblref{medium-coefficients}. \default{\texttt{skin1}}}
- *     \parameter{sigmaS}{\Spectrum\Or\Texture}{Specifies the scattering coefficient 
+ *     \parameter{sigmaS}{\Spectrum\Or\Texture}{Specifies the scattering coefficient
  *      of the internal layer. \default{based on \code{material}}}
- *     \parameter{sigmaA}{\Spectrum\Or\Texture}{Specifies the absorption coefficient 
+ *     \parameter{sigmaA}{\Spectrum\Or\Texture}{Specifies the absorption coefficient
  *      of the internal layer. \default{based on \code{material}}}
  *     \parameter{sigmaT \& albedo}{\Spectrum\Or\Texture}{
  *      Optional: Alternatively, the scattering and absorption coefficients may also be
- *      specified using the extinction coefficient \code{sigmaT} and the 
- *      single-scattering albedo. Note that only one of the parameter passing 
- *      conventions can be used at a time (i.e. use either \code{sigmaS\&sigmaA} 
+ *      specified using the extinction coefficient \code{sigmaT} and the
+ *      single-scattering albedo. Note that only one of the parameter passing
+ *      conventions can be used at a time (i.e. use either \code{sigmaS\&sigmaA}
  *      \emph{or} \code{sigmaT\&albedo})}
  *     \parameter{thickness}{\Float}{Denotes the thickness of the layer.
  *      (should be specified in inverse units of \code{sigmaA} and \code{sigmaS})\default{1}}
- *     \parameter{\Unnamed}{\Phase}{A nested phase function instance that represents 
+ *     \parameter{\Unnamed}{\Phase}{A nested phase function instance that represents
  *      the type of scattering interactions occurring within the layer}
  * }
  *
@@ -59,15 +59,15 @@ MTS_NAMESPACE_BEGIN
  * }
  *
  * This plugin provides an implementation of the Hanrahan-Krueger BSDF
- * \cite{Hanrahan1993Reflection} for simulating single scattering in thin 
- * index-matched layers filled with a random scattering medium. 
+ * \cite{Hanrahan1993Reflection} for simulating single scattering in thin
+ * index-matched layers filled with a random scattering medium.
  * In addition, the implementation also accounts for attenuated
  * light that passes through the medium without undergoing any scattering events.
  *
  * This BSDF requires a phase function to model scattering interactions within the
- * random medium. When no phase function is explicitly specified, it uses an 
+ * random medium. When no phase function is explicitly specified, it uses an
  * isotropic one ($g=0$) by default. A sample usage for instantiating the
- * plugin is given on the next page:\newpage 
+ * plugin is given on the next page:\newpage
  * \begin{xml}
  * <bsdf type="hk">
  *     <spectrum name="sigmaS" value="2"/>
@@ -80,16 +80,16 @@ MTS_NAMESPACE_BEGIN
  * </bsdf>
  * \end{xml}
  *
- * When used in conjuction with the \pluginref{coating} plugin, it is possible 
- * to model refraction and reflection at the layer boundaries when the indices 
- * of refraction are mismatched. The combination of these two plugins then 
+ * When used in conjuction with the \pluginref{coating} plugin, it is possible
+ * to model refraction and reflection at the layer boundaries when the indices
+ * of refraction are mismatched. The combination of these two plugins then
  * reproduces the full model as it was originally proposed by Hanrahan and
  * Krueger \cite{Hanrahan1993Reflection}.
  *
- * Note that this model does not account for light that undergoes multiple 
+ * Note that this model does not account for light that undergoes multiple
  * scattering events within the layer. This leads to energy loss,
  * particularly at grazing angles, which can be seen in the left-hand image of
- * \figref{hk-example}. 
+ * \figref{hk-example}.
  *
  * \begin{xml}[caption=A thin dielectric layer with measured ketchup scattering parameters, label=lst:hk-coated]
  * <bsdf type="coating">
@@ -104,18 +104,19 @@ MTS_NAMESPACE_BEGIN
  * \end{xml}
  *
  * Note that when \texttt{sigmaS} = \texttt{sigmaA}$\ = 0$, or when \texttt{thickness=0},
- * any geometry associated with this BSDF becomes invisible, as light will pass through 
+ * any geometry associated with this BSDF becomes invisible, as light will pass through
  * unchanged.
  *
  * The implementation in Mitsuba is based on code by Tom Kazimiers and Marios Papas.
- * Marios Papas has kindly verified the implementation of the coated and uncoated variants 
+ * Marios Papas has kindly verified the implementation of the coated and uncoated variants
  * against both a path tracer and a separate reference implementation.
  */
 class HanrahanKrueger : public BSDF {
 public:
 	HanrahanKrueger(const Properties &props) : BSDF(props) {
-		Spectrum sigmaS, sigmaA;
-		lookupMaterial(props, sigmaS, sigmaA, NULL);
+		Spectrum sigmaS, sigmaA, g;
+		lookupMaterial(props, sigmaS, sigmaA, g, NULL);
+		sigmaS *= Spectrum(1.0f) - g;
 
 		/* Scattering coefficient of the layer */
 		m_sigmaS = new ConstantSpectrumTexture(
@@ -124,10 +125,10 @@ public:
 		/* Absorption coefficient of the layer */
 		m_sigmaA = new ConstantSpectrumTexture(
 			props.getSpectrum("sigmaA", sigmaA));
-		
+
 		/* Slab thickness in inverse units of sigmaS and sigmaA */
-		m_thickness = props.getFloat("thickness", 1); 
-		
+		m_thickness = props.getFloat("thickness", 1);
+
 		if (props.hasProperty("sigmaT"))
 			m_sigmaT = new ConstantSpectrumTexture(
 				props.getSpectrum("sigmaT"));
@@ -136,7 +137,7 @@ public:
 				props.getSpectrum("albedo"));
 	}
 
-	HanrahanKrueger(Stream *stream, InstanceManager *manager) 
+	HanrahanKrueger(Stream *stream, InstanceManager *manager)
 	 : BSDF(stream, manager) {
 		m_phase = static_cast<PhaseFunction *>(manager->getInstance(stream));
 		m_sigmaS = static_cast<Texture *>(manager->getInstance(stream));
@@ -209,7 +210,7 @@ public:
 				&& (bRec.component == -1 || bRec.component == 0);
 			bool hasGlossyTransmission = (bRec.typeMask & EGlossyTransmission)
 				&& (bRec.component == -1 || bRec.component == 1);
-		
+
 			Spectrum albedo;
 			for (int i = 0; i < SPECTRUM_SAMPLES; i++)
 				albedo[i] = sigmaT[i] > 0 ? (sigmaS[i]/sigmaT[i]) : (Float) 0;
@@ -217,7 +218,7 @@ public:
 			const Float cosThetaI = Frame::cosTheta(bRec.wi),
 				        cosThetaO = Frame::cosTheta(bRec.wo),
 				        dp = cosThetaI*cosThetaO;
-		
+
 			bool reflection = dp > 0, transmission = dp < 0;
 
 			/* ==================================================================== */
@@ -226,7 +227,7 @@ public:
 
 			if (hasGlossyReflection && reflection) {
 				MediumSamplingRecord dummy;
-				PhaseFunctionSamplingRecord pRec(dummy,bRec.wi,bRec.wo); 
+				PhaseFunctionSamplingRecord pRec(dummy,bRec.wi,bRec.wo);
 				const Float phaseVal = m_phase->eval(pRec);
 
 				result = albedo * (phaseVal*cosThetaI/(cosThetaI+cosThetaO)) *
@@ -246,11 +247,11 @@ public:
 				/* Hanrahan etal 93 Single Scattering transmission term */
 				if (std::abs(cosThetaI + cosThetaO) < Epsilon) {
 					/* avoid division by zero */
-					result += albedo * phaseVal*tauD/std::abs(cosThetaO) * 
+					result += albedo * phaseVal*tauD/std::abs(cosThetaO) *
 								((-tauD/std::abs(cosThetaO)).exp());
 				} else {
 					/* Guaranteed to be positive even if |cosThetaO| > |cosThetaI| */
-					result += albedo * phaseVal*std::abs(cosThetaI)/(std::abs(cosThetaI)-std::abs(cosThetaO)) * 
+					result += albedo * phaseVal*std::abs(cosThetaI)/(std::abs(cosThetaI)-std::abs(cosThetaO)) *
 						((-tauD/std::abs(cosThetaI)).exp() - (-tauD/std::abs(cosThetaO)).exp());
 				}
 			}
@@ -314,7 +315,7 @@ public:
 				 sigmaT = sigmaA + sigmaS,
 				 tauD = sigmaT * m_thickness;
 
-		/* Probability for a specular transmission is approximated by the average (per wavelength) 
+		/* Probability for a specular transmission is approximated by the average (per wavelength)
 		 * probability of a photon exiting without a scattering event or an absorption event */
 		Float probSpecularTransmission = (-tauD/std::abs(Frame::cosTheta(bRec.wi))).exp().average();
 
@@ -351,7 +352,7 @@ public:
 
 			/* Store the sampled direction */
 			bRec.wo = pRec.wo;
-			
+
 			bool reflection = Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo) >= 0;
 			if ((!hasGlossyReflection && reflection) ||
 				(!hasGlossyTransmission && !reflection))
@@ -364,7 +365,7 @@ public:
 			_pdf *= (hasSpecularTransmission ? (1 - probSpecularTransmission) : 1.0f);
 
 			/* Guard against numerical imprecisions */
-			if (_pdf == 0) 
+			if (_pdf == 0)
 				return Spectrum(0.0f);
 			else
 				return eval(bRec, ESolidAngle) / _pdf;
@@ -409,7 +410,7 @@ public:
 	}
 
 	Float getRoughness(const Intersection &its, int component) const {
-		/* For lack of a better value, treat this material as diffuse 
+		/* For lack of a better value, treat this material as diffuse
 		   in Manifold Exploration */
 		return std::numeric_limits<Float>::infinity();
 	}
@@ -425,7 +426,7 @@ public:
 			<< "]";
 		return oss.str();
 	}
-	
+
 	Shader *createShader(Renderer *renderer) const;
 
 	MTS_DECLARE_CLASS()
@@ -440,7 +441,7 @@ private:
 };
 
 
-// ================ Hardware shader implementation ================ 
+// ================ Hardware shader implementation ================
 
 /**
  * This is a relatively approximate GLSL shader for the HK model.
@@ -449,7 +450,7 @@ private:
  */
 class HanrahanKruegerShader : public Shader {
 public:
-	HanrahanKruegerShader(Renderer *renderer, const Texture *sigmaS, const Texture *sigmaA) 
+	HanrahanKruegerShader(Renderer *renderer, const Texture *sigmaS, const Texture *sigmaA)
 		: Shader(renderer, EBSDFShader), m_sigmaS(sigmaS), m_sigmaA(sigmaA) {
 		m_sigmaSShader = renderer->registerShaderForResource(m_sigmaS.get());
 		m_sigmaAShader = renderer->registerShaderForResource(m_sigmaA.get());
@@ -499,7 +500,7 @@ private:
 	ref<Shader> m_sigmaAShader;
 };
 
-Shader *HanrahanKrueger::createShader(Renderer *renderer) const { 
+Shader *HanrahanKrueger::createShader(Renderer *renderer) const {
 	return new HanrahanKruegerShader(renderer, m_sigmaS.get(), m_sigmaA.get());
 }
 

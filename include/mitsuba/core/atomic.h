@@ -40,7 +40,7 @@ MTS_NAMESPACE_BEGIN
 
 /**
  * \brief Atomically attempt to exchange a pointer with another value
- * 
+ *
  * \param v Pointer to the pointer in question
  * \param oldValue Last known value of the destination \a v
  * \param newValue Replacement value for the destination \a v
@@ -55,7 +55,7 @@ template <typename T> inline bool atomicCompareAndExchangePtr(T **v, T *newValue
 		reinterpret_cast<void * volatile *>(v), newValue, oldValue) == oldValue;
   #else
     return _InterlockedCompareExchange(
-		reinterpret_cast<long volatile *>(v), 
+		reinterpret_cast<long volatile *>(v),
 		reinterpret_cast<long>(newValue), reinterpret_cast<long>(oldValue)) == reinterpret_cast<long>(oldValue);
   #endif
 #else
@@ -65,11 +65,11 @@ template <typename T> inline bool atomicCompareAndExchangePtr(T **v, T *newValue
   /* Use the following workaround for clang and icl (Linux/Mac OS) */
   #if __SIZEOF_POINTER__ == 8 || defined(__LP64__)
 	return __sync_bool_compare_and_swap(
-		reinterpret_cast<long long volatile *>(v), reinterpret_cast<long long>(oldValue), 
+		reinterpret_cast<long long volatile *>(v), reinterpret_cast<long long>(oldValue),
 		reinterpret_cast<long long>(newValue));
   #else
 	return __sync_bool_compare_and_swap(
-		reinterpret_cast<long volatile *>(v), reinterpret_cast<long>(oldValue), 
+		reinterpret_cast<long volatile *>(v), reinterpret_cast<long>(oldValue),
 		reinterpret_cast<long>(newValue));
   #endif
   #endif
@@ -78,7 +78,7 @@ template <typename T> inline bool atomicCompareAndExchangePtr(T **v, T *newValue
 
 /**
  * \brief Atomically attempt to exchange a 32-bit integer with another value
- * 
+ *
  * \param v Pointer to the memory region in question
  * \param oldValue Last known value of the destination \a v
  * \param newValue Replacement value for the destination \a v
@@ -97,7 +97,7 @@ inline bool atomicCompareAndExchange(volatile int32_t *v, int32_t newValue, int3
 
 /**
  * \brief Atomically attempt to exchange a 64-bit integer with another value
- * 
+ *
  * \param v Pointer to the memory region in question
  * \param oldValue Last known value of the destination \a v
  * \param newValue Replacement value for the destination \a v

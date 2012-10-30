@@ -27,7 +27,7 @@ MTS_NAMESPACE_BEGIN
 enum EVPLType {
 	EPointEmitterVPL = 0,
 	EDirectionalEmitterVPL,
-	ESurfaceVPL	
+	ESurfaceVPL
 };
 
 /**
@@ -36,7 +36,7 @@ enum EVPLType {
  * \ingroup librender
  */
 struct VPL {
-	inline VPL(EVPLType type, const Spectrum &P) 
+	inline VPL(EVPLType type, const Spectrum &P)
 		: type(type), P(P) {
 	}
 	EVPLType type;
@@ -52,8 +52,8 @@ struct VPL {
  * Generate a series of point light sources by sampling from the Halton
  * sequence (as is done in Instant Radiosity). The parameter \c offset
  * allows setting the initial QMC sample index (should be set to 0 if no offset is
- * desired), and the last index is returned after the function finishes. This can 
- * be used to generate an arbitrary number of VPLs incrementally. Note that the 
+ * desired), and the last index is returned after the function finishes. This can
+ * be used to generate an arbitrary number of VPLs incrementally. Note that the
  * value supplied with the parameter \c count is only a suggestion to the implementation.
  * Generally, it will produce a few more VPLs than the requsted amount. After VPL
  * generation is done, their power must be scaled by the inverse of the returned index.
@@ -61,7 +61,7 @@ struct VPL {
  * is used to prune VPLs in an unbiased manner.
  */
 extern MTS_EXPORT_RENDER size_t generateVPLs(const Scene *scene,
-		Random *random, size_t offset, 
+		Random *random, size_t offset,
 		size_t count, int maxDepth, bool prune,
 		std::deque<VPL> &vpls);
 

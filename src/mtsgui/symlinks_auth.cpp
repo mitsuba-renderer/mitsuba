@@ -20,8 +20,8 @@ bool create_symlinks() {
 	AuthorizationItem items = {kAuthorizationRightExecute, 0, NULL, 0};
 	AuthorizationRights rights = { 1, &items };
 	flags = kAuthorizationFlagDefaults |
-		kAuthorizationFlagInteractionAllowed | 
-		kAuthorizationFlagPreAuthorize | 
+		kAuthorizationFlagInteractionAllowed |
+		kAuthorizationFlagPreAuthorize |
 		kAuthorizationFlagExtendRights;
 	status = AuthorizationCopyRights(ref, &rights, NULL, flags, NULL);
 	if (status != errAuthorizationSuccess) {

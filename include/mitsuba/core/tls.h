@@ -41,7 +41,7 @@ namespace detail {
 		/// Functor to release memory of a TLS object
 		typedef void (*DestructFunctor)(void *);
 		/// Construct a new thread local storage object
-		ThreadLocalBase(const ConstructFunctor &constructFunctor, 
+		ThreadLocalBase(const ConstructFunctor &constructFunctor,
 			const DestructFunctor &destructFfunctor);
 		/// Destroy the thread local storage object
 		~ThreadLocalBase();
@@ -62,14 +62,14 @@ namespace detail {
 
 /**
  * \headerfile mitsuba/core/tls.h mitsuba/mitsuba.h
- * \brief Thin wrapper around boost thread local storage. 
+ * \brief Thin wrapper around boost thread local storage.
  *     Stores references to Object instances.
  * \sa PrimitiveThreadLocal
  * \ingroup libcore
  *
- * This class implements a reference counting thread local storage object which captures 
+ * This class implements a reference counting thread local storage object which captures
  * references to subclasses of \ref Object. In comparison to an API like <tt>boost::thread_specific_ptr</tt>
- * it has a much nicer cleanup mechanism. Held references are destroyed when the owning thread dies \a or 
+ * it has a much nicer cleanup mechanism. Held references are destroyed when the owning thread dies \a or
  * when the \c ThreadLocal instance is freed, whichever occurs first.
  */
 template <typename ValueType> class ThreadLocal {
@@ -84,7 +84,7 @@ public:
 	inline ValueType *get() { return ((ref<ValueType> *) m_base.get())->get(); }
 
 	/**
-	 * \brief Return a reference to the data associated with the 
+	 * \brief Return a reference to the data associated with the
 	 * current thread (const version)
 	 */
 	inline const ValueType *get() const { return ((const ref<ValueType> *) m_base.get())->get(); }
@@ -102,14 +102,14 @@ protected:
 
 /**
  * \headerfile mitsuba/core/tls.h mitsuba/mitsuba.h
- * \brief Thin wrapper around posix thread local storage. 
+ * \brief Thin wrapper around posix thread local storage.
  *     Stores heap-allocated data other than Object instances.
  * \sa ThreadLocal
  * \ingroup libcore
- * 
+ *
  * This class implements a thread local storage object for POD-style data structures.
- * In comparison to an API like <tt>boost::thread_specific_ptr</tt> it has a much nicer 
- * cleanup mechanism. Held references are destroyed when the owning thread dies \a or 
+ * In comparison to an API like <tt>boost::thread_specific_ptr</tt> it has a much nicer
+ * cleanup mechanism. Held references are destroyed when the owning thread dies \a or
  * when the \c PrimitiveThreadLocal instance is freed, whichever occurs first.
  */
 template <typename ValueType> class PrimitiveThreadLocal {
@@ -129,7 +129,7 @@ public:
 	}
 
 	/**
-	 * \brief Return a reference to the data associated with the 
+	 * \brief Return a reference to the data associated with the
 	 * current thread (const version)
 	 */
 	inline const ValueType &get() const {

@@ -34,7 +34,7 @@ LoadDialog::LoadDialog(QWidget *parent) :
 	m_oldLogLevel = logger->getLogLevel();
 	logger->setLogLevel(EDebug);
 	logger->addAppender(m_consoleAppender);
-	connect(m_consoleAppender, SIGNAL(textMessage(ELogLevel, const QString &)), 
+	connect(m_consoleAppender, SIGNAL(textMessage(ELogLevel, const QString &)),
 		this, SLOT(onTextMessage(ELogLevel, const QString &)), Qt::QueuedConnection);
 	QFont font("Monospace");
 	font.setStyleHint(QFont::TypeWriter);
@@ -81,7 +81,7 @@ void LoadDialog::close() {
 	Logger *logger = Thread::getThread()->getLogger();
 	logger->setLogLevel(m_oldLogLevel);
 	logger->removeAppender(m_consoleAppender);
-	disconnect(m_consoleAppender, SIGNAL(textMessage(ELogLevel, const QString &)), 
+	disconnect(m_consoleAppender, SIGNAL(textMessage(ELogLevel, const QString &)),
 		this, SLOT(onTextMessage(ELogLevel, const QString &)));
 	m_consoleAppender = NULL;
 	if (ui->console->isVisible()) {
@@ -97,19 +97,19 @@ void LoadDialog::close() {
 void LoadDialog::onTextMessage(ELogLevel level, const QString &message) {
 	QColor color;
 	int idx = message.indexOf("] ");
-	if (idx != -1 && ui->progressBar->value() != 100 && message.indexOf("\n") == -1) { 
+	if (idx != -1 && ui->progressBar->value() != 100 && message.indexOf("\n") == -1) {
 		ui->statusLabel->setText(message.mid(idx+2));
 	}
 	switch (level) {
-		case ETrace: 
-		case EDebug: 
+		case ETrace:
+		case EDebug:
 		case EInfo:
 			color = Qt::gray;
 			break;
 		case EError:
 			color = Qt::red;
 			break;
-		case EWarn: 
+		case EWarn:
 		default:
 			color = QColor(255,180,180);
 			break;

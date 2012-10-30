@@ -29,14 +29,14 @@ MTS_NAMESPACE_BEGIN
 /**
  * \brief Bidirectional path data structure
  *
- * In the path-space light transport framework, a path is represented as a 
- * linear sequence of interactions (expressed using vertices) and transport 
+ * In the path-space light transport framework, a path is represented as a
+ * linear sequence of interactions (expressed using vertices) and transport
  * (expressed using edges).
  *
  * The \ref Path data structure is responsible for the storage of this
- * information. It also contains useful utility functions, for instance 
+ * information. It also contains useful utility functions, for instance
  * to perform a random walk, or to splice and connect path segments.
- * 
+ *
  * \sa PathVertex
  * \sa PathEdge
  *
@@ -51,13 +51,13 @@ public:
 	/* ==================================================================== */
 	//! @{ \name              Path construction
 	/* ==================================================================== */
-	
+
 	/// Create a new, empty path
 	inline Path() { }
 
 	/// Create a new path of the specified size
 	inline Path(size_t size) : m_vertices(size) { }
-	
+
 	/// Copy constructor
 	inline Path(const Path &path) : m_vertices(path.m_vertices),
 		m_edges(path.m_edges) { }
@@ -65,7 +65,7 @@ public:
 	/**
 	 * \brief Initialize the path with an endpoint vertex
 	 *
-	 * This function clears the path and initializes it with a single 
+	 * This function clears the path and initializes it with a single
 	 * endpoint vertex of the type implied by the \c mode parameter.
 	 *
 	 * \param scene
@@ -78,7 +78,7 @@ public:
 	 *     Reference to a memory pool that will be used to release
 	 *     and allocate edges and vertices.
 	 */
-	void initialize(const Scene *scene, Float time, 
+	void initialize(const Scene *scene, Float time,
 		ETransportMode mode, MemoryPool &pool);
 
 	/**
@@ -92,16 +92,16 @@ public:
 	 *     Desired number of random walk steps (<tt>-1</tt>=infinite)
 	 * \param rrStart
 	 *     Depth to start using russian roulette
-	 *     (<tt>-1</tt>=never, <tt>0</tt>=starting at the first 
+	 *     (<tt>-1</tt>=never, <tt>0</tt>=starting at the first
 	 *     bounce, and so on)
 	 * \param mode
 	 *     Denotes whether radiance or importance are being transported
 	 * \param pool
-	 *     Reference to a memory pool that will be used to allocate 
+	 *     Reference to a memory pool that will be used to allocate
 	 *     edges and vertices.
 	 * \return The number of successful steps performed by the random walk.
 	 */
-	int randomWalk(const Scene *scene, Sampler *sampler, 
+	int randomWalk(const Scene *scene, Sampler *sampler,
 		int nSteps, int rrStart, ETransportMode mode,
 		MemoryPool &pool);
 
@@ -120,21 +120,21 @@ public:
 	 *     sensor subpath
 	 * \param rrStart
 	 *     Depth to start using russian roulette
-	 *     (<tt>-1</tt>=never, <tt>0</tt>=starting at the first 
+	 *     (<tt>-1</tt>=never, <tt>0</tt>=starting at the first
 	 *     bounce, and so on)
 	 * \param pool
-	 *     Reference to a memory pool that will be used to allocate 
+	 *     Reference to a memory pool that will be used to allocate
 	 *     edges and vertices.
 	 * \return The number of successful steps performed by the random walk.
 	 */
-	int randomWalkFromPixel(const Scene *scene, Sampler *sampler, 
-		int nSteps, const Point2i &pixelPosition, int rrStart, 
+	int randomWalkFromPixel(const Scene *scene, Sampler *sampler,
+		int nSteps, const Point2i &pixelPosition, int rrStart,
 		MemoryPool &pool);
 
 	/**
 	 * \brief Perform two random walks on an emitter and sensor subpath
 	 *
-	 * This function is almost identical to calling \ref randomWalk() twice 
+	 * This function is almost identical to calling \ref randomWalk() twice
 	 * in sequence. The main difference is that it performs the random
 	 * walk steps in a staggered order (i.e. one step on the emitter subpath,
 	 * one step on the sensor subpath, and so on..), which is important for
@@ -163,25 +163,25 @@ public:
 	 *     sensor subpath
 	 * \param rrStart
 	 *     Depth to start using russian roulette
-	 *     (<tt>-1</tt>=never, <tt>0</tt>=starting at the first 
+	 *     (<tt>-1</tt>=never, <tt>0</tt>=starting at the first
 	 *     bounce, and so on)
 	 * \param pool
-	 *     Reference to a memory pool that will be used to allocate 
+	 *     Reference to a memory pool that will be used to allocate
 	 *     edges and vertices.
 	 * \return The number of successful steps performed by the random walk
 	 *         on the emitter and sensor subpath, respectively.
 	 */
-	static std::pair<int, int> alternatingRandomWalkFromPixel(const Scene *scene, 
-		Sampler *sampler, Path &emitterPath, int nEmitterSteps, 
+	static std::pair<int, int> alternatingRandomWalkFromPixel(const Scene *scene,
+		Sampler *sampler, Path &emitterPath, int nEmitterSteps,
 		Path &sensorPath, int nSensorSteps, const Point2i &pixelPosition,
 		int rrStart, MemoryPool &pool);
 
 	/**
-	 * \brief Verify the cached values stored in this path 
+	 * \brief Verify the cached values stored in this path
 	 *
 	 * This function re-evaluates a series of quantities associated with
 	 * each vertex and edge and compares them to locally cached values.
-	 * If any mismatch is found, the function sends debug output to a 
+	 * If any mismatch is found, the function sends debug output to a
 	 * specified output stream and returns \c false.
 	 *
 	 * \param scene
@@ -203,7 +203,7 @@ public:
 	/**
 	 * \brief Return the number of vertices stored in this path
 	 *
-	 * For a nonempty path, the number of vertices is always equal 
+	 * For a nonempty path, the number of vertices is always equal
 	 * To \ref edgeCount()+1.
 	 */
 	inline size_t vertexCount() const {
@@ -213,7 +213,7 @@ public:
 	/**
 	 * \brief Return the number of edges stored in this path
 	 *
-	 * For a nonempty path, the number of vertices is always equal 
+	 * For a nonempty path, the number of vertices is always equal
 	 * To \ref vertexCount()-1.
 	 */
 	inline size_t edgeCount() const {
@@ -231,9 +231,9 @@ public:
 	/// Return an vertex by its index
 	inline PathVertexPtr &vertex(size_t index) {
 		#if MTS_BD_DEBUG == 1
-			if (index >= m_vertices.size()) 
+			if (index >= m_vertices.size())
 				SLog(EError, "Path vertex index " SIZE_T_FMT
-					" is out of bounds, array size: " SIZE_T_FMT, 
+					" is out of bounds, array size: " SIZE_T_FMT,
 					index, m_vertices.size());
 		#endif
 		return m_vertices[index];
@@ -242,9 +242,9 @@ public:
 	/// Return an vertex by its index (const version)
 	inline const PathVertexPtr &vertex(size_t index) const {
 		#if MTS_BD_DEBUG == 1
-			if (index >= m_vertices.size()) 
+			if (index >= m_vertices.size())
 				SLog(EError, "Path vertex index " SIZE_T_FMT
-					" is out of bounds, array size: " SIZE_T_FMT, 
+					" is out of bounds, array size: " SIZE_T_FMT,
 					index, m_vertices.size());
 		#endif
 		return m_vertices[index];
@@ -252,7 +252,7 @@ public:
 
 	/// Return an vertex by its index (or NULL if out of bounds)
 	inline PathVertexPtr vertexOrNull(size_t index) {
-		if (index >= m_vertices.size()) 
+		if (index >= m_vertices.size())
 			return NULL;
 		return m_vertices[index];
 	}
@@ -267,9 +267,9 @@ public:
 	/// Return an edge by its index
 	inline PathEdgePtr &edge(size_t index) {
 		#if MTS_BD_DEBUG == 1
-			if (index >= m_edges.size()) 
+			if (index >= m_edges.size())
 				SLog(EError, "Path edge index " SIZE_T_FMT
-					" is out of bounds, array size: " SIZE_T_FMT, 
+					" is out of bounds, array size: " SIZE_T_FMT,
 					index, m_edges.size());
 		#endif
 		return m_edges[index];
@@ -278,9 +278,9 @@ public:
 	/// Return an edge by its index (const version)
 	inline const PathEdgePtr &edge(size_t index) const {
 		#if MTS_BD_DEBUG == 1
-			if (index >= m_edges.size()) 
+			if (index >= m_edges.size())
 				SLog(EError, "Path edge index " SIZE_T_FMT
-					" is out of bounds, array size: " SIZE_T_FMT, 
+					" is out of bounds, array size: " SIZE_T_FMT,
 					index, m_edges.size());
 		#endif
 		return m_edges[index];
@@ -288,24 +288,24 @@ public:
 
 	/// Return an edge by its index (or \c NULL if out of bounds)
 	inline PathEdgePtr edgeOrNull(size_t index) {
-		if (index >= m_edges.size()) 
+		if (index >= m_edges.size())
 			return NULL;
 		return m_edges[index];
 	}
 
 	/// Return an edge by its index (or \c NULL if out of bounds, const version)
 	inline PathEdgePtr edgeOrNull(size_t index) const {
-		if (index >= m_edges.size()) 
+		if (index >= m_edges.size())
 			return NULL;
 		return m_edges[index];
 	}
 
-	
+
 	//! @}
     /* ==================================================================== */
 
 	/* ==================================================================== */
-	//! @{ \name                    Miscellaneous 
+	//! @{ \name                    Miscellaneous
  	/* ==================================================================== */
 
 	/**
@@ -320,11 +320,11 @@ public:
 	inline Spectrum getPrefixSuffixWeight(int l, int m) const {
 		Spectrum weight(1.0f);
 
-		for (int s=0; s<l; ++s) 
-			weight *= m_vertices[s]->weight[EImportance] 
+		for (int s=0; s<l; ++s)
+			weight *= m_vertices[s]->weight[EImportance]
 				* m_edges[s]->weight[EImportance];
 
-		for (int t=length(); t>m; --t) 
+		for (int t=length(); t>m; --t)
 			weight *= m_vertices[t]->weight[ERadiance]
 				* m_edges[t-1]->weight[ERadiance];
 
@@ -344,7 +344,7 @@ public:
 			return false;
 
 		for (size_t i=0; i<m_vertices.size(); ++i) {
-			if (m_vertices[i]->type != p.vertex(i)->type || 
+			if (m_vertices[i]->type != p.vertex(i)->type ||
 				m_vertices[i]->isConnectable() != p.vertex(i)->isConnectable())
 				return false;
 		}
@@ -365,11 +365,11 @@ public:
 		Spectrum weight(1.0f);
 		int k = length();
 
-		for (int s=0; s<k-1; ++s) 
-			weight *= m_vertices[s]->weight[EImportance] 
+		for (int s=0; s<k-1; ++s)
+			weight *= m_vertices[s]->weight[EImportance]
 				* m_edges[s]->weight[EImportance];
 
-		weight = weight  
+		weight = weight
 			* m_vertices[k]->weight[ERadiance]
 			* m_vertices[k-1]->weight[ERadiance]
 			* m_edges[k-1]->weight[ERadiance];
@@ -379,15 +379,15 @@ public:
 	}
 
 	/**
-	 * \brief Compute the multiple importance sampling weight of the <tt>(s,t)</tt> 
+	 * \brief Compute the multiple importance sampling weight of the <tt>(s,t)</tt>
 	 * sampling strategy in BDPT.
 	 *
-	 * This implementation uses the power heuristic with exponent 2 and 
-	 * repeatedly evaluates equation (10.9) from Eric Veach's PhD thesis to 
-	 * compute the weight in an efficient and numerically stable manner. 
+	 * This implementation uses the power heuristic with exponent 2 and
+	 * repeatedly evaluates equation (10.9) from Eric Veach's PhD thesis to
+	 * compute the weight in an efficient and numerically stable manner.
 	 *
 	 * The function completely ignores the effects of russian roulette, since
-	 * this allows for a more efficient implementation. The resulting estimator 
+	 * this allows for a more efficient implementation. The resulting estimator
 	 * is still unbiased despite this apparent inaccuracy.
 	 *
 	 * \param scene
@@ -396,7 +396,7 @@ public:
 	 *    Reference to the emitter subpath
 	 * \param connectionEdge
 	 *    Pointer to an edge data structure associated with the
-	 *    transport between <tt>emitterSubpath[s]</tt> and 
+	 *    transport between <tt>emitterSubpath[s]</tt> and
 	 *    <tt>sensorSubpath[t]</tt>.
 	 * \param sensorSubpath
 	 *    Reference to the sensor subpath
@@ -404,19 +404,19 @@ public:
 	 *    Number of steps to take along the emitter subpath
 	 * \param t
 	 *    Number of steps to take along the sensor subpath
-	 * \param direct 
+	 * \param direct
 	 *    When the parameter \c direct is set to \c true, the implementation
 	 *    accounts for the fact that specialized direct sampling strategies
 	 *    are used for paths with <tt>s==1</tt> and <tt>t==1</tt>.
 	 * \param lightImage
 	 *    Denotes whether or not rendering strategies that require a 'light image'
-	 *    (specifically, those with <tt>t==0</tt> or <tt>t==1</tt>) are included 
+	 *    (specifically, those with <tt>t==0</tt> or <tt>t==1</tt>) are included
 	 *    in the rendering process.
 	 */
-	static Float miWeight(const Scene *scene, 
-			const Path &emitterSubpath, 
+	static Float miWeight(const Scene *scene,
+			const Path &emitterSubpath,
 			const PathEdge *connectionEdge,
-			const Path &sensorSubpath, int s, int t, 
+			const Path &sensorSubpath, int s, int t,
 			bool direct, bool lightImage);
 
 	/**
@@ -494,7 +494,7 @@ public:
 
 	/// Compare this path against another path
 	bool operator==(const Path &path) const;
-	
+
 	/// Compare this path against another path
 	inline bool operator!=(const Path &path) const {
 		return !operator==(path);
@@ -503,10 +503,10 @@ public:
 	/// Create a deep copy of this path
 	void clone(Path &target, MemoryPool &pool) const;
 
-	/// Return a string representation of the path 
+	/// Return a string representation of the path
 	std::string toString() const;
-	
-	/// Return a basic string summary of the path 
+
+	/// Return a basic string summary of the path
 	std::string summarize() const;
 
 	//! @}

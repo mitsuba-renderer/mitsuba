@@ -20,7 +20,7 @@
 
 MTS_NAMESPACE_BEGIN
 
-ConstantSpectrumTexture::ConstantSpectrumTexture(Stream *stream, InstanceManager *manager) 
+ConstantSpectrumTexture::ConstantSpectrumTexture(Stream *stream, InstanceManager *manager)
  : Texture(stream, manager) {
 	m_value = Spectrum(stream);
 }
@@ -31,7 +31,7 @@ void ConstantSpectrumTexture::serialize(Stream *stream, InstanceManager *manager
 	m_value.serialize(stream);
 }
 
-ConstantFloatTexture::ConstantFloatTexture(Stream *stream, InstanceManager *manager) 
+ConstantFloatTexture::ConstantFloatTexture(Stream *stream, InstanceManager *manager)
  : Texture(stream, manager) {
 	m_value = stream->readFloat();
 }
@@ -41,7 +41,7 @@ void ConstantFloatTexture::serialize(Stream *stream, InstanceManager *manager) c
 	stream->writeFloat(m_value);
 }
 
-SpectrumProductTexture::SpectrumProductTexture(Stream *stream, InstanceManager *manager) 
+SpectrumProductTexture::SpectrumProductTexture(Stream *stream, InstanceManager *manager)
  : Texture(stream, manager) {
 	m_a = static_cast<Texture *>(manager->getInstance(stream));
 	m_b = static_cast<Texture *>(manager->getInstance(stream));
@@ -53,7 +53,7 @@ void SpectrumProductTexture::serialize(Stream *stream, InstanceManager *manager)
 	manager->serialize(stream, m_b.get());
 }
 
-SpectrumAdditionTexture::SpectrumAdditionTexture(Stream *stream, InstanceManager *manager) 
+SpectrumAdditionTexture::SpectrumAdditionTexture(Stream *stream, InstanceManager *manager)
  : Texture(stream, manager) {
 	m_a = static_cast<Texture *>(manager->getInstance(stream));
 	m_b = static_cast<Texture *>(manager->getInstance(stream));
@@ -65,7 +65,7 @@ void SpectrumAdditionTexture::serialize(Stream *stream, InstanceManager *manager
 	manager->serialize(stream, m_b.get());
 }
 
-SpectrumSubtractionTexture::SpectrumSubtractionTexture(Stream *stream, InstanceManager *manager) 
+SpectrumSubtractionTexture::SpectrumSubtractionTexture(Stream *stream, InstanceManager *manager)
  : Texture(stream, manager) {
 	m_a = static_cast<Texture *>(manager->getInstance(stream));
 	m_b = static_cast<Texture *>(manager->getInstance(stream));
@@ -79,7 +79,7 @@ void SpectrumSubtractionTexture::serialize(Stream *stream, InstanceManager *mana
 
 class ConstantSpectrumTextureShader : public Shader {
 public:
-	ConstantSpectrumTextureShader(Renderer *renderer, const Spectrum &value) 
+	ConstantSpectrumTextureShader(Renderer *renderer, const Spectrum &value)
 		: Shader(renderer, ETextureShader), m_value(value) {
 	}
 
@@ -108,7 +108,7 @@ private:
 
 class ConstantFloatTextureShader : public Shader {
 public:
-	ConstantFloatTextureShader(Renderer *renderer, const Float &value) 
+	ConstantFloatTextureShader(Renderer *renderer, const Float &value)
 		: Shader(renderer, ETextureShader), m_value(value) {
 	}
 
@@ -137,7 +137,7 @@ private:
 
 class SpectrumProductTextureShader : public Shader {
 public:
-	SpectrumProductTextureShader(Renderer *renderer, const Texture *a, const Texture *b) 
+	SpectrumProductTextureShader(Renderer *renderer, const Texture *a, const Texture *b)
 		: Shader(renderer, ETextureShader), m_a(a), m_b(b) {
 		m_aShader = renderer->registerShaderForResource(m_a.get());
 		m_bShader = renderer->registerShaderForResource(m_b.get());
@@ -173,7 +173,7 @@ private:
 
 class SpectrumAdditionTextureShader : public Shader {
 public:
-	SpectrumAdditionTextureShader(Renderer *renderer, const Texture *a, const Texture *b) 
+	SpectrumAdditionTextureShader(Renderer *renderer, const Texture *a, const Texture *b)
 		: Shader(renderer, ETextureShader), m_a(a), m_b(b) {
 		m_aShader = renderer->registerShaderForResource(m_a.get());
 		m_bShader = renderer->registerShaderForResource(m_b.get());
@@ -209,7 +209,7 @@ private:
 
 class SpectrumSubtractionTextureShader : public Shader {
 public:
-	SpectrumSubtractionTextureShader(Renderer *renderer, const Texture *a, const Texture *b) 
+	SpectrumSubtractionTextureShader(Renderer *renderer, const Texture *a, const Texture *b)
 		: Shader(renderer, ETextureShader), m_a(a), m_b(b) {
 		m_aShader = renderer->registerShaderForResource(m_a.get());
 		m_bShader = renderer->registerShaderForResource(m_b.get());
@@ -243,23 +243,23 @@ private:
 	ref<Shader> m_aShader, m_bShader;
 };
 
-Shader *ConstantSpectrumTexture::createShader(Renderer *renderer) const { 
+Shader *ConstantSpectrumTexture::createShader(Renderer *renderer) const {
 	return new ConstantSpectrumTextureShader(renderer, m_value);
 }
 
-Shader *ConstantFloatTexture::createShader(Renderer *renderer) const { 
+Shader *ConstantFloatTexture::createShader(Renderer *renderer) const {
 	return new ConstantFloatTextureShader(renderer, m_value);
 }
 
-Shader *SpectrumProductTexture::createShader(Renderer *renderer) const { 
+Shader *SpectrumProductTexture::createShader(Renderer *renderer) const {
 	return new SpectrumProductTextureShader(renderer, m_a.get(), m_b.get());
 }
 
-Shader *SpectrumAdditionTexture::createShader(Renderer *renderer) const { 
+Shader *SpectrumAdditionTexture::createShader(Renderer *renderer) const {
 	return new SpectrumAdditionTextureShader(renderer, m_a.get(), m_b.get());
 }
 
-Shader *SpectrumSubtractionTexture::createShader(Renderer *renderer) const { 
+Shader *SpectrumSubtractionTexture::createShader(Renderer *renderer) const {
 	return new SpectrumSubtractionTextureShader(renderer, m_a.get(), m_b.get());
 }
 

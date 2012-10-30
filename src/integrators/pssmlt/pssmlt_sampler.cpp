@@ -34,7 +34,7 @@ PSSMLTSampler::PSSMLTSampler(PSSMLTSampler *sampler) : Sampler(Properties()),
 	configure();
 }
 
-PSSMLTSampler::PSSMLTSampler(Stream *stream, InstanceManager *manager) 
+PSSMLTSampler::PSSMLTSampler(Stream *stream, InstanceManager *manager)
 	: Sampler(stream, manager) {
 	m_random = static_cast<Random *>(manager->getInstance(stream));
 	m_s1 = stream->readFloat();
@@ -74,7 +74,7 @@ void PSSMLTSampler::reset() {
 }
 
 void PSSMLTSampler::reject() {
-	for (size_t i=0; i<m_backup.size(); ++i) 
+	for (size_t i=0; i<m_backup.size(); ++i)
 		m_u[m_backup[i].first] = m_backup[i].second;
 	m_backup.clear();
 	m_sampleIndex = 0;
@@ -133,7 +133,7 @@ std::string PSSMLTSampler::toString() const {
 	std::ostringstream oss;
 	oss << "PSSMLTSampler[" << endl
 		<< "  sampleCount = " << m_sampleCount << endl
-		<< "]"; 
+		<< "]";
 	return oss.str();
 }
 

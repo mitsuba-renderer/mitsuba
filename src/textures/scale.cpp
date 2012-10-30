@@ -33,7 +33,7 @@ MTS_NAMESPACE_BEGIN
  *     }
  * }
  *
- * This simple plugin wraps a nested texture plugin and multiplies its 
+ * This simple plugin wraps a nested texture plugin and multiplies its
  * contents by a user-specified value. This can be quite useful when a
  * texture is too dark or too bright. The plugin can also be used to adjust
  * the height of a bump map when using the \pluginref{bump} plugin.
@@ -64,7 +64,7 @@ public:
 		Assert(m_scale.min() > 0);
 	}
 
-	ScalingTexture(Stream *stream, InstanceManager *manager) 
+	ScalingTexture(Stream *stream, InstanceManager *manager)
 		: Texture(stream, manager) {
 		m_nested = static_cast<Texture *>(manager->getInstance(stream));
 		m_scale = Spectrum(stream);
@@ -129,11 +129,11 @@ protected:
 	Spectrum m_scale;
 };
 
-// ================ Hardware shader implementation ================ 
+// ================ Hardware shader implementation ================
 
 class ScalingTextureShader : public Shader {
 public:
-	ScalingTextureShader(Renderer *renderer, const Texture *nested, const Spectrum &scale) 
+	ScalingTextureShader(Renderer *renderer, const Texture *nested, const Spectrum &scale)
 		: Shader(renderer, ETextureShader), m_nested(nested), m_scale(scale) {
 		m_nestedShader = renderer->registerShaderForResource(m_nested.get());
 	}

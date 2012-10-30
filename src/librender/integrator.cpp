@@ -35,7 +35,7 @@ void Integrator::postprocess(const Scene *scene, RenderQueue *queue, const Rende
 void Integrator::serialize(Stream *stream, InstanceManager *manager) const {
 	NetworkedObject::serialize(stream, manager);
 }
-void Integrator::configureSampler(const Scene *scene, Sampler *sampler) { 
+void Integrator::configureSampler(const Scene *scene, Sampler *sampler) {
 	/* Prepare the sampler for bucket-based rendering */
 	sampler->setFilmResolution(scene->getFilm()->getCropSize(),
 		getClass()->derivesFrom(MTS_CLASS(SamplingIntegrator)));
@@ -52,7 +52,7 @@ void SamplingIntegrator::serialize(Stream *stream, InstanceManager *manager) con
 	Integrator::serialize(stream, manager);
 }
 
-Spectrum SamplingIntegrator::E(const Scene *scene, const Intersection &its, 
+Spectrum SamplingIntegrator::E(const Scene *scene, const Intersection &its,
 		const Medium *medium, Sampler *sampler, int nSamples, bool handleIndirect) const {
 	Spectrum E(0.0f);
 	RadianceQueryRecord query(scene, sampler);
@@ -68,7 +68,7 @@ Spectrum SamplingIntegrator::E(const Scene *scene, const Intersection &its,
 
 		if (!directRadiance.isZero()) {
 			Float dp = dot(dRec.d, its.shFrame.n);
-			if (dp > 0) 
+			if (dp > 0)
 				E += directRadiance * dp;
 		}
 
@@ -103,13 +103,13 @@ bool SamplingIntegrator::render(Scene *scene,
 	const Sampler *sampler = static_cast<const Sampler *>(sched->getResource(samplerResID, 0));
 	size_t sampleCount = sampler->getSampleCount();
 
-	Log(EInfo, "Starting render job (%ix%i, " SIZE_T_FMT " %s, " SIZE_T_FMT 
-		" %s, " SSE_STR ") ..", film->getCropSize().x, film->getCropSize().y, 
-		sampleCount, sampleCount == 1 ? "sample" : "samples", nCores, 
+	Log(EInfo, "Starting render job (%ix%i, " SIZE_T_FMT " %s, " SIZE_T_FMT
+		" %s, " SSE_STR ") ..", film->getCropSize().x, film->getCropSize().y,
+		sampleCount, sampleCount == 1 ? "sample" : "samples", nCores,
 		nCores == 1 ? "core" : "cores");
 
 	/* This is a sampling-based integrator - parallelize */
-	ref<ParallelProcess> proc = new BlockedRenderProcess(job, 
+	ref<ParallelProcess> proc = new BlockedRenderProcess(job,
 		queue, scene->getBlockSize());
 	int integratorResID = sched->registerResource(this);
 	proc->bindResource("integrator", integratorResID);
@@ -138,12 +138,12 @@ void SamplingIntegrator::wakeup(ConfigurableObject *parent,
 }
 
 void SamplingIntegrator::renderBlock(const Scene *scene,
-		const Sensor *sensor, Sampler *sampler, ImageBlock *block, 
+		const Sensor *sensor, Sampler *sampler, ImageBlock *block,
 		const bool &stop, const std::vector< TPoint2<uint8_t> > &points) const {
 
-	Float diffScaleFactor = 1.0f / 
+	Float diffScaleFactor = 1.0f /
 		std::sqrt((Float) sampler->getSampleCount());
-	
+
 	bool needsApertureSample = sensor->needsApertureSample();
 	bool needsTimeSample = sensor->needsTimeSample();
 
@@ -156,7 +156,7 @@ void SamplingIntegrator::renderBlock(const Scene *scene,
 
 	for (size_t i = 0; i<points.size(); ++i) {
 		Point2i offset = Point2i(points[i]) + Vector2i(block->getOffset());
-		if (stop) 
+		if (stop)
 			break;
 
 		sampler->generate(offset);
@@ -186,7 +186,7 @@ MonteCarloIntegrator::MonteCarloIntegrator(const Properties &props) : SamplingIn
 	/* Depth to begin using russian roulette */
 	m_rrDepth = props.getInteger("rrDepth", 5);
 
-	/* Longest visualized path depth (\c -1 = infinite). 
+	/* Longest visualized path depth (\c -1 = infinite).
 	   A value of \c 1 will visualize only directly visible light sources.
 	   \c 2 will lead to single-bounce (direct-only) illumination, and so on. */
 	m_maxDepth = props.getInteger("maxDepth", -1);
@@ -196,7 +196,7 @@ MonteCarloIntegrator::MonteCarloIntegrator(const Properties &props) : SamplingIn
 	 * and shading normals of a surface don't agree on whether a ray is on
 	 * the front or back-side of a surface.
 	 *
-	 * When \c strictNormals is set to \c false, the shading normal has 
+	 * When \c strictNormals is set to \c false, the shading normal has
 	 * precedence, and rendering proceeds normally at the risk of
 	 * introducing small light leaks (this is the default).
 	 *

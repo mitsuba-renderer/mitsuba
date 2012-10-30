@@ -38,7 +38,7 @@ public:
 		n = Normal(stream);
 		shapeIndex = stream->readInt();
 	}
-	inline PositionSample(const Point &p, const Normal &n, int shapeIndex) 
+	inline PositionSample(const Point &p, const Normal &n, int shapeIndex)
 		: p(p), n(n), shapeIndex(shapeIndex) { }
 
 	/// Serialize an position sample to a binary data stream
@@ -55,7 +55,7 @@ public:
 
 /**
  * \brief This class stores a number of position samples, which can be sent
- * over the wire as needed. 
+ * over the wire as needed.
  *
  * Used to implement parallel irradiance sampling for the dipole BSSRDF.
  */
@@ -121,7 +121,7 @@ public:
 	 * \param p The sample point on the surface
 	 * \param E The irradiance value at this position
 	 */
-	inline IrradianceSample(const Point &p, const Spectrum &E) 
+	inline IrradianceSample(const Point &p, const Spectrum &E)
 		: p(p), E(E) { }
 
 	/// Serialize an irradiance sample to a binary data stream
@@ -144,7 +144,7 @@ public:
 
 /**
  * \brief This class stores a number of irradiance samples, which can be sent
- * over the wire as needed. 
+ * over the wire as needed.
  *
  * Used to implement parallel irradiance sampling for the dipole BSSRDF.
  */
@@ -195,7 +195,7 @@ private:
 class IrradianceSamplingProcess : public ParallelProcess {
 public:
 	IrradianceSamplingProcess(PositionSampleVector *positions,
-		size_t granularity, int irrSamples, bool irrIndirect, 
+		size_t granularity, int irrSamples, bool irrIndirect,
 		Float time, const void *data);
 
 	inline IrradianceSampleVector *getIrradianceSampleVector() {
@@ -211,7 +211,7 @@ public:
 	}
 
 	/* ParallelProcess implementation */
-	ref<WorkProcessor> createWorkProcessor() const; 
+	ref<WorkProcessor> createWorkProcessor() const;
 	void processResult(const WorkResult *wr, bool cancelled);
 	ParallelProcess::EStatus generateWork(WorkUnit *unit, int worker);
 

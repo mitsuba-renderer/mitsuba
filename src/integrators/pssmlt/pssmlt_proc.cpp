@@ -27,22 +27,22 @@ MTS_NAMESPACE_BEGIN
 /*                         Worker implementation                        */
 /* ==================================================================== */
 
-StatsCounter largeStepRatio("Primary sample space MLT",  
+StatsCounter largeStepRatio("Primary sample space MLT",
 	"Accepted large steps", EPercentage);
-StatsCounter smallStepRatio("Primary sample space MLT",  
+StatsCounter smallStepRatio("Primary sample space MLT",
 	"Accepted small steps", EPercentage);
-StatsCounter acceptanceRate("Primary sample space MLT",  
+StatsCounter acceptanceRate("Primary sample space MLT",
 	"Overall acceptance rate", EPercentage);
-StatsCounter forcedAcceptance("Primary sample space MLT",  
+StatsCounter forcedAcceptance("Primary sample space MLT",
 	"Number of forced acceptances");
 
 class PSSMLTRenderer : public WorkProcessor {
 public:
-	PSSMLTRenderer(const PSSMLTConfiguration &conf) 
+	PSSMLTRenderer(const PSSMLTConfiguration &conf)
 		: m_config(conf) {
 	}
 
-	PSSMLTRenderer(Stream *stream, InstanceManager *manager) 
+	PSSMLTRenderer(Stream *stream, InstanceManager *manager)
 		: WorkProcessor(stream, manager) {
 		m_config = PSSMLTConfiguration(stream);
 	}
@@ -80,8 +80,8 @@ public:
 		m_emitterSampler = new PSSMLTSampler(m_origSampler);
 		m_directSampler = new PSSMLTSampler(m_origSampler);
 
-		m_pathSampler = new PathSampler(m_config.technique, m_scene, 
-			m_emitterSampler, m_sensorSampler, m_directSampler, m_config.maxDepth, 
+		m_pathSampler = new PathSampler(m_config.technique, m_scene,
+			m_emitterSampler, m_sensorSampler, m_directSampler, m_config.maxDepth,
 			m_config.rrDepth, m_config.separateDirect, m_config.directSampling);
 	}
 
@@ -119,10 +119,10 @@ public:
 		m_emitterSampler->accept();
 		m_directSampler->accept();
 
-		/* Sanity check -- the luminance should match the one from 
+		/* Sanity check -- the luminance should match the one from
 		   the warmup phase - an error here would indicate inconsistencies
 		   regarding the use of random numbers during sample generation */
-		if (std::abs((current->luminance - seed.luminance) 
+		if (std::abs((current->luminance - seed.luminance)
 				/ seed.luminance) > Epsilon)
 			Log(EError, "Error when reconstructing a seed path: luminance "
 				"= %f, but expected luminance = %f", current->luminance, seed.luminance);
@@ -133,7 +133,7 @@ public:
 		Float cumulativeWeight = 0;
 		current->normalize(m_config.importanceMap);
 		for (uint64_t mutationCtr=0; mutationCtr<m_config.nMutations && !stop; ++mutationCtr) {
-			if (wu->getTimeout() > 0 && (mutationCtr % 8192) == 0 
+			if (wu->getTimeout() > 0 && (mutationCtr % 8192) == 0
 					&& (int) timer->getMilliseconds() > wu->getTimeout())
 				break;
 
@@ -171,7 +171,7 @@ public:
 				accept = (a == 1) || (random->nextFloat() < a);
 			} else {
 				if (m_config.kelemenStyleWeights)
-					currentWeight = current->luminance 
+					currentWeight = current->luminance
 						/ (current->luminance/m_config.luminance + m_config.pLarge);
 				else
 					currentWeight = 1;
@@ -183,7 +183,7 @@ public:
 			if (accept) {
 				for (size_t k=0; k<current->size(); ++k) {
 					Spectrum value = current->getValue(k) * cumulativeWeight;
-					if (!value.isZero()) 
+					if (!value.isZero())
 						result->put(current->getPosition(k), &value[0]);
 				}
 
@@ -205,7 +205,7 @@ public:
 			} else {
 				for (size_t k=0; k<proposed->size(); ++k) {
 					Spectrum value = proposed->getValue(k) * proposedWeight;
-					if (!value.isZero()) 
+					if (!value.isZero())
 						result->put(proposed->getPosition(k), &value[0]);
 				}
 
@@ -213,9 +213,9 @@ public:
 				m_emitterSampler->reject();
 				m_directSampler->reject();
 				acceptanceRate.incrementBase(1);
-				if (largeStep) 
+				if (largeStep)
 					largeStepRatio.incrementBase(1);
-				else 
+				else
 					smallStepRatio.incrementBase(1);
 			}
 		}
@@ -254,9 +254,9 @@ private:
 /*                           Parallel process                           */
 /* ==================================================================== */
 
-PSSMLTProcess::PSSMLTProcess(const RenderJob *parent, RenderQueue *queue, 
+PSSMLTProcess::PSSMLTProcess(const RenderJob *parent, RenderQueue *queue,
 	const PSSMLTConfiguration &conf, const Bitmap *directImage,
-	const std::vector<PathSeed> &seeds) : m_job(parent), m_queue(queue), 
+	const std::vector<PathSeed> &seeds) : m_job(parent), m_queue(queue),
 		m_config(conf), m_progress(NULL), m_seeds(seeds) {
 	m_directImage = directImage;
 	m_timeoutTimer = new Timer();
@@ -293,7 +293,7 @@ void PSSMLTProcess::develop() {
 
 	avgLuminance /= (Float) pixelCount;
 	Float luminanceFactor = m_config.luminance / avgLuminance;
-	
+
 	for (size_t i=0; i<pixelCount; ++i) {
 		Float correction = luminanceFactor;
 		if (importanceMap)
@@ -316,7 +316,7 @@ void PSSMLTProcess::processResult(const WorkResult *wr, bool cancelled) {
 	m_progress->update(++m_resultCounter);
 	m_refreshTimeout = std::min(2000U, m_refreshTimeout * 2);
 
-	/* Re-develop the entire image every two seconds if partial results are 
+	/* Re-develop the entire image every two seconds if partial results are
 	   visible (e.g. in a graphical user interface). */
 	if (m_job->isInteractive() && m_refreshTimer->getMilliseconds() > m_refreshTimeout)
 		develop();
@@ -340,7 +340,7 @@ ParallelProcess::EStatus PSSMLTProcess::generateWork(WorkUnit *unit, int worker)
 
 void PSSMLTProcess::bindResource(const std::string &name, int id) {
 	ParallelProcess::bindResource(name, id);
-	if (name == "sensor") { 
+	if (name == "sensor") {
 		m_film = static_cast<Sensor *>(Scheduler::getInstance()->getResource(id))->getFilm();
 		if (m_progress)
 			delete m_progress;

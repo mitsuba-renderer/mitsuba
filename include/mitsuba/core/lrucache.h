@@ -39,17 +39,17 @@ MTS_NAMESPACE_BEGIN
  * The original code is under the following license:
  *
  * <pre>
- * Copyright (c) 2010, Tim Day <timday@timday.com> 
- * Permission to use, copy, modify, and/or distribute this software for any 
- * purpose with or without fee is hereby granted, provided that the above 
- * copyright notice and this permission notice appear in all copies. 
- *  
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES 
- * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF 
- * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR 
- * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES 
- * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN 
- * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF 
+ * Copyright (c) 2010, Tim Day <timday@timday.com>
+ * Permission to use, copy, modify, and/or distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  * </pre>
  *
@@ -85,11 +85,11 @@ public:
 		typename cache_type::right_iterator
 			src = m_cache.right.begin();
 		if (m_cleanupFunction) {
-			while (src != m_cache.right.end()) 
+			while (src != m_cache.right.end())
 				m_cleanupFunction((*src++).info);
 		}
 	}
-		
+
 	bool isFull() const {
 		return m_cache.size() == m_capacity;
 	}
@@ -97,7 +97,7 @@ public:
 	// Obtain value of the cached function for k
 	V get(const K& k, bool &hit) {
 		// Attempt to find existing record
-		const typename cache_type::left_iterator it 
+		const typename cache_type::left_iterator it
 			= m_cache.left.find(k);
 
 		if (it == m_cache.left.end()) {
@@ -127,7 +127,7 @@ public:
 	template <typename IT> void get_keys(IT dst) const {
 		typename cache_type::right_const_reverse_iterator
 			src = m_cache.right.rbegin();
-		while (src != m_cache.right.rend()) 
+		while (src != m_cache.right.rend())
 			*dst++=(*src++).second;
 	}
 protected:

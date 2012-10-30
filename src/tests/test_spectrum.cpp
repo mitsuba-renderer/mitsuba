@@ -78,7 +78,7 @@ public:
 		spec.append(500, 1);
 		spec.append(700, 2);
 		spec.append(800, 3);
-		
+
 		InterpolatedSpectrum spec2 = spec;
 
 		assertEquals(spec.eval(499), 0.0f);
@@ -110,7 +110,7 @@ public:
 		assertEqualsEpsilon(z, 1.0f, 1e-3f);
 
 		#if SPECTRUM_SAMPLES > 3
-		spec2.clear();		
+		spec2.clear();
 		spec2.append(Spectrum::getBinCoverage(0).first, 0);
 		spec2.append(Spectrum::getBinCoverage(1).first, 1);
 		spec2.append(Spectrum::getBinCoverage(2).first, 1);
@@ -129,11 +129,11 @@ public:
 		/* Spot-check a 5000 Kelvin spectrum against values obtained at
 		   https://www.sensiac.org/external/resources/calculators/infrared_radiance_calculator.jsf
 
-		   Mitsuba uses units of W * m^-2 * sr^-1 * nm^-1, whereas that 
+		   Mitsuba uses units of W * m^-2 * sr^-1 * nm^-1, whereas that
 		   page uses W * cm^-2 * sr^-1 * um^-1  --- this is the reason for
 		   the factor of 10-difference.
 		*/
-		BlackBodySpectrum spec(5000); 
+		BlackBodySpectrum spec(5000);
 		assertEqualsEpsilon(spec.eval(400)/10, 874.f, .5f);
 		assertEqualsEpsilon(spec.eval(500)/10, 1211.f, .5f);
 		assertEqualsEpsilon(spec.eval(600)/10, 1276.f, .5f);

@@ -60,21 +60,21 @@ public:
 	 *
 	 * \param proposal
 	 *     Path data structure to be filled with the proposed mutated path
-	 * 
-	 * \param muRec 
+	 *
+	 * \param muRec
 	 *     Data record that describes the sampled mutation strategy
 	 *
-	 * \return \a true upon success. When the sampling step is 
-	 *     unsuccessful (this could happen due to various 
+	 * \return \a true upon success. When the sampling step is
+	 *     unsuccessful (this could happen due to various
 	 *     reasons), the function returns <tt>false</tt>.
 
      */
-	virtual bool sampleMutation(Path &source, Path &proposal, 
+	virtual bool sampleMutation(Path &source, Path &proposal,
 			MutationRecord &muRec) = 0;
 
 	/**
 	 * \brief For a pair of paths, this function computes the inverse
-	 * transition probability (matching the Q term in [Veach 97]) 
+	 * transition probability (matching the Q term in [Veach 97])
 	 *
 	 * \param source
 	 *     A path data structure containing the original path
@@ -82,7 +82,7 @@ public:
 	 * \param proposal
 	 *     A path data structure containing the proposed mutated path
 	 *
-	 * \param muRec 
+	 * \param muRec
 	 *     Data record that describes the mutation strategy, which
 	 *     transformed \c source to \c proposal.
 	 */
@@ -117,8 +117,8 @@ struct MTS_EXPORT_BIDIR MutationRecord {
 	int extra[5];
 
 	inline MutationRecord() { }
-	inline MutationRecord(Mutator::EMutationType type, int l, 
-			int m, int ka, const Spectrum &weight) 
+	inline MutationRecord(Mutator::EMutationType type, int l,
+			int m, int ka, const Spectrum &weight)
 	 : type(type), l(l), m(m), ka(ka), weight(weight) { }
 
 	MutationRecord reverse() const {

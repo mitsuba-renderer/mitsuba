@@ -37,10 +37,10 @@ MTS_NAMESPACE_BEGIN
 #define PROGRESS_MSG_SIZE 56
 
 /**
- * Specifies the number of internal counters associated with each 
+ * Specifies the number of internal counters associated with each
  * \ref StatsCounter instance.
  *
- * This is needed for SMP/ccNUMA systems where different processors might 
+ * This is needed for SMP/ccNUMA systems where different processors might
  * be contending for a cache line containing a counter. The solution used
  * here tries to ensure that every processor has  its own local counter.
  */
@@ -68,7 +68,7 @@ enum EStatsType {
  *
  * This counter takes up at least one cache line to reduce false sharing.
  */
-struct CacheLineCounter { 
+struct CacheLineCounter {
 #if MTS_32BIT_COUNTERS == 1
 	// WIN32 & Darwin (PPC/32) don't support atomic 64 bit increment operations
 	// -> restrict counters to 32bit :(
@@ -81,19 +81,19 @@ struct CacheLineCounter {
 };
 
 /** \brief General-purpose statistics counter
- * 
+ *
  * This class implements a simple counter, which can be used to track various
  * quantities within Mitsuba. At various points during the execution, it is
- * possible to then call \ref Statistics::printStats() to get a human-readable 
+ * possible to then call \ref Statistics::printStats() to get a human-readable
  * report of their values.
  *
  * \ingroup libcore
  */
 class MTS_EXPORT_CORE StatsCounter {
 public:
-	/** 
-	 * \brief Create a new statistics counter 
-	 * 
+	/**
+	 * \brief Create a new statistics counter
+	 *
 	 * \param category Category of the counter when shown in the statistics summary
 	 * \param name     Name of the counter when shown in the statistics summary
 	 * \param type     Characterization of the quantity that will be measured
@@ -137,7 +137,7 @@ public:
 		__sync_fetch_and_add(&m_value[Thread::getID() & NUM_COUNTERS_MASK].value, amount);
 #endif
 	}
-	
+
 	/// Increment the base counter by the specified amount (only for use with EPercentage/EAverage)
 	inline void incrementBase(size_t amount = 1) {
 #ifdef MTS_NO_STATISTICS
@@ -158,12 +158,12 @@ public:
 	inline void recordMinimum(size_t value) {
 		int id = Thread::getID() & NUM_COUNTERS_MASK;
 		#if MTS_32BIT_COUNTERS == 1
-			volatile int32_t *ptr = 
+			volatile int32_t *ptr =
 				(volatile int32_t *) &m_value[id].value;
 			int32_t curMinimum;
 			int32_t newMinimum = (int32_t) value;
 		#else
-			volatile int64_t *ptr = 
+			volatile int64_t *ptr =
 				(volatile int64_t *) &m_value[id].value;
 			int64_t curMinimum;
 			int64_t newMinimum = (int64_t) value;
@@ -186,12 +186,12 @@ public:
 	inline void recordMaximum(size_t value) {
 		int id = Thread::getID() & NUM_COUNTERS_MASK;
 		#if MTS_32BIT_COUNTERS == 1
-			volatile int32_t *ptr = 
+			volatile int32_t *ptr =
 				(volatile int32_t *) &m_value[id].value;
 			int32_t curMaximum;
 			int32_t newMaximum = (int32_t) value;
 		#else
-			volatile int64_t *ptr = 
+			volatile int64_t *ptr =
 				(volatile int64_t *) &m_value[id].value;
 			int64_t curMaximum;
 			int64_t newMaximum = (int64_t) value;
@@ -284,7 +284,7 @@ private:
 class MTS_EXPORT_CORE ProgressReporter {
 public:
 	/**
-	 * Construct a new progress reporter. 
+	 * Construct a new progress reporter.
 	 * 'ptr' is a custom pointer payload to be submitted with progress messages
 	 */
 	ProgressReporter(const std::string &title, long long total, const void *ptr);
@@ -299,7 +299,7 @@ public:
 	inline long long getValue() const { return m_value; }
 
 	/// Finish
-	inline void finish() { 
+	inline void finish() {
 		if (m_value < m_total)
 			update(m_total);
 	}
@@ -327,7 +327,7 @@ private:
 /** \brief Collects various rendering statistics and presents them
  * in a human-readable form.
  *
- * \remark Only the \ref getInstance(), \ref getStats(), and 
+ * \remark Only the \ref getInstance(), \ref getStats(), and
  * \ref printStats() functions are implemented in the Python bindings.
  *
  * \ingroup libcore
@@ -370,7 +370,7 @@ private:
 			return c1->getCategory() < c2->getCategory();
 		}
 	};
-	 
+
 	static ref<Statistics> m_instance;
 	std::vector<const StatsCounter *> m_counters;
 	std::vector<std::pair<std::string, std::string> > m_plugins;

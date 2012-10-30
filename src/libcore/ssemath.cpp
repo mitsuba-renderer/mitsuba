@@ -68,16 +68,16 @@ namespace constants {
 	static const MM_ALIGN16 SSEVector min_norm_pos( 0x00800000);
 	static const MM_ALIGN16 SSEVector mant_mask(    0x7f800000);
 	static const MM_ALIGN16 SSEVector inv_mant_mask(~0x7f800000);
-	
+
 	static const MM_ALIGN16 SSEVector sign_mask(     0x80000000);
 	static const MM_ALIGN16 SSEVector inv_sign_mask(~0x80000000);
-	
+
 	static const MM_ALIGN16 SSEVector pi32_1(1);
 	static const MM_ALIGN16 SSEVector pi32_inv1(~1);
 	static const MM_ALIGN16 SSEVector pi32_2(2);
 	static const MM_ALIGN16 SSEVector pi32_4(4);
 	static const MM_ALIGN16 SSEVector pi32_0x7f(0x7f);
-	
+
 	static const MM_ALIGN16 SSEVector cephes_SQRTHF(  0.707106781186547524f);
 	static const MM_ALIGN16 SSEVector cephes_log_p0(  7.0376836292E-2f);
 	static const MM_ALIGN16 SSEVector cephes_log_p1(- 1.1514610310E-1f);
@@ -90,21 +90,21 @@ namespace constants {
 	static const MM_ALIGN16 SSEVector cephes_log_p8(+ 3.3333331174E-1f);
 	static const MM_ALIGN16 SSEVector cephes_log_q1(- 2.12194440e-4f);
 	static const MM_ALIGN16 SSEVector cephes_log_q2(  0.693359375f);
-	
+
 	static const MM_ALIGN16 SSEVector exp_hi( 88.3762626647949f);
 	static const MM_ALIGN16 SSEVector exp_lo(-88.3762626647949f);
-	
+
 	static const MM_ALIGN16 SSEVector cephes_LOG2EF( 1.44269504088896341f);
 	static const MM_ALIGN16 SSEVector cephes_exp_C1( 0.693359375f);
 	static const MM_ALIGN16 SSEVector cephes_exp_C2(-2.12194440e-4f);
-	
+
 	static const MM_ALIGN16 SSEVector cephes_exp_p0(1.9875691500E-4f);
 	static const MM_ALIGN16 SSEVector cephes_exp_p1(1.3981999507E-3f);
 	static const MM_ALIGN16 SSEVector cephes_exp_p2(8.3334519073E-3f);
 	static const MM_ALIGN16 SSEVector cephes_exp_p3(4.1665795894E-2f);
 	static const MM_ALIGN16 SSEVector cephes_exp_p4(1.6666665459E-1f);
 	static const MM_ALIGN16 SSEVector cephes_exp_p5(5.0000001201E-1f);
-	
+
 	static const MM_ALIGN16 SSEVector minus_cephes_DP1(-0.78515625f);
 	static const MM_ALIGN16 SSEVector minus_cephes_DP2(-2.4187564849853515625e-4f);
 	static const MM_ALIGN16 SSEVector minus_cephes_DP3(-3.77489497744594108e-8f);
@@ -134,7 +134,7 @@ namespace constants {
 	static const MM_ALIGN16 SSEVector am_exp2_q1(4.36821166879210612817e3f);
 };
 
-/* natural logarithm computed for 4 simultaneous float 
+/* natural logarithm computed for 4 simultaneous float
    return NaN for x <= 0
 */
 __m128 log_ps(__m128 x) {
@@ -158,7 +158,7 @@ __m128 log_ps(__m128 x) {
 
     e = _mm_add_ps(e, one);
 
-    /* part2: 
+    /* part2:
        if( x < SQRTHF ) {
          e -= 1;
          x = x + x - 1.0;
@@ -225,7 +225,7 @@ __m128 exp_ps(__m128 x) {
     emm0 = _mm_cvttps_epi32(fx);
     tmp  = _mm_cvtepi32_ps(emm0);
     /* if greater, substract 1 */
-    v4sf mask = _mm_cmpgt_ps(tmp, fx);    
+    v4sf mask = _mm_cmpgt_ps(tmp, fx);
     mask = _mm_and_ps(mask, one);
     fx = _mm_sub_ps(tmp, mask);
 
@@ -311,7 +311,7 @@ __m128 sin_ps(__m128 x) { // any x
     /* get the swap sign flag */
     emm0 = _mm_and_si128(emm2, constants::pi32_4.pi);
     emm0 = _mm_slli_epi32(emm0, 29);
-    /* get the polynom selection mask 
+    /* get the polynom selection mask
        there is one polynom for 0 <= x <= Pi/4
        and another one for Pi/4<x<=Pi/2
 
@@ -324,7 +324,7 @@ __m128 sin_ps(__m128 x) { // any x
     v4sf poly_mask = _mm_castsi128_ps(emm2);
     sign_bit = _mm_xor_ps(sign_bit, swap_sign_bit);
 
-    /* The magic pass: "Extended precision modular arithmetic" 
+    /* The magic pass: "Extended precision modular arithmetic"
     x = ((x - y * DP1) - y * DP2) - y * DP3; */
     xmm1 = constants::minus_cephes_DP1.ps;
     xmm2 = constants::minus_cephes_DP2.ps;
@@ -361,7 +361,7 @@ __m128 sin_ps(__m128 x) { // any x
     y2 = _mm_mul_ps(y2, x);
     y2 = _mm_add_ps(y2, x);
 
-    /* select the correct result from the two polynoms */  
+    /* select the correct result from the two polynoms */
     xmm3 = poly_mask;
     y2 = _mm_and_ps(xmm3, y2); //, xmm3);
     y = _mm_andnot_ps(xmm3, y);
@@ -404,7 +404,7 @@ __m128 cos_ps(__m128 x) { // any x
     v4sf sign_bit = _mm_castsi128_ps(emm0);
     v4sf poly_mask = _mm_castsi128_ps(emm2);
 
-    /* The magic pass: "Extended precision modular arithmetic" 
+    /* The magic pass: "Extended precision modular arithmetic"
     x = ((x - y * DP1) - y * DP2) - y * DP3; */
     xmm1 = constants::minus_cephes_DP1.ps;
     xmm2 = constants::minus_cephes_DP2.ps;
@@ -441,7 +441,7 @@ __m128 cos_ps(__m128 x) { // any x
     y2 = _mm_mul_ps(y2, x);
     y2 = _mm_add_ps(y2, x);
 
-    /* select the correct result from the two polynoms */  
+    /* select the correct result from the two polynoms */
     xmm3 = poly_mask;
     y2 = _mm_and_ps(xmm3, y2); //, xmm3);
     y = _mm_andnot_ps(xmm3, y);
@@ -489,7 +489,7 @@ void sincos_ps(__m128 x, __m128* s, __m128* c) {
     emm2 = _mm_cmpeq_epi32(emm2, _mm_setzero_si128());
     v4sf poly_mask = _mm_castsi128_ps(emm2);
 
-    /* The magic pass: "Extended precision modular arithmetic" 
+    /* The magic pass: "Extended precision modular arithmetic"
     x = ((x - y * DP1) - y * DP2) - y * DP3; */
     xmm1 = constants::minus_cephes_DP1.ps;
     xmm2 = constants::minus_cephes_DP2.ps;
@@ -534,7 +534,7 @@ void sincos_ps(__m128 x, __m128* s, __m128* c) {
     y2 = _mm_mul_ps(y2, x);
     y2 = _mm_add_ps(y2, x);
 
-    /* select the correct result from the two polynoms */  
+    /* select the correct result from the two polynoms */
     xmm3 = poly_mask;
     v4sf ysin2 = _mm_and_ps(xmm3, y2);
     v4sf ysin1 = _mm_andnot_ps(xmm3, y);
@@ -584,7 +584,7 @@ __m128 fastlog_ps(__m128 x) {
 	// Extract the original exponent and undo the bias
 	const V4i biasedExponent = srl(castAsInt(x0), 23);
 	const V4f origExponent = toFloat(biasedExponent - const_127);
-	
+
 	V4f vFrac = v_min1 * rcp(v_plus1); // Is it worth it to use rcp_nr?
 	vFrac += vFrac;
 	const V4f vFracSqr = vFrac * vFrac;

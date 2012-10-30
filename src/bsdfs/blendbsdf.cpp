@@ -39,14 +39,14 @@ MTS_NAMESPACE_BEGIN
  *     smooth gold based on a binary bitmap texture (\lstref{blendbsdf})}{bsdf_blendbsdf}
  * }
  *
- * This plugin implements a ``blend'' material, which represents 
+ * This plugin implements a ``blend'' material, which represents
  * linear combinations of two BSDF instances. It is conceptually very similar
  * to the \pluginref{mixturebsdf} plugin. The main difference is that
- * \pluginref{blendbsdf} can interpolate based on a texture rather than a set 
+ * \pluginref{blendbsdf} can interpolate based on a texture rather than a set
  * of constants.
  *
- * Any surface scattering model in Mitsuba (be it smooth, rough, reflecting, or 
- * transmitting) can be mixed with others in this manner to synthesize new models. 
+ * Any surface scattering model in Mitsuba (be it smooth, rough, reflecting, or
+ * transmitting) can be mixed with others in this manner to synthesize new models.
  *
  * \begin{xml}[caption=Description of the material shown above,
  *     label=lst:blendbsdf]
@@ -59,7 +59,7 @@ MTS_NAMESPACE_BEGIN
  *     <bsdf type="conductor">
  *         <string name="material" value="Au"/>
  *     </bsdf>
- * 
+ *
  *     <bsdf type="roughplastic">
  *         <spectrum name="diffuseReflectance" value="0"/>
  *     </bsdf>
@@ -69,12 +69,12 @@ MTS_NAMESPACE_BEGIN
 
 class BlendBSDF : public BSDF {
 public:
-	BlendBSDF(const Properties &props) 
+	BlendBSDF(const Properties &props)
 		: BSDF(props) {
 		m_weight = new ConstantFloatTexture(props.getFloat("weight", 0.5f));
 	}
 
-	BlendBSDF(Stream *stream, InstanceManager *manager) 
+	BlendBSDF(Stream *stream, InstanceManager *manager)
 	 : BSDF(stream, manager) {
 		m_weight = static_cast<Texture *>(manager->getInstance(stream));
 		m_bsdfs.push_back(static_cast<BSDF *>(manager->getInstance(stream)));
@@ -131,7 +131,7 @@ public:
 	}
 
 	Spectrum eval(const BSDFSamplingRecord &bRec, EMeasure measure) const {
-		Float weight = std::min((Float) 1.0f, std::max((Float) 0.0f, 
+		Float weight = std::min((Float) 1.0f, std::max((Float) 0.0f,
 			m_weight->eval(bRec.its).average()));
 
 		if (bRec.component == -1) {
@@ -152,7 +152,7 @@ public:
 	Float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const {
 		Spectrum result;
 
-		Float weight = std::min((Float) 1.0f, std::max((Float) 0.0f, 
+		Float weight = std::min((Float) 1.0f, std::max((Float) 0.0f,
 			m_weight->eval(bRec.its).average()));
 
 		if (bRec.component == -1) {
@@ -174,7 +174,7 @@ public:
 		Point2 sample(_sample);
 
 		Float weights[2];
-		weights[1] = std::min((Float) 1.0f, std::max((Float) 0.0f, 
+		weights[1] = std::min((Float) 1.0f, std::max((Float) 0.0f,
 			m_weight->eval(bRec.its).average()));
 		weights[0] = 1-weights[1];
 
@@ -220,7 +220,7 @@ public:
 		Point2 sample(_sample);
 
 		Float weights[2];
-		weights[1] = std::min((Float) 1.0f, std::max((Float) 0.0f, 
+		weights[1] = std::min((Float) 1.0f, std::max((Float) 0.0f,
 			m_weight->eval(bRec.its).average()));
 		weights[0] = 1-weights[1];
 
@@ -285,7 +285,7 @@ public:
 			<< "  id = \"" << getID() << "\"," << endl
 			<< "  weight = " << indent(m_weight->toString()) << endl
 			<< "  bsdfs = {" << endl;
-		for (size_t i=0; i<m_bsdfs.size(); ++i) 
+		for (size_t i=0; i<m_bsdfs.size(); ++i)
 			oss << "    " << indent(m_bsdfs[i]->toString(), 2) << "," << endl;
 		oss << "  }"
 			<< "]";

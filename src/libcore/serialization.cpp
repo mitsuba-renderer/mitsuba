@@ -32,7 +32,7 @@ InstanceManager::~InstanceManager() {
 #ifdef DEBUG_SERIALIZATION
 	Log(EDebug, "Destroying an instance manager");
 #endif
-	for (std::vector<SerializableObject *>::iterator it = m_fullyAllocated.begin(); 
+	for (std::vector<SerializableObject *>::iterator it = m_fullyAllocated.begin();
 		it!= m_fullyAllocated.end(); ++it) {
 		(*it)->decRef();
 	}
@@ -86,7 +86,7 @@ void InstanceManager::serialize(Stream *stream, const SerializableObject *inst) 
 	}
 }
 
-SerializableObject::SerializableObject(Stream *stream, InstanceManager *manager) { 
+SerializableObject::SerializableObject(Stream *stream, InstanceManager *manager) {
 	manager->registerInstance(this);
 }
 

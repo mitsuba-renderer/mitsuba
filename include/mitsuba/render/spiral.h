@@ -89,7 +89,7 @@ public:
 
 	/// Send the finished event even if not all blocks have been processed yet
 	void finish();
-	
+
 	/// Send events notifying all listeners that the film has changed
 	void notifyFilmChanged();
 

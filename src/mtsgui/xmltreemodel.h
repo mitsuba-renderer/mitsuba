@@ -29,8 +29,8 @@
 class TreeItem {
 public:
 	TreeItem(const QString &name, const QString &readableName,
-			const QVariant &data = QVariant(), 
-			const QVariant &defaultValue = QVariant(), 
+			const QVariant &data = QVariant(),
+			const QVariant &defaultValue = QVariant(),
 			TreeItem *parent = 0,
 			int importance = 10);
 	~TreeItem();

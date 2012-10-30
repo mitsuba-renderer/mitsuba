@@ -28,12 +28,12 @@
 MTS_NAMESPACE_BEGIN
 
 /* The native TLS classes on Linux/MacOS/Windows only support a limited number
-   of dynamically allocated entries (usually 1024 or 1088). Furthermore, they 
-   do not provide appropriate cleanup semantics when the TLS object or one of 
-   the assocated threads dies. The custom TLS code provided in Mitsuba has no 
+   of dynamically allocated entries (usually 1024 or 1088). Furthermore, they
+   do not provide appropriate cleanup semantics when the TLS object or one of
+   the assocated threads dies. The custom TLS code provided in Mitsuba has no
    such limits (caching in various subsystems of Mitsuba may create a huge amount,
-   so this is a big deal) as well as nice cleanup semantics. The implementation 
-   is designed to make the \c get() operation as fast as as possible at the cost 
+   so this is a big deal) as well as nice cleanup semantics. The implementation
+   is designed to make the \c get() operation as fast as as possible at the cost
    of more involved locking when creating or destroying threads and TLS objects */
 namespace detail {
 
@@ -70,15 +70,15 @@ struct ThreadLocalBase::ThreadLocalPrivate {
 	ConstructFunctor constructFunctor;
 	DestructFunctor destructFunctor;
 
-	ThreadLocalPrivate(const ConstructFunctor &constructFunctor, 
+	ThreadLocalPrivate(const ConstructFunctor &constructFunctor,
 			const DestructFunctor &destructFunctor) : constructFunctor(constructFunctor),
 			destructFunctor(destructFunctor) { }
 
 	~ThreadLocalPrivate() {
-		/* The TLS object was destroyed. Walk through all threads 
+		/* The TLS object was destroyed. Walk through all threads
 		   and clean up where necessary */
 		boost::lock_guard<boost::mutex> guard(ptdGlobalLock);
-		
+
 		for (std::set<PerThreadData *>::iterator it = ptdGlobal.begin();
 				it != ptdGlobal.end(); ++it) {
 			PerThreadData *ptd = *it;
@@ -94,7 +94,7 @@ struct ThreadLocalBase::ThreadLocalPrivate {
 
 			lock.unlock();
 
-			if (entry.data) 
+			if (entry.data)
 				destructFunctor(entry.data);
 		}
 	}
@@ -125,7 +125,7 @@ struct ThreadLocalBase::ThreadLocalPrivate {
 };
 
 ThreadLocalBase::ThreadLocalBase(
-		const ConstructFunctor &constructFunctor, const DestructFunctor &destructFunctor) 
+		const ConstructFunctor &constructFunctor, const DestructFunctor &destructFunctor)
 		: d(new ThreadLocalPrivate(constructFunctor, destructFunctor)) { }
 
 ThreadLocalBase::~ThreadLocalBase() { }
@@ -193,7 +193,7 @@ void destroyLocalTLS() {
 
 	boost::unique_lock<boost::mutex> lock(ptd->mutex);
 
-	for (PerThreadData::Map::iterator it = ptd->map.begin(); 
+	for (PerThreadData::Map::iterator it = ptd->map.begin();
 			it != ptd->map.end(); ++it) {
 		TLSEntry &entry = it->second;
 		entry.destructFunctor(entry.data);

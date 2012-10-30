@@ -29,7 +29,7 @@ MTS_NAMESPACE_BEGIN
 //         Constructors, destructor and serialization-related code
 // ===========================================================================
 
-Scene::Scene() 
+Scene::Scene()
  : NetworkedObject(Properties()), m_blockSize(DEFAULT_BLOCKSIZE) {
 	m_kdtree = new ShapeKDTree();
 	m_sourceFile = new fs::path();
@@ -39,30 +39,30 @@ Scene::Scene()
 Scene::Scene(const Properties &props)
  : NetworkedObject(props), m_blockSize(DEFAULT_BLOCKSIZE) {
 	m_kdtree = new ShapeKDTree();
-	/* kd-tree construction: Enable primitive clipping? Generally leads to a 
+	/* kd-tree construction: Enable primitive clipping? Generally leads to a
 	  significant improvement of the resulting tree. */
 	if (props.hasProperty("kdClip"))
 		m_kdtree->setClip(props.getBoolean("kdClip"));
-	/* kd-tree construction: Relative cost of a triangle intersection operation 
+	/* kd-tree construction: Relative cost of a triangle intersection operation
 	   in the surface area heuristic. */
 	if (props.hasProperty("kdIntersectionCost"))
 		m_kdtree->setQueryCost(props.getFloat("kdIntersectionCost"));
-	/* kd-tree construction: Relative cost of a kd-tree traversal operation 
+	/* kd-tree construction: Relative cost of a kd-tree traversal operation
 	   in the surface area heuristic. */
 	if (props.hasProperty("kdTraversalCost"))
 		m_kdtree->setTraversalCost(props.getFloat("kdTraversalCost"));
 	/* kd-tree construction: Bonus factor for cutting away regions of empty space */
 	if (props.hasProperty("kdEmptySpaceBonus"))
 		m_kdtree->setEmptySpaceBonus(props.getFloat("kdEmptySpaceBonus"));
-	/* kd-tree construction: A kd-tree node containing this many or fewer 
+	/* kd-tree construction: A kd-tree node containing this many or fewer
 	   primitives will not be split */
 	if (props.hasProperty("kdStopPrims"))
 		m_kdtree->setStopPrims(props.getInteger("kdStopPrims"));
 	/* kd-tree construction: Maximum tree depth */
 	if (props.hasProperty("kdMaxDepth"))
 		m_kdtree->setMaxDepth(props.getInteger("kdMaxDepth"));
-	/* kd-tree construction: Specify the number of primitives, at which the 
-	   builder will switch from (approximate) Min-Max binning to the accurate 
+	/* kd-tree construction: Specify the number of primitives, at which the
+	   builder will switch from (approximate) Min-Max binning to the accurate
 	   O(n log n) SAH-based optimization method. */
 	if (props.hasProperty("kdExactPrimitiveThreshold"))
 		m_kdtree->setExactPrimitiveThreshold(props.getInteger("kdExactPrimitiveThreshold"));
@@ -103,7 +103,7 @@ Scene::Scene(Scene *scene) : NetworkedObject(Properties()) {
 	m_degenerateEmitters = scene->m_degenerateEmitters;
 }
 
-Scene::Scene(Stream *stream, InstanceManager *manager) 
+Scene::Scene(Stream *stream, InstanceManager *manager)
  : NetworkedObject(stream, manager) {
 	m_kdtree = new ShapeKDTree();
 	m_kdtree->setQueryCost(stream->readFloat());
@@ -146,11 +146,11 @@ Scene::Scene(Stream *stream, InstanceManager *manager)
 		m_emitters.push_back(static_cast<Emitter *>(manager->getInstance(stream)));
 	count = stream->readSize();
 	m_media.reserve(count);
-	for (size_t i=0; i<count; ++i) 
+	for (size_t i=0; i<count; ++i)
 		m_media.push_back(static_cast<Medium *>(manager->getInstance(stream)));
 	count = stream->readSize();
 	m_ssIntegrators.reserve(count);
-	for (size_t i=0; i<count; ++i) 
+	for (size_t i=0; i<count; ++i)
 		m_ssIntegrators.push_back(static_cast<Subsurface *>(manager->getInstance(stream)));
 	count = stream->readSize();
 	m_objects.reserve(count);
@@ -191,40 +191,40 @@ void Scene::serialize(Stream *stream, InstanceManager *manager) const {
 	stream->writeString(m_destinationFile->string());
 
 	stream->writeSize(m_shapes.size());
-	for (size_t i=0; i<m_shapes.size(); ++i) 
+	for (size_t i=0; i<m_shapes.size(); ++i)
 		manager->serialize(stream, m_shapes[i].get());
-	
+
 	stream->writeSize(m_specialShapes.size());
-	for (size_t i=0; i<m_specialShapes.size(); ++i) 
+	for (size_t i=0; i<m_specialShapes.size(); ++i)
 		manager->serialize(stream, m_specialShapes[i].get());
 
 	stream->writeSize(m_meshes.size());
-	for (size_t i=0; i<m_meshes.size(); ++i) 
+	for (size_t i=0; i<m_meshes.size(); ++i)
 		manager->serialize(stream, m_meshes[i]);
-	
+
 	stream->writeSize(m_sensors.size());
-	for (size_t i=0; i<m_sensors.size(); ++i) 
+	for (size_t i=0; i<m_sensors.size(); ++i)
 		manager->serialize(stream, m_sensors[i].get());
 
 	stream->writeSize(m_emitters.size());
-	for (size_t i=0; i<m_emitters.size(); ++i) 
+	for (size_t i=0; i<m_emitters.size(); ++i)
 		manager->serialize(stream, m_emitters[i].get());
 
 	stream->writeSize(m_media.size());
 	for (ref_vector<Medium>::const_iterator it = m_media.begin();
 			it != m_media.end(); ++it)
 		manager->serialize(stream, it->get());
-	
+
 	stream->writeSize(m_ssIntegrators.size());
 	for (ref_vector<Subsurface>::const_iterator it = m_ssIntegrators.begin();
 			it != m_ssIntegrators.end(); ++it)
 		manager->serialize(stream, it->get());
-	
+
 	stream->writeSize(m_objects.size());
 	for (ref_vector<ConfigurableObject>::const_iterator it = m_objects.begin();
 			it != m_objects.end(); ++it)
 		manager->serialize(stream, it->get());
-	
+
 	stream->writeSize(m_netObjects.size());
 	for (ref_vector<NetworkedObject>::const_iterator it = m_netObjects.begin();
 			it != m_netObjects.end(); ++it)
@@ -257,13 +257,13 @@ void Scene::removeSensor(Sensor *sensor) {
 	if (!sensor)
 		return;
 	ref<Sensor> oldSensor = sensor;
-	m_sensors.erase(std::remove(m_sensors.begin(), 
+	m_sensors.erase(std::remove(m_sensors.begin(),
 		m_sensors.end(), oldSensor));
 }
 
 void Scene::addSensor(Sensor *sensor) {
 	ref<Sensor> newSensor = sensor;
-	if (!newSensor || std::find(m_sensors.begin(), 
+	if (!newSensor || std::find(m_sensors.begin(),
 			m_sensors.end(), newSensor) != m_sensors.end())
 		return;
 	m_sensors.push_back(newSensor);
@@ -300,7 +300,7 @@ void Scene::configure() {
 				props.setFloat("nearClip", distance / 100);
 
 				props.setFloat("focusDistance", distance + extents.z/2);
-				props.setTransform("toWorld", Transform::translate(Vector(center.x, 
+				props.setTransform("toWorld", Transform::translate(Vector(center.x,
 						center.y, aabb.min.z - distance)));
 			}
 			Sensor *sensor = static_cast<Sensor *> (PluginManager::getInstance()->
@@ -320,7 +320,7 @@ void Scene::initialize() {
 		/* Expand all geometry */
 		ref_vector<Shape> temp;
 		temp.reserve(m_shapes.size());
-		
+
 		m_shapes.ensureUnique();
 		m_shapes.swap(temp);
 		size_t primitiveCount = 0, effPrimitiveCount = 0;
@@ -354,7 +354,7 @@ void Scene::initialize() {
 		if (m_emitters.size() == 0) {
 			Log(EWarn, "No emitters found -- adding sun & sky.");
 			/* This is not a particularly realistic sky -- it extends below the
-			   horizon and uses an enlarged sun :). This is done to get better 
+			   horizon and uses an enlarged sun :). This is done to get better
 			   results for arbitrary input (and with a path tracer). */
 
 			Properties skyProps("sunsky");
@@ -369,7 +369,7 @@ void Scene::initialize() {
 		}
 
 		/* Calculate a discrete PDF to importance sample emitters */
-		for (ref_vector<Emitter>::iterator it = m_emitters.begin(); 
+		for (ref_vector<Emitter>::iterator it = m_emitters.begin();
 				it != m_emitters.end(); ++it)
 			m_emitterPDF.append(it->get()->getSamplingWeight());
 
@@ -409,7 +409,7 @@ void Scene::initializeBidirectional() {
 	m_aabb = aabb;
 }
 
-bool Scene::preprocess(RenderQueue *queue, const RenderJob *job, 
+bool Scene::preprocess(RenderQueue *queue, const RenderJob *job,
 		int sceneResID, int sensorResID, int samplerResID) {
 
 	initialize();
@@ -421,8 +421,8 @@ bool Scene::preprocess(RenderQueue *queue, const RenderJob *job,
 
 	/* Pre-process step for all sub-surface integrators */
 	for (ref_vector<Subsurface>::iterator it = m_ssIntegrators.begin();
-		it != m_ssIntegrators.end(); ++it) 
-		if (!(*it)->preprocess(this, queue, job, 
+		it != m_ssIntegrators.end(); ++it)
+		if (!(*it)->preprocess(this, queue, job,
 				sceneResID, sensorResID, samplerResID))
 			return false;
 
@@ -432,13 +432,13 @@ bool Scene::preprocess(RenderQueue *queue, const RenderJob *job,
 bool Scene::render(RenderQueue *queue, const RenderJob *job,
 		int sceneResID, int sensorResID, int samplerResID) {
 	m_sensor->getFilm()->clear();
-	return m_integrator->render(this, queue, job, sceneResID, 
+	return m_integrator->render(this, queue, job, sceneResID,
 		sensorResID, samplerResID);
 }
 
 void Scene::cancel() {
 	for (ref_vector<Subsurface>::iterator it = m_ssIntegrators.begin();
-			it != m_ssIntegrators.end(); ++it) 
+			it != m_ssIntegrators.end(); ++it)
 		(*it)->cancel();
 	m_integrator->cancel();
 }
@@ -446,7 +446,7 @@ void Scene::cancel() {
 void Scene::flush() {
 	m_sensor->getFilm()->develop();
 }
-	
+
 void Scene::setDestinationFile(const fs::path &name) {
 	*m_destinationFile = name;
 }
@@ -457,7 +457,7 @@ void Scene::setSourceFile(const fs::path &name) {
 
 void Scene::postprocess(RenderQueue *queue, const RenderJob *job,
 		int sceneResID, int sensorResID, int samplerResID) {
-	m_integrator->postprocess(this, queue, job, sceneResID, 
+	m_integrator->postprocess(this, queue, job, sceneResID,
 		sensorResID, samplerResID);
 	m_sensor->getFilm()->develop();
 }
@@ -466,7 +466,7 @@ void Scene::addChild(const std::string &name, ConfigurableObject *child) {
 	const Class *cClass = child->getClass();
 
 	if (cClass->derivesFrom(MTS_CLASS(NetworkedObject)) &&
-	   !cClass->derivesFrom(MTS_CLASS(Integrator))) 
+	   !cClass->derivesFrom(MTS_CLASS(Integrator)))
 		m_netObjects.push_back(static_cast<NetworkedObject *>(child));
 
 	if (cClass->derivesFrom(MTS_CLASS(Sensor))) {
@@ -526,11 +526,11 @@ void Scene::addChild(const std::string &name, ConfigurableObject *child) {
 			addChild(shapes[i]);
 
 		for (ref_vector<ConfigurableObject>::iterator it = refObjects.begin();
-				it != refObjects.end(); ++it) 
+				it != refObjects.end(); ++it)
 			addChild(it->get());
 
 		for (ref_vector<Medium>::iterator it = scene->getMedia().begin();
-				it != scene->getMedia().end(); ++it) 
+				it != scene->getMedia().end(); ++it)
 			addChild(it->get());
 
 		if (scene->getIntegrator() != NULL)
@@ -553,9 +553,9 @@ void Scene::addShape(Shape *shape) {
 			addShape(element);
 		} while (true);
 	} else {
-		if (shape->isSensor() && !m_sensors.contains(shape->getSensor())) 
+		if (shape->isSensor() && !m_sensors.contains(shape->getSensor()))
 			m_sensors.push_back(shape->getSensor());
-		if (shape->isEmitter()) 
+		if (shape->isEmitter())
 			m_emitters.push_back(shape->getEmitter());
 		if (shape->hasSubsurface()) {
 			m_netObjects.push_back(shape->getSubsurface());
@@ -571,7 +571,7 @@ void Scene::addShape(Shape *shape) {
 		if (iMedium != NULL)
 			m_media.push_back(iMedium);
 
-		if (shape->getClass()->derivesFrom(MTS_CLASS(TriMesh))) 
+		if (shape->getClass()->derivesFrom(MTS_CLASS(TriMesh)))
 			m_meshes.push_back(static_cast<TriMesh *>(shape));
 
 		m_kdtree->addShape(shape);
@@ -631,7 +631,7 @@ Spectrum Scene::evalTransmittance(const Point &p1, bool p1OnSurface, const Point
 			transmittance *= medium->evalTransmittance(
 				Ray(ray, 0, std::min(its.t, remaining)), sampler);
 
-		if (!surface || transmittance.isZero()) 
+		if (!surface || transmittance.isZero())
 			break;
 
 		const BSDF *bsdf = its.getBSDF();
@@ -676,7 +676,7 @@ bool Scene::rayIntersectAll(const Ray &ray) const {
 
 	Float mint = ray.mint;
 	if (mint == Epsilon)
-		mint *= std::max(std::max(std::max(std::abs(ray.o.x), 
+		mint *= std::max(std::max(std::max(std::abs(ray.o.x),
 			std::abs(ray.o.y)), std::abs(ray.o.z)), Epsilon);
 
 	for (size_t i=0; i<m_specialShapes.size(); ++i) {
@@ -687,7 +687,7 @@ bool Scene::rayIntersectAll(const Ray &ray) const {
 	return false;
 }
 
-bool Scene::rayIntersectAll(const Ray &ray, Float &t, 
+bool Scene::rayIntersectAll(const Ray &ray, Float &t,
 			ConstShapePtr &shapePtr, Normal &n, Point2 &uv) const {
 	bool result = rayIntersect(ray, t, shapePtr, n, uv);
 	if (m_specialShapes.size() == 0)
@@ -698,7 +698,7 @@ bool Scene::rayIntersectAll(const Ray &ray, Float &t,
 
 	Float mint = ray.mint;
 	if (mint == Epsilon)
-		mint *= std::max(std::max(std::max(std::abs(ray.o.x), 
+		mint *= std::max(std::max(std::max(std::abs(ray.o.x),
 			std::abs(ray.o.y)), std::abs(ray.o.z)), Epsilon);
 
 
@@ -730,7 +730,7 @@ bool Scene::rayIntersectAll(const Ray &ray, Intersection &its) const {
 	Float maxt = result ? its.t : ray.maxt;
 	Float mint = ray.mint;
 	if (mint == Epsilon)
-		mint *= std::max(std::max(std::max(std::abs(ray.o.x), 
+		mint *= std::max(std::max(std::max(std::abs(ray.o.x),
 			std::abs(ray.o.y)), std::abs(ray.o.z)), Epsilon);
 	Float tempT;
 
@@ -738,7 +738,6 @@ bool Scene::rayIntersectAll(const Ray &ray, Intersection &its) const {
 		const Shape *shape = m_specialShapes[i].get();
 
 		if (shape->rayIntersect(ray, mint, maxt, tempT, buffer)) {
-			its.time = ray.time;
 			its.t = tempT;
 			shape->fillIntersectionRecord(ray, buffer, its);
 			result = true;
@@ -775,7 +774,7 @@ Spectrum Scene::evalTransmittanceAll(const Point &p1, bool p1OnSurface, const Po
 			transmittance *= medium->evalTransmittance(
 				Ray(ray, 0, std::min(its.t, remaining)), sampler);
 
-		if (!surface || transmittance.isZero()) 
+		if (!surface || transmittance.isZero())
 			break;
 
 		const BSDF *bsdf = its.getBSDF();
@@ -814,7 +813,7 @@ Spectrum Scene::evalTransmittanceAll(const Point &p1, bool p1OnSurface, const Po
 //                Emission and direct illumination sampling
 // ===========================================================================
 
-Spectrum Scene::sampleEmitterDirect(DirectSamplingRecord &dRec, 
+Spectrum Scene::sampleEmitterDirect(DirectSamplingRecord &dRec,
 		const Point2 &_sample, bool testVisibility) const {
 	Point2 sample(_sample);
 
@@ -826,7 +825,7 @@ Spectrum Scene::sampleEmitterDirect(DirectSamplingRecord &dRec,
 
 	if (dRec.pdf != 0) {
 		if (testVisibility) {
-			Ray ray(dRec.ref, dRec.d, Epsilon, 
+			Ray ray(dRec.ref, dRec.d, Epsilon,
 					dRec.dist*(1-ShadowEpsilon), dRec.time);
 			if (m_kdtree->rayIntersect(ray))
 				return Spectrum(0.0f);
@@ -852,7 +851,7 @@ Spectrum Scene::sampleAttenuatedEmitterDirect(DirectSamplingRecord &dRec,
 
 	if (dRec.pdf != 0) {
 		value *= evalTransmittance(dRec.ref, false,
-			dRec.p, emitter->isOnSurface(), dRec.time, medium, 
+			dRec.p, emitter->isOnSurface(), dRec.time, medium,
 			interactions, sampler) / emPdf;
 		dRec.object = emitter;
 		dRec.pdf *= emPdf;
@@ -886,13 +885,13 @@ Spectrum Scene::sampleAttenuatedEmitterDirect(DirectSamplingRecord &dRec,
 	}
 }
 
-Spectrum Scene::sampleSensorDirect(DirectSamplingRecord &dRec, 
+Spectrum Scene::sampleSensorDirect(DirectSamplingRecord &dRec,
 		const Point2 &sample, bool testVisibility) const {
 	Spectrum value = m_sensor->sampleDirect(dRec, sample);
 
 	if (dRec.pdf != 0) {
 		if (testVisibility) {
-			Ray ray(dRec.ref, dRec.d, Epsilon, 
+			Ray ray(dRec.ref, dRec.d, Epsilon,
 					dRec.dist*(1-ShadowEpsilon), dRec.time);
 			if (m_kdtree->rayIntersect(ray))
 				return Spectrum(0.0f);
@@ -904,7 +903,7 @@ Spectrum Scene::sampleSensorDirect(DirectSamplingRecord &dRec,
 	}
 }
 
-Spectrum Scene::sampleAttenuatedSensorDirect(DirectSamplingRecord &dRec, 
+Spectrum Scene::sampleAttenuatedSensorDirect(DirectSamplingRecord &dRec,
 		const Medium *medium, int &interactions, const Point2 &sample, Sampler *sampler) const {
 	Spectrum value = m_sensor->sampleDirect(dRec, sample);
 

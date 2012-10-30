@@ -38,20 +38,20 @@ MTS_NAMESPACE_BEGIN
  *	   }
  *     \parameter{radius}{\Float}{
  *       Radius of the hair segments in world-space units
- *       \default{0.025, which assumes that the scene 
+ *       \default{0.025, which assumes that the scene
  *       is modeled in millimeters.}.
  *	   }
  *     \parameter{angleThreshold}{\Float}{
- *	     For performance reasons, the plugin will merge adjacent hair 
+ *	     For performance reasons, the plugin will merge adjacent hair
  *	     segments when the angle of their tangent directions is below
  *	     than this value (in degrees). \default{1}.
  *	   }
  *     \parameter{reduction}{\Float}{
- *       When the reduction ratio is set to a value between zero and one, the hair 
+ *       When the reduction ratio is set to a value between zero and one, the hair
  *       plugin stochastically culls this portion of the input data (where
- *       1 corresponds to removing all hairs). To approximately preserve the 
- *       appearance in renderings, the hair radius is enlarged (see Cook et al. 
- *       \cite{Cook2007Stochastic}). This parameter is convenient for fast 
+ *       1 corresponds to removing all hairs). To approximately preserve the
+ *       appearance in renderings, the hair radius is enlarged (see Cook et al.
+ *       \cite{Cook2007Stochastic}). This parameter is convenient for fast
  *       previews. \default{0, i.e. all geometry is rendered}
  *     }
  *     \parameter{toWorld}{\Transform}{
@@ -64,37 +64,37 @@ MTS_NAMESPACE_BEGIN
  *     \centering
  *     \fbox{\includegraphics[width=6cm]{images/shape_hair}}\hspace{4.5cm}
  *     \caption{A close-up of the hair shape rendered with a diffuse
- *     scattering model (an actual hair scattering model will 
+ *     scattering model (an actual hair scattering model will
  *     be needed for realistic apperance)}
  * }
- * The plugin implements a space-efficient acceleration structure for 
- * hairs made from many straight cylindrical hair segments with miter 
- * joints. The underlying idea is that intersections with straight cylindrical 
- * hairs can be found quite efficiently, and curved hairs are easily 
+ * The plugin implements a space-efficient acceleration structure for
+ * hairs made from many straight cylindrical hair segments with miter
+ * joints. The underlying idea is that intersections with straight cylindrical
+ * hairs can be found quite efficiently, and curved hairs are easily
  * approximated using a series of such segments.
  *
  * The plugin supports two different input formats: a simple (but not
- * particularly efficient) ASCII format containing the coordinates of a 
- * hair vertex on every line. An empty line marks the beginning of a 
+ * particularly efficient) ASCII format containing the coordinates of a
+ * hair vertex on every line. An empty line marks the beginning of a
  * new hair. The following snippet is an example of this format:\newpage
  * \begin{xml}
- * ..... 
+ * .....
  * -18.5498 -21.7669 22.8138
  * -18.6358 -21.3581 22.9262
  * -18.7359 -20.9494 23.0256
- * 
+ *
  * -30.6367 -21.8369 6.78397
  * -30.7289 -21.4145 6.76688
  * -30.8226 -20.9933 6.73948
- * ..... 
+ * .....
  * \end{xml}
  *
  * There is also a binary format, which starts with the identifier
- * ``\texttt{BINARY\_HAIR}'' (11 bytes), followed by the number of 
- * vertices as a 32-bit little endian integer. 
- * The remainder of the file consists of the vertex positions stored as 
+ * ``\texttt{BINARY\_HAIR}'' (11 bytes), followed by the number of
+ * vertices as a 32-bit little endian integer.
+ * The remainder of the file consists of the vertex positions stored as
  * single-precision XYZ coordinates (again in little-endian byte ordering).
- * To mark the beginning of a new hair strand, a single $+\infty$ floating 
+ * To mark the beginning of a new hair strand, a single $+\infty$ floating
  * point value can be inserted between the vertex data.
  */
 
@@ -105,7 +105,7 @@ public:
 	using SAHKDTree3D<HairKDTree>::IndexType;
 	using SAHKDTree3D<HairKDTree>::SizeType;
 
-	HairKDTree(std::vector<Point> &vertices, 
+	HairKDTree(std::vector<Point> &vertices,
 			std::vector<bool> &vertexStartsFiber, Float radius)
 			: m_radius(radius) {
 		/* Take the supplied vertex & start fiber arrays (without copying) */
@@ -124,11 +124,11 @@ public:
 		m_segmentCount = m_segIndex.size();
 
 		Log(EDebug, "Building a kd-tree for " SIZE_T_FMT " hair vertices, "
-			SIZE_T_FMT " segments, " SIZE_T_FMT " hairs", 
+			SIZE_T_FMT " segments, " SIZE_T_FMT " hairs",
 			m_vertices.size(), m_segmentCount, m_hairCount);
 
 		/* Ray-cylinder intersections are expensive. Use only the
-		   SAH cost as the tree subdivision stopping criterion, 
+		   SAH cost as the tree subdivision stopping criterion,
 		   not the number of primitives */
 		setStopPrims(1);
 
@@ -143,13 +143,13 @@ public:
 		buildInternal();
 
 		Log(EDebug, "Total amount of storage (kd-tree & vertex data): %s",
-			memString(m_nodeCount * sizeof(KDNode) 
+			memString(m_nodeCount * sizeof(KDNode)
 			+ m_indexCount * sizeof(IndexType)
 			+ vertices.size() * sizeof(Point)
 			+ vertexStartsFiber.size() / 8).c_str());
 
 		/* Optimization: replace all primitive indices by the
-		   associated vertex indices (this avoids an extra 
+		   associated vertex indices (this avoids an extra
 		   indirection during traversal later on) */
 		for (SizeType i=0; i<m_indexCount; ++i)
 			m_indices[i] = m_segIndex[m_indices[i]];
@@ -169,7 +169,7 @@ public:
 	}
 
 	/**
-	 * Return a boolean list specifying whether a vertex 
+	 * Return a boolean list specifying whether a vertex
 	 * marks the beginning of a new fiber
 	 */
 	inline const std::vector<bool> &getStartFiber() const {
@@ -185,21 +185,21 @@ public:
 	inline size_t getSegmentCount() const {
 		return m_segmentCount;
 	}
-	
+
 	/// Return the total number of hairs
 	inline size_t getHairCount() const {
 		return m_hairCount;
 	}
-	
+
 	/// Return the total number of vertices
 	inline size_t getVertexCount() const {
 		return m_vertices.size();
 	}
 
 	/// Intersect a ray with all segments stored in the kd-tree
-	inline bool rayIntersect(const Ray &ray, Float _mint, Float _maxt, 
+	inline bool rayIntersect(const Ray &ray, Float _mint, Float _maxt,
 			Float &t, void *temp) const {
-		Float tempT = std::numeric_limits<Float>::infinity(); 
+		Float tempT = std::numeric_limits<Float>::infinity();
 		Float mint, maxt;
 
 		if (m_aabb.rayIntersect(ray, mint, maxt)) {
@@ -221,7 +221,7 @@ public:
 	 * (Visiblity query version)
 	 */
 	inline bool rayIntersect(const Ray &ray, Float _mint, Float _maxt) const {
-		Float tempT = std::numeric_limits<Float>::infinity(); 
+		Float tempT = std::numeric_limits<Float>::infinity();
 		Float mint, maxt;
 
 		if (m_aabb.rayIntersect(ray, mint, maxt)) {
@@ -229,7 +229,7 @@ public:
 			if (_maxt < maxt) maxt = _maxt;
 
 			if (EXPECT_TAKEN(maxt > mint)) {
-				if (rayIntersectHavran<true>(ray, mint, maxt, tempT, NULL)) 
+				if (rayIntersectHavran<true>(ray, mint, maxt, tempT, NULL))
 					return true;
 			}
 		}
@@ -286,7 +286,7 @@ public:
 	}
 
 	/**
-	 * \brief Intersect an infinite cylinder with an 
+	 * \brief Intersect an infinite cylinder with an
 	 * AABB face and bound the resulting clipped ellipse
 	 */
 	AABB intersectCylFace(int axis,
@@ -303,7 +303,7 @@ public:
 		Float ellipseLengths[2];
 
 		AABB aabb;
-		if (!intersectCylPlane(min, planeNrml, cylPt, cylD, m_radius * (1 + Epsilon), 
+		if (!intersectCylPlane(min, planeNrml, cylPt, cylD, m_radius * (1 + Epsilon),
 			ellipseCenter, ellipseAxes, ellipseLengths)) {
 			/* Degenerate case -- return an invalid AABB. This is
 			   not a problem, since one of the other faces will provide
@@ -355,9 +355,9 @@ public:
 			Point p1 = ellipseCenter + cosTheta*ellipseAxes[0] + sinTheta*ellipseAxes[1];
 			Point p2 = ellipseCenter - cosTheta*ellipseAxes[0] - sinTheta*ellipseAxes[1];
 
-			if (faceBounds.contains(p1)) 
+			if (faceBounds.contains(p1))
 				aabb.expandBy(p1);
-			if (faceBounds.contains(p2)) 
+			if (faceBounds.contains(p2))
 				aabb.expandBy(p2);
 		}
 
@@ -370,7 +370,7 @@ public:
 		Vector axes[2];
 		Float lengths[2];
 
-		bool success = intersectCylPlane(firstVertex(iv), firstMiterNormal(iv), 
+		bool success = intersectCylPlane(firstVertex(iv), firstMiterNormal(iv),
 			firstVertex(iv), tangent(iv), m_radius * (1-Epsilon), center, axes, lengths);
 		Assert(success);
 
@@ -382,7 +382,7 @@ public:
 			result.max[i] = std::max(result.max[i], center[i]+range);
 		}
 
-		success = intersectCylPlane(secondVertex(iv), secondMiterNormal(iv), 
+		success = intersectCylPlane(secondVertex(iv), secondMiterNormal(iv),
 			secondVertex(iv), tangent(iv), m_radius * (1-Epsilon), center, axes, lengths);
 		Assert(success);
 
@@ -404,10 +404,10 @@ public:
 		Point cylPt = firstVertex(iv);
 		Vector cylD = tangent(iv);
 
-		/* Now forget about the cylinder ends and 
+		/* Now forget about the cylinder ends and
 		   intersect an infinite cylinder with each AABB face */
 		AABB clippedAABB;
-		clippedAABB.expandBy(intersectCylFace(0, 
+		clippedAABB.expandBy(intersectCylFace(0,
 				Point(base.min.x, base.min.y, base.min.z),
 				Point(base.min.x, base.max.y, base.max.z),
 				cylPt, cylD));
@@ -417,7 +417,7 @@ public:
 				Point(base.max.x, base.max.y, base.max.z),
 				cylPt, cylD));
 
-		clippedAABB.expandBy(intersectCylFace(1, 
+		clippedAABB.expandBy(intersectCylFace(1,
 				Point(base.min.x, base.min.y, base.min.z),
 				Point(base.max.x, base.min.y, base.max.z),
 				cylPt, cylD));
@@ -427,7 +427,7 @@ public:
 				Point(base.max.x, base.max.y, base.max.z),
 				cylPt, cylD));
 
-		clippedAABB.expandBy(intersectCylFace(2, 
+		clippedAABB.expandBy(intersectCylFace(2,
 				Point(base.min.x, base.min.y, base.min.z),
 				Point(base.max.x, base.max.y, base.min.z),
 				cylPt, cylD));
@@ -481,7 +481,7 @@ public:
 		Point p;
 	};
 
-	inline bool intersect(const Ray &ray, IndexType iv, 
+	inline bool intersect(const Ray &ray, IndexType iv,
 		Float mint, Float maxt, Float &t, void *tmp) const {
 		/* First compute the intersection with the infinite cylinder */
 		Vector3d axis = tangentDouble(iv);
@@ -511,8 +511,8 @@ public:
 		Point3d pointNear = rayO + rayD * nearT;
 		Point3d pointFar = rayO + rayD * farT;
 
-		Vector3d n1 = firstMiterNormalDouble(iv); 
-		Vector3d n2 = secondMiterNormalDouble(iv); 
+		Vector3d n1 = firstMiterNormalDouble(iv);
+		Vector3d n2 = secondMiterNormalDouble(iv);
 		Point3d v2 = secondVertexDouble(iv);
 		IntersectionStorage *storage = static_cast<IntersectionStorage *>(tmp);
 		Point p;
@@ -539,8 +539,8 @@ public:
 
 		return true;
 	}
-	
-	inline bool intersect(const Ray &ray, IndexType iv, 
+
+	inline bool intersect(const Ray &ray, IndexType iv,
 		Float mint, Float maxt) const {
 		Float tempT;
 		return intersect(ray, iv, mint, maxt, tempT, NULL);
@@ -614,7 +614,7 @@ HairShape::HairShape(const Properties &props) : Shape(props) {
 	Float angleThreshold = degToRad(props.getFloat("angleThreshold", 1.0f));
 	Float dpThresh = std::cos(angleThreshold);
 
-	/* When set to a value n>1, the hair shape object will reduce 
+	/* When set to a value n>1, the hair shape object will reduce
 	   the input by only loading every n-th hair */
 	Float reduction = props.getFloat("reduction", 0);
 	if (reduction < 0 || reduction >= 1) {
@@ -772,7 +772,7 @@ HairShape::HairShape(const Properties &props) : Shape(props) {
 	}
 
 	if (nDegenerate > 0)
-		Log(EInfo, "Encountered " SIZE_T_FMT 
+		Log(EInfo, "Encountered " SIZE_T_FMT
 			" degenerate segments!", nDegenerate);
 	if (nSkipped > 0)
 		Log(EInfo, "Skipped " SIZE_T_FMT " segments.", nSkipped);
@@ -783,7 +783,7 @@ HairShape::HairShape(const Properties &props) : Shape(props) {
 	m_kdtree = new HairKDTree(vertices, vertexStartsFiber, radius);
 }
 
-HairShape::HairShape(Stream *stream, InstanceManager *manager) 
+HairShape::HairShape(Stream *stream, InstanceManager *manager)
 	: Shape(stream, manager) {
 	Float radius = stream->readFloat();
 	size_t vertexCount = stream->readSize();
@@ -792,7 +792,7 @@ HairShape::HairShape(Stream *stream, InstanceManager *manager)
 	std::vector<bool> vertexStartsFiber(vertexCount+1);
 	stream->readFloatArray((Float *) &vertices[0], vertexCount * 3);
 
-	for (size_t i=0; i<vertexCount; ++i) 
+	for (size_t i=0; i<vertexCount; ++i)
 		vertexStartsFiber[i] = stream->readBool();
 	vertexStartsFiber[vertexCount] = true;
 
@@ -812,7 +812,7 @@ void HairShape::serialize(Stream *stream, InstanceManager *manager) const {
 		stream->writeBool(vertexStartsFiber[i]);
 }
 
-bool HairShape::rayIntersect(const Ray &ray, Float mint, 
+bool HairShape::rayIntersect(const Ray &ray, Float mint,
 		Float maxt, Float &t, void *temp) const {
 	return m_kdtree->rayIntersect(ray, mint, maxt, t, temp);
 }
@@ -821,14 +821,14 @@ bool HairShape::rayIntersect(const Ray &ray, Float mint, Float maxt) const {
 	return m_kdtree->rayIntersect(ray, mint, maxt);
 }
 
-void HairShape::fillIntersectionRecord(const Ray &ray, 
+void HairShape::fillIntersectionRecord(const Ray &ray,
 	const void *temp, Intersection &its) const {
 	/* No UV coordinates for now */
 	its.uv = Point2(0,0);
 	its.dpdu = Vector(0,0,0);
 	its.dpdv = Vector(0,0,0);
 
-	const HairKDTree::IntersectionStorage *storage = 
+	const HairKDTree::IntersectionStorage *storage =
 		static_cast<const HairKDTree::IntersectionStorage *>(temp);
 	HairKDTree::IndexType iv = storage->iv;
 	its.p = storage->p;
@@ -843,6 +843,7 @@ void HairShape::fillIntersectionRecord(const Ray &ray,
 	its.wi = its.toLocal(-ray.d);
 	its.hasUVPartials = false;
 	its.instance = this;
+	its.time = ray.time;
 }
 
 ref<TriMesh> HairShape::createTriMesh() {
@@ -858,7 +859,7 @@ ref<TriMesh> HairShape::createTriMesh() {
 	Normal *normals = mesh->getVertexNormals();
 	Triangle *triangles = mesh->getTriangles();
 	size_t triangleIdx = 0, vertexIdx = 0;
-	
+
 	const std::vector<Point> &hairVertices = m_kdtree->getVertices();
 	const std::vector<bool> &vertexStartsFiber = m_kdtree->getStartFiber();
 	const Float radius = m_kdtree->getRadius();

@@ -33,16 +33,16 @@ MTS_NAMESPACE_BEGIN
  *         power per unit area per unit steradian.
  *     }
  *     \parameter{samplingWeight}{\Float}{
- *         Specifies the relative amount of samples 
+ *         Specifies the relative amount of samples
  *         allocated to this emitter. \default{1}
  *     }
  * }
  *
  * This plugin implements an area light, i.e. a light source that emits
- * diffuse illumination from the exterior of an arbitrary shape. 
+ * diffuse illumination from the exterior of an arbitrary shape.
  * Since the emission profile of an area light is completely diffuse, it
  * has the same apparent brightness regardless of the observer's viewing
- * direction. Furthermore, since it occupies a nonzero amount of space, an 
+ * direction. Furthermore, since it occupies a nonzero amount of space, an
  * area light generally causes scene objects to cast soft shadows.
  *
  * When modeling scenes involving area lights, it is preferable
@@ -78,7 +78,7 @@ public:
 		m_power = Spectrum(0.0f); /// Don't know the power yet
 	}
 
-	AreaLight(Stream *stream, InstanceManager *manager) 
+	AreaLight(Stream *stream, InstanceManager *manager)
 		: Emitter(stream, manager) {
 		m_radiance = Spectrum(stream);
 		m_power = Spectrum(stream);
@@ -112,7 +112,7 @@ public:
 		return m_shape->pdfPosition(pRec);
 	}
 
-	Spectrum sampleDirection(DirectionSamplingRecord &dRec, 
+	Spectrum sampleDirection(DirectionSamplingRecord &dRec,
 			PositionSamplingRecord &pRec,
 			const Point2 &sample, const Point2 *extra) const {
 		Vector local = Warp::squareToCosineHemisphere(sample);
@@ -138,7 +138,7 @@ public:
 
 		if (dRec.measure != ESolidAngle || dp < 0)
 			dp = 0.0f;
-	
+
 		return INV_PI * dp;
 	}
 
@@ -155,11 +155,11 @@ public:
 		return m_power;
 	}
 
-	Spectrum sampleDirect(DirectSamplingRecord &dRec, 
+	Spectrum sampleDirect(DirectSamplingRecord &dRec,
 			const Point2 &sample) const {
 		m_shape->sampleDirect(dRec, sample);
 
-		/* Check that the emitter and reference position are oriented correctly 
+		/* Check that the emitter and reference position are oriented correctly
 		   with respect to each other. Note that the >= 0 check
 		   for 'refN' is intentional -- those sampling requests that specify
 		   a reference point within a medium or on a transmissive surface
@@ -173,7 +173,7 @@ public:
 	}
 
 	Float pdfDirect(const DirectSamplingRecord &dRec) const {
-		/* Check that the emitter and receiver are oriented correctly 
+		/* Check that the emitter and receiver are oriented correctly
 		   with respect to each other. */
 		if (dot(dRec.d, dRec.refN) >= 0 && dot(dRec.d, dRec.n) < 0) {
 			return m_shape->pdfDirect(dRec);
@@ -223,15 +223,15 @@ protected:
 	Spectrum m_radiance, m_power;
 };
 
-// ================ Hardware shader implementation ================ 
+// ================ Hardware shader implementation ================
 
 class AreaLightShader : public Shader {
 public:
-	AreaLightShader(Renderer *renderer, const Spectrum &radiance) 
+	AreaLightShader(Renderer *renderer, const Spectrum &radiance)
 		: Shader(renderer, EEmitterShader), m_radiance(radiance) {
 	}
-	
-	void resolve(const GPUProgram *program, const std::string &evalName, 
+
+	void resolve(const GPUProgram *program, const std::string &evalName,
 			std::vector<int> &parameterIDs) const {
 		parameterIDs.push_back(program->getParameterID(evalName + "_radiance", false));
 	}
@@ -251,7 +251,7 @@ public:
 			<< "}" << endl;
 	}
 
-	void bind(GPUProgram *program, const std::vector<int> &parameterIDs, 
+	void bind(GPUProgram *program, const std::vector<int> &parameterIDs,
 		int &textureUnitOffset) const {
 		program->setParameter(parameterIDs[0], m_radiance);
 	}
@@ -261,7 +261,7 @@ private:
 	Spectrum m_radiance;
 };
 
-Shader *AreaLight::createShader(Renderer *renderer) const { 
+Shader *AreaLight::createShader(Renderer *renderer) const {
 	return new AreaLightShader(renderer, m_radiance);
 }
 

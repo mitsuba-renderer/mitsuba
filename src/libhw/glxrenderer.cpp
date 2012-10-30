@@ -71,7 +71,7 @@ void GLXRenderer::shutdown() {
 
 	if (!m_borrowed) {
 		Log(EDebug, "Shutting down GLX Renderer");
-		X11Session *session = static_cast<X11Session *>(m_session.get());   
+		X11Session *session = static_cast<X11Session *>(m_session.get());
 		glXDestroyContext(session->m_display, m_context);
 	}
 

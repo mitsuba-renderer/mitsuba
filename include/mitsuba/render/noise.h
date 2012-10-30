@@ -42,33 +42,33 @@ public:
 	 * \brief Evaluate a fractional Brownian noise function
 	 * based on \ref perlinNoise() at \a p.
 	 *
-	 * \param dpdx Differential of p with respect to 
+	 * \param dpdx Differential of p with respect to
 	 *   the next horizontal pixel in screen-space.
-	 * \param dpdy Differential of p with respect to 
+	 * \param dpdy Differential of p with respect to
 	 *   the next vertical pixel in screen-space.
 	 * \param omega Controls the falloff weights applied
 	 *   to higher-frequency octaves
 	 * \param maxOctaves Max. number of octaves used
 	 *   in the noise computation
 	 */
-	static Float fbm(const Point &p, const Vector &dpdx, 
+	static Float fbm(const Point &p, const Vector &dpdx,
 		const Vector &dpdy, Float omega, int maxOctaves);
 
 	/**
 	 * \brief Similar to \ref fbm, but adds first-derivative
-	 * discontinuities, causing the resulting function to have 
+	 * discontinuities, causing the resulting function to have
 	 * infinite frequency content.
 	 *
-	 * \param dpdx Differential of p with respect to 
+	 * \param dpdx Differential of p with respect to
 	 *   the next horizontal pixel in screen-space.
-	 * \param dpdy Differential of p with respect to 
+	 * \param dpdy Differential of p with respect to
 	 *   the next vertical pixel in screen-space.
 	 * \param omega Controls the falloff weights applied
 	 *   to higher-frequency octaves
 	 * \param maxOctaves Max. number of octaves used
 	 *   in the noise computation
 	 */
-	static Float turbulence(const Point &p, const Vector &dpdx, 
+	static Float turbulence(const Point &p, const Vector &dpdx,
 		const Vector &dpdy, Float omega, int maxOctaves);
 };
 

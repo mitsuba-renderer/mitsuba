@@ -62,7 +62,7 @@ struct Frame {
 		t = Vector(stream);
 		n = Normal(stream);
 	}
-	
+
 	/// Serialize to a binary data stream
 	inline void serialize(Stream *stream) const {
 		s.serialize(stream);
@@ -84,7 +84,7 @@ struct Frame {
 		return s * v.x + t * v.y + n * v.z;
 	}
 
-	/** \brief Assuming that the given direction is in the local coordinate 
+	/** \brief Assuming that the given direction is in the local coordinate
 	 * system, return the cosine of the angle between the normal and v */
 	inline static Float cosTheta(const Vector &v) {
 		return v.z;
@@ -114,7 +114,7 @@ struct Frame {
 		return 1.0f - v.z * v.z;
 	}
 
-	/** \brief Assuming that the given direction is in the local coordinate 
+	/** \brief Assuming that the given direction is in the local coordinate
 	 * system, return the sine of the phi parameter in spherical coordinates */
 	inline static Float sinPhi(const Vector &v) {
 		Float sinTheta = Frame::sinTheta(v);
@@ -123,7 +123,7 @@ struct Frame {
 		return clamp(v.y / sinTheta, (Float) -1.0f, (Float) 1.0f);
 	}
 
-	/** \brief Assuming that the given direction is in the local coordinate 
+	/** \brief Assuming that the given direction is in the local coordinate
 	 * system, return the cosine of the phi parameter in spherical coordinates */
 	inline static Float cosPhi(const Vector &v) {
 		Float sinTheta = Frame::sinTheta(v);

@@ -41,7 +41,7 @@ MTS_NAMESPACE_BEGIN
  * the average radiance passing through a specified position.
  * By default, the sensor is located at the origin.
  *
- * Such a sensor is useful for conducting virtual experiments and 
+ * Such a sensor is useful for conducting virtual experiments and
  * testing the renderer for correctness.
  *
  * \vspace{4mm}
@@ -74,12 +74,12 @@ public:
 	FluenceMeter(const Properties &props) : Sensor(props) {
 		m_type |= EDeltaPosition;
 
-		if (props.getTransform("toWorld", Transform()).hasScale()) 
+		if (props.getTransform("toWorld", Transform()).hasScale())
 			Log(EError, "Scale factors in the sensor-to-world "
 				"transformation are not allowed!");
 	}
 
-	FluenceMeter(Stream *stream, InstanceManager *manager) 
+	FluenceMeter(Stream *stream, InstanceManager *manager)
 	 : Sensor(stream, manager) {
 		configure();
 	}
@@ -114,7 +114,7 @@ public:
 		return (pRec.measure == EDiscrete) ? 1.0f : 0.0f;
 	}
 
-	Spectrum sampleDirection(DirectionSamplingRecord &dRec, 
+	Spectrum sampleDirection(DirectionSamplingRecord &dRec,
 			PositionSamplingRecord &pRec,
 			const Point2 &sample,
 			const Point2 *extra) const {

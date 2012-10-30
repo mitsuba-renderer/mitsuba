@@ -52,7 +52,7 @@ public:
 	inline Spectrum getAverage() const {
 		return m_value;
 	}
-	
+
 	inline Spectrum getMaximum() const {
 		return m_value;
 	}
@@ -103,7 +103,7 @@ public:
 	inline Spectrum getAverage() const {
 		return Spectrum(m_value);
 	}
-	
+
 	inline Spectrum getMaximum() const {
 		return Spectrum(m_value);
 	}

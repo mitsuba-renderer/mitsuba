@@ -35,8 +35,8 @@
 
 MTS_NAMESPACE_BEGIN
 
-TriMesh::TriMesh(const std::string &name, size_t triangleCount, 
-		size_t vertexCount, bool hasNormals, bool hasTexcoords, 
+TriMesh::TriMesh(const std::string &name, size_t triangleCount,
+		size_t vertexCount, bool hasNormals, bool hasTexcoords,
 		bool hasVertexColors, bool flipNormals, bool faceNormals)
  	: Shape(Properties()), m_triangleCount(triangleCount),
 	  m_vertexCount(vertexCount), m_flipNormals(flipNormals),
@@ -52,14 +52,14 @@ TriMesh::TriMesh(const std::string &name, size_t triangleCount,
 	m_mutex = new Mutex();
 }
 
-TriMesh::TriMesh(const Properties &props) 
+TriMesh::TriMesh(const Properties &props)
  : Shape(props), m_triangles(NULL), m_positions(NULL),
 	m_normals(NULL), m_texcoords(NULL), m_tangents(NULL),
 	m_colors(NULL) {
 
 	/* By default, any existing normals will be used for
 	   rendering. If no normals are found, Mitsuba will
-	   automatically generate smooth vertex normals. 
+	   automatically generate smooth vertex normals.
 	   Setting the 'faceNormals' parameter instead forces
 	   the use of face normals, which will result in a faceted
 	   appearance.
@@ -68,15 +68,15 @@ TriMesh::TriMesh(const Properties &props)
 
 	/* Causes all normals to be flipped */
 	m_flipNormals = props.getBoolean("flipNormals", false);
-	
+
 	m_triangles = NULL;
 	m_surfaceArea = m_invSurfaceArea = -1;
 	m_mutex = new Mutex();
 }
 
 TriMesh::TriMesh(Stream *stream, int index)
-		: Shape(Properties()), m_triangles(NULL), 
-	m_positions(NULL), m_normals(NULL), m_texcoords(NULL), 
+		: Shape(Properties()), m_triangles(NULL),
+	m_positions(NULL), m_normals(NULL), m_texcoords(NULL),
 	m_tangents(NULL), m_colors(NULL) {
 
 	m_mutex = new Mutex();
@@ -95,7 +95,7 @@ enum ETriMeshFlags {
 	EDoublePrecision = 0x2000
 };
 
-TriMesh::TriMesh(Stream *stream, InstanceManager *manager) 
+TriMesh::TriMesh(Stream *stream, InstanceManager *manager)
 	: Shape(stream, manager), m_tangents(NULL) {
 	m_name = stream->readString();
 	m_aabb = AABB(stream);
@@ -105,14 +105,14 @@ TriMesh::TriMesh(Stream *stream, InstanceManager *manager)
 	m_triangleCount = stream->readSize();
 
 	m_positions = new Point[m_vertexCount];
-	stream->readFloatArray(reinterpret_cast<Float *>(m_positions), 
+	stream->readFloatArray(reinterpret_cast<Float *>(m_positions),
 		m_vertexCount * sizeof(Point)/sizeof(Float));
 
 	m_faceNormals = flags & EFaceNormals;
 
 	if (flags & EHasNormals) {
 		m_normals = new Normal[m_vertexCount];
-		stream->readFloatArray(reinterpret_cast<Float *>(m_normals), 
+		stream->readFloatArray(reinterpret_cast<Float *>(m_normals),
 			m_vertexCount * sizeof(Normal)/sizeof(Float));
 	} else {
 		m_normals = NULL;
@@ -120,7 +120,7 @@ TriMesh::TriMesh(Stream *stream, InstanceManager *manager)
 
 	if (flags & EHasTexcoords) {
 		m_texcoords = new Point2[m_vertexCount];
-		stream->readFloatArray(reinterpret_cast<Float *>(m_texcoords), 
+		stream->readFloatArray(reinterpret_cast<Float *>(m_texcoords),
 			m_vertexCount * sizeof(Point2)/sizeof(Float));
 	} else {
 		m_texcoords = NULL;
@@ -128,14 +128,14 @@ TriMesh::TriMesh(Stream *stream, InstanceManager *manager)
 
 	if (flags & EHasColors) {
 		m_colors = new Color3[m_vertexCount];
-		stream->readFloatArray(reinterpret_cast<Float *>(m_colors), 
+		stream->readFloatArray(reinterpret_cast<Float *>(m_colors),
 			m_vertexCount * sizeof(Color3)/sizeof(Float));
 	} else {
 		m_colors = NULL;
 	}
 
 	m_triangles = new Triangle[m_triangleCount];
-	stream->readUIntArray(reinterpret_cast<uint32_t *>(m_triangles), 
+	stream->readUIntArray(reinterpret_cast<uint32_t *>(m_triangles),
 		m_triangleCount * sizeof(Triangle)/sizeof(uint32_t));
 	m_flipNormals = false;
 	m_surfaceArea = m_invSurfaceArea = -1;
@@ -143,7 +143,7 @@ TriMesh::TriMesh(Stream *stream, InstanceManager *manager)
 	configure();
 }
 
-static void readHelper(Stream *stream, bool fileDoublePrecision, 
+static void readHelper(Stream *stream, bool fileDoublePrecision,
 		Float *target, size_t count, size_t nelems) {
 #if defined(SINGLE_PRECISION)
 	bool hostDoublePrecision = false;
@@ -175,7 +175,7 @@ static void readHelper(Stream *stream, bool fileDoublePrecision,
 void TriMesh::loadCompressed(Stream *_stream, int index) {
 	ref<Stream> stream = _stream;
 
-	if (stream->getByteOrder() != Stream::ELittleEndian) 
+	if (stream->getByteOrder() != Stream::ELittleEndian)
 		Log(EError, "Tried to unserialize a shape from a stream, "
 		"which was not previously set to little endian byte order!");
 
@@ -243,7 +243,7 @@ void TriMesh::loadCompressed(Stream *_stream, int index) {
 
 	if (flags & EHasNormals) {
 		m_normals = new Normal[m_vertexCount];
-		readHelper(stream, fileDoublePrecision, 
+		readHelper(stream, fileDoublePrecision,
 				reinterpret_cast<Float *>(m_normals),
 				m_vertexCount, sizeof(Normal)/sizeof(Float));
 	} else {
@@ -267,7 +267,7 @@ void TriMesh::loadCompressed(Stream *_stream, int index) {
 
 	if (flags & EHasColors) {
 		m_colors = new Color3[m_vertexCount];
-		readHelper(stream, fileDoublePrecision, 
+		readHelper(stream, fileDoublePrecision,
 				reinterpret_cast<Float *>(m_colors),
 				m_vertexCount, sizeof(Color3)/sizeof(Float));
 	} else {
@@ -275,7 +275,7 @@ void TriMesh::loadCompressed(Stream *_stream, int index) {
 	}
 
 	m_triangles = new Triangle[m_triangleCount];
-	stream->readUIntArray(reinterpret_cast<uint32_t *>(m_triangles), 
+	stream->readUIntArray(reinterpret_cast<uint32_t *>(m_triangles),
 		m_triangleCount * sizeof(Triangle)/sizeof(uint32_t));
 
 	m_surfaceArea = m_invSurfaceArea = -1;
@@ -296,7 +296,7 @@ TriMesh::~TriMesh() {
 	if (m_triangles)
 		delete[] m_triangles;
 }
-	
+
 std::string TriMesh::getName() const {
 	return m_name;
 }
@@ -313,9 +313,9 @@ void TriMesh::configure() {
 	Shape::configure();
 
 	if (!m_aabb.isValid()) {
-		/* Most shape objects should compute the AABB while 
+		/* Most shape objects should compute the AABB while
 		   loading the geometry -- but let's be on the safe side */
-		for (size_t i=0; i<m_vertexCount; i++) 
+		for (size_t i=0; i<m_vertexCount; i++)
 			m_aabb.expandBy(m_positions[i]);
 	}
 
@@ -326,11 +326,11 @@ void TriMesh::configure() {
 	    1. An anisotropic BRDF is attached to the shape
 		2. The material explicitly requests tangents so that it can do texture filtering
 	*/
-	if (hasBSDF() && 
+	if (hasBSDF() &&
 		((m_bsdf->getType() & BSDF::EAnisotropic) || m_bsdf->usesRayDifferentials()))
 		computeUVTangents();
 
-	/* For manifold exploration: always compute UV tangents when a glossy material 
+	/* For manifold exploration: always compute UV tangents when a glossy material
 	   is involved. TODO: find a way to avoid this expense (compute on demand?) */
 	if (hasBSDF() && (m_bsdf->getType() & BSDF::EGlossy))
 		computeUVTangents();
@@ -346,7 +346,7 @@ void TriMesh::prepareSamplingTable() {
 	if (m_surfaceArea < 0) {
 		/* Generate a PDF for sampling wrt. area */
 		m_areaDistr.reserve(m_triangleCount);
-		for (size_t i=0; i<m_triangleCount; i++) 
+		for (size_t i=0; i<m_triangleCount; i++)
 			m_areaDistr.append(m_triangles[i].surfaceArea(m_positions));
 		m_surfaceArea = m_areaDistr.normalize();
 		m_invSurfaceArea = 1.0f / m_surfaceArea;
@@ -360,14 +360,15 @@ Float TriMesh::getSurfaceArea() const {
 	return m_surfaceArea;
 }
 
-void TriMesh::samplePosition(PositionSamplingRecord &pRec, 
+void TriMesh::samplePosition(PositionSamplingRecord &pRec,
 		const Point2 &_sample) const {
 	if (EXPECT_NOT_TAKEN(m_surfaceArea < 0))
 		const_cast<TriMesh *>(this)->prepareSamplingTable();
 
 	Point2 sample(_sample);
 	size_t index = m_areaDistr.sampleReuse(sample.y);
-	pRec.p = m_triangles[index].sample(m_positions, m_normals, pRec.n, sample);
+	pRec.p = m_triangles[index].sample(m_positions, m_normals,
+		m_texcoords, pRec.n, pRec.uv, sample);
 	pRec.pdf = m_invSurfaceArea;
 	pRec.measure = EArea;
 }
@@ -380,7 +381,7 @@ struct Vertex {
 };
 
 /// For using vertices as keys in an associative structure
-struct vertex_key_order : public 
+struct vertex_key_order : public
 	std::binary_function<Vertex, Vertex, bool> {
 	static int compare(const Vertex &v1, const Vertex &v2) {
 		if (v1.p.x < v2.p.x) return -1;
@@ -430,8 +431,8 @@ void TriMesh::rebuildTopology(Float maxAngle) {
 		m_tangents = NULL;
 	}
 
-	Log(EInfo, "Rebuilding the topology of \"%s\" (" SIZE_T_FMT 
-			" triangles, " SIZE_T_FMT " vertices, max. angle = %f)", 
+	Log(EInfo, "Rebuilding the topology of \"%s\" (" SIZE_T_FMT
+			" triangles, " SIZE_T_FMT " vertices, max. angle = %f)",
 			m_name.c_str(), m_triangleCount, m_vertexCount, maxAngle);
 	ref<Timer> timer = new Timer();
 
@@ -510,7 +511,7 @@ void TriMesh::rebuildTopology(Float maxAngle) {
 		it = end;
 	}
 
-	for (size_t i=0; i<m_triangleCount; ++i) 
+	for (size_t i=0; i<m_triangleCount; ++i)
 		for (int j=0; j<3; ++j)
 			Assert(newTriangles[i].idx[j] != 0xFFFFFFFFU);
 
@@ -535,13 +536,13 @@ void TriMesh::rebuildTopology(Float maxAngle) {
 
 	m_vertexCount = newPositions.size();
 
-	Log(EInfo, "Done after %i ms (mesh now has " SIZE_T_FMT " vertices)", 
+	Log(EInfo, "Done after %i ms (mesh now has " SIZE_T_FMT " vertices)",
 			timer->getMilliseconds(), m_vertexCount);
 
 	configure();
 }
 
-void TriMesh::computeNormals() {
+void TriMesh::computeNormals(bool force) {
 	int invalidNormals = 0;
 	if (m_faceNormals) {
 		if (m_normals) {
@@ -557,18 +558,19 @@ void TriMesh::computeNormals() {
 			}
 		}
 	} else {
-		if (m_normals) {
+		if (m_normals && !force) {
 			if (m_flipNormals) {
-				for (size_t i=0; i<m_vertexCount; i++) 
+				for (size_t i=0; i<m_vertexCount; i++)
 					m_normals[i] *= -1;
 			} else {
 				/* Do nothing */
 			}
 		} else {
-			m_normals = new Normal[m_vertexCount];
+			if (!m_normals)
+				m_normals = new Normal[m_vertexCount];
 			memset(m_normals, 0, sizeof(Normal)*m_vertexCount);
 
-			/* Well-behaved vertex normal computation based on 
+			/* Well-behaved vertex normal computation based on
 			   "Computing Vertex Normals from Polygonal Facets"
 			   by Grit Thuermer and Charles A. Wuethrich,
 			   JGT 1998, Vol 3 */
@@ -609,14 +611,14 @@ void TriMesh::computeNormals() {
 	}
 
 	m_flipNormals = false;
-	
+
 	if (invalidNormals > 0)
-		Log(EWarn, "\"%s\": Unable to generate %i vertex normals", 
+		Log(EWarn, "\"%s\": Unable to generate %i vertex normals",
 			m_name.c_str(), invalidNormals);
 }
 
 void TriMesh::computeUVTangents() {
-	int degenerate = 0;
+	// int degenerate = 0;
 	if (!m_texcoords) {
 		bool anisotropic = hasBSDF() && m_bsdf->getType() & BSDF::EAnisotropic;
 		if (anisotropic)
@@ -653,13 +655,13 @@ void TriMesh::computeUVTangents() {
 		Normal n = Normal(cross(dP1, dP2));
 		Float length = n.length();
 		if (length == 0) {
-			++degenerate;
+			// ++degenerate;
 			continue;
 		}
 
 		Float determinant = dUV1.x * dUV2.y - dUV1.y * dUV2.x;
 		if (determinant == 0) {
-			/* The user-specified parameterization is degenerate. Pick 
+			/* The user-specified parameterization is degenerate. Pick
 			   arbitrary tangents that are perpendicular to the geometric normal */
 			coordinateSystem(n/length, m_tangents[i].dpdu, m_tangents[i].dpdv);
 		} else {
@@ -669,9 +671,12 @@ void TriMesh::computeUVTangents() {
 		}
 	}
 
-	if (degenerate > 0)
-		Log(EWarn, "\"%s\": computeTangentSpace(): Mesh contains %i "
-			"degenerate triangles!", getName().c_str(), degenerate);
+	#if 0
+		/* Don't be so noisy -- this isn't usually a problem.. */
+		if (degenerate > 0)
+			Log(EWarn, "\"%s\": computeTangentSpace(): Mesh contains %i "
+				"degenerate triangles!", getName().c_str(), degenerate);
+	#endif
 }
 
 void TriMesh::getNormalDerivative(const Intersection &its,
@@ -684,7 +689,7 @@ void TriMesh::getNormalDerivative(const Intersection &its,
 		const Triangle &tri = m_triangles[its.primIndex];
 
 		uint32_t idx0 = tri.idx[0],
-				 idx1 = tri.idx[1], 
+				 idx1 = tri.idx[1],
 				 idx2 = tri.idx[2];
 
 		const Point
@@ -711,7 +716,7 @@ void TriMesh::getNormalDerivative(const Intersection &its,
 		      v = (-a12 * b1 + a11 * b2) * invDet,
 		      w = 1 - u - v;
 
-		const Normal 
+		const Normal
 			&n0 = m_normals[idx0],
 			&n1 = m_normals[idx1],
 			&n2 = m_normals[idx2];
@@ -719,7 +724,7 @@ void TriMesh::getNormalDerivative(const Intersection &its,
 		/* Now compute the derivative of "normalize(u*n1 + v*n2 + (1-u-v)*n0)"
 		   with respect to [u, v] in the local triangle parameterization.
 
-		   Since d/du [f(u)/|f(u)|] = [d/du f(u)]/|f(u)| 
+		   Since d/du [f(u)/|f(u)|] = [d/du f(u)]/|f(u)|
 		     - f(u)/|f(u)|^3 <f(u), d/du f(u)>, this results in
 		*/
 
@@ -730,7 +735,7 @@ void TriMesh::getNormalDerivative(const Intersection &its,
 		dndv = (n2 - n0) * il; dndv -= N * dot(N, dndv);
 
 		if (m_tangents) {
-			/* Compute derivatives with respect to a specified texture 
+			/* Compute derivatives with respect to a specified texture
 			   UV parameterization.  */
 			const Point2
 				&uv0 = m_texcoords[idx0],
@@ -775,18 +780,18 @@ void TriMesh::serialize(Stream *stream, InstanceManager *manager) const {
 	stream->writeSize(m_vertexCount);
 	stream->writeSize(m_triangleCount);
 
-	stream->writeFloatArray(reinterpret_cast<Float *>(m_positions), 
+	stream->writeFloatArray(reinterpret_cast<Float *>(m_positions),
 		m_vertexCount * sizeof(Point)/sizeof(Float));
 	if (m_normals)
-		stream->writeFloatArray(reinterpret_cast<Float *>(m_normals), 
+		stream->writeFloatArray(reinterpret_cast<Float *>(m_normals),
 			m_vertexCount * sizeof(Normal)/sizeof(Float));
 	if (m_texcoords)
-		stream->writeFloatArray(reinterpret_cast<Float *>(m_texcoords), 
+		stream->writeFloatArray(reinterpret_cast<Float *>(m_texcoords),
 			m_vertexCount * sizeof(Point2)/sizeof(Float));
 	if (m_colors)
-		stream->writeFloatArray(reinterpret_cast<Float *>(m_colors), 
+		stream->writeFloatArray(reinterpret_cast<Float *>(m_colors),
 			m_vertexCount * sizeof(Color3)/sizeof(Float));
-	stream->writeUIntArray(reinterpret_cast<uint32_t *>(m_triangles), 
+	stream->writeUIntArray(reinterpret_cast<uint32_t *>(m_triangles),
 		m_triangleCount * sizeof(Triangle)/sizeof(uint32_t));
 }
 
@@ -794,7 +799,7 @@ void TriMesh::writeOBJ(const fs::path &path) const {
 	fs::ofstream os(path);
 	os << "o " << m_name << endl;
 	for (size_t i=0; i<m_vertexCount; ++i) {
-		os << "v " 
+		os << "v "
 			<< m_positions[i].x << " "
 			<< m_positions[i].y << " "
 			<< m_positions[i].z << endl;
@@ -802,7 +807,7 @@ void TriMesh::writeOBJ(const fs::path &path) const {
 
 	if (m_texcoords) {
 		for (size_t i=0; i<m_vertexCount; ++i) {
-			os << "vt " 
+			os << "vt "
 				<< m_texcoords[i].x << " "
 				<< m_texcoords[i].y << endl;
 		}
@@ -810,7 +815,7 @@ void TriMesh::writeOBJ(const fs::path &path) const {
 
 	if (m_normals) {
 		for (size_t i=0; i<m_vertexCount; ++i) {
-			os << "vn " 
+			os << "vn "
 				<< m_normals[i].x << " "
 				<< m_normals[i].y << " "
 				<< m_normals[i].z << endl;
@@ -818,9 +823,10 @@ void TriMesh::writeOBJ(const fs::path &path) const {
 	}
 
 	for (size_t i=0; i<m_triangleCount; ++i) {
-		int i0 = m_triangles[i].idx[0] + 1,
-			i1 = m_triangles[i].idx[1] + 1,
-			i2 = m_triangles[i].idx[2] + 1;
+		uint32_t i0 = m_triangles[i].idx[0] + 1,
+		         i1 = m_triangles[i].idx[1] + 1,
+		         i2 = m_triangles[i].idx[2] + 1;
+
 		if (m_normals && m_texcoords) {
 			os << "f " << i0 << "/" << i0 << "/" << i0 << " "
 			   <<  i1 << "/" << i1 << "/" << i1 << " "
@@ -840,7 +846,7 @@ void TriMesh::writeOBJ(const fs::path &path) const {
 void TriMesh::serialize(Stream *_stream) const {
 	ref<Stream> stream = _stream;
 
-	if (stream->getByteOrder() != Stream::ELittleEndian) 
+	if (stream->getByteOrder() != Stream::ELittleEndian)
 		Log(EError, "Tried to unserialize a shape from a stream, "
 			"which was not previously set to little endian byte order!");
 
@@ -868,18 +874,18 @@ void TriMesh::serialize(Stream *_stream) const {
 	stream->writeSize(m_vertexCount);
 	stream->writeSize(m_triangleCount);
 
-	stream->writeFloatArray(reinterpret_cast<Float *>(m_positions), 
+	stream->writeFloatArray(reinterpret_cast<Float *>(m_positions),
 		m_vertexCount * sizeof(Point)/sizeof(Float));
 	if (m_normals)
-		stream->writeFloatArray(reinterpret_cast<Float *>(m_normals), 
+		stream->writeFloatArray(reinterpret_cast<Float *>(m_normals),
 			m_vertexCount * sizeof(Normal)/sizeof(Float));
 	if (m_texcoords)
-		stream->writeFloatArray(reinterpret_cast<Float *>(m_texcoords), 
+		stream->writeFloatArray(reinterpret_cast<Float *>(m_texcoords),
 			m_vertexCount * sizeof(Point2)/sizeof(Float));
 	if (m_colors)
-		stream->writeFloatArray(reinterpret_cast<Float *>(m_colors), 
+		stream->writeFloatArray(reinterpret_cast<Float *>(m_colors),
 			m_vertexCount * sizeof(Color3)/sizeof(Float));
-	stream->writeUIntArray(reinterpret_cast<uint32_t *>(m_triangles), 
+	stream->writeUIntArray(reinterpret_cast<uint32_t *>(m_triangles),
 		m_triangleCount * sizeof(Triangle)/sizeof(uint32_t));
 }
 
@@ -905,7 +911,7 @@ std::string TriMesh::toString() const {
 		<< "  surfaceArea = " << m_surfaceArea << "," << endl
 		<< "  aabb = " << m_aabb.toString() << "," << endl
 		<< "  bsdf = " << indent(m_bsdf.toString()) << "," << endl;
-	if (isMediumTransition()) 
+	if (isMediumTransition())
 		oss << "  interiorMedium = " << indent(m_interiorMedium.toString()) << "," << endl
 			<< "  exteriorMedium = " << indent(m_exteriorMedium.toString()) << "," << endl;
 	oss << "  subsurface = " << indent(m_subsurface.toString()) << "," << endl

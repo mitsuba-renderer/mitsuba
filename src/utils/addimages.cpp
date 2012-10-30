@@ -54,10 +54,10 @@ public:
 		if (aBitmap->getSize() != bBitmap->getSize())
 			Log(EError, "Error: Input bitmaps have a different size!");
 
-		ref<Bitmap> outBitmap = new Bitmap(aBitmap->getPixelFormat(), 
+		ref<Bitmap> outBitmap = new Bitmap(aBitmap->getPixelFormat(),
 				aBitmap->getComponentFormat(), aBitmap->getSize());
 
-		size_t nEntries = 
+		size_t nEntries =
 			(size_t) aBitmap->getSize().x *
 			(size_t) aBitmap->getSize().y *
 			aBitmap->getChannelCount();
@@ -68,7 +68,7 @@ public:
 					half *bData = bBitmap->getFloat16Data();
 					half *outData = outBitmap->getFloat16Data();
 					for (size_t i=0; i<nEntries; ++i)
-						*outData++ = (half) std::max((Float) 0, 
+						*outData++ = (half) std::max((Float) 0,
 								weight1 * (Float) (*aData++) +
 								weight2 * (Float) (*bData++));
 				}
@@ -79,7 +79,7 @@ public:
 					float *bData = bBitmap->getFloat32Data();
 					float *outData = outBitmap->getFloat32Data();
 					for (size_t i=0; i<nEntries; ++i)
-						*outData++ = (float) std::max((Float) 0, 
+						*outData++ = (float) std::max((Float) 0,
 								weight1 * (Float) (*aData++) +
 								weight2 * (Float) (*bData++));
 				}
@@ -90,7 +90,7 @@ public:
 					uint32_t *bData = bBitmap->getUInt32Data();
 					uint32_t *outData = outBitmap->getUInt32Data();
 					for (size_t i=0; i<nEntries; ++i)
-						*outData++ = (uint32_t) std::max((Float) 0, 
+						*outData++ = (uint32_t) std::max((Float) 0,
 								weight1 * (Float) (*aData++) +
 								weight2 * (Float) (*bData++));
 				}

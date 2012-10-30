@@ -25,7 +25,7 @@
 class PreviewSettingsDlg;
 
 #if defined(__OBJC__)
-@interface CocoaRenderSettingsDlg : NSView < NSWindowDelegate > 
+@interface CocoaRenderSettingsDlg : NSView < NSWindowDelegate >
 {
 	IBOutlet NSPanel *panel;
 	IBOutlet BWTransparentPopUpButton *previewMethod;

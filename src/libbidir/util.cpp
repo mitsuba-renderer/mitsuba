@@ -25,7 +25,7 @@
 
 MTS_NAMESPACE_BEGIN
 
-ref<Bitmap> BidirectionalUtils::renderDirectComponent(Scene *scene, int sceneResID, 
+ref<Bitmap> BidirectionalUtils::renderDirectComponent(Scene *scene, int sceneResID,
 		int sensorResID, RenderQueue *queue, const RenderJob *job, size_t directSamples) {
 	ref<PluginManager> pluginMgr = PluginManager::getInstance();
 	ref<Scheduler> scheduler = Scheduler::getInstance();
@@ -54,7 +54,7 @@ ref<Bitmap> BidirectionalUtils::renderDirectComponent(Scene *scene, int sceneRes
 	ref<Integrator> directIntegrator = static_cast<Integrator *> (pluginMgr->
 			createObject(Integrator::m_theClass, integratorProps));
 	/* Create a low discrepancy sampler instance for every core */
-	Properties samplerProps("ldsampler"); 
+	Properties samplerProps("ldsampler");
 	samplerProps.setSize("sampleCount", pixelSamples);
 	ref<Sampler> ldSampler = static_cast<Sampler *> (pluginMgr->
 			createObject(Sampler::m_theClass, samplerProps));
@@ -73,7 +73,7 @@ ref<Bitmap> BidirectionalUtils::renderDirectComponent(Scene *scene, int sceneRes
 
 	integrator->incRef();
 	scene->setIntegrator(directIntegrator);
-	bool success = directIntegrator->render(scene, queue, job, 
+	bool success = directIntegrator->render(scene, queue, job,
 		sceneResID, sensorResID, ldSamplerResID);
 	scene->setIntegrator(integrator);
 	integrator->decRef();
@@ -91,7 +91,7 @@ ref<Bitmap> BidirectionalUtils::renderDirectComponent(Scene *scene, int sceneRes
 	}
 }
 
-ref<Bitmap> BidirectionalUtils::mltLuminancePass(Scene *scene, int sceneResID, 
+ref<Bitmap> BidirectionalUtils::mltLuminancePass(Scene *scene, int sceneResID,
 		RenderQueue *queue, int sizeFactor, ref<RenderJob> &nestedJob) {
 	ref<PluginManager> pluginMgr = PluginManager::getInstance();
 	ref<Scheduler> scheduler = Scheduler::getInstance();
@@ -101,14 +101,14 @@ ref<Bitmap> BidirectionalUtils::mltLuminancePass(Scene *scene, int sceneResID,
 	Vector2i origSize       = scene->getFilm()->getSize();
 
 	Vector2i reducedSize = Vector2i(
-		std::max(1, origSize.x / sizeFactor), 
+		std::max(1, origSize.x / sizeFactor),
 		std::max(1, origSize.y / sizeFactor));
 
 	Vector2i reducedCropSize = Vector2i(
-		std::max(1, origCropSize.x / sizeFactor), 
+		std::max(1, origCropSize.x / sizeFactor),
 		std::max(1, origCropSize.y / sizeFactor));
 
-	Point2i reducedCropOffset = 
+	Point2i reducedCropOffset =
 		scene->getFilm()->getCropOffset()/sizeFactor;
 
 	size_t sampleCount = scene->getSampler()->getSampleCount();
@@ -143,7 +143,7 @@ ref<Bitmap> BidirectionalUtils::mltLuminancePass(Scene *scene, int sceneResID,
 
 	/* Configure the sensor */
 	Properties sensorProps = sensor->getProperties();
-	ref<Sensor> nestedSensor = static_cast<Sensor *> 
+	ref<Sensor> nestedSensor = static_cast<Sensor *>
 		(pluginMgr->createObject(Sensor::m_theClass, sensorProps));
 	nestedSensor->addChild(nestedSampler);
 	nestedSensor->addChild(nestedFilm);
@@ -182,9 +182,9 @@ ref<Bitmap> BidirectionalUtils::mltLuminancePass(Scene *scene, int sceneResID,
 	rfilter->configure();
 
 	/* Develop the rendered image into a luminance bitmap */
-	ref<Bitmap> luminanceMap = new Bitmap(Bitmap::ELuminance, 
+	ref<Bitmap> luminanceMap = new Bitmap(Bitmap::ELuminance,
 		Bitmap::EFloat, reducedCropSize);
-	nestedFilm->develop(Point2i(0, 0), reducedCropSize, 
+	nestedFilm->develop(Point2i(0, 0), reducedCropSize,
 		Point2i(0, 0), luminanceMap);
 
 	/* Up-sample the low resolution luminance map */
@@ -192,7 +192,7 @@ ref<Bitmap> BidirectionalUtils::mltLuminancePass(Scene *scene, int sceneResID,
 		ReconstructionFilter::EClamp,
 		ReconstructionFilter::EClamp, origCropSize,
 		0.0f, std::numeric_limits<Float>::infinity());
-		
+
 	return luminanceMap;
 }
 

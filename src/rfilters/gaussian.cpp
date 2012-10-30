@@ -23,13 +23,13 @@ MTS_NAMESPACE_BEGIN
 /**
  * This is a windowed Gaussian filter with configurable standard deviation.
  * It often produces pleasing results, but may introduce too much blurring.
- * 
+ *
  * When no reconstruction filter is explicitly requested, this is the default
  * choice in Mitsuba.
  */
 class GaussianFilter : public ReconstructionFilter {
 public:
-	GaussianFilter(const Properties &props) 
+	GaussianFilter(const Properties &props)
 		: ReconstructionFilter(props) {
 		/* Standard deviation */
 		m_stddev = props.getFloat("stddev", 0.5f);
@@ -38,7 +38,7 @@ public:
 		m_radius = 4 * m_stddev;
 	}
 
-	GaussianFilter(Stream *stream, InstanceManager *manager) 
+	GaussianFilter(Stream *stream, InstanceManager *manager)
 		: ReconstructionFilter(stream, manager) {
 		m_stddev = stream->readFloat();
 		configure();
@@ -51,8 +51,8 @@ public:
 
 	Float eval(Float x) const {
 		Float alpha = -1.0f / (2.0f * m_stddev*m_stddev);
-		return std::max((Float) 0.0f, 
-			std::exp(alpha * x * x) - 
+		return std::max((Float) 0.0f,
+			std::exp(alpha * x * x) -
 			std::exp(alpha * m_radius * m_radius));
 	}
 

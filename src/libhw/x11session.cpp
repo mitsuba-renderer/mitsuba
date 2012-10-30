@@ -31,7 +31,7 @@ X11Session::~X11Session() {
 }
 
 static int X11SessionErrorHandler(Display *pDisplay, XErrorEvent *pEvent) {
-	SLog(EWarn, "Xlib error: Error code %d, request code %d", 
+	SLog(EWarn, "Xlib error: Error code %d, request code %d",
 			pEvent->error_code, pEvent->request_code);
 	return 0;
 }
@@ -65,7 +65,7 @@ void X11Session::init() {
 
 	if(!XQueryExtension(m_display, "GLX", &temp, &temp, &temp)) {
 		Log(EError, "OpenGL is not supported");
-	} else {	
+	} else {
 		if (glXQueryVersion(m_display, &major, &minor)) {
 			if (major == 1 && minor < 1) {
 				Log(EWarn, "GLX Version is too old (1.1 or higher is required)");
@@ -96,7 +96,7 @@ void X11Session::processEvents() {
 	while (XPending(m_display)) {
 		XNextEvent(m_display, &event);
 		Window window = event.xany.window;
-		
+
 		std::vector<Device *>::iterator it = m_devices.begin();
 
 		for (; it!=m_devices.end(); ++it) {
@@ -116,7 +116,7 @@ void X11Session::processEventsBlocking(bool &stop) {
 			break;
 		XNextEvent(m_display, &event);
 		Window window = event.xany.window;
-		
+
 		std::vector<Device *>::iterator it = m_devices.begin();
 
 		for (; it!=m_devices.end(); ++it) {

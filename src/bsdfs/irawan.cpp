@@ -44,7 +44,7 @@ MTS_NAMESPACE_BEGIN
  *         parameterization}
  *     \parameter{(\emph{Additional parameters})}{\Spectrum\Or\Float}{
  *         Weave pattern files may define their own custom parameters; this is
- *         useful for instance to support changing the color of a weave 
+ *         useful for instance to support changing the color of a weave
  *         without having to create a new file every time.
  *         These parameters must be specified directly to the plugin
  *         so that they can be appropriately resolved when the pattern file is loaded.
@@ -54,16 +54,16 @@ MTS_NAMESPACE_BEGIN
  * This plugin implements the Irawan \& Marschner BRDF,
  * a realistic model for rendering woven materials.
  * This spatially-varying reflectance model uses an explicit description
- * of the underlying weave pattern to create fine-scale texture and 
+ * of the underlying weave pattern to create fine-scale texture and
  * realistic reflections across a wide range of different weave types.
- * To use the model, you must provide a special weave pattern 
- * file---for an example of what these look like, see the 
+ * To use the model, you must provide a special weave pattern
+ * file---for an example of what these look like, see the
  * examples scenes available on the Mitsuba website.
  *
  * A detailed explanation of the model is beyond the scope of this manual.
- * For reference, it is described in detail in the PhD thesis of 
+ * For reference, it is described in detail in the PhD thesis of
  * Piti Irawan (``The Appearance of Woven Cloth'' \cite{IrawanThesis}).
- * The code in Mitsuba a modified port of a previous Java implementation 
+ * The code in Mitsuba a modified port of a previous Java implementation
  * by Piti, which has been extended with a simple domain-specific weave
  * pattern description language. \vspace{8mm}
  *
@@ -81,13 +81,13 @@ MTS_NAMESPACE_BEGIN
  */
 class IrawanClothBRDF : public BSDF {
 public:
-	IrawanClothBRDF(const Properties &props) 
+	IrawanClothBRDF(const Properties &props)
 		: BSDF(props), m_specularNormalization(0) {
 
 		FileResolver *fResolver = Thread::getThread()->getFileResolver();
 		fs::path path = fResolver->resolve(props.getString("filename"));
 		if (!fs::exists(path))
-			Log(EError, "Weave pattern file \"%s\" could not be found!",	
+			Log(EError, "Weave pattern file \"%s\" could not be found!",
 				path.string().c_str());
 		fs::ifstream in(path);
 		typedef spirit::istream_iterator iterator_type;
@@ -98,15 +98,15 @@ public:
 
 		bool success = phrase_parse(begin, end, g, sg, m_pattern);
 		if (!success)
-			Log(EError, "Unable to parse the weave pattern file \"%s\"!", 
+			Log(EError, "Unable to parse the weave pattern file \"%s\"!",
 				path.string().c_str());
 
 		/* Some sanity checks */
-		SAssert(m_pattern.pattern.size() == 
+		SAssert(m_pattern.pattern.size() ==
 		        m_pattern.tileWidth * m_pattern.tileHeight);
 		for (size_t i=0; i<m_pattern.pattern.size(); ++i)
 			SAssert(m_pattern.pattern[i] > 0 &&
-			        m_pattern.pattern[i] <= m_pattern.yarns.size()); 
+			        m_pattern.pattern[i] <= m_pattern.yarns.size());
 
 		/* U and V tile count */
 		m_repeatU = props.getFloat("repeatU");
@@ -118,7 +118,7 @@ public:
 				"appropriately set the 'kd' and 'ks'-values used in your model.");
 	}
 
-	IrawanClothBRDF(Stream *stream, InstanceManager *manager) 
+	IrawanClothBRDF(Stream *stream, InstanceManager *manager)
 		: BSDF(stream, manager) {
 		m_pattern = WeavePattern(stream);
 		m_repeatU = stream->readFloat();
@@ -143,7 +143,7 @@ public:
 		m_components.push_back(EDiffuseReflection | EFrontSide
 			| ESpatiallyVarying);
 
-		/* Estimate the average reflectance under diffuse 
+		/* Estimate the average reflectance under diffuse
 		   illumination and use it to normalize the specular
 		   component */
 		ref<Random> random = new Random();
@@ -175,7 +175,7 @@ public:
 	Spectrum getDiffuseReflectance(const Intersection &its) const {
 		Point2 uv = Point2(its.uv.x * m_repeatU,
 			(1 - its.uv.y) * m_repeatV);
-		Point2 xy(uv.x * m_pattern.tileWidth, uv.y * m_pattern.tileHeight); 
+		Point2 xy(uv.x * m_pattern.tileWidth, uv.y * m_pattern.tileHeight);
 		Point2i lookup(
 			modulo((int) xy.x, m_pattern.tileWidth),
 			modulo((int) xy.y, m_pattern.tileHeight));
@@ -191,7 +191,7 @@ public:
 			(bRec.component == -1 || bRec.component == 0);
 		bool hasDiffuse = (bRec.typeMask & EDiffuseReflection) &&
 			(bRec.component == -1 || bRec.component == 1);
-		
+
 		if (Frame::cosTheta(bRec.wi) <= 0 ||
 			Frame::cosTheta(bRec.wo) <= 0 ||
 			(!hasDiffuse && !hasSpecular) ||
@@ -200,7 +200,7 @@ public:
 
 		Point2 uv = Point2(bRec.its.uv.x * m_repeatU,
 			(1 - bRec.its.uv.y) * m_repeatV);
-		Point2 xy(uv.x * m_pattern.tileWidth, uv.y * m_pattern.tileHeight); 
+		Point2 xy(uv.x * m_pattern.tileWidth, uv.y * m_pattern.tileHeight);
 
 		Point2i lookup(
 			modulo((int) xy.x, m_pattern.tileWidth),
@@ -211,20 +211,20 @@ public:
 		const Yarn &yarn = m_pattern.yarns.at(yarnID);
 		// store center of the yarn segment
 		Point2 center
-			(((int) xy.x / m_pattern.tileWidth) * m_pattern.tileWidth 
+			(((int) xy.x / m_pattern.tileWidth) * m_pattern.tileWidth
 			 	+ yarn.centerU * m_pattern.tileWidth,
-			 ((int) xy.y / m_pattern.tileHeight) * m_pattern.tileHeight 
+			 ((int) xy.y / m_pattern.tileHeight) * m_pattern.tileHeight
 			 	+ (1 - yarn.centerV) * m_pattern.tileHeight);
-		
+
 		// transform x and y to new coordinate system with (0,0) at the
 		// center of the yarn segment
 		xy.x =	  xy.x - center.x;
 		xy.y = - (xy.y - center.y);
-		
+
 		int type = yarn.type;
 		Float w = yarn.width;
 		Float l = yarn.length;
- 
+
 		// Get incident and exitant directions.
 		Vector om_i = bRec.wi;
 		Vector om_r = bRec.wo;
@@ -232,7 +232,7 @@ public:
 		Float psi = yarn.psi;
 		Float umax = yarn.umax;
 		Float kappa = yarn.kappa;
- 
+
 		Float dUmaxOverDWarp, dUmaxOverDWeft;
 		if (type == Yarn::EWarp) {
 			dUmaxOverDWarp = m_pattern.dWarpUmaxOverDWarp;
@@ -240,7 +240,7 @@ public:
 		} else { // type == EWeft
 			dUmaxOverDWarp = m_pattern.dWeftUmaxOverDWarp;
 			dUmaxOverDWeft = m_pattern.dWeftUmaxOverDWeft;
-			// Rotate xy, incident, and exitant directions pi/2 radian about z-axis 
+			// Rotate xy, incident, and exitant directions pi/2 radian about z-axis
 			Float tmp = xy.x;
 			xy.x = -xy.y;
 			xy.y = tmp;
@@ -265,10 +265,10 @@ public:
 			Point2u pos(center);
 
 			random1 = Noise::perlinNoise(Point(
-				(center.x * (m_pattern.tileHeight * m_repeatV 
+				(center.x * (m_pattern.tileHeight * m_repeatV
 					+ sampleTEAFloat(pos.x, 2*pos.y, teaIterations)) + center.y) / m_pattern.period, 0, 0));
 			random2 = Noise::perlinNoise(Point(
-				(center.y * (m_pattern.tileWidth * m_repeatU 
+				(center.y * (m_pattern.tileWidth * m_repeatU
 					+ sampleTEAFloat(pos.x, 2*pos.y+1, teaIterations)) + center.x) / m_pattern.period, 0, 0));
 			umax = umax + random1 * dUmaxOverDWarp + random2 * dUmaxOverDWeft;
 		}
@@ -283,24 +283,24 @@ public:
 		if (hasSpecular) {
 			Float integrand;
 			if (psi != 0.0f)
-				integrand = evalStapleIntegrand(u, v, om_i, om_r, m_pattern.alpha, 
+				integrand = evalStapleIntegrand(u, v, om_i, om_r, m_pattern.alpha,
 						m_pattern.beta, psi, umax, kappa, w, l);
 			else
-				integrand = evalFilamentIntegrand(u, v, om_i, om_r, m_pattern.alpha, 
+				integrand = evalFilamentIntegrand(u, v, om_i, om_r, m_pattern.alpha,
 						m_pattern.beta, m_pattern.ss, umax, kappa, w, l);
 
 			// Initialize random number generator based on texture location.
 			Float intensityVariation = 1.0f;
 			if (m_pattern.fineness > 0.0f) {
 				// Compute random variation and scale specular component.
-				// Generate fineness^2 seeds per 1 unit of texture. 
+				// Generate fineness^2 seeds per 1 unit of texture.
 				uint32_t index1 = (uint32_t) ((center.x + xy.x) * m_pattern.fineness);
 				uint32_t index2 = (uint32_t) ((center.y + xy.y) * m_pattern.fineness);
 
 				Float xi = sampleTEAFloat(index1, index2, teaIterations);
 				intensityVariation = std::min(-math::fastlog(xi), (Float) 10.0f);
 			}
-			
+
 			if (!m_initialization)
 				result = yarn.ks * (intensityVariation * integrand * m_specularNormalization);
 			else
@@ -323,7 +323,7 @@ public:
 			(bRec.component == -1 || bRec.component == 0);
 		bool hasDiffuse = (bRec.typeMask & EDiffuseReflection) &&
 			(bRec.component == -1 || bRec.component == 1);
-		
+
 		if (Frame::cosTheta(bRec.wi) <= 0 ||
 			Frame::cosTheta(bRec.wo) <= 0 ||
 			(!hasDiffuse && !hasSpecular) ||
@@ -338,7 +338,7 @@ public:
 			(bRec.component == -1 || bRec.component == 0);
 		bool hasDiffuse = (bRec.typeMask & EDiffuseReflection) &&
 			(bRec.component == -1 || bRec.component == 1);
-		
+
 		if (Frame::cosTheta(bRec.wi) <= 0 ||
 			(!hasDiffuse && !hasSpecular))
 			return Spectrum(0.0f);
@@ -356,7 +356,7 @@ public:
 			(bRec.component == -1 || bRec.component == 0);
 		bool hasDiffuse = (bRec.typeMask & EDiffuseReflection) &&
 			(bRec.component == -1 || bRec.component == 1);
-		
+
 		if (Frame::cosTheta(bRec.wi) <= 0 ||
 			(!hasDiffuse && !hasSpecular))
 			return Spectrum(0.0f);
@@ -387,7 +387,7 @@ public:
 	 *	w	 width of segment rectangle
 	 *	l	 length of segment rectangle
 	 */
-	Float evalFilamentIntegrand(Float u, Float v, const Vector &om_i, 
+	Float evalFilamentIntegrand(Float u, Float v, const Vector &om_i,
 			const Vector &om_r, Float alpha, Float beta, Float ss,
 			Float umax, Float kappa, Float w, Float l) const {
 		// 0 <= ss < 1.0
@@ -404,10 +404,10 @@ public:
 
 		// h is the half vector
 		Vector h = normalize(om_r + om_i);
- 
+
 		// u_of_v is location of specular reflection.
 		Float u_of_v = std::atan(h.y / h.z);
-			
+
 		// Check if u_of_v within the range of valid u values
 		if (std::abs(u_of_v) < umax) {
 			// n is normal to the yarn surface
@@ -453,16 +453,16 @@ public:
 			Float y_of_v = u_of_v * 0.5f * l / umax;
 			if (y_of_v > 0.5f * (l - delta_y))
 				y_of_v = 0.5f * (l - delta_y);
-			else if (y_of_v < 0.5f * (delta_y - l)) 
+			else if (y_of_v < 0.5f * (delta_y - l))
 				y_of_v = 0.5f * (delta_y - l);
-			
+
 			// Check if |y(u(v)) - y(u)| < delta_y/2.
 			if (std::abs(y_of_v - u * 0.5f * l / umax) < 0.5f * delta_y)
 				return fs / delta_y;
 		}
 		return 0.0f;
 	}
- 
+
 	/** parameters:
 	 *	u	 for staple, we compute v(u)
 	 *	v	 to be compared to v(u) in texturing
@@ -479,8 +479,8 @@ public:
 	 *	w	 width of segment rectangle
 	 *	l	 length of segment rectangle
 	 */
-	Float evalStapleIntegrand(Float u, Float v, const Vector &om_i, 
-			const Vector &om_r, Float alpha, Float beta, Float psi, 
+	Float evalStapleIntegrand(Float u, Float v, const Vector &om_i,
+			const Vector &om_r, Float alpha, Float beta, Float psi,
 			Float umax, Float kappa, Float w, Float l) const {
 		// w * sin(umax) < l
 		if (w * std::sin(umax) >= l)
@@ -502,12 +502,12 @@ public:
 		if (std::abs(D) < 1.0f && std::abs(v_of_u) < M_PI / 2.0f) {
 			// n is normal to the yarn surface.
 			// t is tangent of the fibers.
-			
+
 			Normal n = normalize(Normal(std::sin(v_of_u), std::sin(u)
 					* std::cos(v_of_u), std::cos(u) * std::cos(v_of_u)));
 
 			/*Vector t = normalize(Vector(-std::cos(v_of_u) * std::sin(psi),
-					std::cos(u) * std::cos(psi) + std::sin(u) * std::sin(v_of_u) * std::sin(psi), 
+					std::cos(u) * std::cos(psi) + std::sin(u) * std::sin(v_of_u) * std::sin(psi),
 					-std::sin(u) * std::cos(psi) + std::cos(u) * std::sin(v_of_u) * std::sin(psi))); */
 
 			// R is radius of curvature.
@@ -521,7 +521,7 @@ public:
 
 			// fc is phase function.
 			Float fc = alpha + vonMises(-dot(om_i, om_r), beta);
-			
+
 			// A is attenuation function without smoothing.
 			Float A = seeliger(dot(n, om_i), dot(n, om_r), 0, 1);
 
@@ -533,7 +533,7 @@ public:
 
 			// Highlight has constant width delta_x on screen.
 			Float delta_x = w * m_pattern.hWidth;
-			
+
 			// Clamp x_of_u between (w - delta_x)/2 and -(w - delta_x)/2.
 			Float x_of_u = v_of_u * w / M_PI;
 			if (x_of_u > 0.5f * (w - delta_x))
@@ -615,7 +615,7 @@ public:
 	}
 
 	Float getRoughness(const Intersection &its, int component) const {
-		/* For lack of a better value, treat this material as diffuse 
+		/* For lack of a better value, treat this material as diffuse
 		   in Manifold Exploration */
 		return std::numeric_limits<Float>::infinity();
 	}
@@ -641,15 +641,15 @@ private:
 	bool m_initialization;
 };
 
-// ================ Hardware shader implementation ================ 
+// ================ Hardware shader implementation ================
 
 /**
- * In place of a real shader, let's just show the average 
+ * In place of a real shader, let's just show the average
  * diffuse albedo for now..
  */
 class IrawanShader : public Shader {
 public:
-	IrawanShader(Renderer *renderer, Spectrum albedo) 
+	IrawanShader(Renderer *renderer, Spectrum albedo)
 		: Shader(renderer, EBSDFShader), m_albedo(albedo) {
 	}
 
@@ -681,7 +681,7 @@ private:
 	Spectrum m_albedo;
 };
 
-Shader *IrawanClothBRDF::createShader(Renderer *renderer) const { 
+Shader *IrawanClothBRDF::createShader(Renderer *renderer) const {
 	Spectrum albedo(0.0f);
 	for (size_t i=0; i<m_pattern.yarns.size(); ++i)
 		albedo += m_pattern.yarns[i].kd;

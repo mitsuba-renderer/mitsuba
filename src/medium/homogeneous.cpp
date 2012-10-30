@@ -25,7 +25,7 @@ MTS_NAMESPACE_BEGIN
  * \order{1}
  * \parameters{
  *     \parameter{material}{\String}{
- *         Name of a material preset, see 
+ *         Name of a material preset, see
  *         \tblref{medium-coefficients}. \default{\texttt{skin1}}
  *     }
  *     \parameter{sigmaA, sigmaS}{\Spectrum}{
@@ -35,7 +35,7 @@ MTS_NAMESPACE_BEGIN
  *         \default{configured based on \code{material}}
  *     }
  *     \parameter{sigmaT, albedo}{\Spectrum}{
- *         Extinction coefficient in inverse scene units 
+ *         Extinction coefficient in inverse scene units
  *         and a (unitless) single-scattering albedo.
  *         These parameters are mutually exclusive with \code{sigmaA} and \code{sigmaS}
  *         \default{configured based on \code{material}}
@@ -53,7 +53,7 @@ MTS_NAMESPACE_BEGIN
  *     }
  * }
  *
- * This class implements a flexible homogeneous participating 
+ * This class implements a flexible homogeneous participating
  * medium with support for arbitrary phase functions and various
  * medium sampling methods. It provides several ways of configuring
  * the medium properties. Either, a material preset can be loaded
@@ -65,11 +65,11 @@ MTS_NAMESPACE_BEGIN
  * initialization methods is not allowed.
  *
  * All scattering parameters (named \code{sigma*}) should
- * be provided in inverse scene units. For instance, when a world-space 
+ * be provided in inverse scene units. For instance, when a world-space
  * distance of 1 unit corresponds to a meter, the scattering coefficents should
  * have units of inverse meters. For convenience, the \code{scale}
  * parameter can be used to correct the units. For instance, when the scene is
- * in meters and the coefficients are in inverse millimeters, set 
+ * in meters and the coefficients are in inverse millimeters, set
  * \code{scale} to \code{1000}.
  *
  * \renderings{
@@ -90,36 +90,50 @@ MTS_NAMESPACE_BEGIN
  *
  * \textbf{Note}: Rendering media that have a spectrally
  * varying extinction coefficient can be tricky, since all
- * commonly used medium sampling methods suffer from high 
+ * commonly used medium sampling methods suffer from high
  * variance in that case. Here, it may often make more sense to render
  * several monochromatic images separately (using only the coefficients for
- * a single channel) and then merge them back into a RGB image. There 
- * is a \code{mtsutil} (\secref{mtsutil}) plugin named \code{joinrgb} 
+ * a single channel) and then merge them back into a RGB image. There
+ * is a \code{mtsutil} (\secref{mtsutil}) plugin named \code{joinrgb}
  * that will perform this RGB merging process.
  *
  * \begin{table}[h!]
  *     \centering
- *     \begin{tabular}{>{\ttfamily}p{2cm}p{.8cm}>{\ttfamily}p{2cm}}
+ *     \vspace{3mm}
+ *     {\footnotesize
+ *     \begin{tabular}{>{\ttfamily}p{3.8cm}p{.4cm}>{\ttfamily}p{3.8cm}p{.4cm}>{\ttfamily}p{3.8cm}}
  *         \toprule
- *         \rmfamily \textbf{Name} &&
- *         \rmfamily \textbf{Name} \\
- *         \cmidrule{1-1} \cmidrule{3-3}
- *         apple&&potato\\
- *         chicken1&&skimmilk\\
- *         chicken2&&skin1\\
- *         cream&&skin2\\
- *         ketchup&&spectralon\\
- *         marble&&wholemilk\\
+ *         \rmfamily \small\textbf{Name} &&
+ *         \rmfamily \small\textbf{Name} &&
+ *         \rmfamily \small\textbf{Name} \\
+ *         \cmidrule{1-1} \cmidrule{3-3} \cmidrule{5-5}
+ *         Apple && Chicken1 && Chicken2 \\
+ *         Cream && Ketchup  && Potato \\
+ *         Skimmilk && Skin1 && Skin2 \\
+ *         Spectralon && Wholemilk && \\
+ *         \cmidrule{1-1} \cmidrule{3-3} \cmidrule{5-5}
+ *         Lowfat Milk              &&  Gatorade                &&    White Grapefruit Juice     \\
+ *         Reduced Milk             &&  Chardonnay              &&    Shampoo                    \\
+ *         Regular Milk             &&  White Zinfandel         &&    Strawberry Shampoo         \\
+ *         Espresso                 &&  Merlot                  &&    \mbox{Head \& Shoulders Shampoo}  \\
+ *         Mint Mocha Coffee        &&  Budweiser Beer          &&    Lemon Tea Powder           \\
+ *         Lowfat Soy Milk          &&  Coors Light Beer        &&    Orange Juice Powder        \\
+ *         Regular Soy Milk         &&  Clorox                  &&    Pink Lemonade Powder       \\
+ *         Lowfat Chocolate Milk    &&  Apple Juice             &&    Cappuccino Powder          \\
+ *         Regular Chocolate Milk   &&  Cranberry Juice         &&    Salt Powder                \\
+ *         Coke                     &&  Grape Juice             &&    Sugar Powder               \\
+ *         Pepsi                    &&  Ruby Grapefruit Juice   &&    Suisse Mocha               \\
+ *         Sprite                   &&                          &&                               \\
  *         \bottomrule
- *     \end{tabular}
- *     \caption{
- *         \label{tbl:medium-coefficients}
- *          This table lists all supported medium material presets. The
- *          values are from Jensen et al. \cite{Jensen2001Practical} using
- *          units of $\frac{1}{mm}$, so remember to set
+ *     \end{tabular}}
+ *     \caption{\label{tbl:medium-coefficients}This
+ *          table lists all supported medium material presets. The
+ *          top entries are from Jensen et al. \cite{Jensen2001Practical}, and the
+ *          bottom ones are from Narasimhan et al. \cite{Narasimhan2006Acquiring}.
+ *          They all use units of $\frac{1}{mm}$, so remember to set
  *          \code{scale} appropriately when your scene is not
  *          in units of millimeters.
- *          These material names can be used with the plugins
+ *          These material presets can be used with the plugins
  *          \pluginref{homogeneous},\
  *          \pluginref{dipole}, and \
  *          \pluginref{hk}
@@ -139,7 +153,7 @@ public:
 		EMaximum   /// Maximum-of-exponential distribution
 	};
 
-	HomogeneousMedium(const Properties &props) 
+	HomogeneousMedium(const Properties &props)
 			: Medium(props), m_samplingDensity(0.0f), m_maxExpDist(NULL) {
 		std::string strategy = props.getString("strategy", "balance");
 
@@ -160,15 +174,15 @@ public:
 					m_mediumSamplingWeight = albedo;
 			}
 			if (m_mediumSamplingWeight > 0) {
-				/* The medium scatters some light -> place at least half 
+				/* The medium scatters some light -> place at least half
 				   of the samples in it, otherwise we will render lots
 				   of spatially varying noise where one pixel has a
 				   medium interaction and the neighbors don't */
-				m_mediumSamplingWeight = std::max(m_mediumSamplingWeight, 
+				m_mediumSamplingWeight = std::max(m_mediumSamplingWeight,
 					(Float) 0.5f);
 			}
 		}
-		
+
 		if (strategy == "balance") {
 			m_strategy = EBalance;
 		} else if (strategy == "single") {
@@ -253,7 +267,7 @@ public:
 		Float negLength = ray.mint - ray.maxt;
 		Spectrum transmittance;
 		for (int i=0; i<SPECTRUM_SAMPLES; ++i)
-			transmittance[i] = m_sigmaT[i] != 0 
+			transmittance[i] = m_sigmaT[i] != 0
 				? math::fastexp(m_sigmaT[i] * negLength) : (Float) 1.0f;
 		return transmittance;
 	}
@@ -267,7 +281,7 @@ public:
 			if (m_strategy != EMaximum) {
 				/* Choose the sampling density to be used */
 				if (m_strategy == EBalance) {
-					int channel = std::min((int) (sampler->next1D() 
+					int channel = std::min((int) (sampler->next1D()
 						* SPECTRUM_SAMPLES), SPECTRUM_SAMPLES-1);
 					samplingDensity = m_sigmaT[channel];
 				}
@@ -289,8 +303,8 @@ public:
 			mRec.sigmaS = m_sigmaS;
 			mRec.time = ray.time;
 			mRec.medium = this;
-			
-			/* Fail if there is no forward progress 
+
+			/* Fail if there is no forward progress
 			   (e.g. due to roundoff errors) */
 			if (mRec.p == ray.o)
 				success = false;
@@ -304,7 +318,7 @@ public:
 				mRec.pdfFailure = 1-m_maxExpDist->cdf(sampledDistance);
 				break;
 
-			case EBalance: 
+			case EBalance:
 				mRec.pdfFailure = 0;
 				mRec.pdfSuccess = 0;
 				for (int i=0; i<SPECTRUM_SAMPLES; ++i) {
@@ -339,7 +353,7 @@ public:
 	void eval(const Ray &ray, MediumSamplingRecord &mRec) const {
 		Float distance = ray.maxt - ray.mint;
 		switch (m_strategy) {
-			case EManual: 
+			case EManual:
 			case ESingle: {
 					Float temp = math::fastexp(-m_samplingDensity * distance);
 					mRec.pdfSuccess = m_samplingDensity * temp;
@@ -401,7 +415,7 @@ public:
 			case EMaximum: oss << "maximum," << endl; break;
 		}
 
-		oss << "  phase = " << indent(m_phaseFunction.toString()) << endl 
+		oss << "  phase = " << indent(m_phaseFunction.toString()) << endl
 			<< "]";
 		return oss.str();
 	}

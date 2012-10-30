@@ -26,7 +26,7 @@
 
 MTS_NAMESPACE_BEGIN
 
-/** \brief Generic serializable object, which supports construction 
+/** \brief Generic serializable object, which supports construction
 * from a Properties instance.
  *
  * All plugins in Mitsuba derive from ConfigurableObject. This mechanism
@@ -40,7 +40,7 @@ MTS_NAMESPACE_BEGIN
 class MTS_EXPORT_CORE ConfigurableObject : public SerializableObject {
 public:
 	/**
-	 * \brief Notify the \ref ConfigurableObject instance about 
+	 * \brief Notify the \ref ConfigurableObject instance about
 	 * its parent object
 	 *
 	 * The default implementation does nothing.
@@ -67,7 +67,7 @@ public:
 	inline void setID(const std::string &name) { m_properties.setID(name); }
 
 	/**
-	 * \brief Return the properties object that was originally used to 
+	 * \brief Return the properties object that was originally used to
 	 * create this instance
 	 *
 	 * This feature mainly of use for editors and other graphical
@@ -80,18 +80,18 @@ public:
 protected:
 	/// Virtual destructor
 	virtual ~ConfigurableObject() { }
-	
+
 	/// Construct a configurable object
-	inline ConfigurableObject(const Properties &props) 
+	inline ConfigurableObject(const Properties &props)
 		: SerializableObject(), m_properties(props) { }
-	
+
 	/// Unserialize a configurable object
 	ConfigurableObject(Stream *stream, InstanceManager *manager);
 protected:
 	Properties m_properties;
 };
 
-/** \brief This macro creates the binary interface, which Mitsuba 
+/** \brief This macro creates the binary interface, which Mitsuba
  * requires to load a plugin.
  *
  * \ingroup libcore

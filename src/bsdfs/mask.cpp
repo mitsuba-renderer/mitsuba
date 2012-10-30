@@ -25,7 +25,7 @@ MTS_NAMESPACE_BEGIN
  * \order{17}
  * \parameters{
  *     \parameter{opacity}{\Spectrum\Or\Texture}{
- *          Specifies the per-channel opacity (where $1=$ completely opaque)\default{0.5}. 
+ *          Specifies the per-channel opacity (where $1=$ completely opaque)\default{0.5}.
  *     }
  *     \parameter{\Unnamed}{\BSDF}{A base BSDF model that represents the
  *         non-transparent portion of the scattering}
@@ -71,13 +71,13 @@ MTS_NAMESPACE_BEGIN
 
 class Mask : public BSDF {
 public:
-	Mask(const Properties &props) 
+	Mask(const Properties &props)
 		: BSDF(props) {
 		m_opacity = new ConstantSpectrumTexture(
 		props.getSpectrum("opacity", Spectrum(0.5f)));
 	}
 
-	Mask(Stream *stream, InstanceManager *manager) 
+	Mask(Stream *stream, InstanceManager *manager)
 		: BSDF(stream, manager) {
 		m_opacity = static_cast<Texture *>(manager->getInstance(stream));
 		m_nestedBSDF = static_cast<BSDF *>(manager->getInstance(stream));
@@ -94,7 +94,7 @@ public:
 	void configure() {
 		if (!m_nestedBSDF)
 			Log(EError, "A child BSDF is required");
-		
+
 		unsigned int extraFlags = 0;
 		if (!m_opacity->isConstant())
 			extraFlags |= ESpatiallyVarying;
@@ -102,7 +102,7 @@ public:
 		m_components.clear();
 		for (int i=0; i<m_nestedBSDF->getComponentCount(); ++i)
 			m_components.push_back(m_nestedBSDF->getType(i) | extraFlags);
-		m_components.push_back(ENull | EFrontSide 
+		m_components.push_back(ENull | EFrontSide
 				| EBackSide | extraFlags);
 
 		m_usesRayDifferentials = m_nestedBSDF->usesRayDifferentials();
@@ -223,7 +223,7 @@ public:
 	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
-		if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "opacity") 
+		if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "opacity")
 			m_opacity = static_cast<Texture *>(child);
 		else if (child->getClass()->derivesFrom(MTS_CLASS(BSDF)))
 			m_nestedBSDF = static_cast<BSDF *>(child);
@@ -249,7 +249,7 @@ protected:
 	ref<BSDF> m_nestedBSDF;
 };
 
-// ================ Hardware shader implementation ================ 
+// ================ Hardware shader implementation ================
 
 /**
  * Somewhat lame GLSL version, which doesn't actually render
@@ -258,7 +258,7 @@ protected:
  */
 class MaskShader : public Shader {
 public:
-	MaskShader(Renderer *renderer, const Texture *opacity, const BSDF *bsdf) 
+	MaskShader(Renderer *renderer, const Texture *opacity, const BSDF *bsdf)
 		: Shader(renderer, EBSDFShader), m_opacity(opacity), m_bsdf(bsdf) {
 		m_opacityShader = renderer->registerShaderForResource(opacity);
 		m_bsdfShader = renderer->registerShaderForResource(bsdf);
@@ -297,7 +297,7 @@ private:
 	ref<Shader> m_bsdfShader;
 };
 
-Shader *Mask::createShader(Renderer *renderer) const { 
+Shader *Mask::createShader(Renderer *renderer) const {
 	return new MaskShader(renderer, m_opacity.get(), m_nestedBSDF.get());
 }
 

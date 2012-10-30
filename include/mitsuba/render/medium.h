@@ -25,7 +25,7 @@
 
 MTS_NAMESPACE_BEGIN
 /**
- * \brief Data record for sampling a point on the in-scattering 
+ * \brief Data record for sampling a point on the in-scattering
  * integral of the RTE
  *
  * \sa Medium::sampleDistance()
@@ -49,7 +49,7 @@ public:
 	/**
 	 * \brief Specifies the transmittance along the segment [mint, t]
 	 *
-	 * When sampling a distance fails, this contains the 
+	 * When sampling a distance fails, this contains the
 	 * transmittance along the whole ray segment [mint, maxDist].
 	 */
 	Spectrum transmittance;
@@ -62,9 +62,9 @@ public:
 
 	/// Records the probability of sampling a medium interaction at p
 	Float pdfSuccess;
-	
+
 	/**
-	 * \brief Records the probability of sampling a medium 
+	 * \brief Records the probability of sampling a medium
 	 * interaction in the reverse direction
 	 *
 	 * This is essentially the density of obtained by calling \ref sampleDistance,
@@ -97,7 +97,7 @@ public:
 	std::string toString() const;
 };
 
-/** \brief Abstract participating medium 
+/** \brief Abstract participating medium
  * \ingroup librender
  */
 class MTS_EXPORT_RENDER Medium : public NetworkedObject {
@@ -122,16 +122,16 @@ public:
 
 	/**
 	 * \brief Compute the 1D density of sampling distance \a ray.maxt
-	 * along the ray using the sampling strategy implemented by 
-	 * \a sampleDistance. 
+	 * along the ray using the sampling strategy implemented by
+	 * \a sampleDistance.
 	 *
 	 * The function computes the continuous densities in the case of
 	 * a successful \ref sampleDistance() invocation (in both directions),
 	 * as well as the Dirac delta density associated with a failure.
-	 * For convenience, it also stores the transmittance along the 
+	 * For convenience, it also stores the transmittance along the
 	 * supplied ray segment within \a mRec.
 	 */
-	virtual void eval(const Ray &ray, 
+	virtual void eval(const Ray &ray,
 		MediumSamplingRecord &mRec) const = 0;
 
 	//! @}
@@ -141,10 +141,10 @@ public:
 	//! @{ \name Functions for querying the medium
 	// =============================================================
 
-	/** 
+	/**
 	 * \brief Compute the transmittance along a ray segment
 	 *
-	 * Computes the transmittance along a ray segment 
+	 * Computes the transmittance along a ray segment
 	 * [mint, maxt] associated with the ray. It is assumed
 	 * that the ray has a normalized direction value.
 	 */
@@ -195,13 +195,13 @@ public:
 protected:
 	/// Create a new participating medium instance
 	Medium(const Properties &props);
-	
+
 	/// Unserialize a participating medium
 	Medium(Stream *stream, InstanceManager *manager);
 
 	/// Virtual destructor
 	virtual ~Medium() { }
-protected:	
+protected:
 	ref<PhaseFunction> m_phaseFunction;
 	Spectrum m_sigmaA;
 	Spectrum m_sigmaS;

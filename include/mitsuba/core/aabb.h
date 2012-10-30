@@ -39,10 +39,10 @@ template <typename T> struct TAABB {
 	typedef typename T::VectorType      VectorType;
 	typedef TRay<PointType, VectorType> RayType;
 
-	/** 
+	/**
 	 * \brief Create a new invalid bounding box
-	 * 
-	 * Initializes the components of the minimum 
+	 *
+	 * Initializes the components of the minimum
 	 * and maximum position to \f$\infty\f$ and \f$-\infty\f$,
 	 * respectively.
 	 */
@@ -57,14 +57,14 @@ template <typename T> struct TAABB {
 	}
 
 	/// Create a collapsed AABB from a single point
-	inline TAABB(const PointType &p) 
+	inline TAABB(const PointType &p)
 		: min(p), max(p) { }
 
 	/// Create a bounding box from two positions
 	inline TAABB(const PointType &min, const PointType &max)
 		: min(min), max(max) {
 #if defined(MTS_DEBUG)
-		for (int i=0; i<PointType::dim; ++i) 
+		for (int i=0; i<PointType::dim; ++i)
 			SAssert(min[i] <= max[i]);
 #endif
 	}
@@ -87,10 +87,10 @@ template <typename T> struct TAABB {
 		}
 	}
 
-	/** 
+	/**
 	 * \brief Mark the bounding box as invalid.
-	 * 
-	 * This operation sets the components of the minimum 
+	 *
+	 * This operation sets the components of the minimum
 	 * and maximum position to \f$\infty\f$ and \f$-\infty\f$,
 	 * respectively.
 	 */
@@ -149,7 +149,7 @@ template <typename T> struct TAABB {
 
 	/// Axis-aligned bounding box overlap test
 	inline bool overlaps(const TAABB &aabb) const {
-		for (int i=0; i<PointType::dim; ++i) 
+		for (int i=0; i<PointType::dim; ++i)
 			if (max[i] < aabb.min[i] || min[i] > aabb.max[i])
 				return false;
 		return true;
@@ -212,14 +212,14 @@ template <typename T> struct TAABB {
 
 	/// Return whether this bounding box is valid
 	inline bool isValid() const {
-		for (int i=0; i<PointType::dim; ++i) 
+		for (int i=0; i<PointType::dim; ++i)
 			if (max[i] < min[i])
 				return false;
 		return true;
 	}
 
 	/**
-	 * \brief Return whether or not this bounding box 
+	 * \brief Return whether or not this bounding box
 	 * covers anything at all.
 	 *
 	 * A bounding box which only covers a single point
@@ -325,14 +325,14 @@ template <typename T> struct TAABB {
 		return oss.str();
 	}
 
-	PointType min; ///< Component-wise minimum 
-	PointType max; ///< Component-wise maximum 
+	PointType min; ///< Component-wise minimum
+	PointType max; ///< Component-wise maximum
 };
 
 
 /**
  * \brief Axis-aligned bounding box data structure in three dimensions
- * 
+ *
  * Maintains a component-wise minimum and maximum position and provides
  * various convenience functions to query or change them.
  *
@@ -341,10 +341,10 @@ template <typename T> struct TAABB {
  */
 struct AABB : public TAABB<Point> {
 public:
-	/** 
+	/**
 	 * \brief Create a new invalid bounding box
-	 * 
-	 * Initializes the components of the minimum 
+	 *
+	 * Initializes the components of the minimum
 	 * and maximum position to \f$\infty\f$ and \f$-\infty\f$,
 	 * respectively.
 	 */
@@ -357,12 +357,12 @@ public:
 	inline AABB(const Point &p) : TAABB<Point>(p) { }
 
 	/// Create a bounding box from two positions
-	inline AABB(const PointType &min, const PointType &max) 
+	inline AABB(const PointType &min, const PointType &max)
 		: TAABB<Point>(min, max) {
 	}
 
 	/// Construct from a TAABB<Point>
-	inline AABB(const TAABB<Point> &aabb) 
+	inline AABB(const TAABB<Point> &aabb)
 		: TAABB<Point>(aabb) { }
 
 	/// Calculate the surface area of the bounding box
@@ -388,7 +388,7 @@ public:
 
 #ifdef MTS_SSE
 	/**
-	 * \brief Intersect against a packet of four rays. 
+	 * \brief Intersect against a packet of four rays.
 	 * \return \c false if none of the rays intersect.
 	 */
 	FINLINE bool rayIntersectPacket(const RayPacket4 &ray, RayInterval4 &interval) const;

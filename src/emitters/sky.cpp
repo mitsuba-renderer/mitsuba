@@ -37,24 +37,24 @@ MTS_NAMESPACE_BEGIN
  * \parameters{
  *     \parameter{turbidity}{\Float}{
  *         This parameter determines the amount of aerosol present
- *         in the atmosphere. 
+ *         in the atmosphere.
  *         Valid range: 1-10. \default{3, corresponding to a clear sky in a temperate climate}
  *     }
  *     \parameter{albedo}{\Spectrum}{Specifies the ground albedo \default{0.15}}
  *     \parameter{year, month, day}{\Integer}{Denote the date of the
  *      observation \default{2010, 07, 10}}
- *     \parameter{hour,minute,\showbreak second}{\Float}{Local time 
+ *     \parameter{hour,minute,\showbreak second}{\Float}{Local time
  *       at the location of the observer in 24-hour format\default{15, 00, 00,
  *       i.e. 3PM}}
  *     \parameter{latitude, longitude, timezone}{\Float}{
- *       These three parameters specify the oberver's latitude and longitude 
- *       in degrees, and the local timezone offset in hours, which are required 
+ *       These three parameters specify the oberver's latitude and longitude
+ *       in degrees, and the local timezone offset in hours, which are required
  *       to compute the sun's position. \default{35.6894, 139.6917, 9 --- Tokyo, Japan}
  *     }
- *     \parameter{sunDirection}{\Vector}{Allows to manually 
+ *     \parameter{sunDirection}{\Vector}{Allows to manually
  *       override the sun direction in world space. When this value
- *       is provided, parameters pertaining to the computation 
- *       of the sun direction (\code{year, hour, latitude,} etc. 
+ *       is provided, parameters pertaining to the computation
+ *       of the sun direction (\code{year, hour, latitude,} etc.
  *       are unnecessary. \default{none}
  *     }
  *     \parameter{stretch}{\Float}{
@@ -68,7 +68,7 @@ MTS_NAMESPACE_BEGIN
  *         emitted by the sky emitter. \default{1}
  *     }
  *     \parameter{samplingWeight}{\Float}{
- *         Specifies the relative amount of samples 
+ *         Specifies the relative amount of samples
  *         allocated to this emitter. \default{1}
  *     }
  * }
@@ -83,32 +83,32 @@ MTS_NAMESPACE_BEGIN
  *     \tinyrendering{5PM}{emitter_sky_small_17}
  *     \tinyrendering{6:30 PM}{emitter_sky_small_1830}\hfill
  *     \vspace{-2mm}
- *     \caption{Time series at the default settings (Equidistant fisheye 
+ *     \caption{Time series at the default settings (Equidistant fisheye
  *     projection of the sky onto a disk. East is left.)}
  *     \vspace{3mm}
  * }
  *
  * This plugin provides the physically-based skylight model by
- * Ho\v{s}ek and Wilkie \cite{Hosek2012Analytic}. It can be used to 
- * create predictive daylight renderings of scenes under clear skies, 
+ * Ho\v{s}ek and Wilkie \cite{Hosek2012Analytic}. It can be used to
+ * create predictive daylight renderings of scenes under clear skies,
  * which is useful for architectural and computer vision applications.
- * The implementation in Mitsuba is based on code that was 
+ * The implementation in Mitsuba is based on code that was
  * generously provided by the authors.
  *
  * The model has two main parameters: the turbidity of the atmosphere
  * and the position of the sun.
  * The position of the sun in turn depends on a number of secondary
- * parameters, including the \code{latitude}, \code{longitude}, 
+ * parameters, including the \code{latitude}, \code{longitude},
  * and \code{timezone} at the location of the observer, as well as the
  * current \code{year}, \code{month}, \code{day}, \code{hour},
  * \code{minute}, and \code{second}.
- * Using all of these, the elevation and azimuth of the sun are computed 
- * using the PSA algorithm by Blanco et al. \cite{Blanco2001Computing}, 
+ * Using all of these, the elevation and azimuth of the sun are computed
+ * using the PSA algorithm by Blanco et al. \cite{Blanco2001Computing},
  * which is accurate to about 0.5 arcminutes (\nicefrac{1}{120} degrees).
  * Note that this algorithm does not account for daylight
  * savings time where it is used, hence a manual correction of the
  * time may be necessary.
- * For detailed coordinate and timezone information of various cities, see 
+ * For detailed coordinate and timezone information of various cities, see
  * \url{http://www.esrl.noaa.gov/gmd/grad/solcalc}.
  *
  * If desired, the world-space solar vector may also be specified
@@ -132,12 +132,12 @@ MTS_NAMESPACE_BEGIN
  * manifests in a halo around the sun, as well as color fringes near the
  * horizon.
  * Smaller turbidity values ($\sim 1-2$) produce an
- * arctic-like clear blue sky, whereas larger values ($\sim 8-10$) 
+ * arctic-like clear blue sky, whereas larger values ($\sim 8-10$)
  * create an atmosphere that is more typical of a warm, humid day.
  * Note that this model does not aim to reproduce overcast, cloudy, or foggy
  * atmospheres with high corresponding turbidity values. An photographic
  * environment map may be more appropriate in such cases.
-  
+
  * The default coordinate system of the emitter associates the up
  * direction with the $+Y$ axis. The east direction is associated with $+X$
  * and the north direction is equal to $+Z$. To change this coordinate
@@ -145,17 +145,17 @@ MTS_NAMESPACE_BEGIN
  * (see \lstref{sky-up} for an example).
  *
  * By default, the emitter will not emit any light below the
- * horizon, which means that these regions are black when 
+ * horizon, which means that these regions are black when
  * observed directly. By setting the \code{stretch} parameter to values
  * between $1$ and $2$, the sky can be extended to cover these directions
- * as well. This is of course a complete kludge and only meant as a quick 
+ * as well. This is of course a complete kludge and only meant as a quick
  * workaround for scenes that are not properly set up.
  *
  * Instead of evaluating the full sky model every on every radiance query,
- * the implementation precomputes a low resolution environment map 
- * (512$\times$ 256) of the entire sky that is then forwarded to the 
+ * the implementation precomputes a low resolution environment map
+ * (512$\times$ 256) of the entire sky that is then forwarded to the
  * \pluginref{envmap} plugin---this dramatically improves rendering
- * performance. This resolution is generally plenty since the sky radiance 
+ * performance. This resolution is generally plenty since the sky radiance
  * distribution is so smooth, but it it can be adjusted manually if
  * necessary using the \code{resolution} parameter.
  *
@@ -177,17 +177,17 @@ MTS_NAMESPACE_BEGIN
  * \subsubsection*{Physical units and spectral rendering}
  * Like the \code{blackbody} emission profile (Page~\pageref{sec:blackbody}),
  * the sky model introduces physical units into the rendering process.
- * The radiance values computed by this plugin have units of power ($W$) per 
+ * The radiance values computed by this plugin have units of power ($W$) per
  * unit area ($m^{-2}$) per steradian ($sr^{-1}$) per unit wavelength ($nm^{-1}$).
  * If these units are inconsistent with your scene description, you may use the
  * optional \texttt{scale} parameter to adjust them.
- * 
- * When Mitsuba is compiled for spectral rendering, the plugin switches 
+ *
+ * When Mitsuba is compiled for spectral rendering, the plugin switches
  * from RGB to a spectral variant of the skylight model, which relies on
- * precomputed data between $320$ and $720 nm$ sampled at $40nm$-increments. 
+ * precomputed data between $320$ and $720 nm$ sampled at $40nm$-increments.
  *
  * \subsubsection*{Ground albedo}
- * The albedo of the ground (e.g. due to rock, snow, or vegetation) can have a 
+ * The albedo of the ground (e.g. due to rock, snow, or vegetation) can have a
  * noticeable and nonlinear effect on the appearance of the sky.
  * \figref{sky_groundalbedo} shows an example of this effect. By default,
  * the ground albedo is set to a 15% gray.
@@ -207,7 +207,7 @@ MTS_NAMESPACE_BEGIN
  *   \medrendering{\code{albedo}=0%}{emitter_sky_albedo_0}
  *   \medrendering{\code{albedo}=100%}{emitter_sky_albedo_1}
  *   \medrendering{\code{albedo}=20% green}{emitter_sky_albedo_green}
- *   \caption{\label{fig:sky_groundalbedo}Influence 
+ *   \caption{\label{fig:sky_groundalbedo}Influence
  *   of the ground albedo on the apperance of the sky}
  * }
  */
@@ -250,7 +250,7 @@ public:
 		configure();
 	}
 
-	SkyEmitter(Stream *stream, InstanceManager *manager) 
+	SkyEmitter(Stream *stream, InstanceManager *manager)
 		    : Emitter(stream, manager) {
 		m_scale = stream->readFloat();
 		m_turbidity = stream->readFloat();
@@ -306,14 +306,14 @@ public:
 		ref<Timer> timer = new Timer();
 		Log(EDebug, "Rasterizing skylight emitter to an %ix%i environment map ..",
 				m_resolution, m_resolution/2);
-		ref<Bitmap> bitmap = new Bitmap(SKY_PIXELFORMAT, Bitmap::EFloat, 
+		ref<Bitmap> bitmap = new Bitmap(SKY_PIXELFORMAT, Bitmap::EFloat,
 			Vector2i(m_resolution, m_resolution/2));
 
 		Point2 factor((2*M_PI) / bitmap->getWidth(),
 			M_PI / bitmap->getHeight());
 
 		#if defined(MTS_OPENMP)
-			#pragma omp parallel for 
+			#pragma omp parallel for
 		#endif
 		for (int y=0; y<bitmap->getHeight(); ++y) {
 			Float theta = (y+.5f) * factor.y;
@@ -338,7 +338,7 @@ public:
 			debugBitmap->clear();
 
 			#if defined(MTS_OPENMP)
-				#pragma omp parallel for 
+				#pragma omp parallel for
 			#endif
 			for (int y=0; y<size; ++y) {
 				float *target = debugBitmap->getFloat32Data() + ((y + border) * fsize + border) * 3;
@@ -393,10 +393,10 @@ public:
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "SkyEmitter[" << endl
-			<< "  turbidity = " << m_turbidity << "," << endl 
-			<< "  sunPos = " << m_sun.toString() << endl 
-			<< "  resolution = " << m_resolution << endl 
-			<< "  stretch = " << m_stretch << endl 
+			<< "  turbidity = " << m_turbidity << "," << endl
+			<< "  sunPos = " << m_sun.toString() << endl
+			<< "  resolution = " << m_resolution << endl
+			<< "  stretch = " << m_stretch << endl
 			<< "  scale = " << m_scale << endl
 			<< "]";
 		return oss.str();

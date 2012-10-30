@@ -46,14 +46,14 @@ MTS_NAMESPACE_BEGIN
  *     \rendering{Rendering with an disk emitter and a textured disk, showing
  *     the default parameterization. (\lstref{disk})}{shape_disk}
  * }
- * 
+ *
  * \vspace{-1mm}
  * This shape plugin describes a simple disk intersection primitive. It is
  * usually preferable over discrete approximations made from triangles.
  *
  * By default, the disk has unit radius and is located at the origin. Its
  * surface normal points into the positive $Z$ direction.
- * To change the disk scale, rotation, or translation, use the 
+ * To change the disk scale, rotation, or translation, use the
  * \code{toWorld} parameter.
  *
  * \begin{xml}[caption={A simple example involving two disk instances}, label=lst:disk]
@@ -87,7 +87,7 @@ public:
 		m_worldToObject = m_objectToWorld.inverse();
 	}
 
-	Disk(Stream *stream, InstanceManager *manager) 
+	Disk(Stream *stream, InstanceManager *manager)
 			: Shape(stream, manager) {
 		m_objectToWorld = Transform(stream);
 		m_worldToObject = m_objectToWorld.inverse();
@@ -161,7 +161,7 @@ public:
 		return Disk::rayIntersect(ray, mint, maxt, t, NULL);
 	}
 
-	void fillIntersectionRecord(const Ray &ray, 
+	void fillIntersectionRecord(const Ray &ray,
 			const void *temp, Intersection &its) const {
 		const Float *data = static_cast<const Float *>(temp);
 
@@ -190,6 +190,7 @@ public:
 		its.wi = its.toLocal(-ray.d);
  		its.hasUVPartials = false;
 		its.instance = NULL;
+		its.time = ray.time;
 	}
 
 	ref<TriMesh> createTriMesh() {
@@ -260,7 +261,7 @@ public:
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "Disk[" << endl
-			<< "  objectToWorld = " << indent(m_objectToWorld.toString()) << ", " << endl
+			<< "  objectToWorld = " << indent(m_objectToWorld.toString()) << "," << endl
 			<< "  bsdf = " << indent(m_bsdf.toString()) << "," << endl;
 		if (isMediumTransition()) {
 			oss << "  interiorMedium = " << indent(m_interiorMedium.toString()) << "," << endl

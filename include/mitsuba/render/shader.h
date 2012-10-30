@@ -29,9 +29,9 @@ class Renderer;
 class GPUProgram;
 
 /**
- * \brief Abstract hardware resource. 
+ * \brief Abstract hardware resource.
  *
- * Implementations provides support for functionality that are also able to 
+ * Implementations provides support for functionality that are also able to
  * live on the GPU. By default, the method 'createShader' just returns \c NULL,
  * which means that the BSDF/Light source/Texture/.. has not yet been ported
  * to the GPU-based renderer.
@@ -46,7 +46,7 @@ public:
 /**
  * \brief %Shader base class for use with a VPL-style renderer.
  *
- * Subclasses can implement one of various things, such as a BSDF, 
+ * Subclasses can implement one of various things, such as a BSDF,
  * a light source, or a texture.
  *
  * \ingroup librender
@@ -79,20 +79,20 @@ public:
 	virtual void putDependencies(std::vector<Shader *> &deps);
 
 	/**
-	 * \brief Is this shader complete? 
+	 * \brief Is this shader complete?
 	 *
-	 * This is mainly useful to check whether all dependencies 
-	 * could be constructed successfully. The default 
+	 * This is mainly useful to check whether all dependencies
+	 * could be constructed successfully. The default
 	 * implementation returns \c true.
 	 */
 	virtual bool isComplete() const;
 
 	/**
 	 * \brief Generate a string version of this shader's evaluation
-	 * routine. 
+	 * routine.
 	 *
-	 * The appended string should assign the name \c evalName to this 
-	 * function. The function names of depedencies (as specified by 
+	 * The appended string should assign the name \c evalName to this
+	 * function. The function names of depedencies (as specified by
 	 * \ref putDependencies), are supplied in the parameter \c depNames
 	 * in identical order.
 	 */
@@ -101,7 +101,7 @@ public:
 			const std::vector<std::string> &depNames) const = 0;
 
 	/**
-	 * \brief This function can optionally be implemented to resolve named 
+	 * \brief This function can optionally be implemented to resolve named
 	 * program parameters to numerical IDs for increased performance.
 	 *
 	 * The int array returned here will later be passed to \ref bind().
@@ -111,12 +111,12 @@ public:
 		std::vector<int> &parameterIDs) const;
 
 	/**
-	 * \brief Configure the the associated GPU program. 
+	 * \brief Configure the the associated GPU program.
 	 *
 	 * This function is typically used to bind textures and
 	 * to set program pararameters.
 	 */
-	virtual void bind(GPUProgram *program, const std::vector<int> &parameterIDs, 
+	virtual void bind(GPUProgram *program, const std::vector<int> &parameterIDs,
 		int &textureUnitOffset) const;
 
 	/// Release any bound resources.

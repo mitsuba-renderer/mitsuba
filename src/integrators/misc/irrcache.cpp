@@ -26,17 +26,17 @@ MTS_NAMESPACE_BEGIN
  * \parameters{
  *     \parameter{resolution}{\Integer}{Elevational resolution of the stratified
  *      final gather hemisphere. The azimuthal resolution is two times this value. \default{14, i.e. $2\cdot14^2$=392 samples in total}}
- *     \parameter{quality}{\Float}{Quality factor (the $\kappa$ parameter of 
+ *     \parameter{quality}{\Float}{Quality factor (the $\kappa$ parameter of
  *     Tabellion et al. \cite{Tabellion2004Approximate})\default{1.0, which is adequate for most cases}}
  *     \parameter{gradients}{\Boolean}{Use irradiance gradients \cite{Ward1992Irradiance}?\default{\code{true}}}
  *     \parameter{clampNeighbor}{\Boolean}{Use neighbor clamping \cite{Krivanek2006Making}?\default{\code{true}}}
  *     \parameter{clampScreen}{\Boolean}{Use a screen-space clamping criterion \cite{Tabellion2004Approximate}? \default{\code{true}}}
- *     \parameter{overture}{\Boolean}{Do an overture pass before starting the main rendering process? 
+ *     \parameter{overture}{\Boolean}{Do an overture pass before starting the main rendering process?
  *      Usually a good idea.\default{\code{true}}}
  *     \parameter{quality\showbreak Adjustment}{\Float}{When an overture pass is used, Mitsuba subsequently reduces
  *      the quality parameter by this amount to interpolate amongst more samples, creating a visually
  *      smoother result. \default{0.5}}
- *     \parameter{indirectOnly}{\Boolean}{Only show the indirect illumination? This can be useful to check 
+ *     \parameter{indirectOnly}{\Boolean}{Only show the indirect illumination? This can be useful to check
  *      the interpolation quality. \default{\code{false}}}
  *     \parameter{debug}{\Boolean}{Visualize the sample placement? \default{\code{false}}}
  * }
@@ -44,10 +44,10 @@ MTS_NAMESPACE_BEGIN
  *  \unframedbigrendering{Illustration of the effect of the different optimizatations
  *   that are provided by this plugin}{integrator_irrcache}
  * }
- * This ``meta-integrator'' implements \emph{irradiance caching} by Ward and Heckbert 
+ * This ``meta-integrator'' implements \emph{irradiance caching} by Ward and Heckbert
  * \cite{Ward1988Ray}. This method computes and caches irradiance information at a sparse
  * set of scene locations and efficiently determines approximate values at other
- * locations using interpolation. 
+ * locations using interpolation.
  *
  * This plugin only provides the caching and interpolation part---another plugin
  * is still needed to do the actual computation of irradiance values at cache points.
@@ -69,14 +69,14 @@ MTS_NAMESPACE_BEGIN
  * addition of samples as rendering proceeds.
  *
  * Note that wrapping an integrator into \pluginref{irrcache} adds one extra
- * light bounce. For instance, the method resulting from using \pluginref{direct} 
+ * light bounce. For instance, the method resulting from using \pluginref{direct}
  * in an irradiance cache renders two-bounce direct illumination.
  *
  * The generality of this implementation allows it to be used in conjunction
- * with photon mapping (the most likely application) as well as all other 
+ * with photon mapping (the most likely application) as well as all other
  * sampling-based integrators in Mitsuba. Several optimizations are used to
- * improve the achieved interpolation quality, namely irradiance gradients 
- * \cite{Ward1992Irradiance}, neighbor clamping \cite{Krivanek2006Making}, a screen-space 
+ * improve the achieved interpolation quality, namely irradiance gradients
+ * \cite{Ward1992Irradiance}, neighbor clamping \cite{Krivanek2006Making}, a screen-space
  * clamping metric and an improved error function \cite{Tabellion2004Approximate}.
  */
 
@@ -84,7 +84,7 @@ class IrradianceCacheIntegrator : public SamplingIntegrator {
 public:
 	IrradianceCacheIntegrator(const Properties &props) : SamplingIntegrator(props) {
 		/* Elevational resolution of the stratified final gather hemisphere.
-		   The azimuthal resolution is three times this value. Default: 
+		   The azimuthal resolution is three times this value. Default:
 		   2*14^2=392 samples */
 		m_resolution = props.getInteger("resolution", 14);
 		/* If set to true, the irradiance cache will be filled by a
@@ -104,15 +104,15 @@ public:
 		/* Should irradiance gradients be used? Generally, this will
 		   significantly improve the interpolation quality.*/
 		m_gradients = props.getBoolean("gradients", true);
-		/* Should neighbor clamping [Krivanek et al.] be used? This 
-		   propagates geometry information amongst close-by samples 
+		/* Should neighbor clamping [Krivanek et al.] be used? This
+		   propagates geometry information amongst close-by samples
 		   and generally leads to better sample placement. */
 		m_clampNeighbor = props.getBoolean("clampNeighbor", true);
 		/* If set to true, the influence region of samples will be clamped
-		   using the screen-space metric by [Tabellion et al.]? 
+		   using the screen-space metric by [Tabellion et al.]?
 		   Turning this off may lead to excessive sample placement. */
 		m_clampScreen = props.getBoolean("clampScreen", true);
-		/* If set to true, direct illumination will be suppressed - 
+		/* If set to true, direct illumination will be suppressed -
 		   useful for checking the interpolation quality */
 		m_indirectOnly = props.getBoolean("indirectOnly", false);
 
@@ -122,7 +122,7 @@ public:
 		Assert(m_qualityAdjustment > 0 && m_qualityAdjustment <= 1);
 	}
 
-	IrradianceCacheIntegrator(Stream *stream, InstanceManager *manager) 
+	IrradianceCacheIntegrator(Stream *stream, InstanceManager *manager)
 	 : SamplingIntegrator(stream, manager) {
 		m_irrCache = static_cast<IrradianceCache *>(manager->getInstance(stream));
 		m_subIntegrator = static_cast<SamplingIntegrator *>(manager->getInstance(stream));
@@ -158,7 +158,7 @@ public:
 		m_subIntegrator->configureSampler(scene, sampler);
 		m_diffScaleFactor = std::sqrt((Float) sampler->getSampleCount());
 	}
-	
+
 	void bindUsedResources(ParallelProcess *proc) const {
 		m_subIntegrator->bindUsedResources(proc);
 	}
@@ -217,7 +217,7 @@ public:
 
 		if (m_overture) {
 			int subIntegratorResID = sched->registerResource(m_subIntegrator);
-			ref<OvertureProcess> proc = new OvertureProcess(job, m_resolution, m_gradients, 
+			ref<OvertureProcess> proc = new OvertureProcess(job, m_resolution, m_gradients,
 				m_clampNeighbor, m_clampScreen, m_quality);
 			m_proc = proc;
 			proc->bindResource("scene", sceneResID);
@@ -262,7 +262,7 @@ public:
 		if (rRec.rayIntersect(ray)) {
 			const BSDF *bsdf = its.getBSDF(ray);
 
-			if (bsdf && (bsdf->getType() & BSDF::EAll) == BSDF::EDiffuseReflection && 
+			if (bsdf && (bsdf->getType() & BSDF::EAll) == BSDF::EDiffuseReflection &&
 					(rRec.type & RadianceQueryRecord::EIndirectSurfaceRadiance)) {
 				Spectrum E;
 
@@ -277,7 +277,7 @@ public:
 
 				rRec.type ^= RadianceQueryRecord::EIndirectSurfaceRadiance;
 
-				return E * bsdf->getDiffuseReflectance(its) * INV_PI + 
+				return E * bsdf->getDiffuseReflectance(its) * INV_PI +
 					m_subIntegrator->Li(ray, rRec);
 			}
 		}
@@ -308,7 +308,7 @@ public:
 			for (unsigned int k=0; k<hs->getN(); k++) {
 				HemisphereSampler::SampleEntry &entry = (*hs)(j, k);
 					entry.dist = std::numeric_limits<Float>::infinity();
-				rRec2.recursiveQuery(rRec, 
+				rRec2.recursiveQuery(rRec,
 					RadianceQueryRecord::ERadianceNoEmission | RadianceQueryRecord::EDistance);
 				rRec2.extra = 1;
 				rRec2.sampler = sampler;
@@ -317,7 +317,7 @@ public:
 				sampler->advance();
 			}
 		}
-	
+
 		hs->process(rRec.its);
 		/* Undo ray differential scaling done by the integrator */
 		if (ray.hasDifferentials)
@@ -326,7 +326,7 @@ public:
 		E = hs->getIrradiance();
 	}
 
-	Spectrum E(const Scene *scene, const Intersection &its, const Medium *medium, 
+	Spectrum E(const Scene *scene, const Intersection &its, const Medium *medium,
 			Sampler *sampler, int nSamples, bool handleIndirect) const {
 		Spectrum EDir(0.0f), EIndir(0.0f);
 		DirectSamplingRecord dRec(its);
@@ -339,7 +339,7 @@ public:
 
 			if (!directRadiance.isZero()) {
 				Float dp = dot(dRec.d, its.shFrame.n);
-				if (dp > 0) 
+				if (dp > 0)
 					EDir += directRadiance * dp;
 			}
 		}
@@ -348,7 +348,7 @@ public:
 			RadianceQueryRecord rRec(scene, sampler);
 			rRec.newQuery(RadianceQueryRecord::ERadianceNoEmission, medium);
 			rRec.its = its;
-			if (!m_irrCache->get(rRec.its, EIndir)) 
+			if (!m_irrCache->get(rRec.its, EIndir))
 				handleMiss(RayDifferential(), rRec, EIndir);
 		}
 

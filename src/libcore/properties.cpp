@@ -91,18 +91,18 @@ public:
 	Properties::EPropertyType operator()(const Properties::Data &) const { return Properties::EData; }
 };
 
-Properties::Properties() 
+Properties::Properties()
 : m_id("unnamed") {
 	m_elements = new std::map<std::string, PropertyElement>();
 }
 
 Properties::Properties(const std::string &pluginName)
-: m_pluginName(pluginName), m_id("unnamed") { 
+: m_pluginName(pluginName), m_id("unnamed") {
 	m_elements = new std::map<std::string, PropertyElement>();
 }
 
 Properties::Properties(const Properties &props)
-: m_pluginName(props.m_pluginName), m_id(props.m_id) { 
+: m_pluginName(props.m_pluginName), m_id(props.m_id) {
 	m_elements = new std::map<std::string, PropertyElement>(*props.m_elements);
 }
 
@@ -144,7 +144,7 @@ Properties::EPropertyType Properties::getType(const std::string &name) const {
 	std::map<std::string, PropertyElement>::const_iterator it = m_elements->find(name);
 	if (it == m_elements->end())
 		SLog(EError, "Property \"%s\" has not been specified!", name.c_str());
-	
+
 	type_visitor myVisitor;
 	return boost::apply_visitor(myVisitor, it->second.data);
 }
@@ -184,7 +184,7 @@ std::string Properties::toString() const {
 				oss << "\"" << boost::get<std::string>(data) << "\"";
 				break;
 			case EData:
-				oss << boost::get<Data>(data).ptr << " (size=" 
+				oss << boost::get<Data>(data).ptr << " (size="
 					<< boost::get<Data>(data).size << ")";
 				break;
 			default:
@@ -215,12 +215,12 @@ bool Properties::wasQueried(const std::string &name) const {
 
 void Properties::putPropertyNames(std::vector<std::string> &results) const {
 	for (std::map<std::string, PropertyElement>::const_iterator it = m_elements->begin();
-			it != m_elements->end(); ++it) 
+			it != m_elements->end(); ++it)
 		results.push_back((*it).first);
 }
 
 
-ConfigurableObject::ConfigurableObject(Stream *stream, InstanceManager *manager) 
+ConfigurableObject::ConfigurableObject(Stream *stream, InstanceManager *manager)
  : SerializableObject(stream, manager) {
 }
 
@@ -237,14 +237,14 @@ void ConfigurableObject::serialize(Stream *stream, InstanceManager *manager) con
 }
 
 void ConfigurableObject::addChild(const std::string &name, ConfigurableObject *child) {
-	SLog(EError, "ConfigurableObject::addChild(\"%s\", %s) not implemented in \"%s\"", 
+	SLog(EError, "ConfigurableObject::addChild(\"%s\", %s) not implemented in \"%s\"",
 		name.c_str(), child->toString().c_str(), toString().c_str());
 }
 
 void NetworkedObject::serialize(Stream *stream, InstanceManager *manager) const {
 	ConfigurableObject::serialize(stream, manager);
 }
-	
+
 void NetworkedObject::bindUsedResources(ParallelProcess *proc) const {
 }
 

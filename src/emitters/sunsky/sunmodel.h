@@ -81,7 +81,7 @@ struct SphericalCoordinates {
 
 	std::string toString() const {
 		std::ostringstream oss;
-		oss << "SphericalCoordinates[elevation = " << radToDeg(elevation) 
+		oss << "SphericalCoordinates[elevation = " << radToDeg(elevation)
 			<< ", azimuth = " << radToDeg(azimuth) << "]";
 		return oss.str();
 	}
@@ -108,7 +108,7 @@ SphericalCoordinates fromSphere(const Vector &d) {
  * \brief Compute the elevation and azimuth of the sun as seen by an observer
  * at \c location at the date and time specified in \c dateTime.
  *
- * Based on "Computing the Solar Vector" by Manuel Blanco-Muriel, 
+ * Based on "Computing the Solar Vector" by Manuel Blanco-Muriel,
  * Diego C. Alarcon-Padilla, Teodoro Lopez-Moratalla, and Martin Lara-Coira,
  * in "Solar energy", vol 27, number 5, 2001 by Pergamon Press.
  */
@@ -127,30 +127,30 @@ SphericalCoordinates computeSunCoordinates(const DateTimeRecord &dateTime, const
 	   and JD 2451545.0, which is noon 1 January 2000 Universal Time */
 	{
 		// Calculate time of the day in UT decimal hours
-		decHours = dateTime.hour - location.timezone + 
+		decHours = dateTime.hour - location.timezone +
 			(dateTime.minute + dateTime.second / 60.0 ) / 60.0;
 
 		// Calculate current Julian Day
 		int liAux1 = (dateTime.month-14) / 12;
-		int liAux2 = (1461*(dateTime.year + 4800 + liAux1)) / 4 
+		int liAux2 = (1461*(dateTime.year + 4800 + liAux1)) / 4
 			+ (367 * (dateTime.month - 2 - 12 * liAux1)) / 12
 			- (3 * ((dateTime.year + 4900 + liAux1) / 100)) / 4
 			+ dateTime.day - 32075;
 		double dJulianDate = (double) liAux2 - 0.5 + decHours / 24.0;
 
-		// Calculate difference between current Julian Day and JD 2451545.0 
+		// Calculate difference between current Julian Day and JD 2451545.0
 		elapsedJulianDays = dJulianDate - 2451545.0;
 	}
 
-	/* Calculate ecliptic coordinates (ecliptic longitude and obliquity of the 
-	   ecliptic in radians but without limiting the angle to be less than 2*Pi 
+	/* Calculate ecliptic coordinates (ecliptic longitude and obliquity of the
+	   ecliptic in radians but without limiting the angle to be less than 2*Pi
 	   (i.e., the result may be greater than 2*Pi) */
 	{
 		double omega = 2.1429 - 0.0010394594 * elapsedJulianDays;
 		double meanLongitude = 4.8950630 + 0.017202791698 * elapsedJulianDays; // Radians
 		double anomaly = 6.2400600 + 0.0172019699 * elapsedJulianDays;
 
-		eclipticLongitude = meanLongitude + 0.03341607 * std::sin(anomaly) 
+		eclipticLongitude = meanLongitude + 0.03341607 * std::sin(anomaly)
 			+ 0.00034894 * std::sin(2*anomaly) - 0.0001134
 			- 0.0000203 * std::sin(omega);
 
@@ -158,8 +158,8 @@ SphericalCoordinates computeSunCoordinates(const DateTimeRecord &dateTime, const
 			+ 0.0000396 * std::cos(omega);
 	}
 
-	/* Calculate celestial coordinates ( right ascension and declination ) in radians 
-	   but without limiting the angle to be less than 2*Pi (i.e., the result may be 
+	/* Calculate celestial coordinates ( right ascension and declination ) in radians
+	   but without limiting the angle to be less than 2*Pi (i.e., the result may be
 	   greater than 2*Pi) */
 	{
 		double sinEclipticLongitude = std::sin(eclipticLongitude);
@@ -176,13 +176,13 @@ SphericalCoordinates computeSunCoordinates(const DateTimeRecord &dateTime, const
 		double greenwichMeanSiderealTime = 6.6974243242
 			+ 0.0657098283 * elapsedJulianDays + decHours;
 
-		double localMeanSiderealTime = degToRad((Float) ((greenwichMeanSiderealTime * 15 
+		double localMeanSiderealTime = degToRad((Float) ((greenwichMeanSiderealTime * 15
 			+ location.longitude)));
 
 		double latitudeInRadians = degToRad(location.latitude);
 		double cosLatitude = std::cos(latitudeInRadians);
 		double sinLatitude = std::sin(latitudeInRadians);
-		
+
 		double hourAngle = localMeanSiderealTime - rightAscension;
 		double cosHourAngle = std::cos(hourAngle);
 
@@ -193,7 +193,7 @@ SphericalCoordinates computeSunCoordinates(const DateTimeRecord &dateTime, const
 		dX = std::tan(declination) * cosLatitude - sinLatitude * cosHourAngle;
 
 		azimuth = std::atan2(dY, dX);
-		if (azimuth < 0.0) 
+		if (azimuth < 0.0)
 			azimuth += 2*M_PI;
 
 		// Parallax Correction
@@ -236,7 +236,7 @@ SphericalCoordinates computeSunCoordinates(const Properties &props) {
 		SphericalCoordinates coords = computeSunCoordinates(dateTime, location);
 
 		SLog(EDebug, "Computed sun position for %s and %s: %s",
-			location.toString().c_str(), dateTime.toString().c_str(), 
+			location.toString().c_str(), dateTime.toString().c_str(),
 			coords.toString().c_str());
 
 		return coords;
@@ -251,21 +251,21 @@ SphericalCoordinates computeSunCoordinates(const Properties &props) {
 // k_o Spectrum table from pg 127, MI.
 Float k_oWavelengths[64] = {
 	300, 305, 310, 315, 320, 325, 330, 335, 340, 345,
-	350, 355, 445, 450, 455, 460, 465, 470, 475, 480, 
-	485, 490, 495, 500, 505, 510, 515, 520, 525, 530, 
-	535, 540, 545, 550, 555, 560, 565, 570, 575, 580, 
-	585, 590, 595, 600, 605, 610, 620, 630, 640, 650, 
-	660, 670, 680, 690, 700, 710, 720, 730, 740, 750, 
+	350, 355, 445, 450, 455, 460, 465, 470, 475, 480,
+	485, 490, 495, 500, 505, 510, 515, 520, 525, 530,
+	535, 540, 545, 550, 555, 560, 565, 570, 575, 580,
+	585, 590, 595, 600, 605, 610, 620, 630, 640, 650,
+	660, 670, 680, 690, 700, 710, 720, 730, 740, 750,
 	760, 770, 780, 790
 };
 
 Float k_oAmplitudes[65] = {
-	10.0, 4.8, 2.7, 1.35, .8, .380, .160, .075, .04, .019, .007, 
-	.0, .003, .003, .004, .006, .008, .009, .012, .014, .017, 
-	.021, .025, .03, .035, .04, .045, .048, .057, .063, .07, 
-	.075, .08, .085, .095, .103, .110, .12, .122, .12, .118, 
-	.115, .12, .125, .130, .12, .105, .09, .079, .067, .057, 
-	.048, .036, .028, .023, .018, .014, .011, .010, .009, 
+	10.0, 4.8, 2.7, 1.35, .8, .380, .160, .075, .04, .019, .007,
+	.0, .003, .003, .004, .006, .008, .009, .012, .014, .017,
+	.021, .025, .03, .035, .04, .045, .048, .057, .063, .07,
+	.075, .08, .085, .095, .103, .110, .12, .122, .12, .118,
+	.115, .12, .125, .130, .12, .105, .09, .079, .067, .057,
+	.048, .036, .028, .023, .018, .014, .011, .010, .009,
 	.007, .004, .0, .0
 };
 
@@ -294,10 +294,10 @@ Float k_waAmplitudes[13] = {
 
 /* Wavelengths corresponding to the table below */
 Float solWavelengths[38] = {
-	380, 390, 400, 410, 420, 430, 440, 450, 
-	460, 470, 480, 490, 500, 510, 520, 530, 
-	540, 550, 560, 570, 580, 590, 600, 610, 
-	620, 630, 640, 650, 660, 670, 680, 690, 
+	380, 390, 400, 410, 420, 430, 440, 450,
+	460, 470, 480, 490, 500, 510, 520, 530,
+	540, 550, 560, 570, 580, 590, 600, 610,
+	620, 630, 640, 650, 660, 670, 680, 690,
 	700, 710, 720, 730, 740, 750
 };
 
@@ -334,25 +334,25 @@ Spectrum computeSunRadiance(Float theta, Float turbidity) {
 		Float tauR = math::fastexp(-m * 0.008735f * std::pow(lambda/1000.0f, (Float) -4.08));
 
 		// Aerosol (water + dust) attenuation
-		// beta - amount of aerosols present 
+		// beta - amount of aerosols present
 		// alpha - ratio of small to large particle sizes. (0:4,usually 1.3)
-		// Results agree with the graph (pg 121, MI) 
+		// Results agree with the graph (pg 121, MI)
 		const Float alpha = 1.3f;
 		Float tauA = math::fastexp(-m * beta * std::pow(lambda/1000.0f, -alpha));  // lambda should be in um
 
-		// Attenuation due to ozone absorption  
-		// lOzone - amount of ozone in cm(NTP) 
-		// Results agree with the graph (pg 128, MI) 
+		// Attenuation due to ozone absorption
+		// lOzone - amount of ozone in cm(NTP)
+		// Results agree with the graph (pg 128, MI)
 		const Float lOzone = .35f;
 		Float tauO = math::fastexp(-m * k_oCurve.eval(lambda) * lOzone);
 
-		// Attenuation due to mixed gases absorption  
+		// Attenuation due to mixed gases absorption
 		// Results agree with the graph (pg 131, MI)
 		Float tauG = math::fastexp(-1.41f * k_gCurve.eval(lambda) * m / std::pow(1 + 118.93f
 			* k_gCurve.eval(lambda) * m, (Float) 0.45f));
 
-		// Attenuation due to water vapor absorbtion  
-		// w - precipitable water vapor in centimeters (standard = 2) 
+		// Attenuation due to water vapor absorbtion
+		// w - precipitable water vapor in centimeters (standard = 2)
 		// Results agree with the graph (pg 132, MI)
 		const Float w = 2.0;
 		Float tauWA = math::fastexp(-0.2385f * k_waCurve.eval(lambda) * w * m /

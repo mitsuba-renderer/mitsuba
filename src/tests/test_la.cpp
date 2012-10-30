@@ -67,7 +67,7 @@ public:
 		assertEqualsEpsilon(d, refD, 1e-6);
 		assertEqualsEpsilon(Q, refQ, 1e-6);
 	}
-	
+
 	void test03_gaussJordan() {
 		Float orig[5][5] = {
 			{0.603220764324061,0.0160774582181293, 0.508210763233408, 0.953606295121746, 0.990510667271985},
@@ -109,11 +109,11 @@ public:
 		assertEqualsEpsilon(det, 0.00294638676819103, 1e-6);
 		assertEqualsEpsilon(randomMatrix.det(), 0.00294638676819103, 1e-6);
 
-		Float b[5] = { 0.088842801947558, 0.717330636910085, 
+		Float b[5] = { 0.088842801947558, 0.717330636910085,
 			0.689651610365336, 0.76615421808756, 0.274406750300772 };
 		Float xref[5] = { 0.319847529827911, 0.991537144805428,
 			-0.283297199558031, 2.02355933108543, -1.92399896347868 };
-		
+
 		Matrix<5, 1, Float> B(b);
 		Matrix<5, 1, Float> X;
 		lu.luSolve(B, X, piv);
@@ -121,7 +121,7 @@ public:
 		Matrix<5, 1, Float> Xref(xref);
 		assertEqualsEpsilon(X, Xref, 1e-5);
 	}
-	
+
 	void test05_chol() {
 		Float orig[5][5] = {
 			{5.51302956379742,     -1.36613599367125,     -0.56818386886837,      1.43247259160815,    -0.341242075046427},

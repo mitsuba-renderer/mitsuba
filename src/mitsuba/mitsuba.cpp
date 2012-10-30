@@ -49,7 +49,7 @@ using XERCES_CPP_NAMESPACE::SAXParser;
 using namespace mitsuba;
 
 void help() {
-	cout <<  "Mitsuba version " << Version(MTS_VERSION).toStringComplete() 
+	cout <<  "Mitsuba version " << Version(MTS_VERSION).toStringComplete()
 		 << ", Copyright (c) " MTS_YEAR " Wenzel Jakob" << endl;
 	cout <<  "Usage: mitsuba [options] <One or more scene XML files>" << endl;
 	cout <<  "Options/Arguments:" << endl;
@@ -104,7 +104,7 @@ void signalHandler(int signal) {
 
 class FlushThread : public Thread {
 public:
-	FlushThread(int timeout) : Thread("flush"), 
+	FlushThread(int timeout) : Thread("flush"),
 		m_flag(new WaitFlag()),
 		m_timeout(timeout) { }
 
@@ -151,7 +151,7 @@ int mitsuba_app(int argc, char **argv) {
 			switch (optchar) {
 				case 'a': {
 						std::vector<std::string> paths = tokenize(optarg, ";");
-						for (int i=(int) paths.size()-1; i>=0; --i) 
+						for (int i=(int) paths.size()-1; i>=0; --i)
 							fileResolver->prependPath(paths[i]);
 					}
 					break;
@@ -260,7 +260,7 @@ int mitsuba_app(int argc, char **argv) {
 			scheduler->registerWorker(new LocalWorker(formatString("wrk%i", i)));
 		std::vector<std::string> hosts = tokenize(networkHosts, ";");
 
-		/* Establish network connections to nested servers */ 
+		/* Establish network connections to nested servers */
 		for (size_t i=0; i<hosts.size(); ++i) {
 			const std::string &hostName = hosts[i];
 			ref<Stream> stream;
@@ -312,9 +312,9 @@ int mitsuba_app(int argc, char **argv) {
 			sa.sa_handler = signalHandler;
 			sigemptyset(&sa.sa_mask);
 			sa.sa_flags = 0;
-			if (sigaction(SIGHUP, &sa, NULL)) 
+			if (sigaction(SIGHUP, &sa, NULL))
 				SLog(EError, "Could not install a custom signal handler!");
-			if (sigaction(SIGFPE, &sa, NULL)) 
+			if (sigaction(SIGFPE, &sa, NULL))
 				SLog(EError, "Could not install a custom signal handler!");
 #endif
 
@@ -339,7 +339,7 @@ int mitsuba_app(int argc, char **argv) {
 		parser->setErrorHandler(handler);
 
 		renderQueue = new RenderQueue();
-	
+
 		ref<FlushThread> flushThread;
 		if (flushTimer > 0) {
 			flushThread = new FlushThread(flushTimer);
@@ -348,7 +348,7 @@ int mitsuba_app(int argc, char **argv) {
 
 		int jobIdx = 0;
 		for (int i=optind; i<argc; ++i) {
-			fs::path 
+			fs::path
 				filename = fileResolver->resolve(argv[i]),
 				filePath = fs::absolute(filename).parent_path(),
 				baseName = filename.stem();
@@ -362,14 +362,14 @@ int mitsuba_app(int argc, char **argv) {
 			ref<Scene> scene = handler->getScene();
 
 			scene->setSourceFile(filename);
-			scene->setDestinationFile(destFile.length() > 0 ? 
+			scene->setDestinationFile(destFile.length() > 0 ?
 				fs::path(destFile) : (filePath / baseName));
 			scene->setBlockSize(blockSize);
 
 			if (scene->destinationExists() && skipExisting)
 				continue;
 
-			ref<RenderJob> thr = new RenderJob(formatString("ren%i", jobIdx++), 
+			ref<RenderJob> thr = new RenderJob(formatString("ren%i", jobIdx++),
 				scene, renderQueue, -1, -1, -1, true, flushTimer > 0);
 			thr->start();
 
@@ -412,10 +412,10 @@ int mts_main(int argc, char **argv) {
 	SHVector::staticInitialization();
 	SceneHandler::staticInitialization();
 
-#if defined(__WINDOWS__) 
+#if defined(__WINDOWS__)
 	/* Initialize WINSOCK2 */
 	WSADATA wsaData;
-	if (WSAStartup(MAKEWORD(2,2), &wsaData)) 
+	if (WSAStartup(MAKEWORD(2,2), &wsaData))
 		SLog(EError, "Could not initialize WinSock2!");
 	if (LOBYTE(wsaData.wVersion) != 2 || HIBYTE(wsaData.wVersion) != 2)
 		SLog(EError, "Could not find the required version of winsock.dll!");
@@ -441,7 +441,7 @@ int mts_main(int argc, char **argv) {
 	PluginManager::staticShutdown();
 	Object::staticShutdown();
 	Class::staticShutdown();
-	
+
 #if defined(__WINDOWS__)
 	/* Shut down WINSOCK2 */
 	WSACleanup();

@@ -41,16 +41,16 @@ private:
 
 /** \brief Abstract seekable stream class
  *
- * Specifies all functions to be implemented by stream 
+ * Specifies all functions to be implemented by stream
  * subclasses and provides various convenience functions
  * layered on top of on them.
  *
  * All read<b>X</b>() and write<b>X</b>() methods support transparent
- * conversion based on the endianness of the underlying system and the 
+ * conversion based on the endianness of the underlying system and the
  * value passed to \ref setByteOrder(). Whenever \ref getHostByteOrder()
  * and \ref getByteOrder() disagree, the endianness is swapped.
  *
- * \sa FileStream, MemoryStream, SocketStream, 
+ * \sa FileStream, MemoryStream, SocketStream,
  *     ConsoleStream, SSHStream, ZStream
  * \ingroup libcore
  * \ingroup libpython
@@ -65,21 +65,21 @@ public:
 	};
 
 	/**
-	 * \brief Create a new stream. 
-	 * 
-	 * By default, it assumes the byte order of the 
-	 * underlying system, i.e. no endianness conversion 
+	 * \brief Create a new stream.
+	 *
+	 * By default, it assumes the byte order of the
+	 * underlying system, i.e. no endianness conversion
 	 * is performed.
 	 */
 	Stream();
-	
+
 	/// Return a string representation
 	virtual std::string toString() const;
 
 	// ======================================================================
 	/// @{ \name Endianness-related
 	// ======================================================================
-	
+
 	/// Set the stream byte order
 	void setByteOrder(EByteOrder byteOrder);
 
@@ -88,7 +88,7 @@ public:
 
 	/// Return the byte order of the underlying machine
 	inline static EByteOrder getHostByteOrder() { return m_hostByteOrder; }
-	
+
 	/// @}
 	// ======================================================================
 
@@ -98,7 +98,7 @@ public:
 
 	/**
 	 * \brief Read a specified amount of data from the stream
-	 * 
+	 *
 	 * Throws an exception when the stream ended prematurely
 	 */
 	virtual void read(void *ptr, size_t size) = 0;
@@ -133,7 +133,7 @@ public:
 
 	//! @}
 	// ======================================================================
-	
+
 	// ======================================================================
 	//! @{ \name Convenience functions with automatic endianness conversion
 	// ======================================================================
@@ -149,7 +149,7 @@ public:
 
 	/// Write a signed short (16 bit) to the stream
 	void writeShort(short value);
-	
+
 	/// Write an array of signed shorts (16 bit) to the stream
 	void writeShortArray(const short *values, size_t size);
 
@@ -173,7 +173,7 @@ public:
 
 	/// Write a signed int (32 bit) to the stream
 	void writeInt(int value);
-	
+
 	/// Write an array of signed ints (32 bit) to the stream
 	void writeIntArray(const int *values, size_t size);
 
@@ -185,7 +185,7 @@ public:
 
 	/// Write an unsigned int (32 bit) to the stream
 	void writeUInt(unsigned int value);
-	
+
 	/// Write an array of unsigned ints (32 bit) to the stream
 	void writeUIntArray(const unsigned int *values, size_t size);
 
@@ -245,7 +245,7 @@ public:
 
 	/// Write a single-precision floating point number (32 bit) to the stream
 	void writeSingle(float value);
-	
+
 	/// Write a single-precision floating point array (32 bit) to the stream
 	void writeSingleArray(const float *data, size_t size);
 
@@ -257,7 +257,7 @@ public:
 
 	/// Write a double-precision floating point number (64 bit) to the stream
 	void writeDouble(double value);
-	
+
 	/// Write a double-precision floating point array (64 bit) to the stream
 	void writeDoubleArray(const double *data, size_t size);
 
@@ -302,7 +302,7 @@ public:
 
 	/// Read a signed short (16 bit) from the stream
 	short readShort();
-	
+
 	/// Read an array of signed shorts (16 bit) from the stream
 	void readShortArray(short *dest, size_t size);
 
@@ -314,7 +314,7 @@ public:
 
 	/// Read an unsigned short (16 bit) from the stream
 	unsigned short readUShort();
-	
+
 	/// Read an array of unsigned shorts (16 bit) from the stream
 	void readUShortArray(unsigned short *dest, size_t size);
 
@@ -326,7 +326,7 @@ public:
 
 	/// Read a signed int (32 bit) from the stream
 	int readInt();
-	
+
 	/// Read an array of signed ints (32 bit) from the stream
 	void readIntArray(int *dst, size_t size);
 
@@ -338,7 +338,7 @@ public:
 
 	/// Read an unsigned int (32 bit) from the stream
 	unsigned int readUInt();
-	
+
 	/// Read an array of unsigned ints (32 bit) from the stream
 	void readUIntArray(unsigned int *dest, size_t size);
 
@@ -362,7 +362,7 @@ public:
 
 	/// Read an unsigned int (64 bit) from the stream
 	uint64_t readULong();
-	
+
 	/// Read a size value from the stream
 	size_t readSize() { return (size_t) readULong(); }
 
@@ -447,26 +447,26 @@ public:
 	/**
 	 * \brief Copy content from this stream into another stream
 	 * \param stream Destination stream
-	 * \param numBytes 
+	 * \param numBytes
 	 * 		The number of bytes to copy. When -1 is specified,
 	 * 		copying proceeds until the end of the source stream.
 	 */
 	void copyTo(Stream *stream, int64_t numBytes = -1);
 
 	/**
-	 * \brief Read an element from the stream (uses partial template 
+	 * \brief Read an element from the stream (uses partial template
 	 * specialization to select a method appropriate to the data type)
 	 */
 	template <typename T> T readElement();
 
 	/**
-	 * \brief Write an element to the stream (uses partial template 
+	 * \brief Write an element to the stream (uses partial template
 	 * specialization to select a method appropriate to the data type)
 	 */
 	template <typename T> void writeElement(T value);
 
 	/**
-	 * \brief Read an array from the stream (uses partial template 
+	 * \brief Read an array from the stream (uses partial template
 	 * specialization to select a method appropriate to the data type)
 	 */
 	template <typename T> void readArray(T *array, size_t count);
@@ -480,7 +480,7 @@ public:
 	}
 
 	/**
-	 * \brief Write an array to the stream (uses partial template 
+	 * \brief Write an array to the stream (uses partial template
 	 * specialization to select a method appropriate to the data type)
 	 */
 	template <typename T> void writeArray(const T *array, size_t count);

@@ -1,9 +1,9 @@
 \section{Plugin reference}
 \vspace{-2mm}
-The following subsections describe the available Mitsuba plugins, usually along 
+The following subsections describe the available Mitsuba plugins, usually along
 with example renderings and a description of what each parameter does.
 They are separated into subsections covering textures, surface scattering
-models, etc. 
+models, etc.
 
 Each subsection begins with a brief general description.
 The documentation of a plugin always starts on a new page and is preceded
@@ -14,7 +14,7 @@ by a table similar to the one below:
 		\default{\code{false}}
 	}
     \parameter{darkMatter}{\Float}{
-	     Controls the proportionate amount of dark matter present in the scene. 
+	     Controls the proportionate amount of dark matter present in the scene.
 		 \default{0.83}
 	}
 }
@@ -27,10 +27,10 @@ this description, it can be instantiated from an XML scene file using a custom c
 	<float name="darkMatter" value="0.4"/>
 </integrator>
 \end{xml}
-In some cases\footnote{Note that obvious parameters are generally omitted. 
-For instance, all shape plugins accept a surface scattering plugin, but this 
-is left out from the documentation for brevity.}, plugins also indicate that they accept nested plugins 
-as input arguments. These can either be \emph{named} or \emph{unnamed}. If 
+In some cases\footnote{Note that obvious parameters are generally omitted.
+For instance, all shape plugins accept a surface scattering plugin, but this
+is left out from the documentation for brevity.}, plugins also indicate that they accept nested plugins
+as input arguments. These can either be \emph{named} or \emph{unnamed}. If
 the \code{amazing} integrator also accepted the following two parameters\vspace{-2mm}
 \parameters{
 	\parameter{\Unnamed}{\Integrator}{A nested integrator which does the actual hard work}

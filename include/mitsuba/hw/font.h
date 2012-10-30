@@ -59,7 +59,7 @@ public:
 		 */
 		int32_t verticalBearing;
 
-		/** \brief Horizontal advance value of this glyph 
+		/** \brief Horizontal advance value of this glyph
 		 *
 		 * (# of pixels the pen must be advanced
 		 * after rendering a glyph)

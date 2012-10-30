@@ -30,8 +30,8 @@ MTS_NAMESPACE_BEGIN
  *     }
  *     \parameter{dimension}{\Integer}{
  *       Effective dimension, up to which stratified samples are provided. The
- *       number here is to be interpreted as the number of subsequent 1D or 2D sample 
- *       requests that can be satisfied using ``good'' samples. Higher high values 
+ *       number here is to be interpreted as the number of subsequent 1D or 2D sample
+ *       requests that can be satisfied using ``good'' samples. Higher high values
  *       increase both storage and computational costs.
  *       \default{4}
  *     }
@@ -39,14 +39,14 @@ MTS_NAMESPACE_BEGIN
  * \renderings{
  *     \unframedrendering{A projection of the first 1024 points
  *     onto the first two dimensions.}{sampler_stratified}
- *     \unframedrendering{The same samples shown together with the 
+ *     \unframedrendering{The same samples shown together with the
  *     underlying strata for illustrative purposes}{sampler_stratified_strata}
  * }
- * 
+ *
  * The stratified sample generator divides the domain into a discrete number
- * of strata and produces a sample within each one of them. This generally leads to less 
- * sample clumping when compared to the independent sampler, as well as better 
- * convergence. Due to internal storage costs, stratified samples are only provided up to a 
+ * of strata and produces a sample within each one of them. This generally leads to less
+ * sample clumping when compared to the independent sampler, as well as better
+ * convergence. Due to internal storage costs, stratified samples are only provided up to a
  * certain dimension, after which independent sampling takes over.
  *
  * Like the \pluginref{independent} sampler, multicore and network renderings
@@ -65,7 +65,7 @@ public:
 		while (i * i < desiredSampleCount)
 			++i;
 		m_sampleCount = i*i;
-	
+
 		if (m_sampleCount != desiredSampleCount) {
 			Log(EWarn, "Sample count should be a perfect square -- rounding to "
 					SIZE_T_FMT, m_sampleCount);
@@ -90,7 +90,7 @@ public:
 		m_random = new Random();
 	}
 
-	StratifiedSampler(Stream *stream, InstanceManager *manager) 
+	StratifiedSampler(Stream *stream, InstanceManager *manager)
 	 : Sampler(stream, manager) {
 		m_maxDimension = stream->readInt();
 		m_resolution = stream->readInt();
@@ -158,7 +158,7 @@ public:
 		for (size_t i=0; i<m_req1D.size(); i++)
 			latinHypercube(m_random, m_sampleArrays1D[i], m_req1D[i] * m_sampleCount, 1);
 		for (size_t i=0; i<m_req2D.size(); i++)
-			latinHypercube(m_random, reinterpret_cast<Float *>(m_sampleArrays2D[i]), 
+			latinHypercube(m_random, reinterpret_cast<Float *>(m_sampleArrays2D[i]),
 				m_req2D[i] * m_sampleCount, 2);
 
 		m_sampleIndex = 0;
@@ -187,7 +187,7 @@ public:
 			return m_random->nextFloat();
 		}
 	}
- 
+
 	Point2 next2D() {
 		Assert(m_sampleIndex < m_sampleCount);
 		if (m_dimension2D < m_maxDimension) {
@@ -214,7 +214,7 @@ public:
 			<< "  dimension = " << m_maxDimension << "," << endl
 			<< "  sampleIndex = " << m_sampleIndex << "," << endl
 			<< "  dimension = " << m_maxDimension << endl
-			<< "]"; 
+			<< "]";
 		return oss.str();
 	}
 

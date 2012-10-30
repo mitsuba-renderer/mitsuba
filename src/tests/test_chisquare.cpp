@@ -24,12 +24,12 @@
 #include <boost/bind.hpp>
 
 /* Statistical significance level of the test. Set to
-   1/4 percent by default -- we want there to be strong 
-   evidence of an implementaiton error before failing 
+   1/4 percent by default -- we want there to be strong
+   evidence of an implementaiton error before failing
    a test case */
 #define SIGNIFICANCE_LEVEL 0.0025f
 
-/* Relative bound on what is still accepted as roundoff 
+/* Relative bound on what is still accepted as roundoff
    error -- be quite tolerant */
 #if defined(SINGLE_PRECISION)
 	#define ERROR_REQ 1e-2f
@@ -40,8 +40,8 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * This testcase checks if the sampling methods of various BSDF & phase  
- * function & emitter implementations really do what they promise in 
+ * This testcase checks if the sampling methods of various BSDF & phase
+ * function & emitter implementations really do what they promise in
  * their pdf() methods
  */
 class TestChiSquare : public TestCase {
@@ -78,7 +78,7 @@ public:
 		void rewind() {
 			m_sampleIndex = 0;
 		}
-		
+
 		ref<Sampler> clone() {
 			SLog(EError, "Not supported!");
 			return NULL;
@@ -116,10 +116,10 @@ public:
 			#if defined(MTS_DEBUG_FP)
 				enableFPExceptions();
 			#endif
-	
+
 			Float pdfVal, sampledPDF;
 
-			/* Check the various sampling routines for agreement 
+			/* Check the various sampling routines for agreement
 			   amongst each other */
 			m_fakeSampler->clear();
 			Spectrum sampled = m_bsdf->sample(bRec, sampledPDF, sample);
@@ -162,9 +162,9 @@ public:
 
 			if (!sampled.isValid() || !sampled2.isValid() || !manual.isValid()) {
 				Log(EWarn, "Oops: sampled=%s, sampled2=%s, manual=%s, sampledPDF=%f, "
-					"pdf=%f, f=%s, bRec=%s, measure=%i", sampled.toString().c_str(), 
+					"pdf=%f, f=%s, bRec=%s, measure=%i", sampled.toString().c_str(),
 					sampled2.toString().c_str(), manual.toString().c_str(),
-					sampledPDF, pdfVal, f.toString().c_str(), bRec.toString().c_str(), 
+					sampledPDF, pdfVal, f.toString().c_str(), bRec.toString().c_str(),
 					measure);
 				return boost::make_tuple(bRec.wo, 0.0f, ESolidAngle);
 			}
@@ -184,9 +184,9 @@ public:
 
 			if (mismatch)
 				Log(EWarn, "Potential inconsistency: sampled=%s, sampled2=%s, manual=%s, sampledPDF=%f, "
-					"pdf=%f, f=%s, bRec=%s, measure=%i", sampled.toString().c_str(), 
+					"pdf=%f, f=%s, bRec=%s, measure=%i", sampled.toString().c_str(),
 					sampled2.toString().c_str(), manual.toString().c_str(),
-					sampledPDF, pdfVal, f.toString().c_str(), bRec.toString().c_str(), 
+					sampledPDF, pdfVal, f.toString().c_str(), bRec.toString().c_str(),
 					measure);
 
 			mismatch = false;
@@ -208,7 +208,7 @@ public:
 
 			return boost::make_tuple(bRec.wo, 1.0f, measure);
 		}
- 
+
 		Float pdf(const Vector &wo, EMeasure measure) {
 			BSDFSamplingRecord bRec(m_its, m_wi, wo);
 			bRec.mode = EImportance;
@@ -247,14 +247,14 @@ public:
 	public:
 		PhaseFunctionAdapter(const MediumSamplingRecord &mRec,
 				const PhaseFunction *phase, Sampler *sampler, const Vector &wi)
-			: m_mRec(mRec), m_phase(phase), m_sampler(sampler), m_wi(wi), 
-			  m_largestWeight(0) { 
+			: m_mRec(mRec), m_phase(phase), m_sampler(sampler), m_wi(wi),
+			  m_largestWeight(0) {
 			m_fakeSampler = new FakeSampler(m_sampler);
 		}
 
 		boost::tuple<Vector, Float, EMeasure> generateSample() {
 			PhaseFunctionSamplingRecord pRec(m_mRec, m_wi);
-			
+
 			#if defined(MTS_DEBUG_FP)
 				enableFPExceptions();
 			#endif
@@ -279,7 +279,7 @@ public:
 
 			bool mismatch = false;
 			Float min = std::min(std::min(sampled, sampled2), manual);
-			Float err = std::max(std::max(std::abs(sampled - sampled2), 
+			Float err = std::max(std::max(std::abs(sampled - sampled2),
 					std::abs(sampled - manual)), std::abs(sampled2 - manual));
 			m_largestWeight = std::max(m_largestWeight, sampled);
 
@@ -288,7 +288,7 @@ public:
 			else if (min > ERROR_REQ && err/min > ERROR_REQ) // relative error threshold
 				mismatch = true;
 
-			if (mismatch) 
+			if (mismatch)
 				Log(EWarn, "Potential inconsistency: sampled=%f, sampled2=%f, manual=%s, "
 					"sampledPDF=%f, pdf=%f, f=%f, pRec=%s", sampled, sampled2, manual,
 					sampledPDF, pdfVal, f, pRec.toString().c_str());
@@ -307,10 +307,10 @@ public:
 					pdfVal, sampledPDF);
 
 
-			return boost::make_tuple(pRec.wo, 
+			return boost::make_tuple(pRec.wo,
 				sampled == 0 ? 0.0f : 1.0f, ESolidAngle);
 		}
- 
+
 		Float pdf(const Vector &wo, EMeasure measure) const {
 			if (measure != ESolidAngle)
 				return 0.0f;
@@ -360,11 +360,11 @@ public:
 
 			return boost::make_tuple(dRec.d, 1.0f, dRec.measure);
 		}
- 
+
 		Float pdf(const Vector &d, EMeasure measure) const {
 			if (measure != ESolidAngle)
 				return 0.0f;
-			
+
 			DirectSamplingRecord dRec(Point(0.0f), 0);
 			dRec.d = d;
 			dRec.measure = ESolidAngle;
@@ -372,9 +372,9 @@ public:
 			#if defined(MTS_DEBUG_FP)
 				enableFPExceptions();
 			#endif
-	
+
 			Float result = m_emitter->pdfDirect(dRec);
-			
+
 			#if defined(MTS_DEBUG_FP)
 				disableFPExceptions();
 			#endif
@@ -394,7 +394,7 @@ public:
 		const fs::path scenePath =
 			resolver->resolveAbsolute("data/tests/test_bsdf.xml");
 		ref<Scene> scene = loadScene(scenePath);
-	
+
 		const ref_vector<ConfigurableObject> &objects = scene->getReferencedObjects();
 		int thetaBins = 10, wiSamples = 20, failureCount = 0, testCount = 0;
 		ref<Sampler> sampler = static_cast<Sampler *> (PluginManager::getInstance()->
@@ -417,7 +417,7 @@ public:
 			/* Test for a number of different incident directions */
 			for (int j=0; j<wiSamples; ++j) {
 				Vector wi;
-	
+
 				if (bsdf->getType() & BSDF::EBackSide)
 					wi = Warp::squareToUniformSphere(sampler->next2D());
 				else
@@ -439,7 +439,7 @@ public:
 					std::string filename = formatString("failure_%i.m", failureCount++);
 					chiSqr->dumpTables(filename);
 					failAndContinue(formatString("Uh oh, the chi-square test indicates a potential "
-						"issue for wi=%s. Dumped the contingency tables to '%s' for user analysis", 
+						"issue for wi=%s. Dumped the contingency tables to '%s' for user analysis",
 						wi.toString().c_str(), filename.c_str()));
 				} else {
 					succeed();
@@ -464,7 +464,7 @@ public:
 					/* Test for a number of different incident directions */
 					for (int j=0; j<wiSamples; ++j) {
 						Vector wi;
-			
+
 						if (bsdf->getType(comp) & BSDF::EBackSide)
 							wi = Warp::squareToUniformSphere(sampler->next2D());
 						else
@@ -487,7 +487,7 @@ public:
 							std::string filename = formatString("failure_%i.m", failureCount++);
 							chiSqr->dumpTables(filename);
 							failAndContinue(formatString("Uh oh, the chi-square test indicates a potential "
-								"issue for wi=%s. Dumped the contingency tables to '%s' for user analysis", 
+								"issue for wi=%s. Dumped the contingency tables to '%s' for user analysis",
 								wi.toString().c_str(), filename.c_str()));
 						} else {
 							succeed();
@@ -511,7 +511,7 @@ public:
 		const fs::path scenePath =
 			resolver->resolveAbsolute("data/tests/test_phase.xml");
 		ref<Scene> scene = loadScene(scenePath);
-	
+
 		const ref_vector<ConfigurableObject> &objects = scene->getReferencedObjects();
 		int thetaBins = 10, wiSamples = 20, failureCount = 0, testCount = 0;
 		ref<Sampler> sampler = static_cast<Sampler *> (PluginManager::getInstance()->
@@ -555,7 +555,7 @@ public:
 					std::string filename = formatString("failure_%i.m", failureCount++);
 					chiSqr->dumpTables(filename);
 					failAndContinue(formatString("Uh oh, the chi-square test indicates a potential "
-						"issue for wi=%s. Dumped the contingency tables to '%s' for user analysis", 
+						"issue for wi=%s. Dumped the contingency tables to '%s' for user analysis",
 						wi.toString().c_str(), filename.c_str()));
 				} else {
 					succeed();
@@ -579,7 +579,7 @@ public:
 			resolver->resolveAbsolute("data/tests/test_emitter.xml");
 		ref<Scene> scene = loadScene(scenePath);
 		scene->initialize();
-	
+
 		const ref_vector<Emitter> &emitters = scene->getEmitters();
 		int thetaBins = 10, failureCount = 0, testCount = 0;
 		ref<Sampler> sampler = static_cast<Sampler *> (PluginManager::getInstance()->
@@ -608,7 +608,7 @@ public:
 				std::string filename = formatString("failure_%i.m", failureCount++);
 				chiSqr->dumpTables(filename);
 				failAndContinue(formatString("Uh oh, the chi-square test indicates a potential "
-					"issue. Dumped the contingency tables to '%s' for user analysis", 
+					"issue. Dumped the contingency tables to '%s' for user analysis",
 					filename.c_str()));
 			} else {
 				succeed();

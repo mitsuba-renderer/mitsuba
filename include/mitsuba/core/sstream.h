@@ -25,8 +25,8 @@
 
 MTS_NAMESPACE_BEGIN
 
-/** \brief Portable %Stream implementation, which encapsulates a socket 
- * for IPv4/IPv6 network communications. 
+/** \brief Portable %Stream implementation, which encapsulates a socket
+ * for IPv4/IPv6 network communications.
  *
  * By default, this type of stream is configured to use network byte
  * order (= big endian).
@@ -67,10 +67,10 @@ public:
 
 	/// Return the peer's name
 	inline const std::string &getPeer() const { return m_peer; }
-	
+
 	/// Return the number of received bytes
 	inline size_t getReceivedBytes() const { return m_received; }
-	
+
 	/// Return the number of sent bytes
 	inline size_t getSentBytes() const { return m_sent; }
 

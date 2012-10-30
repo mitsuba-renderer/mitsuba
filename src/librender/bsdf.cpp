@@ -32,7 +32,7 @@ BSDF::BSDF(const Properties &props)
 	m_usesRayDifferentials = false;
 }
 
-BSDF::BSDF(Stream *stream, InstanceManager *manager) 
+BSDF::BSDF(Stream *stream, InstanceManager *manager)
  : ConfigurableObject(stream, manager) {
 	m_ensureEnergyConservation = stream->readBool();
 	m_usesRayDifferentials = false;
@@ -73,7 +73,7 @@ Spectrum BSDF::getDiffuseReflectance(const Intersection &its) const {
 	return eval(bRec) * M_PI;
 }
 
-Texture *BSDF::ensureEnergyConservation(Texture *texture, 
+Texture *BSDF::ensureEnergyConservation(Texture *texture,
 		const std::string &paramName, Float max) const {
 	if (!m_ensureEnergyConservation)
 		return texture;
@@ -83,7 +83,7 @@ Texture *BSDF::ensureEnergyConservation(Texture *texture,
 		std::ostringstream oss;
 		Float scale = 0.99f * (max / actualMax);
 		oss << "The BSDF" << endl << toString() << endl
-			<< "violates energy conservation! The parameter \"" << paramName << "\" " 
+			<< "violates energy conservation! The parameter \"" << paramName << "\" "
 			<< "has a component-wise maximum of "<< actualMax << " (which is > " << max << "!) "
 			<< "and will therefore be scaled by " << scale << " to prevent "
 			<< "issues. Specify the parameter ensureEnergyConservation=false "
@@ -110,7 +110,7 @@ std::pair<Texture *, Texture *> BSDF::ensureEnergyConservation(
 		std::ostringstream oss;
 		Float scale = 0.99f * (max / actualMax);
 		oss << "The BSDF" << endl << toString() << endl
-			<< "violates energy conservation! The parameters \"" << paramName1 << "\" " 
+			<< "violates energy conservation! The parameters \"" << paramName1 << "\" "
 			<< "and \"" << paramName2 << "\" sum to a component-wise maximum of "
 			<< actualMax << " (which is > " << max << "!) and will therefore be "
 			<< "scaled by " << scale << " to prevent issues. Specify the parameter "
@@ -179,6 +179,6 @@ std::string BSDFSamplingRecord::toString() const {
 		<< "]";
 	return oss.str();
 }
-	
+
 MTS_IMPLEMENT_CLASS(BSDF, true, ConfigurableObject)
 MTS_NAMESPACE_END

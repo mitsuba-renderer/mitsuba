@@ -39,14 +39,14 @@ void GLTexture::init() {
 		Log(ETrace, "Uploading a texture : %s", toString().c_str());
 	else
 		Log(ETrace, "Creating a framebuffer : %s", toString().c_str());
-	
+
 	if (m_samples > 1) {
 		int maxSamples = 1;
 		if (GLEW_ARB_texture_multisample)
 			glGetIntegerv(GL_MAX_SAMPLES_EXT, &maxSamples);
 		if (m_samples > maxSamples) {
 			Log(EWarn, "Attempted to create a multisample framebuffer "
-				"with an unsupported number of samples (requested=%i, supported=%i)", 
+				"with an unsupported number of samples (requested=%i, supported=%i)",
 				m_samples, maxSamples);
 			m_samples = maxSamples;
 		}
@@ -60,7 +60,7 @@ void GLTexture::init() {
 	/* Bind to the texture */
 	glBindTexture(m_glType, m_id);
 
-	/* Set the texture filtering / wrapping modes 
+	/* Set the texture filtering / wrapping modes
 	   (don't do this for multisample textures)*/
 	if (!((m_fbType & EColorBuffer) && m_samples > 1))
 		configureTexture(); /* Multisample textures don't have these parameters */
@@ -77,19 +77,19 @@ void GLTexture::init() {
 		bool depthAsTexture = m_fbType & EDepthBuffer;
 
 		switch (m_fbType) {
-			case EColorAndDepthBuffer: 
+			case EColorAndDepthBuffer:
 			case EColorBuffer: {
 					if (m_type == ETexture2D) {
 						if (!depthAsTexture) {
 							glGenRenderbuffersEXT(1, &m_depthId);
 							glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, m_depthId);
 							if (m_samples == 1)
-								glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT, 
+								glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT,
 									GL_DEPTH_COMPONENT32, m_size.x, m_size.y);
 							else
-								glRenderbufferStorageMultisampleEXT(GL_RENDERBUFFER_EXT, 
+								glRenderbufferStorageMultisampleEXT(GL_RENDERBUFFER_EXT,
 									m_samples, GL_DEPTH_COMPONENT32, m_size.x, m_size.y);
-							glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, 
+							glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT,
 								GL_DEPTH_ATTACHMENT_EXT, GL_RENDERBUFFER_EXT, m_depthId);
 						} else {
 							glGenTextures(1, &m_depthId);
@@ -101,32 +101,32 @@ void GLTexture::init() {
 								glTexImage2D(m_glType, 0, GL_DEPTH_COMPONENT32, m_size.x, m_size.y,
 									0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
 							else
-								glTexImage2DMultisample(m_glType, 
+								glTexImage2DMultisample(m_glType,
 									m_samples, GL_DEPTH_COMPONENT32, m_size.x, m_size.y, GL_FALSE);
-							glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, 
+							glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT,
 								GL_DEPTH_ATTACHMENT, m_glType, m_depthId, 0);
 							glBindTexture(m_glType, m_id);
 						}
 
-						if (m_samples == 1) 
+						if (m_samples == 1)
 							glTexImage2D(m_glType, 0, m_internalFormat, m_size.x, m_size.y,
 								0, m_format, m_dataFormat, NULL);
 						else
-							glTexImage2DMultisample(m_glType, 
+							glTexImage2DMultisample(m_glType,
 								m_samples, m_internalFormat, m_size.x, m_size.y, GL_FALSE);
 
 						if (isMipMapped())
 							glGenerateMipmapEXT(m_glType);
 
-						glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, 
+						glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT,
 							GL_COLOR_ATTACHMENT0_EXT, m_glType, m_id, 0);
 					} else if (m_type == ETextureCubeMap) {
 						Assert(m_size.x == m_size.y && isPowerOfTwo(m_size.x));
 						Assert(m_fbType == EColorBuffer);
 						Assert(m_samples == 1);
 
-						for (int i=0; i<6; i++) 
-							glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, m_internalFormat, 
+						for (int i=0; i<6; i++)
+							glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, m_internalFormat,
 								m_size.x, m_size.y, 0, m_format, m_dataFormat, NULL);
 
 						if (isMipMapped())
@@ -139,8 +139,8 @@ void GLTexture::init() {
 							glTexParameteri(m_glType, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 							glTexParameteri(m_glType, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
-							for (int i=0; i<6; i++) 
-								glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT32, 
+							for (int i=0; i<6; i++)
+								glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT32,
 									m_size.x, m_size.y, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
 
 							if (GLEW_EXT_geometry_shader4)
@@ -150,9 +150,9 @@ void GLTexture::init() {
 						} else {
 							glGenRenderbuffersEXT(1, &m_depthId);
 							glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, m_depthId);
-							glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT, 
+							glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT,
 								GL_DEPTH_COMPONENT32, m_size.x, m_size.y);
-							glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, 
+							glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT,
 								GL_DEPTH_ATTACHMENT_EXT, GL_RENDERBUFFER_EXT, m_depthId);
 							activateSide(0);
 						}
@@ -170,17 +170,17 @@ void GLTexture::init() {
 
 				if (m_type == ETexture2D) {
 					/* Allocate the texture memory */
-					glTexImage2D(m_glType, 0, m_internalFormat, 
-						m_size.x, m_size.y, 0, GL_DEPTH_COMPONENT, 
+					glTexImage2D(m_glType, 0, m_internalFormat,
+						m_size.x, m_size.y, 0, GL_DEPTH_COMPONENT,
 						m_dataFormat, NULL);
 
 					/* Attach the texture as a depth target */
-					glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, 
+					glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT,
 						GL_DEPTH_ATTACHMENT_EXT, m_glType, m_id, 0);
 				} else if (m_type == ETextureCubeMap) {
 					Assert(m_size.x == m_size.y && isPowerOfTwo(m_size.x));
 					for (int i=0; i<6; i++)
-						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, m_internalFormat, 
+						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, m_internalFormat,
 							m_size.x, m_size.y, 0, m_format, m_dataFormat, NULL);
 
 					if (GLEW_EXT_geometry_shader4)
@@ -226,15 +226,15 @@ void GLTexture::init() {
 				errorStatus = "Unknown error status"; break;
 		}
 		if (!errorStatus.empty())
-			Log(EError, "FBO Error 0x%x: %s!\nFramebuffer configuration: %s", 
+			Log(EError, "FBO Error 0x%x: %s!\nFramebuffer configuration: %s",
 				errorStatusID, errorStatus.c_str(), toString().c_str());
-	
+
 		glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, GL_NONE);
 	}
 
 	glBindTexture(m_glType, GL_NONE);
 }
-	
+
 void GLTexture::refresh(const Point2i &offset, const Vector2i &size) {
 	Assert(m_type == ETexture2D);
 
@@ -242,7 +242,7 @@ void GLTexture::refresh(const Point2i &offset, const Vector2i &size) {
 
 	Bitmap *bitmap = getBitmap();
 
-	uint8_t *ptr = bitmap->getUInt8Data() + 
+	uint8_t *ptr = bitmap->getUInt8Data() +
 		bitmap->getBytesPerPixel() * (offset.x + offset.y * bitmap->getWidth());
 
 	glPixelStorei(GL_UNPACK_ROW_LENGTH, bitmap->getWidth());
@@ -274,7 +274,7 @@ void GLTexture::refresh() {
 	} else if (m_type == ETexture2D) {
 		/* Anisotropic texture filtering */
 		float anisotropy = (float) getMaxAnisotropy();
-		if (isMipMapped() && m_filterType == EMipMapLinear && anisotropy > 1.0f) 
+		if (isMipMapped() && m_filterType == EMipMapLinear && anisotropy > 1.0f)
 			glTexParameterf(m_glType, GL_TEXTURE_MAX_ANISOTROPY_EXT, anisotropy);
 
 		glTexImage2D(m_glType, 0, m_internalFormat, m_size.x, m_size.y,
@@ -314,7 +314,7 @@ void GLTexture::lookupGLConstants() {
 	/* Convert the texture type */
 	switch (m_type) {
 		case ETexture1D: m_glType = GL_TEXTURE_1D; break;
-		case ETexture2D: 
+		case ETexture2D:
 			if (m_samples == 1)
 				m_glType = GL_TEXTURE_2D;
 			else
@@ -462,8 +462,8 @@ void GLTexture::configureTexture() {
 	}
 
 	if (border && m_type == ETexture2D) {
-		const GLfloat color[] = { (GLfloat) m_borderColor[0], 
-			(GLfloat) m_borderColor[1], (GLfloat) m_borderColor[2], 
+		const GLfloat color[] = { (GLfloat) m_borderColor[0],
+			(GLfloat) m_borderColor[1], (GLfloat) m_borderColor[2],
 			(GLfloat) 1.0f };
 		glTexParameterfv(m_glType, GL_TEXTURE_BORDER_COLOR, color);
 	}
@@ -486,7 +486,7 @@ void GLTexture::download(Bitmap *bitmap) {
 		case Bitmap::EFloat32: dataFormat = GL_FLOAT; break;
 		case Bitmap::EFloat64: dataFormat = GL_DOUBLE; break;
 		default:
-			Log(EError, "GLTexture::download(): Unknown/unsupported component format %i!", 
+			Log(EError, "GLTexture::download(): Unknown/unsupported component format %i!",
 					(int) bitmap->getComponentFormat());
 			return;
 	}
@@ -502,7 +502,7 @@ void GLTexture::download(Bitmap *bitmap) {
 		case Bitmap::ERGB: format = GL_RGB; break;
 		case Bitmap::ERGBA: format = GL_RGBA; break;
 		default:
-			Log(EError, "GLTexture::download(): Unknown/unsupported pixel format %i!", 
+			Log(EError, "GLTexture::download(): Unknown/unsupported pixel format %i!",
 					(int) bitmap->getPixelFormat());
 			return;
 	}
@@ -511,9 +511,9 @@ void GLTexture::download(Bitmap *bitmap) {
 
 	switch (m_type) {
 		case ETexture2D:
-			glReadPixels(0, 0, bitmap->getWidth(), bitmap->getHeight(), format, 
+			glReadPixels(0, 0, bitmap->getWidth(), bitmap->getHeight(), format,
 				dataFormat, bitmap->getUInt8Data());
-			/* OpenGL associates (0, 0) with the lower left position and 
+			/* OpenGL associates (0, 0) with the lower left position and
 			   the resulting bitmap must thus be vertically flipped. */
 			bitmap->flipVertically();
 			break;
@@ -521,7 +521,7 @@ void GLTexture::download(Bitmap *bitmap) {
 			for (int i=0; i<6; ++i) {
 				activateSide(i);
 				bitmap = getBitmap(i);
-				glReadPixels(0, 0, bitmap->getWidth(), bitmap->getHeight(), format, 
+				glReadPixels(0, 0, bitmap->getWidth(), bitmap->getHeight(), format,
 					dataFormat, bitmap->getUInt8Data());
 				bitmap->flipVertically();
 			}
@@ -581,7 +581,7 @@ void GLTexture::activateSide(int side) {
 		}
 	}
 }
-	
+
 void GLTexture::setTargetRegion(const Point2i &offset, const Vector2i &size) {
 	glViewport(offset.x, offset.y, size.x, size.y);
 }
@@ -659,7 +659,7 @@ void GLTexture::blit(GPUTexture *target, int what) const {
 			"framebuffer blitting!");
 
 	glBindFramebufferEXT(GL_READ_FRAMEBUFFER_EXT, m_fboId);
-	glBindFramebufferEXT(GL_DRAW_FRAMEBUFFER_EXT, 
+	glBindFramebufferEXT(GL_DRAW_FRAMEBUFFER_EXT,
 		(dest == NULL) ? GL_NONE : dest->m_fboId);
 
 	int flags = 0;
@@ -669,19 +669,19 @@ void GLTexture::blit(GPUTexture *target, int what) const {
 		flags |= GL_COLOR_BUFFER_BIT;
 
 	if (!dest) {
-		glBlitFramebufferEXT(0, 0, m_size.x, m_size.y, 0, 0, 
+		glBlitFramebufferEXT(0, 0, m_size.x, m_size.y, 0, 0,
 			m_size.x, m_size.y, flags, GL_NEAREST);
 	} else {
-		glBlitFramebufferEXT(0, 0, m_size.x, m_size.y, 0, 0, 
-			dest->m_size.x, dest->m_size.y, flags, 
+		glBlitFramebufferEXT(0, 0, m_size.x, m_size.y, 0, 0,
+			dest->m_size.x, dest->m_size.y, flags,
 			(m_size == dest->m_size) ? GL_NEAREST : GL_LINEAR);
 	}
-	
+
 	glBindFramebufferEXT(GL_READ_FRAMEBUFFER_EXT, GL_NONE);
 	glBindFramebufferEXT(GL_DRAW_FRAMEBUFFER_EXT, GL_NONE);
 }
 
-void GLTexture::blit(GPUTexture *target, int what, 
+void GLTexture::blit(GPUTexture *target, int what,
 		const Point2i &sourceOffset, const Vector2i &sourceSize,
 		const Point2i &destOffset, const Vector2i &destSize) const {
 	GLTexture *dest = static_cast<GLTexture *>(target);
@@ -692,7 +692,7 @@ void GLTexture::blit(GPUTexture *target, int what,
 			"framebuffer blitting!");
 
 	glBindFramebufferEXT(GL_READ_FRAMEBUFFER_EXT, m_fboId);
-	glBindFramebufferEXT(GL_DRAW_FRAMEBUFFER_EXT, 
+	glBindFramebufferEXT(GL_DRAW_FRAMEBUFFER_EXT,
 		(dest == NULL) ? GL_NONE : dest->m_fboId);
 
 	int flags = 0;
@@ -701,10 +701,10 @@ void GLTexture::blit(GPUTexture *target, int what,
 	if (what & EColorBuffer)
 		flags |= GL_COLOR_BUFFER_BIT;
 
-	glBlitFramebufferEXT(sourceOffset.x, sourceOffset.y, 
+	glBlitFramebufferEXT(sourceOffset.x, sourceOffset.y,
 		sourceOffset.x + sourceSize.x, sourceOffset.x + sourceSize.y,
-		destOffset.x, destOffset.y, destOffset.x + destSize.x, 
-		destOffset.y + destSize.y, flags, 
+		destOffset.x, destOffset.y, destOffset.x + destSize.x,
+		destOffset.y + destSize.y, flags,
 		(sourceSize == destSize) ? GL_NEAREST : GL_LINEAR);
 
 	glBindFramebufferEXT(GL_READ_FRAMEBUFFER_EXT, GL_NONE);
@@ -713,10 +713,10 @@ void GLTexture::blit(GPUTexture *target, int what,
 
 void GLTexture::clear() {
 	Assert(m_fbType != ENone);
-	glClear(GL_DEPTH_BUFFER_BIT 
+	glClear(GL_DEPTH_BUFFER_BIT
 		| ((m_fbType & EColorBuffer) ? GL_COLOR_BUFFER_BIT : 0));
 }
-	
+
 GLTexture::~GLTexture() {
 	cleanup();
 }

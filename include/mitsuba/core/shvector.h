@@ -27,14 +27,14 @@
 MTS_NAMESPACE_BEGIN
 
 /* Precompute normalization coefficients for the first 10 bands */
-#define SH_NORMTBL_SIZE 10 
+#define SH_NORMTBL_SIZE 10
 
 namespace ublas  = boost::numeric::ublas;
 
 struct SHVector;
 
 /**
- * \brief Stores the diagonal blocks of a spherical harmonic 
+ * \brief Stores the diagonal blocks of a spherical harmonic
  * rotation matrix
  *
  * \ingroup libcore
@@ -52,7 +52,7 @@ struct MTS_EXPORT_CORE SHRotation {
 
 	/**
 	 * \brief Transform a coefficient vector and store the result into
-	 * the given target vector. 
+	 * the given target vector.
 	 *
 	 * The source and target must have the same number of bands.
 	 */
@@ -63,9 +63,9 @@ struct MTS_EXPORT_CORE SHRotation {
  * \brief Stores a truncated real spherical harmonics representation of
  * an L2-integrable function.
  *
- * Also provides some other useful functionality, such as evaluation, 
+ * Also provides some other useful functionality, such as evaluation,
  * projection and rotation.
- * 
+ *
  * The Mathematica equivalent of the basis functions implemented here is:
  *
  * \code
@@ -231,8 +231,8 @@ public:
 
 	/**
 	 * \brief Convolve the SH representation with the supplied kernel.
-	 * 
-	 * Based on the Funk-Hecke theorem -- the kernel must be rotationally 
+	 *
+	 * Based on the Funk-Hecke theorem -- the kernel must be rotationally
 	 * symmetric around the Z-axis.
 	 */
 	void convolve(const SHVector &kernel);
@@ -282,7 +282,7 @@ public:
 				}
 			}
 		}
-		
+
 		for (int l=0; l<m_bands; ++l)
 			for (int m=-l; m<=l; ++m)
 				operator()(l,m) *= hExt*hInt/9;
@@ -329,18 +329,18 @@ public:
 		if (l < SH_NORMTBL_SIZE)
 			return m_normalization[l*(l+1)/2 + m];
 		else
-			return computeNormalization(l, m);	
+			return computeNormalization(l, m);
 	}
 
 	/**
 	 * \brief Recursively computes rotation matrices for each band of SH coefficients.
 	 *
-	 * Based on 'Rotation Matrices for Real Spherical Harmonics. Direct Determination by Recursion' 
-	 * by Ivanic and Ruedenberg. The implemented tables follow the notation in 
+	 * Based on 'Rotation Matrices for Real Spherical Harmonics. Direct Determination by Recursion'
+	 * by Ivanic and Ruedenberg. The implemented tables follow the notation in
 	 * 'Spherical Harmonic Lighting: The Gritty Details' by Robin Green.
 	 */
 	static void rotation(const Transform &t, SHRotation &rot);
-	
+
 	/// Precomputes normalization coefficients for the first few bands
 	static void staticInitialization();
 
@@ -366,7 +366,7 @@ class MTS_EXPORT_CORE SHSampler : public Object {
 public:
 	/**
 	 * \brief Precompute a spherical harmonics sampler object
-	 * 
+	 *
 	 * \param bands Number of SH coefficient bands to support
 	 * \param depth Number of recursive sample warping steps.
 	 */
@@ -376,7 +376,7 @@ public:
 	 * \brief Warp a uniform sample in [0,1]^2 to one that is
 	 * approximately proportional to the specified function.
 	 *
-	 * The resulting sample will have spherical coordinates 
+	 * The resulting sample will have spherical coordinates
 	 * [0,pi]x[0,2pi] and its actual PDF (which might be
 	 * slightly different from the function evaluated at the
 	 * sample, even if $f$ is a distribution) will be returned.

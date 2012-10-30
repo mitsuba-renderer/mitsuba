@@ -30,17 +30,17 @@ MTS_NAMESPACE_BEGIN
 #if MTS_BD_DEBUG == 1
 #define BDAssert(expr) SAssert(expr)
 #else
-#define BDAssert(expr) 
+#define BDAssert(expr)
 #endif
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
 /**
- * \brief Data record associated with path endpoints (aka supernodes) 
+ * \brief Data record associated with path endpoints (aka supernodes)
  * in the path-space framework
  *
- * This record stores the desired time value when starting a new path. 
- * For sensor subpaths, it optionally specifies the desired pixel 
+ * This record stores the desired time value when starting a new path.
+ * For sensor subpaths, it optionally specifies the desired pixel
  * position of the path.
  *
  * \ingroup libbidir
@@ -50,10 +50,10 @@ struct EndpointRecord {
 	Float time;
 
 	/// Create a new endpoint record for a given time value
-	inline EndpointRecord(Float time) 
+	inline EndpointRecord(Float time)
 		: time(time) { }
 
-	/// Create a new endpoint record for a given time value 
+	/// Create a new endpoint record for a given time value
 	inline EndpointRecord(Float time,
 		const Point2 &uv) : time(time) { }
 

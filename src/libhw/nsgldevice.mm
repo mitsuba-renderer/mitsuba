@@ -259,10 +259,10 @@ using namespace mitsuba;
 					}
 				}
 
-				if (cursorInWindow) 
+				if (cursorInWindow)
 					m_mouseInWindow = true;
 
-				if (absolute.x > m_device->getSize().x || absolute.x < 0 
+				if (absolute.x > m_device->getSize().x || absolute.x < 0
 					|| absolute.y > m_device->getSize().y || absolute.y< 0)
 					return;
 			}
@@ -289,7 +289,7 @@ using namespace mitsuba;
 					deviceEvent.setKeyboardSpecial(m_keymap[scanCode]);
 					deviceEvent.setKeyboardModifiers([self extractModifiers: [event modifierFlags]]);
 				} else {
-					if (count > 0) 
+					if (count > 0)
 						deviceEvent.setKeyboardKey([[event charactersIgnoringModifiers] UTF8String][0]);
 					else
 						deviceEvent.setKeyboardKey('\0');
@@ -299,7 +299,7 @@ using namespace mitsuba;
 			}
 		}
 	}
-	
+
 	if (deviceEvent.getType() != Device::ENoEvent)
 		m_device->pushEvent(deviceEvent);
 }
@@ -415,7 +415,7 @@ void NSGLDevice::init(Device *other) {
 	if (m_window == nil)
 		Log(EError, "Could not create window");
 
-	if (m_center) 
+	if (m_center)
 		[m_window center];
 
 	/* Create a sub-view as drawing destination and in order to catch events */
@@ -501,7 +501,7 @@ void NSGLDevice::setPosition(const Point2i &position) {
 
 	NSPoint point = NSMakePoint(position.x,
 		CGDisplayPixelsHigh(kCGDirectMainDisplay) - position.y);
-	
+
 	[m_window setFrameTopLeftPoint: point];
 	Device::setPosition(position);
 }
@@ -584,7 +584,7 @@ void NSGLDevice::processEvents() {
 	Assert(m_initialized);
 
 	m_mutex->lock();
-	for (std::vector<DeviceEvent>::iterator it = m_deviceEvents.begin(); it!=m_deviceEvents.end(); ++it) 
+	for (std::vector<DeviceEvent>::iterator it = m_deviceEvents.begin(); it!=m_deviceEvents.end(); ++it)
 		fireDeviceEvent(*it);
 	m_deviceEvents.clear();
 	m_mutex->unlock();

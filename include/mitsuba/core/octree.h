@@ -30,9 +30,9 @@ MTS_NAMESPACE_BEGIN
 /**
  * \brief Lock-free linked list data structure
  *
- * This class provides a very basic linked list data structure whose primary 
+ * This class provides a very basic linked list data structure whose primary
  * purpose it is to efficiently service append operations from multiple parallel
- * threads. These are internally realized via atomic compare and exchange 
+ * threads. These are internally realized via atomic compare and exchange
  * operations, meaning that no lock must be acquired.
  *
  * \ingroup libcore
@@ -79,7 +79,7 @@ private:
  * This class is currently used to implement BSSRDF evaluation
  * with irradiance point clouds.
  *
- * The \c Item template parameter must implement a function 
+ * The \c Item template parameter must implement a function
  * named <tt>getPosition()</tt> that returns a \ref Point.
  *
  * \ingroup libcore
@@ -120,7 +120,7 @@ public:
 	 *
 	 * By default, the maximum tree depth is set to 16
 	 */
-	inline StaticOctree(const AABB &aabb, uint32_t maxDepth = 24, uint32_t maxItems = 8) : 
+	inline StaticOctree(const AABB &aabb, uint32_t maxDepth = 24, uint32_t maxItems = 8) :
 		m_aabb(aabb), m_maxDepth(maxDepth), m_maxItems(maxItems), m_root(NULL) { }
 
 	/// Release all memory
@@ -220,7 +220,7 @@ protected:
 		OctreeNode *result = new OctreeNode();
 		for (int i=0; i<8; i++) {
 			AABB bounds = childBounds(i, aabb, center);
-	
+
 			uint32_t *it = start + nestedCounts[i];
 			result->children[i] = build(bounds, depth+1, base, temp, start, it);
 			start = it;
@@ -243,7 +243,7 @@ protected:
 /**
  * \brief Generic multiple-reference octree with support for parallel dynamic updates
  *
- * Based on the excellent implementation in PBRT. Modifications are 
+ * Based on the excellent implementation in PBRT. Modifications are
  * the addition of a bounding sphere query and support for multithreading.
  *
  * This class is currently used to implement irradiance caching.
@@ -257,11 +257,11 @@ public:
 	 *
 	 * By default, the maximum tree depth is set to 24
 	 */
-	inline DynamicOctree(const AABB &aabb, uint32_t maxDepth = 24) 
+	inline DynamicOctree(const AABB &aabb, uint32_t maxDepth = 24)
 	 : m_aabb(aabb), m_maxDepth(maxDepth) {
 	}
 
-	/// Insert an item with the specified cell coverage 
+	/// Insert an item with the specified cell coverage
 	inline void insert(const Item &value, const AABB &coverage) {
 		insert(&m_root, m_aabb, value, coverage,
 			coverage.getExtents().lengthSquared(), 0);
@@ -280,7 +280,7 @@ public:
 			return;
 		searchSphere(&m_root, m_aabb, sphere, functor);
 	}
-	
+
 	inline const AABB &getAABB() const { return m_aabb; }
 private:
 	struct OctreeNode {
@@ -313,12 +313,12 @@ private:
 		return childAABB;
 	}
 
-	void insert(OctreeNode *node, const AABB &nodeAABB, const Item &value, 
+	void insert(OctreeNode *node, const AABB &nodeAABB, const Item &value,
 			const AABB &coverage, Float diag2, uint32_t depth) {
 		/* Add the data item to the current octree node if the max. tree
 		   depth is reached or the data item's coverage area is smaller
 		   than the current node size */
-		if (depth == m_maxDepth || 
+		if (depth == m_maxDepth ||
 			(nodeAABB.getExtents().lengthSquared() < diag2)) {
 			node->data.append(value);
 			return;
@@ -352,7 +352,7 @@ private:
 	}
 
 	/// Internal lookup procedure - const version
-	template <typename Functor> inline void lookup(const OctreeNode *node, 
+	template <typename Functor> inline void lookup(const OctreeNode *node,
 			const AABB &nodeAABB, const Point &p, Functor &functor) const {
 		const Point center = nodeAABB.getCenter();
 
@@ -363,7 +363,7 @@ private:
 		}
 
 		int child = (p.x > center.x ? 4 : 0)
-				+ (p.y > center.y ? 2 : 0) 
+				+ (p.y > center.y ? 2 : 0)
 				+ (p.z > center.z ? 1 : 0);
 
 		OctreeNode *childNode = node->children[child];
@@ -374,8 +374,8 @@ private:
 		}
 	}
 
-	template <typename Functor> inline void searchSphere(OctreeNode *node, 
-			const AABB &nodeAABB, const BSphere &sphere, 
+	template <typename Functor> inline void searchSphere(OctreeNode *node,
+			const AABB &nodeAABB, const BSphere &sphere,
 			Functor &functor) {
 		const Point center = nodeAABB.getCenter();
 
@@ -386,7 +386,7 @@ private:
 		}
 
 		// Potential for much optimization..
-		for (int child=0; child<8; ++child) { 
+		for (int child=0; child<8; ++child) {
 			if (node->children[child]) {
 				const AABB childAABB(childBounds(child, nodeAABB, center));
 				if (childAABB.overlaps(sphere))

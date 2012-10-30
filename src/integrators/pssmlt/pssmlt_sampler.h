@@ -27,8 +27,8 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * Sampler implementation as described in 
- * 'A Simple and Robust Mutation Strategy for the 
+ * Sampler implementation as described in
+ * 'A Simple and Robust Mutation Strategy for the
  * Metropolis Light Transport Algorithm' by Kelemen et al.
  */
 class PSSMLTSampler : public Sampler {
@@ -66,7 +66,7 @@ public:
 	/// Return a string description
 	virtual std::string toString() const;
 
-	/// 1D mutation routine 
+	/// 1D mutation routine
 	inline Float mutate(Float value) {
 		#if KELEMEN_STYLE_MUTATIONS == 1
 			Float sample = m_random->nextFloat();
@@ -107,13 +107,13 @@ public:
 
 	/// Accept a mutation
 	void accept();
-	
+
 	/// Reject a mutation
 	void reject();
 
 	/// Replace the underlying random number generator
 	inline void setRandom(Random *random) { m_random = random; }
-	
+
 	/// Return the underlying random number generator
 	inline Random *getRandom() { return m_random; }
 
@@ -136,7 +136,7 @@ protected:
 		Float value;
 		size_t modify;
 
-		inline SampleStruct(Float value) : value(value), modify(0) { } 
+		inline SampleStruct(Float value) : value(value), modify(0) { }
 	};
 
 	ref<Random> m_random;

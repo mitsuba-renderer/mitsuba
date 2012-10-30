@@ -23,7 +23,7 @@
 #include <boost/static_assert.hpp>
 
 MTS_NAMESPACE_BEGIN
- 
+
 /*! \addtogroup libcore */
 /*! @{ */
 
@@ -68,7 +68,7 @@ template<class Iterator> std::string containerToString(const Iterator &start, co
 	while (it != end) {
 		oss << "  " << indent((*it)->toString());
 		++it;
-		if (it != end) 
+		if (it != end)
 			oss << "," << std::endl;
 		else
 			oss << std::endl;
@@ -110,12 +110,12 @@ extern MTS_EXPORT_CORE int getCoreCount();
 /// Return the host name of this machine
 extern MTS_EXPORT_CORE std::string getHostName();
 
-/// Return the fully qualified domain name of this machine 
+/// Return the fully qualified domain name of this machine
 extern MTS_EXPORT_CORE std::string getFQDN();
 
 /**
- * \brief Enable floating point exceptions (to catch NaNs, overflows, 
- * arithmetic with infinity). 
+ * \brief Enable floating point exceptions (to catch NaNs, overflows,
+ * arithmetic with infinity).
  *
  * On Intel processors, this applies to both x87 and SSE2 math
  *
@@ -183,7 +183,7 @@ static FINLINE __int64 rdtsc(void) {
 
 /**
  * \brief Apply an arbitrary permutation to an array in linear time
- * 
+ *
  * This algorithm is based on Donald Knuth's book
  * "The Art of Computer Programming, Volume 3: Sorting and Searching"
  * (1st edition, section 5.2, page 595)
@@ -197,7 +197,7 @@ static FINLINE __int64 rdtsc(void) {
  *     Pointer to the data that should be permuted
  * \param perm
  *     Input permutation vector having the same size as \c data. After
- *     the function terminates, this vector will be set to the 
+ *     the function terminates, this vector will be set to the
  *     identity permutation.
  */
 template <typename DataType, typename IndexType> void permute_inplace(
@@ -223,7 +223,7 @@ template <typename DataType, typename IndexType> void permute_inplace(
 			} while (perm[j] != i);
 
 			/* Fix the final position with the saved value */
-			data[j] = curval; 
+			data[j] = curval;
 			perm[j] = j;
 		}
 	}
@@ -329,94 +329,103 @@ inline size_t roundToPowerOfTwo(size_t value) {
  * \brief Solve a quadratic equation of the form a*x^2 + b*x + c = 0.
  * \return \c true if a solution could be found
  */
-extern MTS_EXPORT_CORE bool solveQuadratic(Float a, Float b, 
+extern MTS_EXPORT_CORE bool solveQuadratic(Float a, Float b,
 	Float c, Float &x0, Float &x1);
 
 /**
- * \brief Solve a double-precision quadratic equation of the 
+ * \brief Solve a double-precision quadratic equation of the
  * form a*x^2 + b*x + c = 0.
  * \return \c true if a solution could be found
  */
-extern MTS_EXPORT_CORE bool solveQuadraticDouble(double a, double b, 
+extern MTS_EXPORT_CORE bool solveQuadraticDouble(double a, double b,
 	double c, double &x0, double &x1);
 
 /**
  * \brief Evaluate a cubic spline interpolant of a regularly sampled 1D function
- * 
+ *
  * This implementation relies on Catmull-Rom splines, i.e. it uses finite
  * differences to approximate the derivatives at the endpoints of each spline
  * segment.
  *
  * \param x
- *      Evaluation point 
+ *      Evaluation point
  * \param data
  *      Floating point array containing \c size regularly spaced evaluations
  *      in the range [\c min,\c max] of the function to be approximated.
- * \param min 
+ * \param min
  *      Position of the first knot
  * \param max
  *      Position of the last knot
- * \param size 
+ * \param size
  *      Denotes the size of the \c data array
+ * \param extrapolate
+ *      Extrapolate data values when \c x is out of range? (default: \c false)
  * \return
- *      The interpolated value or zero when \c x lies outside of [\c min, \c max]
+ *      The interpolated value or zero when <tt>extrapolate=false</tt>tt>
+ *      and \c x lies outside of [\c min, \c max]
  */
-extern MTS_EXPORT_CORE Float interpCubic1D(Float x, const Float *data, 
-		Float min, Float max, size_t size);
+extern MTS_EXPORT_CORE Float interpCubic1D(Float x, const Float *data,
+		Float min, Float max, size_t size, bool extrapolate = false);
 
 /**
  * \brief Evaluate a cubic spline interpolant of an \a irregularly sampled 1D function
- * 
+ *
  * This implementation relies on Catmull-Rom splines, i.e. it uses finite
  * differences to approximate the derivatives at the endpoints of each spline
  * segment.
  *
  * \param x
- *      Evaluation point 
+ *      Evaluation point
  * \param nodes
  *      Floating point array containing \c size irregularly spaced values
  *      denoting positions the where the function to be interpolated was evaluated.
  *      They must be provided in \a increasing order.
  * \param data
- *      Floating point array containing interpolant values matched to 
+ *      Floating point array containing interpolant values matched to
  *      the entries of \c nodes.
- * \param size 
+ * \param size
  *      Denotes the size of the \c data array
+ * \param extrapolate
+ *      Extrapolate data values when \c x is out of range? (default: \c false)
  * \return
- *      The interpolated value or zero when \c x lies outside of \a [\c min, \c max]
+ *      The interpolated value or zero when <tt>extrapolate=false</tt>tt>
+ *      and \c x lies outside of \a [\c min, \c max]
  */
-extern MTS_EXPORT Float interpCubic1DIrregular(Float x, const Float *nodes, 
-		const Float *data, size_t size);
+extern MTS_EXPORT Float interpCubic1DIrregular(Float x, const Float *nodes,
+		const Float *data, size_t size, bool extrapolate = false);
 
 /**
  * \brief Evaluate a cubic spline interpolant of a regularly sampled 2D function
- * 
- * This implementation relies on a tensor product of Catmull-Rom splines, i.e. it uses 
+ *
+ * This implementation relies on a tensor product of Catmull-Rom splines, i.e. it uses
  * finite differences to approximate the derivatives at the endpoints of each spline
  * patch.
  *
  * \param p
- *      Evaluation point 
+ *      Evaluation point
  * \param data
  *      A 2D floating point array of <tt>size.x*size.y</tt> cells containing regularly
- *      spaced evaluations of the function to be interpolated on the domain <tt>[min, max]</tt>. 
+ *      spaced evaluations of the function to be interpolated on the domain <tt>[min, max]</tt>.
  *      Consecutive entries of this array correspond to increments in the 'x' coordinate.
  * \param min
  *      Position of the first knot on each dimension
  * \param max
  *      Position of the last knot on each dimension
- * \param size 
+ * \param size
  *      Denotes the size of the \c data array (along each dimension)
+ * \param extrapolate
+ *      Extrapolate data values when \c p is out of range? (default: \c false)
  * \return
- *      The interpolated value or zero when \c p lies outside of the knot range
+ *      The interpolated value or zero when <tt>extrapolate=false</tt>tt> and
+ *      \c p lies outside of the knot range
  */
-extern MTS_EXPORT_CORE Float interpCubic2D(const Point2 &p, const Float *data, 
-		const Point2 &min, const Point2 &max, const Size2 &size);
+extern MTS_EXPORT_CORE Float interpCubic2D(const Point2 &p, const Float *data,
+		const Point2 &min, const Point2 &max, const Size2 &size, bool extrapolate = false);
 
 /**
  * \brief Evaluate a cubic spline interpolant of an \a irregularly sampled 2D function
- * 
- * This implementation relies on a tensor product of Catmull-Rom splines, i.e. it uses 
+ *
+ * This implementation relies on a tensor product of Catmull-Rom splines, i.e. it uses
  * finite differences to approximate the derivatives at the endpoints of each spline
  * region.
  *
@@ -424,27 +433,30 @@ extern MTS_EXPORT_CORE Float interpCubic2D(const Point2 &p, const Float *data,
  * should be preferred, since data lookups will be considerably faster.
  *
  * \param p
- *      Evaluation point 
+ *      Evaluation point
  * \param nodes
  *      Pointer to a list for each dimension denoting the positions where the function
  *      to be interpolated was evaluated. The <tt>i</tt>-th array must have
  *      size <tt>size[i]</tt> and contain position values in \a increasing order.
  * \param data
  *      A 2D floating point array of <tt>size.x*size.y</tt> cells containing irregularly
- *      spaced evaluations of the function to be interpolated on the domain <tt>[min, max]</tt>. 
+ *      spaced evaluations of the function to be interpolated on the domain <tt>[min, max]</tt>.
  *      Consecutive entries of this array correspond to increments in the 'x' coordinate.
- * \param size 
+ * \param size
  *      Denotes the size of the \c data array (along each dimension)
+ * \param extrapolate
+ *      Extrapolate data values when \c p is out of range? (default: \c false)
  * \return
- *      The interpolated value or zero when \c p lies outside of the knot range
+ *      The interpolated value or zero when <tt>extrapolate=false</tt>tt> and
+ *      \c p lies outside of the knot range
  */
-extern MTS_EXPORT_CORE Float interpCubic2DIrregular(const Point2 &p, const Float **nodes, 
-		const Float *data, const Size2 &size);
+extern MTS_EXPORT_CORE Float interpCubic2DIrregular(const Point2 &p, const Float **nodes,
+		const Float *data, const Size2 &size, bool extrapolate = false);
 
 /**
  * \brief Evaluate a cubic spline interpolant of a regularly sampled 3D function
- * 
- * This implementation relies on a tensor product of Catmull-Rom splines, i.e. it uses 
+ *
+ * This implementation relies on a tensor product of Catmull-Rom splines, i.e. it uses
  * finite differences to approximate the derivatives at the endpoints of each spline
  * region.
  *
@@ -452,25 +464,28 @@ extern MTS_EXPORT_CORE Float interpCubic2DIrregular(const Point2 &p, const Float
  *      Evaluation point of the interpolant
  * \param data
  *      A 3D floating point array of <tt>size.x*size.y*size.z</tt> cells containing regularly
- *      spaced evaluations of the function to be interpolated on the domain <tt>[min, max]</tt>. 
+ *      spaced evaluations of the function to be interpolated on the domain <tt>[min, max]</tt>.
  *      Consecutive entries of this array correspond to increments in the 'x' coordinate,
  *      then 'y', and finally 'z' increments.
  * \param min
  *      Position of the first knot on each dimension
  * \param max
  *      Position of the last knot on each dimension
- * \param size 
+ * \param size
  *      Denotes the size of the \c data array (along each dimension)
+ * \param extrapolate
+ *      Extrapolate data values when \c p is out of range? (default: \c false)
  * \return
- *      The interpolated value or zero when \c p lies outside of the knot range
+ *      The interpolated value or zero when <tt>extrapolate=false</tt>tt> and
+ *      \c p lies outside of the knot range
  */
-extern MTS_EXPORT_CORE Float interpCubic3D(const Point3 &p, const Float *data, 
-		const Point3 &min, const Point3 &max, const Size3 &size);
+extern MTS_EXPORT_CORE Float interpCubic3D(const Point3 &p, const Float *data,
+		const Point3 &min, const Point3 &max, const Size3 &size, bool extrapolate = false);
 
 /**
  * \brief Evaluate a cubic spline interpolant of an \a irregularly sampled 3D function
- * 
- * This implementation relies on a tensor product of Catmull-Rom splines, i.e. it uses 
+ *
+ * This implementation relies on a tensor product of Catmull-Rom splines, i.e. it uses
  * finite differences to approximate the derivatives at the endpoints of each spline
  * region.
  *
@@ -478,23 +493,26 @@ extern MTS_EXPORT_CORE Float interpCubic3D(const Point3 &p, const Float *data,
  * should be preferred, since data lookups will be considerably faster.
  *
  * \param p
- *      Evaluation point 
+ *      Evaluation point
  * \param nodes
  *      Pointer to a list for each dimension denoting the positions where the function
  *      to be interpolated was evaluated. The <tt>i</tt>-th array must have
  *      size <tt>size[i]</tt> and contain position values in \a increasing order.
  * \param data
  *      A 2D floating point array of <tt>size.x*size.y</tt> cells containing irregularly
- *      spaced evaluations of the function to be interpolated on the domain <tt>[min, max]</tt>. 
+ *      spaced evaluations of the function to be interpolated on the domain <tt>[min, max]</tt>.
  *      Consecutive entries of this array correspond to increments in the 'x' coordinate,
  *      then 'y', and finally 'z' increments.
- * \param size 
+ * \param size
  *      Denotes the size of the \c data array (along each dimension)
+ * \param extrapolate
+ *      Extrapolate data values when \c p is out of range? (default: \c false)
  * \return
- *      The interpolated value or zero when \c p lies outside of the knot range
+ *      The interpolated value or zero when <tt>extrapolate=false</tt>tt> and
+ *      \c p lies outside of the knot range
  */
-extern MTS_EXPORT_CORE Float interpCubic3DIrregular(const Point3 &p, const Float **nodes, 
-		const Float *data, const Size3 &size);
+extern MTS_EXPORT_CORE Float interpCubic3DIrregular(const Point3 &p, const Float **nodes,
+		const Float *data, const Size3 &size, bool extrapolate = false);
 
 //// Convert radians to degrees
 inline Float radToDeg(Float value) { return value * (180.0f / M_PI); }
@@ -519,7 +537,7 @@ inline Float smoothStep(Float min, Float max, Float value) {
 }
 
 /**
- * \brief Numerically well-behaved routine for computing the angle 
+ * \brief Numerically well-behaved routine for computing the angle
  * between two unit direction vectors
  *
  * This should be used wherever one is tempted to compute the
@@ -549,7 +567,7 @@ extern MTS_EXPORT_CORE bool solveLinearSystem2x2(const Float a[2][2], const Floa
 
 /**
  * \brief Complete the set {a} to an orthonormal base
- * \remark In Python, this function is used as 
+ * \remark In Python, this function is used as
  *     follows: <tt>s, t = coordinateSystem(n)</tt>
  * \ingroup libpython
  */
@@ -563,18 +581,18 @@ extern MTS_EXPORT_CORE void coordinateSystem(const Vector &a, Vector &b, Vector 
  * \param count The interval [0, 1] is split into count strata
  * \param jitter Randomly jitter the samples?
  */
-extern MTS_EXPORT_CORE void stratifiedSample1D(Random *random, Float *dest, 
+extern MTS_EXPORT_CORE void stratifiedSample1D(Random *random, Float *dest,
 	int count, bool jitter);
 
 /**
  * \brief Generate (optionally jittered) stratified 2D samples
  * \param random Source of random numbers
- * \param dest A pointer to a floating point array 
+ * \param dest A pointer to a floating point array
  * \param countX The X axis interval [0, 1] is split into countX strata
  * \param countY The Y axis interval [0, 1] is split into countY strata
  * \param jitter Randomly jitter the samples?
  */
-extern MTS_EXPORT_CORE void stratifiedSample2D(Random *random, Point2 *dest, 
+extern MTS_EXPORT_CORE void stratifiedSample2D(Random *random, Point2 *dest,
 	int countX, int countY, bool jitter);
 
 /// Generate latin hypercube samples
@@ -616,19 +634,19 @@ extern MTS_EXPORT_CORE Point2 toSphericalCoordinates(const Vector &v);
  * 		Relative refractive index to the transmitted direction
  * \ingroup libpython
  */
-extern MTS_EXPORT_CORE Float fresnelDielectric(Float cosThetaI, 
+extern MTS_EXPORT_CORE Float fresnelDielectric(Float cosThetaI,
 		Float cosThetaT, Float eta);
 
 /**
  * \brief Calculates the unpolarized Fresnel reflection coefficient
  * at a planar interface between two dielectrics (extended version)
  *
- * In comparison to \ref fresnelDielectric(), this function internally 
- * computes the transmitted direction and returns it using the \c cosThetaT 
- * argument. When encountering total internal reflection, it sets 
+ * In comparison to \ref fresnelDielectric(), this function internally
+ * computes the transmitted direction and returns it using the \c cosThetaT
+ * argument. When encountering total internal reflection, it sets
  * <tt>cosThetaT=0</tt> and returns the value 1.
  *
- * When <tt>cosThetaI < 0</tt>, the function computes the Fresnel reflectance 
+ * When <tt>cosThetaI < 0</tt>, the function computes the Fresnel reflectance
  * from the \a internal boundary, which is equivalent to calling the function
  * with arguments <tt>fresnelDielectric(abs(cosThetaI), cosThetaT, 1/eta)</tt>.
  *
@@ -639,13 +657,13 @@ extern MTS_EXPORT_CORE Float fresnelDielectric(Float cosThetaI,
  * 		Cosine of the angle between the normal and the incident ray
  * 		(may be negative)
  * \param cosThetaT
- * 		Argument used to return the cosine of the angle between the normal 
+ * 		Argument used to return the cosine of the angle between the normal
  * 		and the transmitted ray, will have the opposite sign of \c cosThetaI
  * \param eta
  * 		Relative refractive index
  * \ingroup libpython
  */
-extern MTS_EXPORT_CORE Float fresnelDielectricExt(Float cosThetaI, 
+extern MTS_EXPORT_CORE Float fresnelDielectricExt(Float cosThetaI,
 	Float &cosThetaT, Float eta);
 
 /**
@@ -663,7 +681,7 @@ inline Float fresnelDielectricExt(Float cosThetaI, Float eta) { Float cosThetaT;
 	return fresnelDielectricExt(cosThetaI, cosThetaT, eta); }
 
 /**
- * \brief Calculates the unpolarized fresnel reflection coefficient 
+ * \brief Calculates the unpolarized fresnel reflection coefficient
  * at a planar interface between vacuum and a conductor.
  *
  * \param cosThetaI
@@ -674,12 +692,12 @@ inline Float fresnelDielectricExt(Float cosThetaI, Float eta) { Float cosThetaT;
  * 		Imaginary refractive index (wavelength-dependent)
  * \ingroup libpython
  */
-extern MTS_EXPORT_CORE Spectrum fresnelConductor(Float cosThetaI, 
+extern MTS_EXPORT_CORE Spectrum fresnelConductor(Float cosThetaI,
 		const Spectrum &eta, const Spectrum &k);
 
 /**
  * \brief Calculates the diffuse unpolarized fresnel reflectance of
- * a dielectric material (sometimes referred to as "Fdr"). 
+ * a dielectric material (sometimes referred to as "Fdr").
  *
  * This value quantifies what fraction of diffuse incident illumination
  * will, on average, be reflected at a dielectric material boundary
@@ -687,10 +705,10 @@ extern MTS_EXPORT_CORE Spectrum fresnelConductor(Float cosThetaI,
  * \param eta
  *      Relative refraction coefficient
  * \param fast
- *      Compute an approximate value? If set to \c true, the 
+ *      Compute an approximate value? If set to \c true, the
  *      implementation will use a polynomial approximation with
  *      a max relative error of ~0.5% on the interval 0.5 < \c eta < 2.
- *      When \c fast=false, the code will use Gauss-Lobatto quadrature 
+ *      When \c fast=false, the code will use Gauss-Lobatto quadrature
  *      to compute the diffuse reflectance more accurately, and for
  *      a wider range of refraction coefficients, but at a cost
  *      in terms of performance.
@@ -712,11 +730,11 @@ extern MTS_EXPORT_CORE Float fresnelDiffuseReflectance(
 extern MTS_EXPORT_CORE Vector reflect(const Vector &wi, const Normal &n);
 
 /**
- * \brief Specularly refract the direction \c wi into a planar dielectric with 
+ * \brief Specularly refract the direction \c wi into a planar dielectric with
  * the given surface normal and index of refraction.
  *
  * This variant internally computes the transmitted direction cosine by
- * calling \ref fresnelDielectricExt. As a side result, the cosine and 
+ * calling \ref fresnelDielectricExt. As a side result, the cosine and
  * Fresnel reflectance are computed and returned via the reference arguments
  * \c cosThetaT and \c F.
  *
@@ -730,8 +748,8 @@ extern MTS_EXPORT_CORE Vector reflect(const Vector &wi, const Normal &n);
  * \param eta
  *     Relative index of refraction at the interface
  * \param cosThetaT
- *     Parameter used to return the signed cosine of the angle between the transmitted 
- *     direction and the surface normal 
+ *     Parameter used to return the signed cosine of the angle between the transmitted
+ *     direction and the surface normal
  * \param F
  *     Parameter used to return the Fresnel reflectance
  * \return
@@ -739,11 +757,11 @@ extern MTS_EXPORT_CORE Vector reflect(const Vector &wi, const Normal &n);
  *     the case of total internal reflection)
  * \ingroup libpython
  */
-extern MTS_EXPORT_CORE Vector refract(const Vector &wi, const Normal &n, 
+extern MTS_EXPORT_CORE Vector refract(const Vector &wi, const Normal &n,
 	Float eta, Float &cosThetaT, Float &F);
 
 /**
- * \brief Specularly refract the direction \c wi into a planar dielectric with 
+ * \brief Specularly refract the direction \c wi into a planar dielectric with
  * the given surface normal and index of refraction.
  *
  * This variant assumes that the transmitted direction cosine has
@@ -762,11 +780,11 @@ extern MTS_EXPORT_CORE Vector refract(const Vector &wi, const Normal &n,
  *     Specularly transmitted direction
  * \ingroup libpython
  */
-extern MTS_EXPORT_CORE Vector refract(const Vector &wi, const Normal &n, 
+extern MTS_EXPORT_CORE Vector refract(const Vector &wi, const Normal &n,
 	Float eta, Float cosThetaT);
 
 /**
- * \brief Specularly refract the direction \c wi into a planar dielectric with 
+ * \brief Specularly refract the direction \c wi into a planar dielectric with
  * the given surface normal and index of refraction.
  *
  * This function is a simple convenience function that only returns the refracted

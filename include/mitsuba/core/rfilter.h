@@ -31,7 +31,7 @@ MTS_NAMESPACE_BEGIN
  * \brief Generic interface to separable image reconstruction filters
  *
  * When resampling bitmaps or adding radiance-valued samples to a rendering in
- * progress, Mitsuba first convolves them with a so-called image reconstruction 
+ * progress, Mitsuba first convolves them with a so-called image reconstruction
  * filter. Various kinds are implemented as subclasses of this interface.
  *
  * Because image filters are generally too expensive to evaluate for
@@ -45,7 +45,7 @@ class MTS_EXPORT_CORE ReconstructionFilter : public ConfigurableObject {
 public:
 	/**
 	 * \brief When resampling data to a different resolution using
-	 * \ref Resample, this enumeration specifies how lookups 
+	 * \ref Resample, this enumeration specifies how lookups
 	 * <em>outside</em> of the input domain are handled.
 	 *
 	 * \see Resampler
@@ -114,13 +114,13 @@ template <typename Scalar> struct Resampler {
 	 *
 	 * \param sourceRes
 	 *      Source resolution
-	 * \param targetRes 
-	 *      Desired target resolution 
+	 * \param targetRes
+	 *      Desired target resolution
 	 * \param bc
 	 *      Boundary conditions that should be observed when looking up samples
 	 *      outside of the defined input domain.
 	 */
-	Resampler(const ReconstructionFilter *rfilter, ReconstructionFilter::EBoundaryCondition bc, 
+	Resampler(const ReconstructionFilter *rfilter, ReconstructionFilter::EBoundaryCondition bc,
 			int sourceRes, int targetRes) : m_bc(bc), m_sourceRes(sourceRes), m_targetRes(targetRes) {
 		SAssert(sourceRes > 0 && targetRes > 0);
 		Float filterRadius = rfilter->getRadius(), scale = 1.0f, invScale = 1.0f;
@@ -153,7 +153,7 @@ template <typename Scalar> struct Resampler {
 
 			Float sum = 0;
 			for (int j=0; j<m_taps; j++) {
-				/* Compute the the position where the filter should be evaluated */ 
+				/* Compute the the position where the filter should be evaluated */
 				Float pos = m_start[i] + j + (Float) 0.5f - center;
 
 				/* Perform the evaluation and record the weight */
@@ -206,9 +206,9 @@ template <typename Scalar> struct Resampler {
 
 			for (int ch=0; ch<channels; ++ch) {
 				Scalar result = 0;
-				for (int j=0; j<taps; ++j) 
+				for (int j=0; j<taps; ++j)
 					result += lookup(source, start + j, sourceStride, ch) * m_weights[i * taps + j];
-				*target++ = result; 
+				*target++ = result;
 			}
 
 			target += targetStride;
@@ -220,9 +220,9 @@ template <typename Scalar> struct Resampler {
 
 			for (int ch=0; ch<channels; ++ch) {
 				Scalar result = 0;
-				for (int j=0; j<taps; ++j) 
+				for (int j=0; j<taps; ++j)
 					result += source[sourceStride * (start + j) + ch] * m_weights[i * taps + j];
-				*target++ = result; 
+				*target++ = result;
 			}
 
 			target += targetStride;
@@ -234,9 +234,9 @@ template <typename Scalar> struct Resampler {
 
 			for (int ch=0; ch<channels; ++ch) {
 				Scalar result = 0;
-				for (int j=0; j<taps; ++j) 
+				for (int j=0; j<taps; ++j)
 					result += lookup(source, start + j, sourceStride, ch) * m_weights[i * taps + j];
-				*target++ = result; 
+				*target++ = result;
 			}
 
 			target += targetStride;
@@ -244,7 +244,7 @@ template <typename Scalar> struct Resampler {
 	}
 
 	/**
-	 * \brief Resample a multi-channel array and clamp the results 
+	 * \brief Resample a multi-channel array and clamp the results
 	 * to a specified valid range
 	 *
 	 * This function is preferred if too large positive/negative values
@@ -268,7 +268,7 @@ template <typename Scalar> struct Resampler {
 	 *     Maximum sample value after resampling
 	 */
 	void resampleAndClamp(const Scalar *source, size_t sourceStride,
-			Scalar *target, size_t targetStride, int channels, 
+			Scalar *target, size_t targetStride, int channels,
 			Scalar min = (Scalar) 0, Scalar max = (Scalar) 1) {
 		const int taps = m_taps;
 		targetStride = channels * (targetStride - 1);
@@ -280,7 +280,7 @@ template <typename Scalar> struct Resampler {
 
 			for (int ch=0; ch<channels; ++ch) {
 				Scalar result = 0;
-				for (int j=0; j<taps; ++j) 
+				for (int j=0; j<taps; ++j)
 					result += lookup(source, start + j, sourceStride, ch) * m_weights[i * taps + j];
 				*target++ = std::min(max, std::max(min, result));
 			}
@@ -294,7 +294,7 @@ template <typename Scalar> struct Resampler {
 
 			for (int ch=0; ch<channels; ++ch) {
 				Scalar result = 0;
-				for (int j=0; j<taps; ++j) 
+				for (int j=0; j<taps; ++j)
 					result += source[sourceStride * (start + j) + ch] * m_weights[i * taps + j];
 				*target++ = std::min(max, std::max(min, result));
 			}
@@ -308,7 +308,7 @@ template <typename Scalar> struct Resampler {
 
 			for (int ch=0; ch<channels; ++ch) {
 				Scalar result = 0;
-				for (int j=0; j<taps; ++j) 
+				for (int j=0; j<taps; ++j)
 					result += lookup(source, start + j, sourceStride, ch) * m_weights[i * taps + j];
 				*target++ = std::min(max, std::max(min, result));
 			}

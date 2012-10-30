@@ -4,7 +4,7 @@ This source is published under the following 3-clause BSD license.
 Copyright (c) 2012, Lukas Hosek and Alexander Wilkie
 All rights reserved.
 
-Redistribution and use in source and binary forms, with or without 
+Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
 
     * Redistributions of source code must retain the above copyright
@@ -12,8 +12,8 @@ modification, are permitted provided that the following conditions are met:
     * Redistributions in binary form must reproduce the above copyright
       notice, this list of conditions and the following disclaimer in the
       documentation and/or other materials provided with the distribution.
-    * None of the names of the contributors may be used to endorse or promote 
-      products derived from this software without specific prior written 
+    * None of the names of the contributors may be used to endorse or promote
+      products derived from this software without specific prior written
       permission.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
@@ -37,23 +37,23 @@ presented in the SIGGRAPH 2012 paper
 
            "An Analytic Model for Full Spectral Sky-Dome Radiance"
 
-                                    by 
+                                    by
 
                        Lukas Hosek and Alexander Wilkie
                 Charles University in Prague, Czech Republic
 
 
                         Version: 1.1, July 4th, 2012
-                        
+
 Version history:
 
-1.1  The coefficients of the spectral model are now scaled so that the output 
-     is given in physical units: W / (m^-2 * sr * nm). Also, the output of the   
+1.1  The coefficients of the spectral model are now scaled so that the output
+     is given in physical units: W / (m^-2 * sr * nm). Also, the output of the
      XYZ model is now no longer scaled to the range [0...1]. Instead, it is
      the result of a simple conversion from spectral data via the CIE 2 degree
-     standard observer matching functions. Therefore, after multiplication 
+     standard observer matching functions. Therefore, after multiplication
      with 683 lm / W, the Y channel now corresponds to luminance in lm.
-     
+
 1.0  Initial release (May 11th, 2012).
 
 
@@ -70,7 +70,7 @@ space version of the model.
 
 */
 
-double dataset320[] = 
+double dataset320[] =
 {
 	// albedo 0, turbidity 1
 	-1.341049e+001,
@@ -1174,7 +1174,7 @@ double dataset320[] =
 	6.227585e-001,
 };
 
-double datasetRad320[] = 
+double datasetRad320[] =
 {
 	// albedo 0, turbidity 1
 	9.282016e-004,
@@ -1318,7 +1318,7 @@ double datasetRad320[] =
 	8.244103e-002,
 };
 
-double dataset360[] = 
+double dataset360[] =
 {
 	// albedo 0, turbidity 1
 	-2.974290e+000,
@@ -2422,7 +2422,7 @@ double dataset360[] =
 	7.279518e-001,
 };
 
-double datasetRad360[] = 
+double datasetRad360[] =
 {
 	// albedo 0, turbidity 1
 	2.494129e-003,
@@ -2566,7 +2566,7 @@ double datasetRad360[] =
 	1.427310e-001,
 };
 
-double dataset400[] = 
+double dataset400[] =
 {
 	// albedo 0, turbidity 1
 	-1.869600e+000,
@@ -3670,7 +3670,7 @@ double dataset400[] =
 	7.086504e-001,
 };
 
-double datasetRad400[] = 
+double datasetRad400[] =
 {
 	// albedo 0, turbidity 1
 	5.767645e-003,
@@ -3814,7 +3814,7 @@ double datasetRad400[] =
 	2.328116e-001,
 };
 
-double dataset440[] = 
+double dataset440[] =
 {
 	// albedo 0, turbidity 1
 	-1.397312e+000,
@@ -4918,7 +4918,7 @@ double dataset440[] =
 	6.840186e-001,
 };
 
-double datasetRad440[] = 
+double datasetRad440[] =
 {
 	// albedo 0, turbidity 1
 	9.406889e-003,
@@ -5062,7 +5062,7 @@ double datasetRad440[] =
 	2.803810e-001,
 };
 
-double dataset480[] = 
+double dataset480[] =
 {
 	// albedo 0, turbidity 1
 	-1.255072e+000,
@@ -6166,7 +6166,7 @@ double dataset480[] =
 	6.747408e-001,
 };
 
-double datasetRad480[] = 
+double datasetRad480[] =
 {
 	// albedo 0, turbidity 1
 	1.367487e-002,
@@ -6310,7 +6310,7 @@ double datasetRad480[] =
 	3.053035e-001,
 };
 
-double dataset520[] = 
+double dataset520[] =
 {
 	// albedo 0, turbidity 1
 	-1.171338e+000,
@@ -7414,7 +7414,7 @@ double dataset520[] =
 	6.713422e-001,
 };
 
-double datasetRad520[] = 
+double datasetRad520[] =
 {
 	// albedo 0, turbidity 1
 	1.459826e-002,
@@ -7558,7 +7558,7 @@ double datasetRad520[] =
 	2.692918e-001,
 };
 
-double dataset560[] = 
+double dataset560[] =
 {
 	// albedo 0, turbidity 1
 	-1.121223e+000,
@@ -8662,7 +8662,7 @@ double dataset560[] =
 	5.872694e-001,
 };
 
-double datasetRad560[] = 
+double datasetRad560[] =
 {
 	// albedo 0, turbidity 1
 	1.518543e-002,
@@ -8806,7 +8806,7 @@ double datasetRad560[] =
 	2.394514e-001,
 };
 
-double dataset600[] = 
+double dataset600[] =
 {
 	// albedo 0, turbidity 1
 	-1.120756e+000,
@@ -9910,7 +9910,7 @@ double dataset600[] =
 	6.545784e-001,
 };
 
-double datasetRad600[] = 
+double datasetRad600[] =
 {
 	// albedo 0, turbidity 1
 	1.605147e-002,
@@ -10054,7 +10054,7 @@ double datasetRad600[] =
 	2.260782e-001,
 };
 
-double dataset640[] = 
+double dataset640[] =
 {
 	// albedo 0, turbidity 1
 	-1.113346e+000,
@@ -11158,7 +11158,7 @@ double dataset640[] =
 	6.650112e-001,
 };
 
-double datasetRad640[] = 
+double datasetRad640[] =
 {
 	// albedo 0, turbidity 1
 	1.479989e-002,
@@ -11302,7 +11302,7 @@ double datasetRad640[] =
 	2.043633e-001,
 };
 
-double dataset680[] = 
+double dataset680[] =
 {
 	// albedo 0, turbidity 1
 	-1.112655e+000,
@@ -12406,7 +12406,7 @@ double dataset680[] =
 	6.710888e-001,
 };
 
-double datasetRad680[] = 
+double datasetRad680[] =
 {
 	// albedo 0, turbidity 1
 	1.320908e-002,
@@ -12550,7 +12550,7 @@ double datasetRad680[] =
 	1.851691e-001,
 };
 
-double dataset720[] = 
+double dataset720[] =
 {
 	// albedo 0, turbidity 1
 	-1.110553e+000,
@@ -13654,7 +13654,7 @@ double dataset720[] =
 	6.917938e-001,
 };
 
-double datasetRad720[] = 
+double datasetRad720[] =
 {
 	// albedo 0, turbidity 1
 	1.130152e-002,
@@ -13828,7 +13828,7 @@ double* datasetsRad[] =
     datasetRad720
 };
 
-double datasetXYZ1[] = 
+double datasetXYZ1[] =
 {
 	// albedo 0, turbidity 1
 	-1.117110e+000,
@@ -14932,7 +14932,7 @@ double datasetXYZ1[] =
 	6.597854e-001,
 };
 
-double datasetXYZRad1[] = 
+double datasetXYZRad1[] =
 {
 	// albedo 0, turbidity 1
 	1.560219e+000,
@@ -15076,7 +15076,7 @@ double datasetXYZRad1[] =
 	2.523432e+001,
 };
 
-double datasetXYZ2[] = 
+double datasetXYZ2[] =
 {
 	// albedo 0, turbidity 1
 	-1.129389e+000,
@@ -16180,7 +16180,7 @@ double datasetXYZ2[] =
 	6.470981e-001,
 };
 
-double datasetXYZRad2[] = 
+double datasetXYZRad2[] =
 {
 	// albedo 0, turbidity 1
 	1.632341e+000,
@@ -16324,7 +16324,7 @@ double datasetXYZRad2[] =
 	2.641780e+001,
 };
 
-double datasetXYZ3[] = 
+double datasetXYZ3[] =
 {
 	// albedo 0, turbidity 1
 	-1.311923e+000,
@@ -17428,7 +17428,7 @@ double datasetXYZ3[] =
 	6.786333e-001,
 };
 
-double datasetXYZRad3[] = 
+double datasetXYZRad3[] =
 {
 	// albedo 0, turbidity 1
 	1.168084e+000,
@@ -17586,7 +17586,7 @@ double* datasetsXYZRad[] =
 	datasetXYZRad3
 };
 
-double datasetRGB1[] = 
+double datasetRGB1[] =
 {
 	// albedo 0, turbidity 1
 	-1.099459e+000,
@@ -18690,7 +18690,7 @@ double datasetRGB1[] =
 	6.658012e-001,
 };
 
-double datasetRGBRad1[] = 
+double datasetRGBRad1[] =
 {
 	// albedo 0, turbidity 1
 	1.962684e+000,
@@ -18834,7 +18834,7 @@ double datasetRGBRad1[] =
 	2.574284e+001,
 };
 
-double datasetRGB2[] = 
+double datasetRGB2[] =
 {
 	// albedo 0, turbidity 1
 	-1.140530e+000,
@@ -19938,7 +19938,7 @@ double datasetRGB2[] =
 	6.588427e-001,
 };
 
-double datasetRGBRad2[] = 
+double datasetRGBRad2[] =
 {
 	// albedo 0, turbidity 1
 	1.590330e+000,
@@ -20082,7 +20082,7 @@ double datasetRGBRad2[] =
 	2.643066e+001,
 };
 
-double datasetRGB3[] = 
+double datasetRGB3[] =
 {
 	// albedo 0, turbidity 1
 	-1.372629e+000,
@@ -21186,7 +21186,7 @@ double datasetRGB3[] =
 	6.966285e-001,
 };
 
-double datasetRGBRad3[] = 
+double datasetRGBRad3[] =
 {
 	// albedo 0, turbidity 1
 	9.926518e-001,

@@ -61,10 +61,10 @@ public:
 
 	/// Does the intersected shape have a subsurface integrator?
 	inline bool hasSubsurface() const;
-	
+
 	/// Does the surface mark a transition between two media?
 	inline bool isMediumTransition() const;
-	
+
 	/**
 	 * \brief Determine the target medium
 	 *
@@ -83,9 +83,9 @@ public:
 	inline const Medium *getTargetMedium(Float cosTheta) const;
 
 	/**
-	 * \brief Returns the BSDF of the intersected shape. 
+	 * \brief Returns the BSDF of the intersected shape.
 	 *
-	 * The parameter ray must match the one used to create the intersection 
+	 * The parameter ray must match the one used to create the intersection
 	 * record. This function computes texture coordinate partials if this is
 	 * required by the BSDF (e.g. for texture filtering).
 	 *
@@ -100,7 +100,7 @@ public:
 	/**
 	 * \brief Returns radiance emitted into direction d.
 	 *
-	 * \remark This function should only be called if the 
+	 * \remark This function should only be called if the
 	 * intersected shape is actually an emitter.
 	 */
 	inline Spectrum Le(const Vector &d) const;
@@ -166,6 +166,7 @@ public:
 
 /** \brief Abstract base class of all shapes
  * \ingroup librender
+ * \ingroup libpython
  */
 class MTS_EXPORT_RENDER Shape : public ConfigurableObject {
 public:
@@ -181,7 +182,7 @@ public:
 	virtual bool isCompound() const;
 
 	/**
-	 * \brief Return a sub-element of a compound shape. 
+	 * \brief Return a sub-element of a compound shape.
 	 *
 	 * When expanding shapes, the scene will repeatedly call this
 	 * function with increasing indices. Returning \a NULL indicates
@@ -200,9 +201,9 @@ public:
 	virtual AABB getAABB() const = 0;
 
 	/**
-	 * \brief Returns the minimal axis-aligned bounding box 
+	 * \brief Returns the minimal axis-aligned bounding box
 	 * of this shape when clipped to another bounding box.
-	 * 
+	 *
 	 * This is extremely important to construct decent kd-trees.
 	 * The default implementation just takes the bounding box
 	 * returned by \ref getAABB() and clips it to \a box.
@@ -212,13 +213,13 @@ public:
 	/**
 	 * \brief Create a triangle mesh approximation of this shape
 	 *
-	 * This function is used by the realtime preview and 
+	 * This function is used by the realtime preview and
 	 * certain integrators, which rely on hardware rasterization.
 	 *
 	 * The default implementation simply returns \a NULL.
 	 */
 	virtual ref<TriMesh> createTriMesh();
-	
+
 	//! @}
 	// =============================================================
 
@@ -231,31 +232,40 @@ public:
 	 *
 	 * Check whether the shape is intersected by the given ray. Some
 	 * temporary space (\ref MTS_KD_INTERSECTION_TEMP-4 bytes) is,
-	 * supplied which can be used to cache information about the 
-	 * intersection. The function \ref fillIntersectionRecord() 
-	 * can later use this information to fill in a detailed 
+	 * supplied which can be used to cache information about the
+	 * intersection. The function \ref fillIntersectionRecord()
+	 * can later use this information to fill in a detailed
 	 * intersection record.
+	 *
+	 * \remark In Python, this function also calls \c fillIntersectionRecord
+	 * and has the signature
+	 * <tt>intersection = shape.rayIntersect(ray, mint, maxt)</tt>
 	 */
-	virtual bool rayIntersect(const Ray &ray, Float mint, 
+	virtual bool rayIntersect(const Ray &ray, Float mint,
 			Float maxt, Float &t, void *temp) const;
 
 	/**
 	 * \brief Fast ray intersection test for visibility queries
 	 *
-	 * Check whether the shape is intersected by the given ray. 
+	 * Check whether the shape is intersected by the given ray.
 	 * No details about the intersection are returned, hence the
 	 * function is only useful for visibility queries. For most
-	 * shapes, this will simply call forward the call to \ref 
-	 * rayIntersect. When the shape actually contains a nested 
+	 * shapes, this will simply call forward the call to \ref
+	 * rayIntersect. When the shape actually contains a nested
 	 * kd-tree, some optimizations are possible.
+	 *
+	 * \remark This function is not exposed in Python
 	 */
 	virtual bool rayIntersect(const Ray &ray, Float mint, Float maxt) const;
 
 	/**
-	 * \brief Given that an intersection has been found, create a 
+	 * \brief Given that an intersection has been found, create a
 	 * detailed intersection record
+	 *
+	 * \remark This function is not directly exposed in Python.
+	 * It is implicitly called as part of \c rayIntersect.
 	 */
-	virtual void fillIntersectionRecord(const Ray &ray, 
+	virtual void fillIntersectionRecord(const Ray &ray,
 			const void *temp, Intersection &its) const;
 
 	/**
@@ -268,14 +278,17 @@ public:
 	 * \param its
 	 *     Intersection record associated with the query
 	 * \param dndu
-	 *     Parameter used to store the partial derivative of the 
+	 *     Parameter used to store the partial derivative of the
 	 *     normal vector with respect to \c u
 	 * \param dndv
-	 *     Parameter used to store the partial derivative of the 
+	 *     Parameter used to store the partial derivative of the
 	 *     normal vector with respect to \c v
 	 * \param shadingFrame
 	 *     Specifies whether to compute the derivative of the
 	 *     geometric normal \a or the shading normal of the surface
+	 *
+	 * \remark In Python, the signature of this function is
+	 * <tt>dndu, dndv = shape.getNormalDerivative(its, shadingFrame)</tt>
 	 */
 	virtual void getNormalDerivative(const Intersection &its,
 		Vector &dndu, Vector &dndv, bool shadingFrame = true) const;
@@ -293,8 +306,11 @@ public:
 	 * \param shadingFrame
 	 *     Specifies whether to compute the curvature based on the
 	 *     geometric normal \a or the shading normal of the surface
+	 *
+	 * \remark In Python, the signature of this function is
+	 * <tt>H, K = shape.getCurvature(its, shadingFrame)</tt>
 	 */
-	void getCurvature(const Intersection &its, Float &H, Float &K, 
+	void getCurvature(const Intersection &its, Float &H, Float &K,
 		bool shadingFrame = true) const;
 
 	/**
@@ -303,6 +319,8 @@ public:
 	 * This function is used by the kd-tree visualization in
 	 * the interactive walkthrough. The default implementation
 	 * simply returns NULL.
+	 *
+	 * \remark This function is not exposed in Python
 	 */
 	virtual const KDTreeBase<AABB> *getKDTree() const;
 
@@ -326,7 +344,7 @@ public:
 	 * \param sample
 	 *     A uniformly distributed 2D vector
 	 */
-	virtual void samplePosition(PositionSamplingRecord &pRec, 
+	virtual void samplePosition(PositionSamplingRecord &pRec,
 			const Point2 &sample) const;
 
 	/**
@@ -347,26 +365,26 @@ public:
 	 * (with respect to the solid angle measure)
 	 *
 	 * The sample density should ideally be uniform in direction as seen from
-	 * the reference point \c dRec.p. 
+	 * the reference point \c dRec.p.
 	 *
-	 * This general approach for sampling positions is named "direct" sampling 
+	 * This general approach for sampling positions is named "direct" sampling
 	 * throughout Mitsuba motivated by direct illumination rendering techniques,
 	 * which represent the most important application.
 	 *
-	 * When no implementation of this function is supplied, the \ref Shape 
-	 * class will revert to the default approach, which piggybacks on 
-	 * \ref sampleArea(). This usually results in a a suboptimal sample 
-	 * placement, which can manifest itself in the form of high variance 
+	 * When no implementation of this function is supplied, the \ref Shape
+	 * class will revert to the default approach, which piggybacks on
+	 * \ref sampleArea(). This usually results in a a suboptimal sample
+	 * placement, which can manifest itself in the form of high variance
 	 *
 	 * \param dRec
-	 *    A direct sampling record that specifies the reference point and a 
-	 *    time value. After the function terminates, it will be populated 
+	 *    A direct sampling record that specifies the reference point and a
+	 *    time value. After the function terminates, it will be populated
 	 *    with the position sample and related information
 	 *
 	 * \param sample
 	 *     A uniformly distributed 2D vector
 	 */
-	virtual void sampleDirect(DirectSamplingRecord &dRec, 
+	virtual void sampleDirect(DirectSamplingRecord &dRec,
 			const Point2 &sample) const;
 
 	/**
@@ -374,8 +392,8 @@ public:
 	 * a particular point on the surface.
 	 *
 	 * \param dRec
-	 *    A direct sampling record, which specifies the query 
-	 *    location. Note that this record need not be completely 
+	 *    A direct sampling record, which specifies the query
+	 *    location. Note that this record need not be completely
 	 *    filled out. The important fields are \c p, \c n, \c ref,
 	 *    \c dist, \c d, \c measure, and \c uv.
 	 *
@@ -386,11 +404,11 @@ public:
 
 	//! @}
 	// =============================================================
-	
+
 	// =============================================================
 	//! @{ \name Miscellaneous
 	// =============================================================
-	
+
 	/// Does the surface of this shape mark a medium transition?
 	inline bool isMediumTransition() const { return m_interiorMedium.get() || m_exteriorMedium.get(); }
 	/// Return the medium that lies on the interior of this shape (\c NULL == vacuum)
@@ -406,7 +424,7 @@ public:
 	inline bool hasSubsurface() const { return m_subsurface.get() != NULL; }
 	/// Return the associated sub-surface integrator
 	inline Subsurface *getSubsurface() { return m_subsurface; }
-	/// Return the associated sub-surface integrator 
+	/// Return the associated sub-surface integrator
 	inline const Subsurface *getSubsurface() const { return m_subsurface.get(); }
 
 	/// Is this shape also an area emitter?
@@ -455,9 +473,9 @@ public:
 
 	//! @}
 	// =============================================================
-	
+
 	// =============================================================
-	//! @{ \name ConfigurableObject interface 
+	//! @{ \name ConfigurableObject interface
 	// =============================================================
 
 	/// Called once after constructing the object
@@ -468,7 +486,7 @@ public:
 
 	/// Add a child (e.g. a emitter/sub surface integrator) to this shape
 	void addChild(const std::string &name, ConfigurableObject *child);
-	
+
 	/// Add an unnamed child
 	inline void addChild(ConfigurableObject *child) { addChild("", child); }
 

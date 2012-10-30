@@ -30,7 +30,7 @@ struct Mutex::MutexPrivate {
 
 Mutex::Mutex() : d(new MutexPrivate) {
 }
-	
+
 Mutex::~Mutex() {
 }
 
@@ -95,7 +95,7 @@ struct WaitFlag::WaitFlagPrivate {
 	WaitFlagPrivate(bool f) : flag(f) {}
 };
 
-WaitFlag::WaitFlag(bool flag) 
+WaitFlag::WaitFlag(bool flag)
 	: d(new WaitFlagPrivate(flag)) {
 }
 
@@ -116,7 +116,7 @@ void WaitFlag::set(bool value) {
 void WaitFlag::wait() {
 	boost::timed_mutex::scoped_lock lock(d->mutex);
 	// Wait for a signal from the CV and release the mutex while waiting
-	while (!d->flag) 
+	while (!d->flag)
 		d->cond.wait(d->mutex);
 }
 

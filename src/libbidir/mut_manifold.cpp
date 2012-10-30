@@ -25,22 +25,22 @@ MTS_NAMESPACE_BEGIN
 
 #define DIFF_SAMPLES 50000
 
-static StatsCounter statsAcceptedRad("Manifold perturbation", 
+static StatsCounter statsAcceptedRad("Manifold perturbation",
 		"Acceptance rate (rad. transport)", EPercentage);
-static StatsCounter statsGeneratedRad("Manifold perturbation", 
+static StatsCounter statsGeneratedRad("Manifold perturbation",
 		"Successful generation rate (rad. transport)", EPercentage);
 
-static StatsCounter statsAcceptedImp("Manifold perturbation", 
+static StatsCounter statsAcceptedImp("Manifold perturbation",
 		"Acceptance rate (imp. transport)", EPercentage);
-static StatsCounter statsGeneratedImp("Manifold perturbation", 
+static StatsCounter statsGeneratedImp("Manifold perturbation",
 		"Successful generation rate (imp. transport)", EPercentage);
-static StatsCounter statsUsedManifold("Manifold perturbation", 
+static StatsCounter statsUsedManifold("Manifold perturbation",
 		"Perturbations involving manifold walks", EPercentage);
-static StatsCounter statsNonReversible("Manifold perturbation", 
+static StatsCounter statsNonReversible("Manifold perturbation",
 		"Non-reversible walks", EPercentage);
-static StatsCounter statsRoughMediumSpecular("Manifold perturbation", 
+static StatsCounter statsRoughMediumSpecular("Manifold perturbation",
 		"Medium treated as specular", EPercentage);
-static StatsCounter statsRoughSurfaceSpecular("Manifold perturbation", 
+static StatsCounter statsRoughSurfaceSpecular("Manifold perturbation",
 		"Rough material treated as specular", EPercentage);
 
 Float ManifoldPerturbation::m_thetaDiffSurface;
@@ -50,11 +50,11 @@ int ManifoldPerturbation::m_thetaDiffMediumSamples;
 Mutex *ManifoldPerturbation::m_thetaDiffMutex = new Mutex();
 
 ManifoldPerturbation::ManifoldPerturbation(const Scene *scene, Sampler *sampler,
-		  MemoryPool &pool, Float probFactor, bool enableOffsetManifolds, 
-		  bool enableSpecularMedia, Float avgAngleChangeSurface, 
-		  Float avgAngleChangeMedium) : m_scene(scene), 
-	  m_sampler(sampler), m_pool(pool), 
-	  m_probFactor(probFactor), 
+		  MemoryPool &pool, Float probFactor, bool enableOffsetManifolds,
+		  bool enableSpecularMedia, Float avgAngleChangeSurface,
+		  Float avgAngleChangeMedium) : m_scene(scene),
+	  m_sampler(sampler), m_pool(pool),
+	  m_probFactor(probFactor),
 	  m_enableOffsetManifolds(enableOffsetManifolds),
 	  m_enableSpecularMedia(enableSpecularMedia) {
 	m_manifold = new SpecularManifold(scene);
@@ -88,7 +88,7 @@ ManifoldPerturbation::~ManifoldPerturbation() {
 Mutator::EMutationType ManifoldPerturbation::getType() const {
 	return EManifoldPerturbation;
 }
-	
+
 Float ManifoldPerturbation::suitability(const Path &path) const {
 	return path.length() >= 4 ? 1.0f : 0.0f;
 }
@@ -101,7 +101,7 @@ Float ManifoldPerturbation::nonspecularProbSurface(Float alpha) const {
 
 	Float q = MTS_MANIFOLD_QUANTILE_SURFACE;
 	Float theta_domain = std::atan(-math::fastlog(1-q) * alpha*alpha);
-	Float theta_diff = m_thetaDiffSurfaceSamples > 0 ? (m_thetaDiffSurface 
+	Float theta_diff = m_thetaDiffSurfaceSamples > 0 ? (m_thetaDiffSurface
 			/ (Float) m_thetaDiffSurfaceSamples) : (Float) 0.0f;
 
 	return (1-std::cos(theta_domain))
@@ -122,7 +122,7 @@ Float ManifoldPerturbation::nonspecularProbMedium(Float g_) const {
 	Float theta_domain = math::safe_acos(
 		(t0*t0 - 2*t0*t1*q + 2*g*t1*q*q) / (t2*t2));
 
-	Float theta_diff = m_thetaDiffMediumSamples > 0 ? (m_thetaDiffMedium 
+	Float theta_diff = m_thetaDiffMediumSamples > 0 ? (m_thetaDiffMedium
 			/ (Float) m_thetaDiffMediumSamples) : (Float) 0.0f;
 	Float theta_newdomain = std::min(M_PI, theta_domain + theta_diff);
 
@@ -195,7 +195,7 @@ bool ManifoldPerturbation::sampleMutationRecord(
 		/* Extra optimization: slightly prefer perturbations from the sensor */
 		#define SENSOR_PROB (Float) 0.25f
 
-		if (sample < SENSOR_PROB) { 
+		if (sample < SENSOR_PROB) {
 			a = k-1;
 			step = -1;
 		} else {
@@ -251,7 +251,7 @@ bool ManifoldPerturbation::sampleMutation(
 		statsGeneratedRad.incrementBase();
 	}
 
-	muRec = MutationRecord(EManifoldPerturbation, l, m, m-l, 
+	muRec = MutationRecord(EManifoldPerturbation, l, m, m-l,
 		source.getPrefixSuffixWeight(l, m));
 
 	#if MTS_MANIFOLD_DEBUG == 1
@@ -272,18 +272,20 @@ bool ManifoldPerturbation::sampleMutation(
 	for (int i=l+1; i<m; ++i) {
 		proposal.append(m_pool.allocVertex());
 		proposal.append(m_pool.allocEdge());
+		memset(proposal.vertex(proposal.vertexCount()-1), 0, sizeof(PathVertex)); /// XXX
 	}
 	proposal.append(source, m, k+1);
+
 	proposal.vertex(a) = proposal.vertex(a)->clone(m_pool);
 	proposal.vertex(c) = proposal.vertex(c)->clone(m_pool);
-	
-	const PathVertex 
+
+	const PathVertex
 		*vb_old = source.vertex(b),
 		*vb_new = proposal.vertex(b);
 
 	if (a != 0 && a != k) {
 		/* Sample the first vertex */
-		const PathVertex 
+		const PathVertex
 			*pred_old     = source.vertex(a-step),
 			*vertex_old   = source.vertex(a),
 			*succ_old     = source.vertex(a+step);
@@ -293,7 +295,7 @@ bool ManifoldPerturbation::sampleMutation(
 			*pred         = proposal.vertex(a-step),
 			*vertex       = proposal.vertex(a),
 			*succ         = proposal.vertex(a+step);
-		PathEdge 
+		PathEdge
 			*predEdge     = proposal.edge(mode == EImportance ? a-step : a-1-step),
 			*succEdge     = proposal.edge(mode == EImportance ? a : a-1);
 
@@ -304,11 +306,11 @@ bool ManifoldPerturbation::sampleMutation(
 			VonMisesFisherDistr::forPeakValue(prob_old * m_probFactor * m_probFactor));
 
 		Vector sampled = vMF.sample(m_sampler->next2D());
-		Vector wo_old = normalize(succ_old->getPosition() 
+		Vector wo_old = normalize(succ_old->getPosition()
 				- vertex_old->getPosition());
 		Vector wo_new = Frame(wo_old).toWorld(sampled);
 
-		if (!vertex->perturbDirection(m_scene, 
+		if (!vertex->perturbDirection(m_scene,
 				pred, predEdge, succEdge, succ, wo_new,
 				succEdge_old->length, succ_old->getType(), mode)) {
 			goto fail;
@@ -337,7 +339,7 @@ bool ManifoldPerturbation::sampleMutation(
 
 	/* Generate subsequent vertices between a .. b deterministically */
 	for (int i = a + step; i != b; i += step) {
-		const PathVertex 
+		const PathVertex
 			*pred_old     = source.vertex(i-step),
 			*vertex_old   = source.vertex(i),
 			*succ_old     = source.vertex(i+step);
@@ -347,16 +349,16 @@ bool ManifoldPerturbation::sampleMutation(
 			*pred         = proposal.vertex(i-step),
 			*vertex       = proposal.vertex(i),
 			*succ         = proposal.vertex(i+step);
-		PathEdge 
+		PathEdge
 			*predEdge     = proposal.edge(mode == EImportance ? i-step : i-1-step),
 			*succEdge     = proposal.edge(mode == EImportance ? i : i-1);
 
 		if (vertex_old->isSurfaceInteraction()) {
-			const Intersection 
+			const Intersection
 				&its_old = vertex_old->getIntersection(),
 				&its_new = vertex->getIntersection();
 
-			Vector 
+			Vector
 				wi_old = its_old.toLocal(normalize(pred_old->getPosition() - its_old.p)),
 				wo_old = its_old.toLocal(normalize(succ_old->getPosition() - its_old.p));
 
@@ -394,7 +396,7 @@ bool ManifoldPerturbation::sampleMutation(
 				if (i+step == b && succ_old->isMediumInteraction())
 					dist += perturbMediumDistance(m_sampler, succ_old);
 
-				if (!vertex->perturbDirection(m_scene, 
+				if (!vertex->perturbDirection(m_scene,
 						pred, predEdge, succEdge, succ, wo_world,
 						dist, succ_old->getType(), mode)) {
 					goto fail;
@@ -407,7 +409,7 @@ bool ManifoldPerturbation::sampleMutation(
 				if (i+step == b && succ_old->isMediumInteraction())
 					dist += perturbMediumDistance(m_sampler, succ_old);
 
-				if (!vertex->propagatePerturbation(m_scene, 
+				if (!vertex->propagatePerturbation(m_scene,
 						pred, predEdge, succEdge, succ, component, dist,
 						succ_old->getType(), mode)) {
 					goto fail;
@@ -421,7 +423,7 @@ bool ManifoldPerturbation::sampleMutation(
 				n_old(normalize(p_old - pred_old->getPosition())),
 				n_new(normalize(p_new - pred->getPosition()));
 
-			Vector 
+			Vector
 				dpdu_old = Vector(p_old) - dot(Vector(p_old), n_old) * n_old,
 				dpdu_new = Vector(p_new) - dot(Vector(p_new), n_new) * n_new;
 
@@ -454,7 +456,7 @@ bool ManifoldPerturbation::sampleMutation(
 			if (i+step == b && succ_old->isMediumInteraction())
 				dist += perturbMediumDistance(m_sampler, succ_old);
 
-			if (!vertex->perturbDirection(m_scene, 
+			if (!vertex->perturbDirection(m_scene,
 					pred, predEdge, succEdge, succ, wo_new,
 					dist, succ_old->getType(), mode))
 				goto fail;
@@ -463,7 +465,7 @@ bool ManifoldPerturbation::sampleMutation(
 		}
 	}
 
-	if (!vb_new->isConnectable()) 
+	if (!vb_new->isConnectable())
 		goto fail;
 
 	statsUsedManifold.incrementBase();
@@ -472,7 +474,7 @@ bool ManifoldPerturbation::sampleMutation(
 		/* Choose a local parameterization of the specular manifold using
 		   a plane with the following normal (which is computed in a
 		   reversible manner) */
-	
+
 		Point p0;
 		Normal n, n1, n2;
 		++statsUsedManifold;
@@ -487,7 +489,7 @@ bool ManifoldPerturbation::sampleMutation(
 
 		Vector rel = vb_new->getPosition() - vb_old->getPosition();
 		Float len = rel.length();
-		if (len == 0) 
+		if (len == 0)
 			goto fail;
 		rel /= len;
 
@@ -496,7 +498,7 @@ bool ManifoldPerturbation::sampleMutation(
 		n = n1 + n2;
 		n = n - dot(rel, n)*rel;
 		len = n.length();
-		if (len == 0) 
+		if (len == 0)
 			goto fail;
 		n /= len;
 
@@ -511,7 +513,7 @@ bool ManifoldPerturbation::sampleMutation(
 			++statsNonReversible;
 			goto fail;
 		}
-		
+
 		Point p1 = m_manifold->getPosition(1);
 		Float relerr = (p0-p1).length() / std::max(std::max(std::abs(p0.x),
 			std::abs(p0.y)), std::abs(p0.z));
@@ -521,34 +523,34 @@ bool ManifoldPerturbation::sampleMutation(
 		}
 	}
 
-	if ((vb_old->isSurfaceInteraction() && m_thetaDiffSurfaceSamples < DIFF_SAMPLES) ||
-		(vb_old->isMediumInteraction() && m_thetaDiffMediumSamples < DIFF_SAMPLES)) {
+	if (((vb_old->isSurfaceInteraction() && m_thetaDiffSurfaceSamples < DIFF_SAMPLES) ||
+		(vb_old->isMediumInteraction() && m_thetaDiffMediumSamples < DIFF_SAMPLES)) && b+1 != k && b-1 != 0) {
 		LockGuard guard(m_thetaDiffMutex);
 
 		if ((vb_old->isSurfaceInteraction() && m_thetaDiffSurfaceSamples < DIFF_SAMPLES) ||
 			(vb_old->isMediumInteraction() && m_thetaDiffMediumSamples < DIFF_SAMPLES)) {
 			/* Compute the half direction-vector change */
-			const PathVertex 
+			const PathVertex
 				*pred_old     = source.vertex(b-step),
 				*vertex_old   = source.vertex(b),
 				*succ_old     = source.vertex(b+step);
-	
+
 			const PathVertex
 				*pred_new     = proposal.vertex(b-step),
 				*vertex_new   = proposal.vertex(b),
 				*succ_new     = proposal.vertex(b+step);
-	
+
 			Vector wi_old = normalize(pred_old->getPosition() - vertex_old->getPosition());
 			Vector wo_old = normalize(succ_old->getPosition() - vertex_old->getPosition());
 			Vector wi_new = normalize(pred_new->getPosition() - vertex_new->getPosition());
 			Vector wo_new = normalize(succ_new->getPosition() - vertex_new->getPosition());
-	
+
 			if (vb_old->isSurfaceInteraction()) {
 				const BSDF *bsdf_old = vertex_old->getIntersection().getBSDF();
 				Vector n_old = vertex_old->getShadingNormal();
 				bool reflection = dot(wi_old, n_old) * dot(wo_old, n_old) > 0;
 				Vector m_old(0.0f), m_new(0.0f);
-	
+
 				if (reflection) {
 					m_old = wi_old + wo_old;
 					m_new = wi_new + wo_new;
@@ -557,17 +559,17 @@ bool ManifoldPerturbation::sampleMutation(
 					if (eta != 1) {
 						if (dot(wi_old, n_old) < 0)
 							eta = 1/eta;
-					
+
 						m_old = wi_old + wo_old * eta;
 						m_new = wi_new + wo_new * eta;
 					}
 				}
-	
+
 				if (!m_old.isZero()) {
 					m_thetaDiffSurface += unitAngle(normalize(m_old), normalize(m_new));
 					m_thetaDiffSurfaceSamples++;
 				}
-	
+
 				if (m_thetaDiffSurfaceSamples == DIFF_SAMPLES)
 					Log(EDebug, "Average angle change (surface): %f, p(.2)=%f, p(.1)=%f, p(.01)=%f",
 						radToDeg(m_thetaDiffSurface/m_thetaDiffSurfaceSamples),
@@ -577,7 +579,7 @@ bool ManifoldPerturbation::sampleMutation(
 			} else {
 				m_thetaDiffMedium += std::abs(unitAngle(wi_old, wo_old) - unitAngle(wi_new, wo_new));
 				m_thetaDiffMediumSamples++;
-	
+
 				if (m_thetaDiffMediumSamples == DIFF_SAMPLES)
 					Log(EDebug, "Average angle change (medium): %f, p(.9)=%f, p(.99)=%f",
 						radToDeg(m_thetaDiffMedium/m_thetaDiffMediumSamples),
@@ -586,18 +588,19 @@ bool ManifoldPerturbation::sampleMutation(
 			}
 		}
 	}
-	if (!PathVertex::connect(m_scene, 
+
+	if (!PathVertex::connect(m_scene,
 			proposal.vertexOrNull(q-1),
 			proposal.edgeOrNull(q-1),
 			proposal.vertex(q),
 			proposal.edge(q),
 			proposal.vertex(q+1),
 			proposal.edgeOrNull(q+1),
-			proposal.vertexOrNull(q+2), 
+			proposal.vertexOrNull(q+2),
 			source.vertex(q)->isConnectable() ? EArea : EDiscrete,
 			source.vertex(q+1)->isConnectable() ? EArea : EDiscrete))
 		goto fail;
-	
+
 	if (m >= k-1)
 		proposal.vertex(k-1)->updateSamplePosition(
 			proposal.vertex(k-2));
@@ -621,7 +624,7 @@ Float ManifoldPerturbation::Q(const Path &source, const Path &proposal,
 		c = muRec.extra[2],
 		k = source.length(),
 		step = muRec.extra[3];
-	
+
 	const PathVertex
 		*vb_old = source.vertex(b),
 		*vb_new = proposal.vertex(b);
@@ -632,7 +635,7 @@ Float ManifoldPerturbation::Q(const Path &source, const Path &proposal,
 
 	if (a != 0 && a != k) {
 		/* Compute the density of the first vertex */
-		const PathVertex 
+		const PathVertex
 			*pred         = source.vertex(a-step),
 			*vertex       = source.vertex(a),
 			*succ_old     = source.vertex(a+step),
@@ -641,9 +644,9 @@ Float ManifoldPerturbation::Q(const Path &source, const Path &proposal,
 		Float prob_old = std::max(INV_FOURPI, vertex->evalPdf(
 				m_scene.get(), pred, succ_old, mode, ESolidAngle));
 
-		Vector wo_old = normalize(succ_old->getPosition() 
+		Vector wo_old = normalize(succ_old->getPosition()
 				- vertex->getPosition());
-		Vector wo_new = normalize(succ_new->getPosition() 
+		Vector wo_new = normalize(succ_new->getPosition()
 				- vertex->getPosition());
 
 		Float dp = dot(wo_old, wo_new);
@@ -665,7 +668,7 @@ Float ManifoldPerturbation::Q(const Path &source, const Path &proposal,
 	} else {
 		Frame frame(source.vertex(a+step)->getGeometricNormal());
 
-		Float stddev = 1.0f / std::sqrt(2*M_PI * 
+		Float stddev = 1.0f / std::sqrt(2*M_PI *
 			source.vertex(a)->pdf[mode] * m_probFactor * m_probFactor);
 
 		Float pdf = source.vertex(a+step)->perturbPositionPdf(proposal.vertex(a+step), stddev);
@@ -675,21 +678,21 @@ Float ManifoldPerturbation::Q(const Path &source, const Path &proposal,
 		weight /= pdf;
 	}
 
-	weight *= 
+	weight *=
 		  m_manifold->multiG(proposal, a, c) *
 		  m_manifold->det(proposal, a, b, c);
 
 	for (int i = a; i != b; i += step) {
-		int l = std::min(i, i+step), 
+		int l = std::min(i, i+step),
 			r = std::max(i, i+step);
 
 		if (!proposal.vertex(i)->isConnectable())
-			weight *= proposal.edge(l)->evalCached(proposal.vertex(l), 
-				proposal.vertex(r), PathEdge::ETransmittance | ((mode == EImportance) 
+			weight *= proposal.edge(l)->evalCached(proposal.vertex(l),
+				proposal.vertex(r), PathEdge::ETransmittance | ((mode == EImportance)
 					? PathEdge::EValueCosineImp : PathEdge::EValueCosineRad));
 		else
-			weight *= proposal.edge(l)->evalCached(proposal.vertex(l), 
-				proposal.vertex(r), PathEdge::ETransmittance | ((mode == EImportance) 
+			weight *= proposal.edge(l)->evalCached(proposal.vertex(l),
+				proposal.vertex(r), PathEdge::ETransmittance | ((mode == EImportance)
 					? PathEdge::EValueImp : PathEdge::EValueRad));
 
 		if (i != a)
@@ -700,18 +703,18 @@ Float ManifoldPerturbation::Q(const Path &source, const Path &proposal,
 	if (nonspec == 0)
 		return 0.0f;
 	weight /= nonspec;
-	
+
 	for (int i = c; i != b; i -= step) {
-		int l = std::min(i, i-step), 
+		int l = std::min(i, i-step),
 			r = std::max(i, i-step);
 
 		if (!proposal.vertex(i)->isConnectable())
-			weight *= proposal.edge(l)->evalCached(proposal.vertex(l), 
-				proposal.vertex(r), PathEdge::ETransmittance | ((mode == EImportance) 
+			weight *= proposal.edge(l)->evalCached(proposal.vertex(l),
+				proposal.vertex(r), PathEdge::ETransmittance | ((mode == EImportance)
 					? PathEdge::EValueCosineRad : PathEdge::EValueCosineImp));
 		else
-			weight *= proposal.edge(l)->evalCached(proposal.vertex(l), 
-				proposal.vertex(r), PathEdge::ETransmittance | ((mode == EImportance) 
+			weight *= proposal.edge(l)->evalCached(proposal.vertex(l),
+				proposal.vertex(r), PathEdge::ETransmittance | ((mode == EImportance)
 					? PathEdge::EValueRad : PathEdge::EValueImp));
 
 		if (i == c)
@@ -729,10 +732,10 @@ Float ManifoldPerturbation::Q(const Path &source, const Path &proposal,
 
 	if (vb_old->isMediumInteraction()) {
 		int vbEdge = std::min(b, b-step);
-		weight /= pdfMediumPerturbation(vb_old, 
+		weight /= pdfMediumPerturbation(vb_old,
 			source.edge(vbEdge), proposal.edge(vbEdge));
 	}
-	
+
 	return 1.0f / weight.getLuminance();
 }
 

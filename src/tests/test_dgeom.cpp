@@ -81,7 +81,7 @@ public:
 		normals[0] = Normal(-0.3f, 0, 1);
 		normals[1] = Normal(0.3f, 0, 1);
 		normals[2] = Normal(0, 0.3f, 1);
-		
+
 		uv[0] = Point2(0.1f, 0.1f);
 		uv[1] = Point2(1.1f, 0.1f);
 		uv[2] = Point2(0.1f, 0.9f);
@@ -100,10 +100,10 @@ public:
 		assertEqualsEpsilon(its.uv, Point2(0.2f, 0.26f), Epsilon);
 		assertEquals(its.geoFrame.n, Normal(0, 0, 1));
 
-		assertEqualsEpsilon(its.shFrame.n, 
+		assertEqualsEpsilon(its.shFrame.n,
 			normalize(normals[0]*.7f + normals[1]*.1f + normals[2]*.2f), Epsilon);
 
-		its.shFrame.s = normalize(its.dpdu - its.shFrame.n 
+		its.shFrame.s = normalize(its.dpdu - its.shFrame.n
 						* dot(its.shFrame.n, its.dpdu));
 
 		assertEqualsEpsilon(its.dpdu, vertices[1]-vertices[0], Epsilon);
@@ -116,7 +116,7 @@ public:
 		its.shape->getNormalDerivative(its, dndu, dndv, true);
 		// From mathematica
 		assertEqualsEpsilon(dndu, Vector(0.571048f, 0.00614519f, 0.10242f), 1e-4f);
-		assertEqualsEpsilon(dndv, Vector(0.288596f, 0.29679f, 0.0341399f), 1e-4f); 
+		assertEqualsEpsilon(dndv, Vector(0.288596f, 0.29679f, 0.0341399f), 1e-4f);
 	}
 
 	void test03_trimesh_3() {
@@ -134,7 +134,7 @@ public:
 		normals[0] = Normal(-0.3f, 0, 1);
 		normals[1] = Normal(0.3f, 0, 1);
 		normals[2] = Normal(0, 0.3f, 1);
-		
+
 		uv[0] = Point2(0.0f, 0.0f);
 		uv[1] = Point2(0.0f, 1.0f);
 		uv[2] = Point2(1.0f, 0.0f);
@@ -154,13 +154,13 @@ public:
 		assertEqualsEpsilon(its.uv, Point2(0.2f, 0.1f), Epsilon);
 		assertEquals(its.geoFrame.n, Normal(0, 0, 1));
 
-		assertEqualsEpsilon(its.shFrame.n, 
+		assertEqualsEpsilon(its.shFrame.n,
 			normalize(normals[0]*.7f + normals[1]*.1f + normals[2]*.2f), Epsilon);
 
 		assertEqualsEpsilon(its.shFrame.s,
 			normalize(its.dpdu - its.shFrame.n * dot(its.dpdu, its.shFrame.n)), Epsilon);
 
-		its.shFrame.s = normalize(its.dpdu - its.shFrame.n 
+		its.shFrame.s = normalize(its.dpdu - its.shFrame.n
 						* dot(its.shFrame.n, its.dpdu));
 
 		assertEquals(its.dpdu, vertices[2]-vertices[0]);
@@ -172,7 +172,7 @@ public:
 		assertEquals(dndu, Vector(0.0f)); assertEquals(dndv, Vector(0.0f));
 		its.shape->getNormalDerivative(its, dndu, dndv, true);
 		// From mathematica
-		assertEqualsEpsilon(dndu, Vector(0.288596f, 0.29679f, 0.0341399f), 1e-4f); 
+		assertEqualsEpsilon(dndu, Vector(0.288596f, 0.29679f, 0.0341399f), 1e-4f);
 		assertEqualsEpsilon(dndv, Vector(0.571048f, 0.00614519f, 0.10242f), 1e-4f);
 	}
 
@@ -205,7 +205,7 @@ public:
 		sc.y *= INV_PI;
 
 		assertEqualsEpsilon(its.uv, sc, Epsilon);
-	
+
 		// from mathematica
 		assertEqualsEpsilon(its.dpdu, Vector(-3.6276f, 3.6276f, 0.0f)*radius, 1e-4f);
 		assertEqualsEpsilon(its.dpdv, Vector(1.28255f, 1.28255f, -2.5651f)*radius, 1e-4f);

@@ -47,7 +47,7 @@ public:
 	 * \remark The \c ptr argument is missing in the Python bindings
 	 */
 	virtual void logProgress(Float progress, const std::string &name,
-		const std::string &formatted, const std::string &eta, 
+		const std::string &formatted, const std::string &eta,
 		const void *ptr) = 0;
 
 	MTS_DECLARE_CLASS()
@@ -97,7 +97,7 @@ private:
 	bool m_lastMessageWasProgress;
 };
 
-/** \brief %Appender implementation, which writes directly 
+/** \brief %Appender implementation, which writes directly
  * to an UNIX-style unbuffered file descriptor.
  *
  * \ingroup libcore

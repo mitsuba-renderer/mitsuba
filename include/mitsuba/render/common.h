@@ -25,7 +25,7 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * \brief Specifies the transport mode when sampling or 
+ * \brief Specifies the transport mode when sampling or
  * evaluating a scattering function
  *
  * \ingroup librender
@@ -43,12 +43,12 @@ enum ETransportMode {
 };
 
 /**
- * \brief A list of measures that are associated with various sampling 
+ * \brief A list of measures that are associated with various sampling
  * methods in Mitsuba.
  *
  * Every now and then, sampling densities consist of a sum of several terms
- * defined on spaces that have different associated measures. In this case, 
- * one of the constants in \ref EMeasure can be specified to clarify the 
+ * defined on spaces that have different associated measures. In this case,
+ * one of the constants in \ref EMeasure can be specified to clarify the
  * component in question when performing query operations.
  *
  * \ingroup librender
@@ -69,12 +69,12 @@ enum EMeasure {
 /**
  * \brief Generic sampling record for positions
  *
- * This sampling record is used to implement techniques that draw a position 
- * from a point, line, surface, or volume domain in 3D and furthermore provide 
+ * This sampling record is used to implement techniques that draw a position
+ * from a point, line, surface, or volume domain in 3D and furthermore provide
  * auxilary information about the sample.
  *
- * Apart from returning the position and (optionally) the surface normal, the 
- * responsible sampling method must annotate the record with the 
+ * Apart from returning the position and (optionally) the surface normal, the
+ * responsible sampling method must annotate the record with the
  * associated probability density and measure.
  *
  * \ingroup librender
@@ -94,7 +94,7 @@ public:
 	Float pdf;
 
 	/**
-	 * \brief Denotes the measure associated with the sample. 
+	 * \brief Denotes the measure associated with the sample.
 	 *
 	 * This is necessary to deal with quantities that are defined on
 	 * unusual spaces, e.g. areas that have collapsed to a point
@@ -105,8 +105,8 @@ public:
 	/**
 	 * \brief Optional: 2D sample position associated with the record
 	 *
-	 * In some uses of this record, a sampled position may be associated 
-	 * with an important 2D quantity, such as the texture coordinates on 
+	 * In some uses of this record, a sampled position may be associated
+	 * with an important 2D quantity, such as the texture coordinates on
 	 * a triangle mesh or a position on the aperture of a sensor. When
 	 * applicable, such positions are stored in the \c uv attribute.
 	 */
@@ -137,7 +137,7 @@ public:
 		uv(0.0f), object(NULL) { }
 
 	/**
-	 * \brief Create a position sampling record 
+	 * \brief Create a position sampling record
 	 * from a surface intersection
 	 *
 	 * This is useful to determine the hypothetical sampling
@@ -145,7 +145,7 @@ public:
 	 * ray tracing. This happens for instance in path tracing
 	 * with multiple importance sampling.
 	 */
-	inline PositionSamplingRecord(const Intersection &its, 
+	inline PositionSamplingRecord(const Intersection &its,
 		EMeasure measure = EArea);
 
 	/// Return a human-readable description of the record
@@ -155,12 +155,12 @@ public:
 /**
  * \brief Generic sampling record for directions
  *
- * This sampling record is used to implement techniques that randomly draw a 
- * unit vector from a subset of the sphere and furthermore provide 
+ * This sampling record is used to implement techniques that randomly draw a
+ * unit vector from a subset of the sphere and furthermore provide
  * auxilary information about the sample.
  *
- * Apart from returning the sampled direction, the responsible sampling method 
- * must annotate the record with the associated probability density 
+ * Apart from returning the sampled direction, the responsible sampling method
+ * must annotate the record with the associated probability density
  * and measure.
  *
  * \ingroup librender
@@ -181,9 +181,9 @@ public:
 	std::string toString() const;
 
 	/**
-	 * \brief Create an uninitialized position sampling record 
+	 * \brief Create an uninitialized position sampling record
 	 *
-	 * The resulting data structure is meant to be used 
+	 * The resulting data structure is meant to be used
 	 * to generate a new direction sample.
 	 *
 	 * \sa Emitter::sampleDirection
@@ -199,12 +199,12 @@ public:
 	 *
 	 * \sa Emitter::pdfDirection
 	 */
-	inline DirectionSamplingRecord(const Vector &d, 
-			EMeasure measure = ESolidAngle) 
+	inline DirectionSamplingRecord(const Vector &d,
+			EMeasure measure = ESolidAngle)
 		: d(d), measure(measure) { }
 
 	/**
-	 * \brief Create a direction sampling record 
+	 * \brief Create a direction sampling record
 	 * from a surface intersection
 	 *
 	 * This is useful to determine the hypothetical sampling
@@ -213,7 +213,7 @@ public:
 	 * the camera aperture in bidirectional rendering
 	 * techniques.
 	 */
-	inline DirectionSamplingRecord(const Intersection &its, 
+	inline DirectionSamplingRecord(const Intersection &its,
 		EMeasure measure = ESolidAngle);
 };
 
@@ -224,13 +224,13 @@ public:
  * a position on the surface of an object with the goal of importance sampling
  * a quantity that is defined over the sphere seen from a given reference point.
  *
- * This general approach for sampling positions is named "direct" sampling 
+ * This general approach for sampling positions is named "direct" sampling
  * throughout Mitsuba motivated by direct illumination rendering techniques,
  * which represent the most important application.
  *
  * This record inherits all fields from \ref PositionSamplingRecord and
- * extends it with two useful quantities that are cached so that they don't 
- * need to be recomputed many times: the unit direction and length from the 
+ * extends it with two useful quantities that are cached so that they don't
+ * need to be recomputed many times: the unit direction and length from the
  * reference position to the sampled point.
  *
  * \ingroup librender
@@ -267,7 +267,7 @@ public:
 	 * \param time
 	 *     An associated time value
 	 */
-	inline DirectSamplingRecord(const Point &ref, Float time) 
+	inline DirectSamplingRecord(const Point &ref, Float time)
 		: PositionSamplingRecord(time), ref(ref), refN(0.0f) { }
 
 	/**
@@ -303,7 +303,7 @@ public:
 
 	inline void setQuery(
 		const Ray &ray,
-		const Intersection &its, 
+		const Intersection &its,
 		EMeasure measure = ESolidAngle);
 
 	/// Return a human-readable description of the record

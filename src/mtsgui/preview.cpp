@@ -21,7 +21,7 @@
 #include <mitsuba/core/timer.h>
 
 PreviewThread::PreviewThread(Device *parentDevice, Renderer *parentRenderer)
-	: Thread("prvw"), m_parentDevice(parentDevice), m_parentRenderer(parentRenderer), 
+	: Thread("prvw"), m_parentDevice(parentDevice), m_parentRenderer(parentRenderer),
 		m_context(NULL), m_quit(false) {
 	MTS_AUTORELEASE_BEGIN()
 	m_session = Session::create();
@@ -54,11 +54,11 @@ PreviewThread::PreviewThread(Device *parentDevice, Renderer *parentRenderer)
 		"	               texture2D(source2, gl_TexCoord[0].xy);\n"
 		"}\n"
 	);
-				
+
 	m_framebuffer = m_renderer->createGPUTexture("Framebuffer");
-	for (int i=0; i<m_bufferCount; ++i) 
+	for (int i=0; i<m_bufferCount; ++i)
 		m_recycleQueue.push_back(PreviewQueueEntry(m_queueEntryIndex++));
-	
+
 	m_random = new Random();
 
 	MTS_AUTORELEASE_END()
@@ -97,7 +97,7 @@ void PreviewThread::quit() {
 	}
 
 	/* Put the buffers back */
-	for (size_t i=0; i<temp.size(); ++i) 
+	for (size_t i=0; i<temp.size(); ++i)
 		m_recycleQueue.push_back(temp[i]);
 	m_quit = true;
 
@@ -115,7 +115,7 @@ void PreviewThread::quit() {
 		m_readyQueue.back().cleanup();
 		m_readyQueue.pop_back();
 	}
-	
+
 	while (!m_recycleQueue.empty()) {
 		m_recycleQueue.back().cleanup();
 		m_recycleQueue.pop_back();
@@ -179,9 +179,9 @@ void PreviewThread::setSceneContext(SceneContext *context, bool swapContext, boo
 		if (m_recycleQueue.size() > (size_t) m_bufferCount) {
 			PreviewQueueEntry entry = m_recycleQueue.front();
 			m_recycleQueue.pop_front();
-			if (entry.buffer) 
+			if (entry.buffer)
 				entry.buffer->decRef();
-			if (entry.sync) 
+			if (entry.sync)
 				entry.sync->decRef();
 		}
 	} else {
@@ -197,7 +197,7 @@ void PreviewThread::setSceneContext(SceneContext *context, bool swapContext, boo
 	m_vplsPerSecond = 0;
 	m_raysPerSecond = 0;
 	m_vplCount = 0;
-	m_timer->reset();	
+	m_timer->reset();
 
 	if (!context)
 		m_shaderManager->setScene(NULL);
@@ -240,13 +240,13 @@ PreviewQueueEntry PreviewThread::acquireBuffer(int ms) {
 	lock.unlock();
 
 #if 0
-	if (m_context->previewMethod == ERayTrace || 
-		m_context->previewMethod == ERayTraceCoherent) 
+	if (m_context->previewMethod == ERayTrace ||
+		m_context->previewMethod == ERayTraceCoherent)
 		entry.buffer->refresh();
-	else 
-#endif	
-	if (m_useSync) 
-		entry.sync->enqueueWait(); 
+	else
+#endif
+	if (m_useSync)
+		entry.sync->enqueueWait();
 
 	return entry;
 }
@@ -295,7 +295,7 @@ void PreviewThread::run() {
 
 			UniqueLock lock(m_mutex);
 			while (!(m_quit || (m_context != NULL && m_context->mode == EPreview
-					&& m_context->previewMethod != EDisabled 
+					&& m_context->previewMethod != EDisabled
 					&& ((m_readyQueue.size() != 0 && !m_motion) || m_recycleQueue.size() != 0))))
 				m_queueCV->wait();
 
@@ -384,7 +384,7 @@ void PreviewThread::run() {
 
 				if (m_timer->getMilliseconds() > 1000) {
 					Float count = m_vplsPerSecond / (Float) m_timer->getMilliseconds() * 1000;
-					if (!m_motion) 
+					if (!m_motion)
 						emit statusMessage(QString(formatString("%.1f VPLs/sec", count).c_str()));
 					m_vplsPerSecond = 0;
 					m_timer->reset();
@@ -403,7 +403,7 @@ void PreviewThread::run() {
 				oglRenderVPL(target, vpl);
 
 				if (m_useSync)
-					target.sync->init(); 
+					target.sync->init();
 			}
 
 			lock.lock();
@@ -411,7 +411,7 @@ void PreviewThread::run() {
 			m_vplCount++;
 
 			if (m_minVPLs == 0) {
-				if (m_timer->getMilliseconds() > 50) 
+				if (m_timer->getMilliseconds() > 50)
 					m_minVPLs = m_vplCount;
 			}
 
@@ -440,18 +440,18 @@ void PreviewThread::run() {
 		LockGuard lock(m_mutex);
 		while (!m_readyQueue.empty()) {
 			PreviewQueueEntry &entry = m_readyQueue.back();
-			if (entry.buffer) 
+			if (entry.buffer)
 				entry.buffer->decRef();
-			if (entry.sync) 
+			if (entry.sync)
 				entry.sync->decRef();
 			m_readyQueue.pop_back();
 		}
 
 		while (!m_recycleQueue.empty()) {
 			PreviewQueueEntry &entry = m_recycleQueue.back();
-			if (entry.buffer) 
+			if (entry.buffer)
 				entry.buffer->decRef();
-			if (entry.sync) 
+			if (entry.sync)
 				entry.sync->decRef();
 			m_recycleQueue.pop_back();
 		}
@@ -485,7 +485,7 @@ void PreviewThread::oglRenderVPL(PreviewQueueEntry &target, const VPL &vpl) {
 
 	Transform projTransform = sensor->getProjectionTransform(apertureSample, aaSample);
 	Transform worldTransform = m_camTransform->eval(
-		sensor->getShutterOpen() + 
+		sensor->getShutterOpen() +
 			(m_motion ? 0.5f : m_random->nextFloat()) * sensor->getShutterOpenTime()
 	);
 
@@ -504,7 +504,7 @@ void PreviewThread::oglRenderVPL(PreviewQueueEntry &target, const VPL &vpl) {
 	m_renderer->setDepthMask(false);
 	m_renderer->setDepthTest(false);
 	m_framebuffer->bind(0);
-		if (m_accumBuffer == NULL) { 
+		if (m_accumBuffer == NULL) {
 		/* First pass, there is no accumulation buffer yet */
 		target.buffer->clear();
 		m_renderer->blitTexture(m_framebuffer, true);
@@ -535,7 +535,7 @@ void PreviewThread::oglRenderVPL(PreviewQueueEntry &target, const VPL &vpl) {
 		if (m_useSync) {
 			m_renderer->flush();
 		} else {
-			/* No sync objects available - we have to wait 
+			/* No sync objects available - we have to wait
 			   for everything to finish */
 			m_renderer->finish();
 		}

@@ -1,4 +1,4 @@
-/* 
+/*
    SIMD oriented Fast Mersenne Twister (SFMT) pseudorandom number generator
    http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/SFMT/
 
@@ -40,12 +40,12 @@
 	 Springer (2008) 607--622.
 	 DOI: 10.1007/978-3-540-74496-2_36
    T. Nishimura, ``Tables of 64-bit Mersenne Twisters''
-     ACM Transactions on Modeling and 
+     ACM Transactions on Modeling and
      Computer Simulation 10. (2000) 348--357.
    M. Matsumoto and T. Nishimura,
      ``Mersenne Twister: a 623-dimensionally equidistributed
        uniform pseudorandom number generator''
-     ACM Transactions on Modeling and 
+     ACM Transactions on Modeling and
      Computer Simulation 8. (Jan. 1998) 3--30.
 */
 
@@ -67,7 +67,7 @@
 
 /************************ SFMT-19937 Parameters *******************************/
 
-/* Mersenne Exponent. The period of the sequence 
+/* Mersenne Exponent. The period of the sequence
  * is a multiple of 2^MEXP-1. */
 #define MEXP 19937
 /* SFMT generator has an internal state array of 128-bit integers,
@@ -109,7 +109,7 @@ inline uint32_t sfmtHash() {
 	const uint32_t data[] =
 		{MEXP, POS1, SL1, SL2, SR1, SR2, MSK1, MSK2, MSK3, MSK4};
 	uint32_t hash = 17;
-	for (int i = 0; i < 10; ++i) 
+	for (int i = 0; i < 10; ++i)
 		hash ^= data[i] + 0x9e3779b9U + (hash<<6) + (hash>>2);
 	return hash;
 }
@@ -208,13 +208,13 @@ inline static void do_recursion(w128_t &r, const w128_t &a, const w128_t &b,
 
 	lshift128(x, a, SL2);
 	rshift128(y, c, SR2);
-	r.u[0] = a.u[0] ^ x.u[0] ^ ((b.u[0] >> SR1) & MSK1) ^ y.u[0] 
+	r.u[0] = a.u[0] ^ x.u[0] ^ ((b.u[0] >> SR1) & MSK1) ^ y.u[0]
 	^ (d.u[0] << SL1);
-	r.u[1] = a.u[1] ^ x.u[1] ^ ((b.u[1] >> SR1) & MSK2) ^ y.u[1] 
+	r.u[1] = a.u[1] ^ x.u[1] ^ ((b.u[1] >> SR1) & MSK2) ^ y.u[1]
 	^ (d.u[1] << SL1);
-	r.u[2] = a.u[2] ^ x.u[2] ^ ((b.u[2] >> SR1) & MSK3) ^ y.u[2] 
+	r.u[2] = a.u[2] ^ x.u[2] ^ ((b.u[2] >> SR1) & MSK3) ^ y.u[2]
 	^ (d.u[2] << SL1);
-	r.u[3] = a.u[3] ^ x.u[3] ^ ((b.u[3] >> SR1) & MSK4) ^ y.u[3] 
+	r.u[3] = a.u[3] ^ x.u[3] ^ ((b.u[3] >> SR1) & MSK4) ^ y.u[3]
 	^ (d.u[3] << SL1);
 }
 #endif // MTS_SFMT_SSE
@@ -282,7 +282,7 @@ struct Random::State {
 	* This function generates and returns 64-bit pseudorandom number.
 	* init_gen_rand or init_by_array must be called before this function.
 	* The function gen_rand64 should not be called after gen_rand32,
-	* unless an initialization is again executed. 
+	* unless an initialization is again executed.
 	* \return 64-bit pseudorandom number
 	*/
 	FINLINE uint64_t gen_rand64() {
@@ -397,7 +397,7 @@ const uint32_t Random::State::s_magic = sfmtHash();
 void Random::State::init_gen_rand(const uint64_t seed) {
 	psfmt64[0] = seed;
 	for (int i = 1; i < N64; ++i) {
-		psfmt64[i] = (6364136223846793005ULL * (psfmt64[i-1] 
+		psfmt64[i] = (6364136223846793005ULL * (psfmt64[i-1]
 		              ^ (psfmt64[i-1] >> 62)) + i);
 	}
 	idx = N32;
@@ -438,7 +438,7 @@ void Random::State::init_by_array(const uint32_t *init_key, int key_length) {
 
 	count--;
 	for (i = 1, j = 0; (j < count) && (j < key_length); j++) {
-		r = func1(psfmt32[i] ^ psfmt32[(i + mid) % N32] 
+		r = func1(psfmt32[i] ^ psfmt32[(i + mid) % N32]
 		      ^ psfmt32[(i + N32 - 1) % N32]);
 		psfmt32[(i + mid) % N32] += r;
 		r += init_key[j] + i;
@@ -447,7 +447,7 @@ void Random::State::init_by_array(const uint32_t *init_key, int key_length) {
 		i = (i + 1) % N32;
 	}
 	for (; j < count; j++) {
-		r = func1(psfmt32[i] ^ psfmt32[(i + mid) % N32] 
+		r = func1(psfmt32[i] ^ psfmt32[(i + mid) % N32]
 		      ^ psfmt32[(i + N32 - 1) % N32]);
 		psfmt32[(i + mid) % N32] += r;
 		r += i;
@@ -456,7 +456,7 @@ void Random::State::init_by_array(const uint32_t *init_key, int key_length) {
 		i = (i + 1) % N32;
 	}
 	for (j = 0; j < N32; j++) {
-		r = func2(psfmt32[i] + psfmt32[(i + mid) % N32] 
+		r = func2(psfmt32[i] + psfmt32[(i + mid) % N32]
 		      + psfmt32[(i + N32 - 1) % N32]);
 		psfmt32[(i + mid) % N32] ^= r;
 		r -= i;
@@ -505,7 +505,7 @@ Random::~Random() {
 		freeAligned(mt);
 }
 
-Random::Random(Stream *stream, InstanceManager *manager) 
+Random::Random(Stream *stream, InstanceManager *manager)
 		: SerializableObject(stream, manager), mt(NULL) {
 	// Check the magic number first
 	uint32_t magic = stream->readUInt();
@@ -556,7 +556,7 @@ uint64_t Random::nextULong() {
 namespace {
 	// Helper function to create bitmasks according to the size
 	template <typename T> T makeBitmask(T n);
-	
+
 	template <> inline uint32_t makeBitmask(uint32_t n) {
 		uint32_t bitmask = n;
 		bitmask |= bitmask >> 1;
@@ -566,7 +566,7 @@ namespace {
 		bitmask |= bitmask >> 16;
 		return bitmask;
 	}
-	
+
 	template <> inline uint64_t makeBitmask(uint64_t n) {
 		uint64_t bitmask = n;
 		bitmask |= bitmask >> 1;
@@ -577,7 +577,7 @@ namespace {
 		bitmask |= bitmask >> 32;
 		return bitmask;
 	}
-	
+
 	#if defined(MTS_AMBIGUOUS_SIZE_T)
 	inline size_t makeBitmask(size_t n) {
 		if (sizeof(size_t) == 8)
@@ -615,7 +615,7 @@ size_t Random::nextSize(size_t n) {
 
 #if defined(DOUBLE_PRECISION)
 Float Random::nextFloat() {
-	/* Trick from MTGP: generate an uniformly distributed 
+	/* Trick from MTGP: generate an uniformly distributed
        single precision number in [1,2) and subtract 1. */
     union {
 		uint64_t u;
@@ -628,7 +628,7 @@ Float Random::nextFloat() {
 #else
 
 Float Random::nextFloat() {
-	/* Trick from MTGP: generate an uniformly distributed 
+	/* Trick from MTGP: generate an uniformly distributed
        single precision number in [1,2) and subtract 1. */
     union {
 		uint32_t u;

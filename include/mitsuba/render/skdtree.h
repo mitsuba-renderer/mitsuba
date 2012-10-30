@@ -31,7 +31,7 @@
 #endif
 
 #if defined(SINGLE_PRECISION)
-/// 32 byte temporary storage for intersection computations 
+/// 32 byte temporary storage for intersection computations
 #define MTS_KD_INTERSECTION_TEMP 32
 #else
 #define MTS_KD_INTERSECTION_TEMP 64
@@ -42,23 +42,23 @@ MTS_NAMESPACE_BEGIN
 typedef const Shape * ConstShapePtr;
 
 /**
- * \brief SAH KD-tree acceleration data structure for fast ray-triangle 
+ * \brief SAH KD-tree acceleration data structure for fast ray-triangle
  * intersections.
  *
- * Implements the construction algorithm for 'perfect split' trees as outlined 
+ * Implements the construction algorithm for 'perfect split' trees as outlined
  * in the paper "On Bulding fast kd-Trees for Ray Tracing, and on doing that in
- * O(N log N)" by Ingo Wald and Vlastimil Havran. Non-triangle shapes are 
+ * O(N log N)" by Ingo Wald and Vlastimil Havran. Non-triangle shapes are
  * supported, but most optimizations here target large triangle meshes.
  * For more details regarding the construction algorithm, please refer to
  * the class \ref GenericKDTree.
  *
  * This class offers a choice of two different triangle intersection algorithms:
- * By default, intersections are computed using the "TriAccel" projection with 
- * pre-computation method from Ingo Wald's PhD thesis "Realtime Ray Tracing 
+ * By default, intersections are computed using the "TriAccel" projection with
+ * pre-computation method from Ingo Wald's PhD thesis "Realtime Ray Tracing
  * and Interactive Global Illumination". This adds an overhead of 48 bytes per
  * triangle.
  *
- * When compiled with \c MTS_KD_CONSERVE_MEMORY, the Moeller-Trumbore intersection 
+ * When compiled with \c MTS_KD_CONSERVE_MEMORY, the Moeller-Trumbore intersection
  * test is used instead, which doesn't need any extra storage. However, it also
  * tends to be quite a bit slower.
  *
@@ -137,7 +137,7 @@ public:
 	 *
 	 * \param t
 	 *    The traveled ray distance will be stored in this parameter
-	 
+
 	 * \param shape
 	 *    A pointer to the intersected shape will be stored in this
 	 *    parameter
@@ -151,7 +151,7 @@ public:
 	 *
 	 * \return \c true if an intersection was found
 	 */
-	bool rayIntersect(const Ray &ray, Float &t, ConstShapePtr &shape, 
+	bool rayIntersect(const Ray &ray, Float &t, ConstShapePtr &shape,
 		Normal &n, Point2 &uv) const;
 
 	/**
@@ -161,7 +161,7 @@ public:
 	 * This function does not compute a detailed intersection record,
 	 * and it never determines the closest intersection, which makes
 	 * it quite a bit faster than the other two \c rayIntersect() methods.
-	 * However, for this reason, it can only be used to check whether 
+	 * However, for this reason, it can only be used to check whether
 	 * there is \a any occlusion along a ray or ray segment.
 	 *
 	 * \param ray
@@ -178,14 +178,14 @@ public:
 	 * \brief Intersect four rays with the stored triangle meshes while making
 	 * use of ray coherence to do this very efficiently. Requires SSE.
 	 */
-	void rayIntersectPacket(const RayPacket4 &packet, 
+	void rayIntersectPacket(const RayPacket4 &packet,
 		const RayInterval4 &interval, Intersection4 &its, void *temp) const;
 
 	/**
 	 * \brief Fallback for incoherent rays
 	 * \sa rayIntesectPacket
 	 */
-	void rayIntersectPacketIncoherent(const RayPacket4 &packet, 
+	void rayIntersectPacketIncoherent(const RayPacket4 &packet,
 		const RayInterval4 &interval, Intersection4 &its, void *temp) const;
 #endif
 	//! @}
@@ -243,19 +243,19 @@ protected:
 	 * temporary space is supplied to store data that can later
 	 * be used to create a detailed intersection record.
 	 */
-	FINLINE bool intersect(const Ray &ray, IndexType idx, Float mint, 
+	FINLINE bool intersect(const Ray &ray, IndexType idx, Float mint,
 		Float maxt, Float &t, void *temp) const {
-		IntersectionCache *cache = 
+		IntersectionCache *cache =
 			static_cast<IntersectionCache *>(temp);
 
 #if defined(MTS_KD_CONSERVE_MEMORY)
 		IndexType shapeIdx = findShape(idx);
 		if (EXPECT_TAKEN(m_triangleFlag[shapeIdx])) {
-			const TriMesh *mesh = 
+			const TriMesh *mesh =
 				static_cast<const TriMesh *>(m_shapes[shapeIdx]);
 			const Triangle &tri = mesh->getTriangles()[idx];
 			Float tempU, tempV, tempT;
-			if (tri.rayIntersect(mesh->getVertexPositions(), ray, 
+			if (tri.rayIntersect(mesh->getVertexPositions(), ray,
 						tempU, tempV, tempT)) {
 				if (tempT < mint || tempT > maxt)
 					return false;
@@ -268,7 +268,7 @@ protected:
 			}
 		} else {
 			const Shape *shape = m_shapes[shapeIdx];
-			if (shape->rayIntersect(ray, mint, maxt, t, 
+			if (shape->rayIntersect(ray, mint, maxt, t,
 					reinterpret_cast<uint8_t*>(temp) + 8)) {
 				cache->shapeIndex = shapeIdx;
 				cache->primIndex = KNoTriangleFlag;
@@ -290,7 +290,7 @@ protected:
 		} else {
 			uint32_t shapeIndex = ta.shapeIndex;
 			const Shape *shape = m_shapes[shapeIndex];
-			if (shape->rayIntersect(ray, mint, maxt, t, 
+			if (shape->rayIntersect(ray, mint, maxt, t,
 					reinterpret_cast<uint8_t*>(temp) + 8)) {
 				cache->shapeIndex = shapeIndex;
 				cache->primIndex = KNoTriangleFlag;
@@ -305,12 +305,12 @@ protected:
 	 * Check whether a primitive is intersected by the given ray. This
 	 * version is used for shadow rays, hence no temporary space is supplied.
 	 */
-	FINLINE bool intersect(const Ray &ray, IndexType idx, 
+	FINLINE bool intersect(const Ray &ray, IndexType idx,
 			Float mint, Float maxt) const {
 #if defined(MTS_KD_CONSERVE_MEMORY)
 		IndexType shapeIdx = findShape(idx);
 		if (EXPECT_TAKEN(m_triangleFlag[shapeIdx])) {
-			const TriMesh *mesh = 
+			const TriMesh *mesh =
 				static_cast<const TriMesh *>(m_shapes[shapeIdx]);
 			const Triangle &tri = mesh->getTriangles()[idx];
 			Float tempU, tempV, tempT;
@@ -336,9 +336,9 @@ protected:
 
 	/**
 	 * \brief After having found a unique intersection, fill a proper record
-	 * using the temporary information collected in \ref intersect() 
+	 * using the temporary information collected in \ref intersect()
 	 */
-	template<bool BarycentricPos> FINLINE void fillIntersectionRecord(const Ray &ray, 
+	template<bool BarycentricPos> FINLINE void fillIntersectionRecord(const Ray &ray,
 			const void *temp, Intersection &its) const {
 		const IntersectionCache *cache = reinterpret_cast<const IntersectionCache *>(temp);
 		const Shape *shape = m_shapes[cache->shapeIndex];
@@ -377,7 +377,7 @@ protected:
 				its.dpdv = side2;
 			}
 			if (EXPECT_TAKEN(vertexNormals)) {
-				const Normal 
+				const Normal
 					&n0 = vertexNormals[idx0],
 					&n1 = vertexNormals[idx1],
 					&n2 = vertexNormals[idx2];
@@ -388,7 +388,7 @@ protected:
 					coordinateSystem(its.shFrame.n, its.shFrame.s, its.shFrame.t);
 				} else {
 					/* Align shFrame.s with dpdu, use Gram-Schmidt to orthogonalize */
-					its.shFrame.s = normalize(its.dpdu - its.shFrame.n 
+					its.shFrame.s = normalize(its.dpdu - its.shFrame.n
 						* dot(its.shFrame.n, its.dpdu));
 					its.shFrame.t = cross(its.shFrame.n, its.shFrame.s);
 				}
@@ -425,16 +425,16 @@ protected:
 			its.hasUVPartials = false;
 			its.primIndex = cache->primIndex;
 			its.instance = NULL;
+			its.time = ray.time;
 		} else {
-			shape->fillIntersectionRecord(ray, 
+			shape->fillIntersectionRecord(ray,
 				reinterpret_cast<const uint8_t*>(temp) + 8, its);
 		}
-		its.time = ray.time;
 	}
 
 	/// Plain shadow ray query (used by the 'instance' plugin)
 	inline bool rayIntersect(const Ray &ray, Float _mint, Float _maxt) const {
-		Float mint, maxt, tempT = std::numeric_limits<Float>::infinity(); 
+		Float mint, maxt, tempT = std::numeric_limits<Float>::infinity();
 		if (m_aabb.rayIntersect(ray, mint, maxt)) {
 			if (_mint > mint) mint = _mint;
 			if (_maxt < maxt) maxt = _maxt;
@@ -447,7 +447,7 @@ protected:
 
 	/// Plain intersection query (used by the 'instance' plugin)
 	inline bool rayIntersect(const Ray &ray, Float _mint, Float _maxt, Float &t, void *temp) const {
-		Float mint, maxt, tempT = std::numeric_limits<Float>::infinity(); 
+		Float mint, maxt, tempT = std::numeric_limits<Float>::infinity();
 		if (m_aabb.rayIntersect(ray, mint, maxt)) {
 			if (_mint > mint) mint = _mint;
 			if (_maxt < maxt) maxt = _maxt;

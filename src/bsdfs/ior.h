@@ -30,9 +30,9 @@ struct IOREntry {
 };
 
 /**
- * Many values are taken from Hecht, Optics, 
+ * Many values are taken from Hecht, Optics,
  * Fourth Edition.
- * 
+ *
  * The IOR values are from measurements between
  * 0 and 20 degrees celsius at ~589 nm.
  */
@@ -77,7 +77,7 @@ static Float lookupIOR(const std::string &name) {
 	}
 
 	std::ostringstream oss;
-	oss << "Unable to find an IOR value for \"" << lowerCase 
+	oss << "Unable to find an IOR value for \"" << lowerCase
 		<< "\"! Valid choices are:";
 
 	/* Unable to find the IOR value by name -- print an error

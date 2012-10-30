@@ -20,17 +20,17 @@
 
 MTS_NAMESPACE_BEGIN
 
-Sampler::Sampler(const Properties &props) 
+Sampler::Sampler(const Properties &props)
  : ConfigurableObject(props), m_sampleCount(0), m_sampleIndex(0) { }
 
-Sampler::Sampler(Stream *stream, InstanceManager *manager) 
+Sampler::Sampler(Stream *stream, InstanceManager *manager)
  : ConfigurableObject(stream, manager) {
 	m_sampleCount = stream->readSize();
 	size_t n1DArrays = stream->readSize();
-	for (size_t i=0; i<n1DArrays; ++i) 
+	for (size_t i=0; i<n1DArrays; ++i)
 		request1DArray(stream->readSize());
 	size_t n2DArrays = stream->readSize();
-	for (size_t i=0; i<n2DArrays; ++i) 
+	for (size_t i=0; i<n2DArrays; ++i)
 		request2DArray(stream->readSize());
 }
 

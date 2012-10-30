@@ -53,7 +53,7 @@ public:
 	VersionException(const std::string &str, const Version &version) :
 		std::runtime_error(str), m_version(version) { }
 
-	/* For stupid and subtle reasons when compiling with GCC, it is important 
+	/* For stupid and subtle reasons when compiling with GCC, it is important
 	   that this class has a virtual member. This will ensure that its typeid
 	   structure is in librender, which is important for throwing exceptions
 	   across DLL boundaries */
@@ -82,19 +82,19 @@ public:
 	typedef std::map<std::string, ConfigurableObject *> NamedObjectMap;
 	typedef std::map<std::string, std::string, SimpleStringOrdering> ParameterMap;
 
-	SceneHandler(const xercesc::SAXParser *parser, 
-			const ParameterMap &params, NamedObjectMap *objects = NULL, 
+	SceneHandler(const xercesc::SAXParser *parser,
+			const ParameterMap &params, NamedObjectMap *objects = NULL,
 			bool isIncludedFile = false);
 	virtual ~SceneHandler();
 
-	/// Convenience method -- load a scene from a given filename 
+	/// Convenience method -- load a scene from a given filename
 	static ref<Scene> loadScene(const fs::path &filename,
 		const ParameterMap &params= ParameterMap());
 
 	/// Convenience method -- load a scene from a given string
 	static ref<Scene> loadSceneFromString(const std::string &string,
 		const ParameterMap &params= ParameterMap());
-	
+
 	/// Initialize Xerces-C++ (needs to be called once at program startup)
 	static void staticInitialization();
 
@@ -157,10 +157,10 @@ private:
 		EVector, ERGB, ESRGB, EBlackBody,
 		ESpectrum, ETransform, EInclude, EAlias
 	};
-	
+
 	typedef std::pair<ETag, const Class *> TagEntry;
 	typedef boost::unordered_map<std::string, TagEntry> TagMap;
-	
+
 	const xercesc::SAXParser *m_parser;
 	xercesc::XMLTranscoder* m_transcoder;
 	ref<Scene> m_scene;

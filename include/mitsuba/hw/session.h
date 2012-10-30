@@ -47,7 +47,7 @@ public:
 	/**
 	 * \brief Process all events and call event callbacks.
 	 *
-	 * This function will run until the \c stop parameter is set 
+	 * This function will run until the \c stop parameter is set
 	 * to \c true from within an event callback.
 	 */
 	virtual void processEventsBlocking(bool &stop) = 0;

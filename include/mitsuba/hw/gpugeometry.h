@@ -51,7 +51,7 @@ public:
 
 	/// Unbind the geometry object
 	virtual void unbind() = 0;
-	
+
 	/// Free the geometry object from GPU memory
 	virtual void cleanup() = 0;
 

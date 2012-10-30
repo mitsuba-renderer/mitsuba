@@ -4,18 +4,18 @@ The rendering functionality of Mitsuba can be accessed through
 a command line interface and an interactive Qt-based frontend. This section
 provides some basic instructions on how to use them.
 \subsection{Interactive frontend}
-To launch the interactive frontend, run \code{Mitsuba.app} on MacOS, 
+To launch the interactive frontend, run \code{Mitsuba.app} on MacOS,
 \code{mtsgui.exe} on Windows, and \code{mtsgui} on Linux (after sourcing \code{setpath.sh}).
 You can also drag and drop scene files onto the application icon or the running program to open them.
 A quick video tutorial on using the GUI can be found here: \url{http://vimeo.com/13480342}.
 \subsection{Command line interface}
 \label{sec:mitsuba}
-The \texttt{mitsuba} binary is an alternative non-interactive rendering 
+The \texttt{mitsuba} binary is an alternative non-interactive rendering
 frontend for command-line usage and batch job operation.
 To get a listing of the parameters it supports, run
 the executable without parameters:
 \begin{shell}
-$\texttt{\$}$ mitsuba 
+$\texttt{\$}$ mitsuba
 \end{shell}
 \begin{console}[label=lst:mitsuba-cli,caption=Command line options of the \texttt{mitsuba} binary]
 Mitsuba version $\texttt{\MitsubaVersion}$, Copyright (c) $\texttt{\MitsubaYear}$ Wenzel Jakob
@@ -75,18 +75,18 @@ mode of operation is to render a single scene, which is provided as a parameter,
 $\texttt{\$}$ mitsuba path-to/my-scene.xml
 \end{shell}
 It is also possible to connect to network render nodes, which essentially lets Mitsuba parallelize
-over additional cores. To do this, pass a semicolon-separated list of machines to 
-the \code{-c} parameter. 
+over additional cores. To do this, pass a semicolon-separated list of machines to
+the \code{-c} parameter.
 \begin{shell}
 $\texttt{\$}$ mitsuba -c machine1;machine2;... path-to/my-scene.xml
 \end{shell}
 There are two different ways in which you can access render nodes:
 \begin{itemize}
 \item\textbf{Direct}: Here, you create a direct connection to a running \code{mtssrv} instance on
-another machine (\code{mtssrv} is the Mitsuba server process). From the the performance 
-standpoint, this approach should always be preferred over the SSH method described below when there is 
+another machine (\code{mtssrv} is the Mitsuba server process). From the the performance
+standpoint, this approach should always be preferred over the SSH method described below when there is
 a choice between them. There are some disadvantages though: first, you need to manually start
-\code{mtssrv} on every machine you want to use. 
+\code{mtssrv} on every machine you want to use.
 
 And perhaps more importantly: the direct communication
 protocol makes no provisions for a malicious user on the remote side. It is too costly
@@ -98,11 +98,11 @@ For direct connections, you can specify the remote port as follows:
 \begin{shell}
 $\texttt{\$}$ mitsuba -c machine:1234 path-to/my-scene.xml
 \end{shell}
-When no port is explicitly specified, Mitsuba uses default value of 7554. 
-\item \textbf{SSH}: 
-    This approach works as follows: The renderer creates a SSH connection 
+When no port is explicitly specified, Mitsuba uses default value of 7554.
+\item \textbf{SSH}:
+    This approach works as follows: The renderer creates a SSH connection
 	to the remote side, where it launches a Mitsuba worker instance.
-	All subsequent communication then passes through the encrypted link. 
+	All subsequent communication then passes through the encrypted link.
 	This is completely secure but slower due to the encryption overhead.
 	If you are rendering a complex scene, there is a good chance that it
 	won't matter much since most time is spent doing computations rather than
@@ -119,18 +119,18 @@ $\texttt{\$}$ mitsuba -c username@machine path-to/my-scene.xml
 \begin{shell}
 $\texttt{\$}$ mitsuba -c username@machine:/opt/mitsuba path-to/my-scene.xml
 \end{shell}
-	For the SSH connection approach to work, you \emph{must} enable passwordless 
+	For the SSH connection approach to work, you \emph{must} enable passwordless
 	authentication.
-	Try opening a terminal window and running the command \code{ssh username@machine} 
+	Try opening a terminal window and running the command \code{ssh username@machine}
 	(replace with the details of your remote connection).
-	If you are asked for a password, something is not set up correctly --- please see 
+	If you are asked for a password, something is not set up correctly --- please see
 	\url{http://www.debian-administration.org/articles/152} for instructions.
 
 	On Windows, the situation is a bit more difficult since there is no suitable SSH client by
 	default. To get SSH connections to work, Mitsuba requires \code{plink.exe} (from PuTTY) to
 	be on the path. For passwordless authentication with a Linux/OSX-based
 	server, convert your private key to PuTTY's format using \code{puttygen.exe}.
-	Afterwards, start \code{pageant.exe} to load and  authenticate the key. All 
+	Afterwards, start \code{pageant.exe} to load and  authenticate the key. All
 	of these binaries are available from the PuTTY website.
 
 	It is possible to mix the two approaches to access some machines directly and others
@@ -152,7 +152,7 @@ machine3.domain.org:7346
 Any attribute in the XML-based scene description language can be parameterized from the
 command line.
 For instance, you can render a scene several times with different reflectance values
-on a certain material by changing its description to something like 
+on a certain material by changing its description to something like
 \begin{xml}
 <bsdf type="diffuse">
 	<spectrum name="reflectance" value="$\texttt{\$}$reflectance"/>
@@ -160,28 +160,28 @@ on a certain material by changing its description to something like
 \end{xml}
 and running Mitsuba as follows:
 \begin{shell}
-$\texttt{\$}$ mitsuba -Dreflectance=0.1 -o ref_0.1.exr scene.xml 
-$\texttt{\$}$ mitsuba -Dreflectance=0.2 -o ref_0.2.exr scene.xml 
-$\texttt{\$}$ mitsuba -Dreflectance=0.5 -o ref_0.5.exr scene.xml 
+$\texttt{\$}$ mitsuba -Dreflectance=0.1 -o ref_0.1.exr scene.xml
+$\texttt{\$}$ mitsuba -Dreflectance=0.2 -o ref_0.2.exr scene.xml
+$\texttt{\$}$ mitsuba -Dreflectance=0.5 -o ref_0.5.exr scene.xml
 \end{shell}
 
 \subsubsection{Writing partial images to disk}
-When doing lengthy command line renders on Linux or OSX, it is possible 
-to send a signal to the process using 
-\begin{shell}	
+When doing lengthy command line renders on Linux or OSX, it is possible
+to send a signal to the process using
+\begin{shell}
 $\texttt{\$}$ killall -HUP mitsuba
 \end{shell}
-This causes the renderer to write out the partially finished 
-image, after which it continues rendering. This can sometimes be useful to 
+This causes the renderer to write out the partially finished
+image, after which it continues rendering. This can sometimes be useful to
 check if everything is working correctly.
 
 \subsubsection{Rendering an animation}
 The command line interface is ideally suited for rendering large amounts of files in batch
-operation. You can simply pass in the files using a wildcard in the filename. 
+operation. You can simply pass in the files using a wildcard in the filename.
 
-If you've already rendered a subset of the frames and you only want to complete the remainder, 
-add the \texttt{-x} flag, and all files with existing output will be skipped. You can also 
-let the scheduler work on several scenes at once using the \texttt{-j} parameter --- this is 
+If you've already rendered a subset of the frames and you only want to complete the remainder,
+add the \texttt{-x} flag, and all files with existing output will be skipped. You can also
+let the scheduler work on several scenes at once using the \texttt{-j} parameter --- this is
 especially useful when parallelizing over multiple machines: as some of the participating machines
 finish rendering the current frame, they can immediately start working on the next one
 instead of having to wait for all other cores to finish. Altogether, you
@@ -206,26 +206,26 @@ $\texttt{\$}$ mtssrv -i maxwell.cs.cornell.edu
 \end{shell}
 As advised in Section~\ref{sec:mitsuba}, it is advised to run \code{mtssrv} \emph{only} in trusted networks.
 
-One nice feature of \code{mtssrv} is that it (like the \code{mitsuba} executable) 
-also supports the \code{-c} and \code{-s} parameters, which create connections 
+One nice feature of \code{mtssrv} is that it (like the \code{mitsuba} executable)
+also supports the \code{-c} and \code{-s} parameters, which create connections
 to additional compute servers.
 Using this feature, one can create hierarchies of compute nodes. For instance,
-the root \code{mttsrv} instance of such a hierarchy could share its work with a 
-number of other  machines running \code{mtssrv}, and each of these might also 
+the root \code{mttsrv} instance of such a hierarchy could share its work with a
+number of other  machines running \code{mtssrv}, and each of these might also
 share their work with further machines, and so on...
 
-The parallelization over such hierarchies happens transparently---when 
-connecting a renderering process to the root node, it sees a machine 
+The parallelization over such hierarchies happens transparently---when
+connecting a renderering process to the root node, it sees a machine
 with hundreds or thousands of cores, to which it can submit work without
-needing to worry about how exactly it is going to be spread out in 
+needing to worry about how exactly it is going to be spread out in
 the hierarchy.
 
 Such hierarchies are mainly useful to reduce communication bottlenecks when distributing
 large resources (such as scenes) to remote machines. Imagine the following hypothetical scenario:
-you would like to render a 50MB-sized scene while at home, but rendering is too slow. 
+you would like to render a 50MB-sized scene while at home, but rendering is too slow.
 You decide to tap into some extra machines available
 at your workplace, but this usually doesn't make things much faster because of the relatively slow broadband
-connection and the need to transmit your scene to every single compute node involved. 
+connection and the need to transmit your scene to every single compute node involved.
 
 Using \code{mtssrv}, you can
 instead designate a central scheduling node at your workplace, which accepts connections and delegates
@@ -233,10 +233,10 @@ rendering tasks to the other machines. In this case, you will only have to trans
 and the remaining distribution happens over the fast local network at your workplace.
 \subsection{Utility launcher}
 \label{sec:mtsutil}
-When working on a larger project, one often needs to implement various utility programs that 
+When working on a larger project, one often needs to implement various utility programs that
 perform simple tasks, such as applying a filter to an image or processing
-a matrix stored in a file. In a framework like Mitsuba, this unfortunately involves 
-a significant coding overhead in initializing the necessary APIs on all supported platforms. 
+a matrix stored in a file. In a framework like Mitsuba, this unfortunately involves
+a significant coding overhead in initializing the necessary APIs on all supported platforms.
 To reduce this tedious work on the side of the programmer, Mitsuba comes with a utility launcher
 called \code{mtsutil}.
 
@@ -250,7 +250,7 @@ For a listing of all supported options and utilities, enter the command without 
 \label{sec:tonemapper}
 One particularly useful utility that shall be mentioned here is the batch tonemapper, which
 loads EXR/RGBE images and writes tonemapped 8-bit PNG/JPGs. This can save much time when one has to
-process many high dynamic-range images such as animation frames using the same basic operations, 
+process many high dynamic-range images such as animation frames using the same basic operations,
 e.g. gamma correction, changing the overall brightness, resizing, cropping, etc. The available
 command line options are shown in \lstref{tonemap-cli}.
 
@@ -282,14 +282,14 @@ Options/Arguments:
                   between [0, 1] chooses between low and high-key images and
                   'burn' (also [0, 1]) controls how much highlights may burn out
 
-   -x             Temporal coherence mode: activate this flag when tonemapping 
+   -x             Temporal coherence mode: activate this flag when tonemapping
                   frames of an animation using the '-p' option to avoid flicker
 
    -o file        Save the output with a given filename
 
    -t             Multithreaded: process several files in parallel
 
- The operations are ordered as follows: 1. crop, 2. resize, 3. color-balance, 
- 4. tonemap, 5. annotate. To simply process a directory full of EXRs in 
+ The operations are ordered as follows: 1. crop, 2. resize, 3. color-balance,
+ 4. tonemap, 5. annotate. To simply process a directory full of EXRs in
  parallel, run the following: 'mtsutil tonemap -t path-to-directory/*.exr'
 \end{console}

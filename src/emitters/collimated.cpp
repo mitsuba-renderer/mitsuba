@@ -35,17 +35,17 @@ MTS_NAMESPACE_BEGIN
  *         \default{1}
  *     }
  *     \parameter{samplingWeight}{\Float}{
- *         Specifies the relative amount of samples 
+ *         Specifies the relative amount of samples
  *         allocated to this emitter. \default{1}
  *     }
  * }
  *
- * This emitter plugin implements a collimated beam source, which 
+ * This emitter plugin implements a collimated beam source, which
  * radiates a specified amount of power along a fixed ray.
  * It can be thought of as the limit of a spot light as its field
  * of view tends to zero.
  *
- * Such a emitter is useful for conducting virtual experiments and 
+ * Such a emitter is useful for conducting virtual experiments and
  * testing the renderer for correctness.
  *
  * By default, the emitter is located at the origin and radiates
@@ -60,12 +60,12 @@ public:
 
 		m_power = props.getSpectrum("power", Spectrum(1.0f));
 
-		if (props.getTransform("toWorld", Transform()).hasScale()) 
+		if (props.getTransform("toWorld", Transform()).hasScale())
 			Log(EError, "Scale factors in the emitter-to-world "
 				"transformation are not allowed!");
 	}
 
-	CollimatedBeamEmitter(Stream *stream, InstanceManager *manager) 
+	CollimatedBeamEmitter(Stream *stream, InstanceManager *manager)
 	 : Emitter(stream, manager) {
 		configure();
 		m_power = Spectrum(stream);
@@ -93,7 +93,7 @@ public:
 		return (pRec.measure == EDiscrete) ? 1.0f : 0.0f;
 	}
 
-	Spectrum sampleDirection(DirectionSamplingRecord &dRec, 
+	Spectrum sampleDirection(DirectionSamplingRecord &dRec,
 			PositionSamplingRecord &pRec,
 			const Point2 &sample, const Point2 *extra) const {
 		dRec.d = pRec.n;

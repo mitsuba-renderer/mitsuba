@@ -28,7 +28,7 @@ MTS_NAMESPACE_BEGIN
  *
  * Scattering by particles that are much smaller than the wavelength
  * of light (e.g. individual molecules in the atmosphere) is well-approximated
- * by the Rayleigh phase function. This plugin implements an unpolarized 
+ * by the Rayleigh phase function. This plugin implements an unpolarized
  * version of this scattering model (i.e the effects of polarization are ignored).
  * This plugin is useful for simulating scattering in planetary atmospheres.
  *
@@ -36,10 +36,10 @@ MTS_NAMESPACE_BEGIN
  */
 class RayleighPhaseFunction : public PhaseFunction {
 public:
-	RayleighPhaseFunction(const Properties &props) 
+	RayleighPhaseFunction(const Properties &props)
 		: PhaseFunction(props) { }
 
-	RayleighPhaseFunction(Stream *stream, InstanceManager *manager) 
+	RayleighPhaseFunction(Stream *stream, InstanceManager *manager)
 		: PhaseFunction(stream, manager) { }
 
 	virtual ~RayleighPhaseFunction() { }

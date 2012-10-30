@@ -37,26 +37,26 @@ MTS_NAMESPACE_BEGIN
  *     \rendering{The model with default parameters}{bsdf_difftrans.jpg}
  * }
  *
- * This BSDF models a non-reflective material, where any entering light loses 
- * its directionality and is diffusely scattered from the other side. This 
+ * This BSDF models a non-reflective material, where any entering light loses
+ * its directionality and is diffusely scattered from the other side. This
  * model can be combined\footnote{For instance using the
- * \pluginref{mixturebsdf} plugin.} with a surface reflection model to 
- * describe translucent substances that have internal multiple scattering 
+ * \pluginref{mixturebsdf} plugin.} with a surface reflection model to
+ * describe translucent substances that have internal multiple scattering
  * processes (e.g. plant leaves).
  */
 class DiffuseTransmitter : public BSDF {
 public:
-	DiffuseTransmitter(const Properties &props) 
+	DiffuseTransmitter(const Properties &props)
 		: BSDF(props) {
 		/* For better compatibility with other models, support both
 		   'transmittance' and 'diffuseTransmittance' as parameter names */
 		m_transmittance = new ConstantSpectrumTexture(props.getSpectrum(
-			props.hasProperty("transmittance") ? "transmittance" 
+			props.hasProperty("transmittance") ? "transmittance"
 				: "diffuseTransmittance", Spectrum(.5f)));
 		m_usesRayDifferentials = false;
 	}
 
-	DiffuseTransmitter(Stream *stream, InstanceManager *manager) 
+	DiffuseTransmitter(Stream *stream, InstanceManager *manager)
 		: BSDF(stream, manager) {
 		m_transmittance = static_cast<Texture *>(manager->getInstance(stream));
 		m_usesRayDifferentials = m_transmittance->usesRayDifferentials();
@@ -103,7 +103,7 @@ public:
 	}
 
 	Spectrum sample(BSDFSamplingRecord &bRec, Float &pdf, const Point2 &sample) const {
-		if (!(bRec.typeMask & m_combinedType)) 
+		if (!(bRec.typeMask & m_combinedType))
 			return Spectrum(0.0f);
 		bRec.wo = Warp::squareToCosineHemisphere(sample);
 		if (Frame::cosTheta(bRec.wi) > 0)
@@ -116,7 +116,7 @@ public:
 	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
-		if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && 
+		if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) &&
 			 	(name == "transmittance" || name == "diffuseTransmittance")) {
 			m_transmittance = static_cast<Texture *>(child);
 			m_usesRayDifferentials |= m_transmittance->usesRayDifferentials();
@@ -151,11 +151,11 @@ private:
 	ref<Texture> m_transmittance;
 };
 
-// ================ Hardware shader implementation ================ 
+// ================ Hardware shader implementation ================
 
 class DiffuseTransmitterShader : public Shader {
 public:
-	DiffuseTransmitterShader(Renderer *renderer, const Texture *reflectance) 
+	DiffuseTransmitterShader(Renderer *renderer, const Texture *reflectance)
 		: Shader(renderer, EBSDFShader), m_transmittance(reflectance) {
 		m_transmittanceShader = renderer->registerShaderForResource(m_transmittance.get());
 	}
@@ -192,7 +192,7 @@ private:
 	ref<Shader> m_transmittanceShader;
 };
 
-Shader *DiffuseTransmitter::createShader(Renderer *renderer) const { 
+Shader *DiffuseTransmitter::createShader(Renderer *renderer) const {
 	return new DiffuseTransmitterShader(renderer, m_transmittance.get());
 }
 

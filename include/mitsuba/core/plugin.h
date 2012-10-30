@@ -29,7 +29,7 @@ MTS_NAMESPACE_BEGIN
 /**
  * \brief Abstract plugin class -- represents loadable configurable objects
  * and utilities.
- * 
+ *
  * Please see the \ref ConfigurableObject and \ref Utility classes for
  * details.
  *
@@ -42,11 +42,11 @@ public:
 
 	/// Virtual destructor
 	virtual ~Plugin();
-	
+
 	/// Is this a configurable object plugin or an utility plugin?
 	bool isUtility() const;
 
-	/// Return an instance of the class implemented by this plugin 
+	/// Return an instance of the class implemented by this plugin
 	ConfigurableObject *createInstance(const Properties &props) const;
 
 	/// Return an utility instance (if this is an utility plugin)
@@ -54,10 +54,10 @@ public:
 
 	/// Return a description of this plugin
 	std::string getDescription() const;
-	
+
 	/// Return the path of this plugin
 	const fs::path &getPath() const;
-	
+
 	/// Return a short name of this plugin
 	const std::string &getShortName() const;
 protected:
@@ -74,13 +74,13 @@ private:
  * \brief The plugin manager is responsible for resolving and
  * loading external plugins.
  *
- * Ordinarily, this class will be used by making repeated calls to 
+ * Ordinarily, this class will be used by making repeated calls to
  * the \ref createObject() methods. The generated instances are then
  * assembled into a final object graph, such as a scene. One such
  * examples is the \ref SceneHandler class, which parses an XML
- * scene file by esentially translating the XML elements into calls 
+ * scene file by esentially translating the XML elements into calls
  * to \ref createObject().
- * 
+ *
  * Since this kind of construction method can be tiresome when
  * dynamically building scenes from Python, this class has an
  * additional Python-only method \c create(), which works as follows:
@@ -130,13 +130,13 @@ public:
 
 	/**
 	 * \brief Instantiate a plugin, verify its type,
-	 * and return the newly created instance. 
-	 * 
+	 * and return the newly created instance.
+	 *
 	 * \param classType Expected type of the plugin. An
 	 *    exception will be thrown if it turns out not
 	 *    to derive from this class.
 	 * \param props A \ref Properties instance containing
-	 *    all information required to find and construct 
+	 *    all information required to find and construct
 	 *    the plugin.
 	 */
 	ConfigurableObject *createObject(
@@ -146,10 +146,10 @@ public:
 
 	/**
 	 * \brief Instantiate a plugin and return the new
-	 * instance (without verifying its type). 
-	 * 
+	 * instance (without verifying its type).
+	 *
 	 * \param props A \ref Properties instance containing
-	 *    all information required to find and construct 
+	 *    all information required to find and construct
 	 *    the plugin.
 	 */
 	ConfigurableObject *createObject(
@@ -165,7 +165,7 @@ public:
 	MTS_DECLARE_CLASS()
 protected:
 	PluginManager();
-	
+
 	/// Destruct and unload all plugins
 	~PluginManager();
 private:

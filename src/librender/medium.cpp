@@ -26,7 +26,13 @@ MTS_NAMESPACE_BEGIN
 
 Medium::Medium(const Properties &props)
  : NetworkedObject(props) {
-	lookupMaterial(props, m_sigmaS, m_sigmaA);	
+	Spectrum g;
+	lookupMaterial(props, m_sigmaS, m_sigmaA, g);
+
+	/* For now, ignore the anisotropy information of preset materials
+	   and use the reduced scattering coefficient */
+	m_sigmaS *= Spectrum(1.0f) - g;
+
 	m_sigmaT = m_sigmaA + m_sigmaS;
 }
 
@@ -37,7 +43,7 @@ Medium::Medium(Stream *stream, InstanceManager *manager)
 	m_sigmaS = Spectrum(stream);
 	m_sigmaT = m_sigmaA + m_sigmaS;
 }
-	
+
 void Medium::addChild(const std::string &name, ConfigurableObject *child) {
 	const Class *cClass = child->getClass();
 

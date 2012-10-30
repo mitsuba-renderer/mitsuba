@@ -45,7 +45,7 @@ public:
 		m_objects.insert(obj);
 	}
 
-	inline void remove(const Object *obj) { 
+	inline void remove(const Object *obj) {
 		Lock lock(m_mutex);
 		m_objects.erase(obj);
 	}
@@ -117,7 +117,7 @@ void Object::decRef() const {
 	if (count == 0) {
 #if DEBUG_REFCOUNTS == 1
 		if (Class::rttiIsInitialized())
-			cout << this << ": Deleting an instance of " << 
+			cout << this << ": Deleting an instance of " <<
 				getClass()->getName() << endl;
 		if (__ref_tracker)
 			__ref_tracker->remove(this);
@@ -139,7 +139,7 @@ std::string Object::toString() const {
 
 Object::~Object() {
 	if (m_refCount > 0) {
-		Log(EWarn, "Deleting %s with reference count %i!", 
+		Log(EWarn, "Deleting %s with reference count %i!",
 			toString().c_str(), (int) m_refCount);
 	}
 }

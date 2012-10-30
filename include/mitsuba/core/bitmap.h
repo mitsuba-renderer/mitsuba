@@ -28,10 +28,10 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * \brief General-purpose bitmap class with read and write support 
+ * \brief General-purpose bitmap class with read and write support
  * for several common file formats.
  *
- * This class handles loading of PNG, JPEG, BMP, TGA, as well as 
+ * This class handles loading of PNG, JPEG, BMP, TGA, as well as
  * OpenEXR files, and it supports writing of PNG, JPEG and OpenEXR files.
  *
  * PNG and OpenEXR files are optionally annotated with string-valued
@@ -92,14 +92,14 @@ public:
 		 * Note that you can use this class to load, save, and access bitmasks -- however,
 		 * many of the manipulation operations (i.e. \ref crop(), \ref accumulate(), etc.)
 		 * do not currently handle them.
-		 * 
+		 *
 		 * Default gamma value: linear (1.0)
 		 */
 		EBitmask = 0,
 
 		/**
 		 * \brief 8-bit unsigned integer (\c uint8_t) component encoding
-		 * 
+		 *
 		 * Default gamma value: sRGB (approx. 2.2)
 		 */
 		EUInt8,
@@ -124,7 +124,7 @@ public:
 		 * Default gamma value: linear (1.0)
 		 */
 		EFloat16,
-		
+
 		/**
 		 * \brief 32-bit floating point (\c float) HDR component encoding
 		 *
@@ -145,7 +145,7 @@ public:
 		EInvalid,
 
 		/**
-		 * \brief Floating point (\c float or \c double depending on the 
+		 * \brief Floating point (\c float or \c double depending on the
 		 * compilation settings) HDR component encoding
 		 *
 		 * Default gamma value: linear (1.0)
@@ -178,13 +178,13 @@ public:
 		 *
 		 * The following is supported:
 		 * <ul>
-		 *   <li>Loading and saving of \ref Eloat16 / \ref EFloat32/ \ref 
+		 *   <li>Loading and saving of \ref Eloat16 / \ref EFloat32/ \ref
 		 *   EUInt32 bitmaps with all supported RGB/Luminance/Alpha combinations</li>
 		 *   <li>Loading and saving of spectral bitmaps</tt>
 		 *   <li>Loading and saving of XYZ tristimulus bitmaps</tt>
 		 *   <li>Loading and saving of string-valued metadata fields</li>
 		 * </ul>
-		 * 
+		 *
 		 * The following is <em>not</em> supported:
 		 * <ul>
 		 *   <li>Saving of tiled images, tile-based read access</li>
@@ -251,7 +251,7 @@ public:
 	};
 
 	/**
-	 * \brief Create a bitmap of the specified type and allocate 
+	 * \brief Create a bitmap of the specified type and allocate
 	 * the necessary amount of memory
 	 *
 	 * \param pFmt
@@ -296,10 +296,10 @@ public:
 	/// Return the bitmap component format for a specified type
 	template <typename T> inline static EComponentFormat componentFormat();
 
-	/// Return the pixel format of this bitmap 
+	/// Return the pixel format of this bitmap
 	inline EPixelFormat getPixelFormat() const { return m_pixelFormat; }
 
-	/// Return the component format of this bitmap 
+	/// Return the component format of this bitmap
 	inline EComponentFormat getComponentFormat() const { return m_componentFormat; }
 
 	/// Return the bitmap's resolution in pixels
@@ -335,35 +335,35 @@ public:
 	 * this function throws an exception.
 	 */
 	int getBytesPerComponent() const;
-	
+
 	/**
 	 * \brief Return the number of bytes per pixel
 	 *
 	 * When the component format is set to \c EBitmask,
 	 * this function throws an exception.
 	 */
-	inline int getBytesPerPixel() const { 
+	inline int getBytesPerPixel() const {
 		return getBytesPerComponent() * getChannelCount(); }
 
 	/// Return the bitmap size in bytes
 	size_t getBufferSize() const;
 
 	/**
-	 * \brief Return the spectral color value associated with 
+	 * \brief Return the spectral color value associated with
 	 * a given pixel.
-	 * 
+	 *
 	 * When this is not a spectrum image, conversions are applied
 	 * as appropriate.
 	 *
 	 * \remark This function is provided here for convenience and
 	 * debugging purposes. Its use is discouraged, particularly for
-	 * performance critical code (direct buffer access will be 
+	 * performance critical code (direct buffer access will be
 	 * faster by at least an order of magnitude)
 	 */
 	Spectrum getPixel(const Point2i &pos) const;
 
 	/**
-	 * \brief Set the spectral color value associated with 
+	 * \brief Set the spectral color value associated with
 	 * a given pixel.
 	 *
 	 * When this is not a spectrum image, conversions are applied
@@ -371,7 +371,7 @@ public:
 	 *
 	 * \remark This function is provided here for convenience and
 	 * debugging purposes. Its use is discouraged, particularly for
-	 * performance critical code (direct buffer access will be 
+	 * performance critical code (direct buffer access will be
 	 * faster by at least order of magnitude)
 	 */
 	void setPixel(const Point2i &pos, const Spectrum &value);
@@ -394,10 +394,10 @@ public:
 	void drawRect(const Point2i &offset, const Vector2i &size, const Spectrum &value);
 
 	/**
-	 * \brief Color balancing: apply the given scale factors to the 
+	 * \brief Color balancing: apply the given scale factors to the
 	 * red, green, and blue channels of the image
 	 *
-	 * When the image is not an \c EFloat16, \c EFloat32, or 
+	 * When the image is not an \c EFloat16, \c EFloat32, or
 	 * \c EFloat64-based RGB/RGBA image, the function throws an exception
 	 */
 	void colorBalance(Float r, Float g, Float b);
@@ -414,7 +414,7 @@ public:
 
 	/// Create an identical copy
 	ref<Bitmap> clone() const;
-	
+
 	/// Clear the bitmap to zero
 	void clear();
 
@@ -433,7 +433,7 @@ public:
 	 *    the lowest and 9 denoting the highest compression). Note that
 	 *    saving files with the highest compression will be very slow.
 	 *    For JPEG files, this denotes the desired quality (between 0 and 100,
-	 *    the latter being best). The default argument (-1) uses compression 
+	 *    the latter being best). The default argument (-1) uses compression
 	 *    5 for PNG and 100 for JPEG files.
 	 *
 	 * \param channelNames
@@ -456,7 +456,7 @@ public:
 	/**
 	 * \brief Convert the bitmap into another pixel and/or component format
 	 *
-	 * This helper function can be used to efficiently convert a bitmap 
+	 * This helper function can be used to efficiently convert a bitmap
 	 * between different underlying representations. For instance, it can
 	 * translate a 24-bit sRGB bitmap to a linear spectrum-valued representation
 	 * based on half-, single- or double-precision floating point-backed storage.
@@ -473,12 +473,12 @@ public:
 	 *   of the desired component format.</li>
 	 * <li>The clamped gamma-corrected value is then written to
 	 *   the new bitmap</li>
-	 * 
+	 *
 	 * If the pixel formats differ, this function will also perform basic
-	 * conversions (e.g. spectrum to rgb, luminance to uniform spectrum 
+	 * conversions (e.g. spectrum to rgb, luminance to uniform spectrum
 	 * values, etc.)
 	 *
-	 * Note that the alpha channel is assumed to be linear in both 
+	 * Note that the alpha channel is assumed to be linear in both
 	 * the source and target bitmap, hence it won't be affected by
 	 * any gamma-related transformations.
 	 *
@@ -498,13 +498,13 @@ public:
 	 *      specifies how ambiguities in this highly under-constrained problem
 	 *      should be resolved.
 	 */
-	void convert(Bitmap *target, Float multiplier = 1.0f, 
+	void convert(Bitmap *target, Float multiplier = 1.0f,
 		Spectrum::EConversionIntent intent = Spectrum::EReflectance) const;
 
 	/**
 	 * \brief Convert the bitmap into another pixel and/or component format
 	 *
-	 * This helper function can be used to efficiently convert a bitmap 
+	 * This helper function can be used to efficiently convert a bitmap
 	 * between different underlying representations. For instance, it can
 	 * translate a 24-bit sRGB bitmap to a linear spectrum-valued representation
 	 * based on half-, single- or double-precision floating point-backed storage.
@@ -521,19 +521,19 @@ public:
 	 *   of the desired component format.</li>
 	 * <li>The clamped gamma-corrected value is then written to
 	 *   the new bitmap</li>
-	 * 
+	 *
 	 * If the pixel formats differ, this function will also perform basic
-	 * conversions (e.g. spectrum to rgb, luminance to uniform spectrum 
+	 * conversions (e.g. spectrum to rgb, luminance to uniform spectrum
 	 * values, etc.)
 	 *
-	 * Note that the alpha channel is assumed to be linear in both 
+	 * Note that the alpha channel is assumed to be linear in both
 	 * the source and target bitmap, hence it won't be affected by
 	 * any gamma-related transformations.
-	 * 
-	 * \remark This <tt>convert()</tt> variant usually returns a new 
-	 * bitmap instance. When the conversion would just involve copying 
-	 * the original bitmap, the function becomes a no-op and returns 
-	 * the current instance. 
+	 *
+	 * \remark This <tt>convert()</tt> variant usually returns a new
+	 * bitmap instance. When the conversion would just involve copying
+	 * the original bitmap, the function becomes a no-op and returns
+	 * the current instance.
 	 *
 	 * \ref pixelFormat
 	 *      Specifies the desired pixel format
@@ -552,14 +552,14 @@ public:
 	 *      specifies how ambiguities in this highly under-constrained problem
 	 *      should be resolved.
 	 */
-	ref<Bitmap> convert(EPixelFormat pixelFormat, EComponentFormat componentFormat, 
-			Float gamma = 1.0f, Float multiplier = 1.0f, 
+	ref<Bitmap> convert(EPixelFormat pixelFormat, EComponentFormat componentFormat,
+			Float gamma = 1.0f, Float multiplier = 1.0f,
 			Spectrum::EConversionIntent intent = Spectrum::EReflectance);
 
 	/**
 	 * \brief Convert the bitmap into another pixel and/or component format
 	 *
-	 * This helper function can be used to efficiently convert a bitmap 
+	 * This helper function can be used to efficiently convert a bitmap
 	 * between different underlying representations. For instance, it can
 	 * translate a 24-bit sRGB bitmap to a linear spectrum-valued representation
 	 * based on half-, single- or double-precision floating point-backed storage.
@@ -576,12 +576,12 @@ public:
 	 *   of the desired component format.</li>
 	 * <li>The clamped gamma-corrected value is then written to
 	 *   the new bitmap</li>
-	 * 
+	 *
 	 * If the pixel formats differ, this function will also perform basic
-	 * conversions (e.g. spectrum to rgb, luminance to uniform spectrum 
+	 * conversions (e.g. spectrum to rgb, luminance to uniform spectrum
 	 * values, etc.)
 	 *
-	 * Note that the alpha channel is assumed to be linear in both 
+	 * Note that the alpha channel is assumed to be linear in both
 	 * the source and target bitmap, hence it won't be affected by
 	 * any gamma-related transformations.
 	 *
@@ -608,8 +608,8 @@ public:
 	 *      should be resolved.
 	 */
 	void convert(void *target,
-			EPixelFormat pixelFormat, EComponentFormat componentFormat, 
-			Float gamma = 1.0f, Float multiplier = 1.0f, 
+			EPixelFormat pixelFormat, EComponentFormat componentFormat,
+			Float gamma = 1.0f, Float multiplier = 1.0f,
 			Spectrum::EConversionIntent intent = Spectrum::EReflectance) const;
 
 	/**
@@ -617,25 +617,25 @@ public:
 	 *
 	 * This function
 	 * <ol>
-	 *  <li>Computes and stores the maximum and log-average luminance of the image 
-	 *  If the \c logAvgLuminace and \c maxLuminance parameters are nonzero, it is 
-	 *  assumed that these have already been computed, and this step is omitted. 
-	 *  Explicitly specifying them can be useful to prevent flickering when tonemapping 
+	 *  <li>Computes and stores the maximum and log-average luminance of the image
+	 *  If the \c logAvgLuminace and \c maxLuminance parameters are nonzero, it is
+	 *  assumed that these have already been computed, and this step is omitted.
+	 *  Explicitly specifying them can be useful to prevent flickering when tonemapping
 	 *  multiple frames of an animation.</li>
 	 *
-	 *  <li>Converts the image to xyY, applies Reinhard's photographic tonemapper in this 
+	 *  <li>Converts the image to xyY, applies Reinhard's photographic tonemapper in this
 	 *  space, and then transforms the result back to its original
 	 *  representation (i.e. RGB or XYZ). The global version of the
-	 *  tonemapping algorithm is used (i.e. the one without automatic 
+	 *  tonemapping algorithm is used (i.e. the one without automatic
 	 *  dodging and burning).</li>
 	 * </ol>
 	 *
 	 * The <tt>key</tt> parameter specifies whether a low-key or high-key image is
-	 * desired. The value must be in the interval <tt>[0,1]</tt>. A good starting 
+	 * desired. The value must be in the interval <tt>[0,1]</tt>. A good starting
 	 * point is a middle-grey, i.e. <tt>key=0.18</tt>.
 	 *
 	 * When <tt>burn=0</tt>, the entire image is re-mapped into the displayable range. This
-	 * may not always be desireable -- for instance, one might choose to let a highlight 
+	 * may not always be desireable -- for instance, one might choose to let a highlight
 	 * burn out, and this is achieved by choosing burn in (0, 1].
 	 *
 	 * For reference, see
@@ -643,8 +643,8 @@ public:
 	 * Peter Shirley, and James Fewerda, in ACM Transactions on Graphics 2002, Vol. 21, 3
 	 *
 	 * \remark The implementation assumes that the image has a RGB(A), XYZ(A), or Luminance(Alpha)
-	 * pixel format, that <tt>gamma=1</tt>, and that it uses a EFloat16/EFloat32/EFloat64 
-	 * component format. The conversion process is destructive in the sense that it overwrites 
+	 * pixel format, that <tt>gamma=1</tt>, and that it uses a EFloat16/EFloat32/EFloat64
+	 * component format. The conversion process is destructive in the sense that it overwrites
 	 * the original image.
 	 */
 	void tonemapReinhard(Float &logAvgLuminance, Float &maxLuminance,
@@ -663,13 +663,13 @@ public:
 	 * \brief Separate out one of the color channels in the
 	 * bitmap and return it as a separate luminance bitmap
 	 *
-	 * When this is already a single-channel bitmap, the function 
+	 * When this is already a single-channel bitmap, the function
 	 * returns a pointer to the current instance.
 	 */
 	ref<Bitmap> separateChannel(int channelIndex);
 
 	/**
-	 * \brief Merges multiple luminance-valued bitmaps into 
+	 * \brief Merges multiple luminance-valued bitmaps into
 	 * a proper multi-channel bitmap.
 	 *
 	 * \param fmt The desired pixel format of the combined bitmap
@@ -696,7 +696,7 @@ public:
 	 * <tt>bitmap != this</tt>.
 	 *
 	 * \remark This function throws an exception when the bitmaps
-	 * use different component formats or channels, or when the 
+	 * use different component formats or channels, or when the
 	 * component format is \ref EBitmask.
 	 */
 	void accumulate(const Bitmap *bitmap, const Point2i &offset);
@@ -705,15 +705,15 @@ public:
 	 * \brief Up- or down-sample this image to a different resolution
 	 *
 	 * Uses the provided reconstruction filter and observes the specified
-	 * horizontal and vertical boundary conditions when looking up data 
+	 * horizontal and vertical boundary conditions when looking up data
 	 * outside of the input domain.
 	 *
 	 * A maximum and maximum image value can be specified to prevent to prevent
 	 * out-of-range values that are created by the resampling process.
 	 */
-	void resample(const ReconstructionFilter *rfilter, 
-		ReconstructionFilter::EBoundaryCondition bch, 
-		ReconstructionFilter::EBoundaryCondition bcv, 
+	void resample(const ReconstructionFilter *rfilter,
+		ReconstructionFilter::EBoundaryCondition bch,
+		ReconstructionFilter::EBoundaryCondition bcv,
 		Bitmap *target, Float minValue = 0.0f,
 		Float maxValue = 1.0f) const;
 
@@ -721,13 +721,13 @@ public:
 	 * \brief Up- or down-sample this image to a different resolution
 	 *
 	 * Uses the provided reconstruction filter and observes the specified
-	 * horizontal and vertical boundary conditions when looking up data 
+	 * horizontal and vertical boundary conditions when looking up data
 	 * outside of the input domain.
 	 *
 	 * A maximum and maximum image value can be specified to prevent to prevent
 	 * out-of-range values that are created by the resampling process.
 	 */
-	ref<Bitmap> resample(const ReconstructionFilter *rfilter, 
+	ref<Bitmap> resample(const ReconstructionFilter *rfilter,
 		ReconstructionFilter::EBoundaryCondition bch,
 		ReconstructionFilter::EBoundaryCondition bcv,
 		const Vector2i &size, Float minValue = 0.0f,
@@ -748,7 +748,7 @@ public:
 
 	/// Set a string-valued metadata field
 	void setString(const std::string &key, const std::string &value);
-	
+
 	/// Return a string-valued metadata field
 	std::string getString(const std::string &key) const;
 
@@ -769,20 +769,20 @@ public:
 
 	//! @}
 	// ======================================================================
-	
+
 	// ======================================================================
 	//! @{ \name Bitmap raster data accessors
 	// ======================================================================
 
 	/// Access the underlying raster
 	inline void *getData() { return m_data; }
-	
+
 	/// Access the underlying bit raster (const version)
 	inline const void *getData() const { return m_data; }
 
 	/// Access the underlying raster (for uint8 bitmaps)
 	inline uint8_t *getUInt8Data() { return m_data; }
-	
+
 	/// Access the underlying bit raster (for uint8 bitmaps, const version)
 	inline const uint8_t *getUInt8Data() const { return m_data; }
 
@@ -844,7 +844,7 @@ protected:
 
 	/// Write a file using the PNG file format
 	void writePNG(Stream *stream, int compression) const;
-	
+
 	/// Read a file stored using the JPEG file format
 	void readJPEG(Stream *stream);
 
@@ -872,7 +872,7 @@ protected:
 
 	/// Read a file stored using the TGA file format
 	void readTGA(Stream *stream);
-	
+
 	/// Read a file stored using the BMP file format
 	void readBMP(Stream *stream);
 
@@ -909,7 +909,7 @@ protected:
  * \remark This is not a color management system. Depending on the
  * target type, out-of-gamut values may be clipped component-wise.
  * If a luminance scale factor is applied, that is also done component-wise
- * (instead of scaling in a space that is based on human perception, such 
+ * (instead of scaling in a space that is based on human perception, such
  * as xyY or CIELab). If this and smarter gamut remapping are needed,
  * a library such as lcms2 will be more appropriate.
  *
@@ -927,7 +927,7 @@ public:
 	 * \brief Transform pixels based on the conversion implemented
 	 * by this class
 	 *
-	 * Note that the alpha channel is assumed to be linear in both 
+	 * Note that the alpha channel is assumed to be linear in both
 	 * the source and target bitmap, hence it won't be affected by
 	 * Gamma-related transformations.
 	 *
@@ -941,8 +941,8 @@ public:
 	 *    Pointer to the first pixel of the source bitmap
 	 * \param destFormat
 	 *    Pixel format of the destination bitmap
-	 * \param destGamma 
-	 *    Gamma value associated with pixels from the destination 
+	 * \param destGamma
+	 *    Gamma value associated with pixels from the destination
 	 *    bitmap. Special values: 1.0 denotes a linear space, and -1.0
 	 *    corresponds to sRGB.
 	 * \param dest
@@ -950,7 +950,7 @@ public:
 	 * \param count
 	 *    How many pixels should be transformed?
 	 * \ref multiplier
-	 *    An optional multiplicative factor that will be applied to all 
+	 *    An optional multiplicative factor that will be applied to all
 	 *    color/luminance/spectrum values in linear space (alpha and weight
 	 *    values will not be affected).
 	 * \ref intent
@@ -960,9 +960,9 @@ public:
 	 * \sa getConversion()
 	 */
 	virtual void convert(
-			Bitmap::EPixelFormat sourceFormat, Float sourceGamma, const void *_source, 
-			Bitmap::EPixelFormat destFormat, Float destGamma, void *_dest, 
-			size_t count, Float multiplier = 1.0f, 
+			Bitmap::EPixelFormat sourceFormat, Float sourceGamma, const void *_source,
+			Bitmap::EPixelFormat destFormat, Float destGamma, void *_dest,
+			size_t count, Float multiplier = 1.0f,
 			Spectrum::EConversionIntent intent = Spectrum::EReflectance) const= 0;
 
 	/**
@@ -1003,7 +1003,7 @@ namespace detail {
 	template <> inline Bitmap::EComponentFormat cfmt<double>() { return Bitmap::EFloat64; }
 };
 
-template <typename T> inline Bitmap::EComponentFormat Bitmap::componentFormat() { 
+template <typename T> inline Bitmap::EComponentFormat Bitmap::componentFormat() {
 	return detail::cfmt<T>();
 }
 

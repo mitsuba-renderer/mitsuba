@@ -54,15 +54,16 @@ struct TangentSpace {
 
 /** \brief Abstract triangle mesh base class
  * \ingroup librender
+ * \ingroup libpython
  */
 class MTS_EXPORT_RENDER TriMesh : public Shape {
 public:
 	/// Create a new, empty triangle mesh with the specified state
-	TriMesh(const std::string &name, 
+	TriMesh(const std::string &name,
 			size_t triangleCount, size_t vertexCount,
 			bool hasNormals = false,
-			bool hasTexcoords = false, 
-			bool hasVertexColors = false, 
+			bool hasTexcoords = false,
+			bool hasVertexColors = false,
 			bool flipNormals = false,
 			bool faceNormals = false);
 
@@ -78,7 +79,7 @@ public:
 	 * the specified index determines which one to load.
 	 */
 	TriMesh(Stream *stream, int idx = 0);
-	
+
 	// =============================================================
 	//! @{ \name General query functions
 	// =============================================================
@@ -97,7 +98,7 @@ public:
 
 	/**
 	 * \brief Create a triangle mesh approximation of this shape
-	 * 
+	 *
 	 * Since instances are already triangle meshes, the implementation
 	 * just returns a pointer to \a this.
 	 */
@@ -148,7 +149,7 @@ public:
 
 	/// Return the per-triangle UV tangents (const version)
 	inline const TangentSpace *getUVTangents() const { return m_tangents; };
-	/// Return the per-triangle UV tangents 
+	/// Return the per-triangle UV tangents
 	inline TangentSpace *getUVTangents() { return m_tangents; };
 	/// Does the mesh have UV tangent information?
 	inline bool hasUVTangents() const { return m_tangents != NULL; };
@@ -173,7 +174,7 @@ public:
 	 * \param sample
 	 *     A uniformly distributed 2D vector
 	 */
-	void samplePosition(PositionSamplingRecord &pRec, 
+	void samplePosition(PositionSamplingRecord &pRec,
 			const Point2 &sample) const;
 
 	/**
@@ -191,7 +192,7 @@ public:
 
 	//! @}
 	// =============================================================
-	
+
 	// =============================================================
 	//! @{ \name Miscellaneous
 	// =============================================================
@@ -200,19 +201,26 @@ public:
 	 * \brief Generate per-triangle space basis vectors from
 	 * a user-specified set of UV coordinates
 	 *
-	 * Will throw an exception when no UV coordinates are 
+	 * Will throw an exception when no UV coordinates are
 	 * associated with the mesh.
 	 */
 	void computeUVTangents();
 
-	/// Generate surface normals
-	void computeNormals();
+	/**
+	 * \brief Generate smooth vertex normals?
+	 *
+	 * \param force
+	 *   When this parameter is set to true, the function
+	 *   generates normals <em>even</em> when there are
+	 *   already existing ones.
+	 */
+	void computeNormals(bool force = false);
 
 	/**
 	 * \brief Rebuild the mesh so that adjacent faces
-	 * with a dihedral angle greater than \c maxAngle degrees 
+	 * with a dihedral angle greater than \c maxAngle degrees
 	 * are topologically disconnected.
-	 * 
+	 *
 	 * On the other hand, if the angle is less than \a maxAngle, the code
 	 * ensures that the faces  reference the same vertices.
 	 * This step is very useful as a pre-process when generating
@@ -237,8 +245,8 @@ public:
 	void serialize(Stream *stream) const;
 
 	/**
-	 * \brief Build a discrete probability distribution 
-	 * for sampling. 
+	 * \brief Build a discrete probability distribution
+	 * for sampling.
 	 *
 	 * Called once while loading the scene
 	 */
@@ -254,10 +262,10 @@ public:
 	 * \param its
 	 *     Intersection record associated with the query
 	 * \param dndu
-	 *     Parameter used to store the partial derivative of the 
+	 *     Parameter used to store the partial derivative of the
 	 *     normal vector with respect to \c u
 	 * \param dndv
-	 *     Parameter used to store the partial derivative of the 
+	 *     Parameter used to store the partial derivative of the
 	 *     normal vector with respect to \c v
 	 * \param shadingFrame
 	 *     Specifies whether to compute the derivative of the
@@ -284,7 +292,7 @@ public:
 
 	/// Export an Wavefront OBJ version of this file
 	void writeOBJ(const fs::path &path) const;
-	
+
 	/// Return a string representation
 	std::string toString() const;
 
@@ -298,7 +306,7 @@ protected:
 
 	/// Virtual destructor
 	virtual ~TriMesh();
-	
+
 	/// Load a Mitsuba compressed triangle mesh substream
 	void loadCompressed(Stream *stream, int idx = 0);
 

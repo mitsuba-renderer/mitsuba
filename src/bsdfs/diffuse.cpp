@@ -28,7 +28,7 @@ MTS_NAMESPACE_BEGIN
  * \icon{bsdf_diffuse}
  * \parameters{
  *     \parameter{reflectance}{\Spectrum\Or\Texture}{
- *       Specifies the diffuse albedo of the 
+ *       Specifies the diffuse albedo of the
  *       material \default{0.5}
  *     }
  * }
@@ -41,22 +41,22 @@ MTS_NAMESPACE_BEGIN
  * }
  *
  * The smooth diffuse material (also referred to as ``Lambertian'')
- * represents an ideally diffuse material with a user-specified amount of 
- * reflectance. Any received illumination is scattered so that the surface 
+ * represents an ideally diffuse material with a user-specified amount of
+ * reflectance. Any received illumination is scattered so that the surface
  * looks the same independently of the direction of observation.
  *
- * Apart from a  homogeneous reflectance value, the plugin can also accept 
- * a nested or referenced texture map to be used as the source of reflectance 
+ * Apart from a  homogeneous reflectance value, the plugin can also accept
+ * a nested or referenced texture map to be used as the source of reflectance
  * information, which is then mapped onto the shape based on its UV
- * parameterization. When no parameters are specified, the model uses the default 
+ * parameterization. When no parameters are specified, the model uses the default
  * of 50% reflectance.
  *
- * Note that this material is one-sided---that is, observed from the 
- * back side, it will be completely black. If this is undesirable, 
+ * Note that this material is one-sided---that is, observed from the
+ * back side, it will be completely black. If this is undesirable,
  * consider using the \pluginref{twosided} BRDF adapter plugin.
  * \vspace{4mm}
  *
- * \begin{xml}[caption={A diffuse material, whose reflectance is specified 
+ * \begin{xml}[caption={A diffuse material, whose reflectance is specified
  *     as an sRGB color}, label=lst:diffuse-uniform]
  * <bsdf type="diffuse">
  *     <srgb name="reflectance" value="#6d7185"/>
@@ -74,16 +74,16 @@ MTS_NAMESPACE_BEGIN
  */
 class SmoothDiffuse : public BSDF {
 public:
-	SmoothDiffuse(const Properties &props) 
+	SmoothDiffuse(const Properties &props)
 		: BSDF(props) {
 		/* For better compatibility with other models, support both
 		   'reflectance' and 'diffuseReflectance' as parameter names */
 		m_reflectance = new ConstantSpectrumTexture(props.getSpectrum(
-			props.hasProperty("reflectance") ? "reflectance" 
+			props.hasProperty("reflectance") ? "reflectance"
 				: "diffuseReflectance", Spectrum(.5f)));
 	}
 
-	SmoothDiffuse(Stream *stream, InstanceManager *manager) 
+	SmoothDiffuse(Stream *stream, InstanceManager *manager)
 		: BSDF(stream, manager) {
 		m_reflectance = static_cast<Texture *>(manager->getInstance(stream));
 
@@ -109,17 +109,17 @@ public:
 
 	Spectrum eval(const BSDFSamplingRecord &bRec, EMeasure measure) const {
 		if (!(bRec.typeMask & EDiffuseReflection) || measure != ESolidAngle
-			|| Frame::cosTheta(bRec.wi) <= 0 
+			|| Frame::cosTheta(bRec.wi) <= 0
 			|| Frame::cosTheta(bRec.wo) <= 0)
 			return Spectrum(0.0f);
-			
+
 		return m_reflectance->eval(bRec.its)
 			* (INV_PI * Frame::cosTheta(bRec.wo));
 	}
 
 	Float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const {
 		if (!(bRec.typeMask & EDiffuseReflection) || measure != ESolidAngle
-			|| Frame::cosTheta(bRec.wi) <= 0 
+			|| Frame::cosTheta(bRec.wi) <= 0
 			|| Frame::cosTheta(bRec.wo) <= 0)
 			return 0.0f;
 
@@ -127,7 +127,7 @@ public:
 	}
 
 	Spectrum sample(BSDFSamplingRecord &bRec, const Point2 &sample) const {
-		if (!(bRec.typeMask & EDiffuseReflection) || Frame::cosTheta(bRec.wi) <= 0) 
+		if (!(bRec.typeMask & EDiffuseReflection) || Frame::cosTheta(bRec.wi) <= 0)
 			return Spectrum(0.0f);
 
 		bRec.wo = Warp::squareToCosineHemisphere(sample);
@@ -150,7 +150,7 @@ public:
 	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
-		if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) 
+		if (child->getClass()->derivesFrom(MTS_CLASS(Texture))
 				&& (name == "reflectance" || name == "diffuseReflectance")) {
 			m_reflectance = static_cast<Texture *>(child);
 		} else {
@@ -184,11 +184,11 @@ private:
 	ref<Texture> m_reflectance;
 };
 
-// ================ Hardware shader implementation ================ 
+// ================ Hardware shader implementation ================
 
 class SmoothDiffuseShader : public Shader {
 public:
-	SmoothDiffuseShader(Renderer *renderer, const Texture *reflectance) 
+	SmoothDiffuseShader(Renderer *renderer, const Texture *reflectance)
 		: Shader(renderer, EBSDFShader), m_reflectance(reflectance) {
 		m_reflectanceShader = renderer->registerShaderForResource(m_reflectance.get());
 	}
@@ -225,7 +225,7 @@ private:
 	ref<Shader> m_reflectanceShader;
 };
 
-Shader *SmoothDiffuse::createShader(Renderer *renderer) const { 
+Shader *SmoothDiffuse::createShader(Renderer *renderer) const {
 	return new SmoothDiffuseShader(renderer, m_reflectance.get());
 }
 

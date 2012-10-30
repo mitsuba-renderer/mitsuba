@@ -28,7 +28,7 @@ ReplayableSampler::ReplayableSampler() : Sampler(Properties()) {
 	m_sampleIndex = 0;
 }
 
-ReplayableSampler::ReplayableSampler(Stream *stream, InstanceManager *manager) 
+ReplayableSampler::ReplayableSampler(Stream *stream, InstanceManager *manager)
 	: Sampler(stream, manager) {
 	m_initial = static_cast<Random *>(manager->getInstance(stream));
 	m_random = new Random();
@@ -94,7 +94,7 @@ std::string ReplayableSampler::toString() const {
 	std::ostringstream oss;
 	oss << "ReplayableSampler[" << endl
 		<< "  sampleCount = " << m_sampleCount << endl
-		<< "]"; 
+		<< "]";
 	return oss.str();
 }
 

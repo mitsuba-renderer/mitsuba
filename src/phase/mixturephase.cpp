@@ -28,7 +28,7 @@ MTS_NAMESPACE_BEGIN
  *     mixed according to the specified weights}
  * }
  *
- * This plugin implements a ``mixture'' scattering model analogous to \pluginref{mixturebsdf}, 
+ * This plugin implements a ``mixture'' scattering model analogous to \pluginref{mixturebsdf},
  * which represents linear combinations of multiple phase functions. There is no
  * limit on how many phase function can be mixed, but their combination
  * weights must be non-negative and sum to a value of one or less to ensure
@@ -37,10 +37,10 @@ MTS_NAMESPACE_BEGIN
 
 class MixturePhase : public PhaseFunction {
 public:
-	MixturePhase(const Properties &props) 
+	MixturePhase(const Properties &props)
 		: PhaseFunction(props) {
 		/* Parse the weight parameter */
-		std::vector<std::string> weights = 
+		std::vector<std::string> weights =
 			tokenize(props.getString("weights", ""), " ,;");
 		if (weights.size() == 0)
 			Log(EError, "No weights were supplied!");
@@ -57,7 +57,7 @@ public:
 		}
 	}
 
-	MixturePhase(Stream *stream, InstanceManager *manager) 
+	MixturePhase(Stream *stream, InstanceManager *manager)
 	 : PhaseFunction(stream, manager) {
 		size_t phaseCount = stream->readSize();
 		m_weights.resize(phaseCount);
@@ -77,7 +77,7 @@ public:
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		PhaseFunction::serialize(stream, manager);
-		
+
 		stream->writeSize(m_phaseFunctions.size());
 		for (size_t i=0; i<m_phaseFunctions.size(); ++i) {
 			stream->writeFloat(m_weights[i]);
@@ -166,7 +166,7 @@ public:
 
 		result *= m_weights[entry] * pdf;
 		pdf *= m_pdf[entry];
-		
+
 		for (size_t i=0; i<m_phaseFunctions.size(); ++i) {
 			if (entry == i)
 				continue;
@@ -198,7 +198,7 @@ public:
 		}
 		oss << " }," << endl
 			<< "  phaseFunctions = {" << endl;
-		for (size_t i=0; i<m_phaseFunctions.size(); ++i) 
+		for (size_t i=0; i<m_phaseFunctions.size(); ++i)
 			oss << "    " << indent(m_phaseFunctions[i]->toString(), 2) << "," << endl;
 		oss << "  }" << endl
 			<< "]";

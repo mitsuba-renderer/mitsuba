@@ -20,7 +20,7 @@
 #include <mitsuba/core/sstream.h>
 #include <mitsuba/core/sched_remote.h>
 
-ServerThread::ServerThread(Logger *logger, int listenPort, const std::string &nodeName) 
+ServerThread::ServerThread(Logger *logger, int listenPort, const std::string &nodeName)
 	: Thread("serv"), m_listenPort(listenPort), m_nodeName(nodeName) {
 	setLogger(logger);
 }
@@ -49,8 +49,8 @@ void ServerThread::run() {
 	m_active = true;
 	bool hostNameSet = m_nodeName != getFQDN();
 
-	snprintf(portName, sizeof(portName), "%i", m_listenPort); 
-	if ((rv = getaddrinfo(hostNameSet ? m_nodeName.c_str() : NULL, portName, &hints, &servinfo)) != 0) 
+	snprintf(portName, sizeof(portName), "%i", m_listenPort);
+	if ((rv = getaddrinfo(hostNameSet ? m_nodeName.c_str() : NULL, portName, &hints, &servinfo)) != 0)
 		SLog(EError, "Error in getaddrinfo(%s:%i): %s", m_nodeName.c_str(), m_listenPort, gai_strerror(rv));
 
 	for (p = servinfo; p != NULL; p = p->ai_next) {
@@ -83,7 +83,7 @@ void ServerThread::run() {
 	if (listen(m_socket, CONN_BACKLOG) == -1)
 		SocketStream::handleError("bind");
 
-	SLog(EInfo, "%s: Listening on port %i.. Close the window to stop.", 
+	SLog(EInfo, "%s: Listening on port %i.. Close the window to stop.",
 		m_nodeName.c_str(), m_listenPort);
 
 	fd_set fds;
@@ -105,7 +105,7 @@ void ServerThread::run() {
 		memset(&sockaddr, 0, addrlen);
 
 		SOCKET newSocket = accept(m_socket, (struct sockaddr *) &sockaddr, &addrlen);
-		
+
 		if (newSocket == INVALID_SOCKET) {
 #if defined(__WINDOWS__)
 			if(!m_active)
@@ -118,20 +118,20 @@ void ServerThread::run() {
 			continue;
 		}
 
-		ref<StreamBackend> backend = new StreamBackend(formatString("con%i", connectionIndex++), 
+		ref<StreamBackend> backend = new StreamBackend(formatString("con%i", connectionIndex++),
 				scheduler, m_nodeName, new SocketStream(newSocket), true);
 		backend->start();
 	}
 
-#if defined(__WINDOWS__)	
+#if defined(__WINDOWS__)
 	closesocket(m_socket);
 #else
 	close(m_socket);
 #endif
 }
 
-ServerWidget::ServerWidget(QWidget *parent, 
-		const QString &nodeName, int listenPort) 
+ServerWidget::ServerWidget(QWidget *parent,
+		const QString &nodeName, int listenPort)
 		: QMainWindow(parent) {
 	m_contents = new QTextEdit(this);
 	QFont font("Monospace");
@@ -174,7 +174,7 @@ ServerWidget::ServerWidget(QWidget *parent,
 	m_logger = new Logger(Thread::getThread()->getLogger()->getLogLevel());
 	m_logger->addAppender(consoleAppender);
 	m_logger->setFormatter(new DefaultFormatter());
-	connect(consoleAppender, SIGNAL(textMessage(ELogLevel, const QString &)), 
+	connect(consoleAppender, SIGNAL(textMessage(ELogLevel, const QString &)),
 		this, SLOT(onTextMessage(ELogLevel, const QString &)), Qt::QueuedConnection);
 
 	m_thread = new ServerThread(m_logger, listenPort, nodeName.toStdString());
@@ -187,15 +187,15 @@ ServerWidget::~ServerWidget() {
 void ServerWidget::onTextMessage(ELogLevel level, const QString &message) {
 	QColor color;
 	switch (level) {
-		case ETrace: 
-		case EDebug: 
+		case ETrace:
+		case EDebug:
 		case EInfo:
 			color = Qt::gray;
 			break;
 		case EError:
 			color = Qt::red;
 			break;
-		case EWarn: 
+		case EWarn:
 		default:
 			color = QColor(255,180,180);
 			break;
@@ -216,7 +216,7 @@ void ServerWidget::show() {
 		QDesktopWidget *desktop = QApplication::desktop();
 		QRect geo = desktop->screenGeometry();
 		QPoint windowPos(
-			geo.left() + (geo.width() - width()) / 2, 
+			geo.left() + (geo.width() - width()) / 2,
 			geo.top() + (geo.height() - height())/2
 		);
 		move(windowPos);

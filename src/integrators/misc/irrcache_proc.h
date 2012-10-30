@@ -71,14 +71,14 @@ private:
  */
 class OvertureProcess : public BlockedImageProcess {
 public:
-	OvertureProcess(const RenderJob *job, int resolution, bool gradients, 
+	OvertureProcess(const RenderJob *job, int resolution, bool gradients,
 		bool clampNeighbor, bool clampScreen, Float quality);
 
 	inline const IrradianceRecordVector *getSamples() const {
 		return m_samples.get();
 	}
 
-	ref<WorkProcessor> createWorkProcessor() const; 
+	ref<WorkProcessor> createWorkProcessor() const;
 	void processResult(const WorkResult *wr, bool cancelled);
 	void bindResource(const std::string &name, int id);
 

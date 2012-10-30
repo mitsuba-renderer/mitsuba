@@ -32,20 +32,20 @@ MTS_NAMESPACE_BEGIN
  *     \unframedrendering{A projection of the first 1024 points
  *     onto the first two dimensions. Note the sample clumping.}{sampler_independent}
  * }
- * 
+ *
  * The independent sampler produces a stream of independent and uniformly
  * distributed pseudorandom numbers. Internally, it relies on a fast SIMD version
  * of the Mersenne Twister random number generator \cite{Saito2008SIMD}.
  *
- * This is the most basic sample generator; because no precautions are taken to avoid 
+ * This is the most basic sample generator; because no precautions are taken to avoid
  * sample clumping, images produced using this plugin will usually take longer to converge.
  * In theory, this sampler is initialized using a deterministic procedure, which means
- * that subsequent runs of Mitsuba should create the same image. In practice, when 
- * rendering with multiple threads and/or machines, this is not true anymore, since the 
+ * that subsequent runs of Mitsuba should create the same image. In practice, when
+ * rendering with multiple threads and/or machines, this is not true anymore, since the
  * ordering of samples is influenced by the operating system scheduler.
  *
  * Note that the Metropolis-type integrators implemented in Mitsuba are incompatible with
- * the more sophisticated sample generators shown in this section. They \emph{require} this 
+ * the more sophisticated sample generators shown in this section. They \emph{require} this
  * specific sampler and refuse to work otherwise.
  */
 class IndependentSampler : public Sampler {
@@ -58,7 +58,7 @@ public:
 		m_random = new Random();
 	}
 
-	IndependentSampler(Stream *stream, InstanceManager *manager) 
+	IndependentSampler(Stream *stream, InstanceManager *manager)
 	 : Sampler(stream, manager) {
 		m_random = static_cast<Random *>(manager->getInstance(stream));
 	}
@@ -106,7 +106,7 @@ public:
 		std::ostringstream oss;
 		oss << "IndependentSampler[" << endl
 			<< "  sampleCount = " << m_sampleCount << endl
-			<< "]"; 
+			<< "]";
 		return oss.str();
 	}
 

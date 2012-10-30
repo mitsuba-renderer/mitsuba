@@ -38,7 +38,7 @@
  * \brief Render cube/hemicube shadow maps in a single pass?
  * (using multiple render targets and geometry shaders)
  *
- * Some benchmarking on different ATI/NVidia hardware shows that 
+ * Some benchmarking on different ATI/NVidia hardware shows that
  * this is *always* slower! So it is disabled for now.
  */
 //#define MTS_VPL_USE_SINGLE_PASS
@@ -50,7 +50,7 @@ MTS_NAMESPACE_BEGIN
 static StatsCounter statsMaxResidentShaders("VPL renderer", "Max. # of resident shaders", EMaximumValue);
 static StatsCounter statsMaxTriangles("VPL renderer", "Max. # of drawn triangles", EMaximumValue);
 
-VPLShaderManager::VPLShaderManager(Renderer *renderer) 
+VPLShaderManager::VPLShaderManager(Renderer *renderer)
 		: m_renderer(renderer) {
 	m_shadowMapResolution = 0;
 	m_clamping = 0.1f;
@@ -100,7 +100,7 @@ void VPLShaderManager::setScene(const Scene *scene) {
 
 			if (shape->getClass()->getName() == "Instance") {
 				const Instance *instance = static_cast<const Instance *>(shape);
-				const std::vector<const Shape *> &instantiatedShapes = 
+				const std::vector<const Shape *> &instantiatedShapes =
 						instance->getShapeGroup()->getKDTree()->getShapes();
 
 				for (size_t j=0; j<instantiatedShapes.size(); ++j) {
@@ -156,7 +156,7 @@ void VPLShaderManager::setScene(const Scene *scene) {
 
 		if (shape->getClass()->getName() == "Instance") {
 			const Instance *instance = static_cast<const Instance *>(shape);
-			const std::vector<const Shape *> &instantiatedShapes = 
+			const std::vector<const Shape *> &instantiatedShapes =
 					instance->getShapeGroup()->getKDTree()->getShapes();
 			const Matrix4x4 &trafo = instance->getWorldTransform().getMatrix();
 
@@ -175,7 +175,7 @@ void VPLShaderManager::setScene(const Scene *scene) {
 				gpuGeo->setShader(shader);
 				m_geometry.push_back(std::make_pair(gpuGeo, trafo));
 
-				if (shader && !(shader->getFlags() & Shader::ETransparent)) 
+				if (shader && !(shader->getFlags() & Shader::ETransparent))
 					m_opaqueGeometry.push_back(std::make_pair(gpuGeo, trafo));
 			}
 		} else {
@@ -192,7 +192,7 @@ void VPLShaderManager::setScene(const Scene *scene) {
 			gpuGeo->setShader(shader);
 			m_geometry.push_back(std::make_pair(gpuGeo, identityTrafo));
 
-			if (shader && !(shader->getFlags() & Shader::ETransparent)) 
+			if (shader && !(shader->getFlags() & Shader::ETransparent))
 				m_opaqueGeometry.push_back(std::make_pair(gpuGeo, identityTrafo));
 		}
 	}
@@ -218,7 +218,7 @@ void VPLShaderManager::setScene(const Scene *scene) {
 		prog->setSource(GPUProgram::EVertexProgram, sh_background_vert);
 		prog->setSource(GPUProgram::EFragmentProgram, code.c_str());
 		prog->define("BACKGROUND_EVAL_NAME", evalName + "_background");
-	
+
 		if (scene->getSensor()->getType() & Sensor::EOrthographicCamera)
 			prog->define("DIRECTIONAL_CAMERA");
 
@@ -250,7 +250,7 @@ void VPLShaderManager::setVPL(const VPL &vpl) {
 			Point2 sample = sample02(i);
 
 			Ray ray;
-			if (vpl.type == ESurfaceVPL || (vpl.type == EPointEmitterVPL && 
+			if (vpl.type == ESurfaceVPL || (vpl.type == EPointEmitterVPL &&
 						vpl.emitter->getType() & Emitter::EOnSurface)) {
 				ray = Ray(vpl.its.p, vpl.its.shFrame.toWorld(
 							Warp::squareToCosineHemisphere(sample)), 0);
@@ -312,7 +312,7 @@ void VPLShaderManager::setVPL(const VPL &vpl) {
 			m_farClip *= 1.5f;
 		}
 
-		m_shadowMapTransform = 
+		m_shadowMapTransform =
 			(Transform::translate(Vector(vpl.its.p)) *
 			Transform::fromFrame(vpl.its.shFrame)).inverse();
 	} else {
@@ -321,15 +321,15 @@ void VPLShaderManager::setVPL(const VPL &vpl) {
 			m_scene->getKDTree()->getAABB(), vpl.its.shFrame.n);
 	}
 
-	bool is2D = 
-		m_shadowMapType == ShadowMapGenerator::EParaboloid || 
+	bool is2D =
+		m_shadowMapType == ShadowMapGenerator::EParaboloid ||
 		m_shadowMapType == ShadowMapGenerator::EDirectional;
 
 	if (is2D) {
 		if (!m_shadowMap2D || m_shadowMap2D->getSize().x != m_shadowMapResolution) {
 			if (m_shadowMap2D)
 				m_shadowMap2D->cleanup();
-			m_shadowMap2D = m_shadowGen->allocate(m_renderer, 
+			m_shadowMap2D = m_shadowGen->allocate(m_renderer,
 				m_shadowMapType, m_shadowMapResolution);
 		}
 		m_shadowMap = m_shadowMap2D;
@@ -337,7 +337,7 @@ void VPLShaderManager::setVPL(const VPL &vpl) {
 		if (!m_shadowMapCube || m_shadowMapCube->getSize().x != m_shadowMapResolution) {
 			if (m_shadowMapCube)
 				m_shadowMapCube->cleanup();
-			m_shadowMapCube = m_shadowGen->allocate(m_renderer, 
+			m_shadowMapCube = m_shadowGen->allocate(m_renderer,
 				m_shadowMapType, m_shadowMapResolution);
 		}
 		m_shadowMap = m_shadowMapCube;
@@ -345,7 +345,7 @@ void VPLShaderManager::setVPL(const VPL &vpl) {
 
 	Float sample = sampleTEAFloat(m_vplIndex++, 0x12345);
 	m_shadowGen->render(m_renderer, m_shadowMap, m_shadowMapType,
-			m_shadowMapTransform, m_nearClip, m_farClip, 
+			m_shadowMapTransform, m_nearClip, m_farClip,
 			sample > 0.3 ? m_opaqueGeometry : m_geometry);
 
 	/* Convert between the Mitsuba and OpenGL matrix conventions */
@@ -353,13 +353,13 @@ void VPLShaderManager::setVPL(const VPL &vpl) {
 		Vector(-1.0f, 1.0f, -1.0f)) * m_shadowMapTransform;
 }
 
-void VPLShaderManager::bind(const VPL &vpl, const BSDF *bsdf, const Sensor *sensor, 
+void VPLShaderManager::bind(const VPL &vpl, const BSDF *bsdf, const Sensor *sensor,
 		const Emitter *emitter, const Matrix4x4 &instanceTransform, bool faceNormals) {
 	Shader *bsdfShader = m_renderer->getShaderForResource(bsdf);
 	Shader *vplShader = (vpl.type == EPointEmitterVPL || vpl.type == EDirectionalEmitterVPL)
 		? m_renderer->getShaderForResource(vpl.emitter)
 		: m_renderer->getShaderForResource(vpl.its.getBSDF());
-	Shader *emitterShader = (emitter == NULL) ? NULL 
+	Shader *emitterShader = (emitter == NULL) ? NULL
 		: m_renderer->getShaderForResource(emitter);
 
 	/* Find situations in which we won't be able to render the
@@ -391,17 +391,17 @@ void VPLShaderManager::bind(const VPL &vpl, const BSDF *bsdf, const Sensor *sens
 			prog->init();
 			prog->incRef();
 			m_currentProgram.program = prog;
-		
+
 			m_currentProgram.param_instanceTransform = prog->getParameterID("instanceTransform", false);
 			m_configurations["unsupported"] = m_currentProgram;
 		}
 		GPUProgram *prog = m_currentProgram.program;
 		prog->bind();
-		prog->setParameter(m_currentProgram.param_instanceTransform, instanceTransform);	
+		prog->setParameter(m_currentProgram.param_instanceTransform, instanceTransform);
 		return;
 	}
 
-	m_targetConfiguration = VPLConfiguration(vplShader, 
+	m_targetConfiguration = VPLConfiguration(vplShader,
 		bsdfShader, emitterShader, faceNormals);
 
 	m_alpha = bsdfShader->getAlpha();
@@ -443,7 +443,7 @@ void VPLShaderManager::bind(const VPL &vpl, const BSDF *bsdf, const Sensor *sens
 			prog->setOutputGeometryType(GPUProgram::ETriangleStrips);
 			prog->setMaxVertices(3);
 		}
-		
+
 		std::string code(sh_render_frag);
 		std::string marker(SUPPLEMENTAL_CODE_MARKER);
 		size_t insertionPos = code.find(marker);
@@ -480,8 +480,8 @@ void VPLShaderManager::bind(const VPL &vpl, const BSDF *bsdf, const Sensor *sens
 			else
 				prog->define("VPL_EVAL_NAME", vplEvalName);
 		}
-			
-		if (vpl.type == ESurfaceVPL || (vpl.type == EPointEmitterVPL && 
+
+		if (vpl.type == ESurfaceVPL || (vpl.type == EPointEmitterVPL &&
 				vpl.emitter->getType() & Emitter::EOnSurface))
 			prog->define("VPL_ON_SURFACE");
 
@@ -515,15 +515,15 @@ void VPLShaderManager::bind(const VPL &vpl, const BSDF *bsdf, const Sensor *sens
 		m_currentProgram.param_shadowMap         = prog->getParameterID("shadowMap", false);
 		m_currentProgram.resolve(prog);
 		m_configurations[fingerprint] = m_currentProgram;
-	
+
 		statsMaxResidentShaders.recordMaximum(m_configurations.size() + m_shadowGen->getShaderCount());
 	}
-		
+
 	GPUProgram *prog = m_currentProgram.program;
 	prog->bind();
 
 	Float minDist = m_nearClip + (m_farClip - m_nearClip) * m_clamping;
-	prog->setParameter(m_currentProgram.param_instanceTransform, instanceTransform);	
+	prog->setParameter(m_currentProgram.param_instanceTransform, instanceTransform);
 	prog->setParameter(m_currentProgram.param_vplTransform, m_shadowMapTransform);
 	prog->setParameter(m_currentProgram.param_depthRange, Vector2(m_nearClip, m_farClip));
 	prog->setParameter(m_currentProgram.param_vplPower, vpl.P);
@@ -570,11 +570,11 @@ void VPLShaderManager::drawAllGeometryForVPL(const VPL &vpl, const Sensor *senso
 	Matrix4x4 currentObjTrafo;
 	currentObjTrafo.setIdentity();
 	m_shadowMap->bind(0);
-	
+
 	m_renderer->beginDrawingMeshes();
 
 	size_t nTriangles = 0;
-	for (std::vector<Renderer::TransformedGPUGeometry>::const_iterator it = m_geometry.begin(); 
+	for (std::vector<Renderer::TransformedGPUGeometry>::const_iterator it = m_geometry.begin();
 			it != m_geometry.end(); ++it) {
 		const GPUGeometry *geo = (*it).first;
 		const Matrix4x4 &trafo = (*it).second;
@@ -598,7 +598,7 @@ void VPLShaderManager::drawAllGeometryForVPL(const VPL &vpl, const Sensor *senso
 		} else if (trafo != currentObjTrafo) {
 			if (m_currentProgram.program)
 				m_currentProgram.program->setParameter(
-					m_currentProgram.param_instanceTransform, trafo);	
+					m_currentProgram.param_instanceTransform, trafo);
 			currentObjTrafo = trafo;
 		}
 
@@ -616,18 +616,18 @@ void VPLShaderManager::drawAllGeometryForVPL(const VPL &vpl, const Sensor *senso
 	m_renderer->checkError();
 }
 
-void VPLShaderManager::drawBackground(const Sensor *sensor, 
+void VPLShaderManager::drawBackground(const Sensor *sensor,
 		const Transform &projectionTransform, Float scaleFactor) {
 	if (m_backgroundProgram == NULL)
 		return;
 
 	const Transform &trafo = sensor->getWorldTransform()->eval(0);
 
-	Transform clipToWorld = trafo 
+	Transform clipToWorld = trafo
 		* Transform::scale(Vector(-1, 1, -1)) * projectionTransform.inverse();
 
 	GPUProgram *prog = m_backgroundProgram;
-	int tuOffset = 0;	
+	int tuOffset = 0;
 	prog->bind();
 	m_backgroundDependencies.bind(prog, m_backgroundDependencies, tuOffset);
 

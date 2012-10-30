@@ -35,7 +35,7 @@ MTS_NAMESPACE_BEGIN
 #define MTS_YEAR "2012"
 
 /**
- * \brief A simple data structure for representing and 
+ * \brief A simple data structure for representing and
  * comparing Mitsuba version strings
  *
  * \ingroup libcore
@@ -44,17 +44,17 @@ struct MTS_EXPORT_CORE Version {
 public:
 	/// Default constructor: initialize to an invalid version (0.0.0)
 	inline Version() : m_major(0), m_minor(0), m_release(0) { }
-	
+
 	/// Initialize with the specified version number
 	inline Version(int major, int minor, int release)
 		: m_major(major), m_minor(minor), m_release(release) { }
 
 	/**
-	 * \brief Parse a version string of the form "major.minor.release" 
+	 * \brief Parse a version string of the form "major.minor.release"
 	 * and turn it into a \ref Version structure
 	 */
 	Version(const std::string &versionString);
-	
+
 	/// Check if this program version is \a older than \c other
 	inline bool operator<(const Version &other) const {
 		if (m_major < other.m_major)
@@ -78,8 +78,8 @@ public:
 
 	/// Check if two program versions match
 	inline bool operator==(const Version &other) const {
-		return m_major == other.m_major 
-			&& m_minor == other.m_minor 
+		return m_major == other.m_major
+			&& m_minor == other.m_minor
 			&& m_release == other.m_release;
 	}
 
@@ -102,11 +102,11 @@ public:
 
 	/// Return the major version
 	inline int getMajorVersion() const { return m_major; }
-	
+
 	/// Return the minor version
 	inline int getMinorVersion() const { return m_minor; }
 
-	/// Return the release 
+	/// Return the release
 	inline int getRelease() const { return m_release; }
 private:
 	int m_major;

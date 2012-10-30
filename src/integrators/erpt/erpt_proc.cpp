@@ -31,9 +31,9 @@
 
 MTS_NAMESPACE_BEGIN
 
-static StatsCounter statsAccepted("Energy redistribution path tracing", 
+static StatsCounter statsAccepted("Energy redistribution path tracing",
 		"Accepted mutations", EPercentage);
-static StatsCounter statsChainsPerPixel("Energy redistribution path tracing", 
+static StatsCounter statsChainsPerPixel("Energy redistribution path tracing",
 		"Chains started per pixel", EAverage);
 
 /* ==================================================================== */
@@ -45,7 +45,7 @@ public:
 	Point2i origOffset;
 	Vector2i origSize;
 
-	ERPTWorkResult(const Vector2i &size, const ReconstructionFilter *filter) 
+	ERPTWorkResult(const Vector2i &size, const ReconstructionFilter *filter)
 		: ImageBlock(Bitmap::ESpectrum, size, filter) { }
 
 	void load(Stream *stream) {
@@ -67,15 +67,15 @@ public:
 
 class ERPTRenderer : public WorkProcessor {
 public:
-	ERPTRenderer(const ERPTConfiguration &conf) 
+	ERPTRenderer(const ERPTConfiguration &conf)
 		: m_config(conf) {
 	}
 
-	ERPTRenderer(Stream *stream, InstanceManager *manager) 
+	ERPTRenderer(Stream *stream, InstanceManager *manager)
 		: WorkProcessor(stream, manager) {
 		m_config = ERPTConfiguration(stream);
 	}
-	
+
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		m_config.serialize(stream);
 	}
@@ -103,7 +103,7 @@ public:
 		m_scene->wakeup(NULL, m_resources);
 		m_scene->initializeBidirectional();
 
-		m_pathSampler = new PathSampler(PathSampler::EBidirectional, m_scene, 
+		m_pathSampler = new PathSampler(PathSampler::EBidirectional, m_scene,
 			m_sampler, m_sampler, m_sampler, m_config.maxDepth, 10,
 			m_config.separateDirect, true, true);
 
@@ -111,7 +111,7 @@ public:
 
 		/* Jump sizes recommended by Eric Veach */
 		Float minJump = 0.1f, coveredArea = 0.05f;
-	
+
 		/* Register all available mutators */
 		if (m_config.bidirectionalMutation)
 			m_mutators.push_back(new BidirectionalMutator(m_scene, m_indepSampler,
@@ -167,7 +167,7 @@ public:
 		if (numChains == 0)
 			return;
 
-		Float depositionEnergy = weight / (m_sampler->getSampleCount() 
+		Float depositionEnergy = weight / (m_sampler->getSampleCount()
 				* meanChains * m_config.chainLength);
 
 		DiscreteDistribution suitabilities(m_mutators.size());
@@ -180,7 +180,7 @@ public:
 		size_t mutations = 0;
 
 		#if defined(MTS_BD_DEBUG_HEAVY)
-			if (!path.verify(m_scene, EImportance, oss)) 
+			if (!path.verify(m_scene, EImportance, oss))
 				Log(EError, "Started ERPT with an invalid path: %s", oss.str().c_str());
 		#endif
 
@@ -200,7 +200,7 @@ public:
 				int mutatorIdx = -1;
 				bool success = false;
 				Mutator *mutator = NULL;
-		
+
 				if (suitabilities.normalize() == 0) {
 					/* No mutator can handle this path -- give up */
 					accumulatedWeight += m_config.chainLength - it;
@@ -245,7 +245,7 @@ public:
 					#endif
 
 					accumulatedWeight += 1-a;
-					
+
 					/* Accept with probability 'a' */
 					if (a == 1 || m_indepSampler->next1D() < a) {
 						Spectrum value = relWeight * (accumulatedWeight * depositionEnergy);
@@ -292,14 +292,14 @@ public:
 		m_result = static_cast<ERPTWorkResult *>(workResult);
 		m_result->origOffset = rect->getOffset();
 		m_result->origSize = rect->getSize();
-		
+
 		m_hilbertCurve.initialize(TVector2<uint8_t>(rect->getSize()));
 		m_result->clear();
-		boost::function<void (int, int, Float, Path &)> callback 
+		boost::function<void (int, int, Float, Path &)> callback
 			= boost::bind(&ERPTRenderer::pathCallback, this, _1, _2, _3, _4, &stop);
 
 		for (size_t i=0; i<m_hilbertCurve.getPointCount(); ++i) {
-			if (stop) 
+			if (stop)
 				break;
 
 			statsChainsPerPixel.incrementBase();
@@ -339,9 +339,9 @@ private:
 /*                           Parallel process                           */
 /* ==================================================================== */
 
-ERPTProcess::ERPTProcess(const RenderJob *job, RenderQueue *queue, 
-	const ERPTConfiguration &conf, const Bitmap *directImage) 
-	: BlockedRenderProcess(job, queue, conf.blockSize), m_job(job), m_config(conf) { 
+ERPTProcess::ERPTProcess(const RenderJob *job, RenderQueue *queue,
+	const ERPTConfiguration &conf, const Bitmap *directImage)
+	: BlockedRenderProcess(job, queue, conf.blockSize), m_job(job), m_config(conf) {
 	m_directImage = directImage;
 }
 

@@ -192,7 +192,7 @@ extern "C" {
 		cinfo->src->next_input_byte = p->buffer;
 		return TRUE;
 	}
-  
+
 	METHODDEF(void) jpeg_skip_input_data (j_decompress_ptr cinfo, long num_bytes) {
 		if (num_bytes > 0) {
 			while (num_bytes > (long) cinfo->src->bytes_in_buffer) {
@@ -209,7 +209,7 @@ extern "C" {
 		delete[] p->buffer;
 	}
 
-	METHODDEF(void) jpeg_init_destination(j_compress_ptr cinfo) { 
+	METHODDEF(void) jpeg_init_destination(j_compress_ptr cinfo) {
 		jbuf_out_t *p = (jbuf_out_t *)cinfo->dest;
 
 		p->buffer = new JOCTET[jpeg_bufferSize];
@@ -217,7 +217,7 @@ extern "C" {
 		p->mgr.free_in_buffer = jpeg_bufferSize;
 	}
 
-	METHODDEF(boolean) jpeg_empty_output_buffer(j_compress_ptr cinfo) { 
+	METHODDEF(boolean) jpeg_empty_output_buffer(j_compress_ptr cinfo) {
 		jbuf_out_t *p = (jbuf_out_t *)cinfo->dest;
 		p->stream->write(p->buffer, jpeg_bufferSize);
 		p->mgr.next_output_byte = p->buffer;
@@ -227,7 +227,7 @@ extern "C" {
 
 	METHODDEF(void) jpeg_term_destination(j_compress_ptr cinfo) {
 		jbuf_out_t *p = (jbuf_out_t *)cinfo->dest;
-		p->stream->write(p->buffer, 
+		p->stream->write(p->buffer,
 			jpeg_bufferSize-p->mgr.free_in_buffer);
 		delete[] p->buffer;
 		p->mgr.free_in_buffer = 0;
@@ -245,8 +245,8 @@ extern "C" {
  *        Bitmap class        *
  * ========================== */
 
-Bitmap::Bitmap(EPixelFormat pFormat, EComponentFormat cFormat, 
-		const Vector2i &size, int channelCount) : m_pixelFormat(pFormat), 
+Bitmap::Bitmap(EPixelFormat pFormat, EComponentFormat cFormat,
+		const Vector2i &size, int channelCount) : m_pixelFormat(pFormat),
 		m_componentFormat(cFormat), m_size(size), m_channelCount(channelCount) {
 	AssertEx(size.x > 0 && size.y > 0, "Invalid bitmap size");
 
@@ -312,12 +312,12 @@ Bitmap::Bitmap(EFileFormat format, Stream *stream, const std::string &prefix) : 
 void Bitmap::write(EFileFormat format, Stream *stream, int compression,
 		const std::vector<std::string> *channelNames) const {
 	switch (format) {
-		case EJPEG: 
+		case EJPEG:
 			if (compression == -1)
 				compression = 100;
 			writeJPEG(stream, compression);
 			break;
-		case EPNG: 
+		case EPNG:
 			if (compression == -1)
 				compression = 5;
 			writePNG(stream, compression);
@@ -377,7 +377,7 @@ int Bitmap::getBytesPerComponent() const {
 		case EFloat16: return 2; break;
 		case EFloat32: return 4; break;
 		case EFloat64: return 8; break;
-		case EBitmask: 
+		case EBitmask:
 			Log(EError, "Bitmask images have less than 1 byte per component!");
 			return -1;
 		default:
@@ -390,9 +390,9 @@ int Bitmap::getBytesPerComponent() const {
 void Bitmap::setString(const std::string &key, const std::string &value) {
 	m_metadata[key] = value;
 }
-	
+
 std::string Bitmap::getString(const std::string &key) const {
-	std::map<std::string, std::string>::const_iterator it = m_metadata.find(key); 
+	std::map<std::string, std::string>::const_iterator it = m_metadata.find(key);
 	if (it != m_metadata.end())
 		return it->second;
 	else
@@ -453,7 +453,7 @@ void Bitmap::accumulate(const Bitmap *bitmap, const Point2i &offset) {
 	const uint8_t *source = bitmap->getUInt8Data() +
 		(offsetX - offset.x + (offsetY - offset.y) * bitmap->getSize().x) * pixelStride;
 
-	uint8_t *target = m_data + 
+	uint8_t *target = m_data +
 		(offsetX + offsetY * m_size.x) * pixelStride;
 
 	for (int y = offsetY; y < endY; ++y) {
@@ -724,10 +724,10 @@ void Bitmap::convert(void *target, EPixelFormat pixelFormat,
 		(size_t) m_size.x * (size_t) m_size.y, multiplier, intent);
 }
 
-template <typename T> void tonemapReinhard(T *data, size_t pixels, Bitmap::EPixelFormat fmt, 
+template <typename T> void tonemapReinhard(T *data, size_t pixels, Bitmap::EPixelFormat fmt,
 		Float &logAvgLuminance, Float &maxLuminance, Float key, Float burn) {
 	int channels = 0;
-	
+
 	switch (fmt) {
 		case Bitmap::ERGB:
 		case Bitmap::EXYZ:
@@ -754,7 +754,7 @@ template <typename T> void tonemapReinhard(T *data, size_t pixels, Bitmap::EPixe
 		maxLuminance = 0;
 		logAvgLuminance = 0;
 
-		if (fmt == Bitmap::ERGB || channels == Bitmap::ERGBA) {
+		if (fmt == Bitmap::ERGB || fmt == Bitmap::ERGBA) {
 			/* RGB[A] version */
 			for (size_t i=0; i < pixels; ++i) {
 				Float luminance = (Float) (ptr[0] * (Float) 0.212671 + ptr[1] * (Float) 0.715160 + ptr[2] * (Float) 0.072169);
@@ -764,7 +764,7 @@ template <typename T> void tonemapReinhard(T *data, size_t pixels, Bitmap::EPixe
 				logAvgLuminance += math::fastlog(1e-3f + luminance);
 				ptr += channels;
 			}
-		} else if (fmt == Bitmap::EXYZ || channels == Bitmap::EXYZA) {
+		} else if (fmt == Bitmap::EXYZ || fmt == Bitmap::EXYZA) {
 			for (size_t i=0; i < pixels; ++i) {
 				Float luminance = (Float) ptr[1];
 				if (luminance == 1024) // ignore the "rendered by mitsuba banner.."
@@ -799,7 +799,7 @@ template <typename T> void tonemapReinhard(T *data, size_t pixels, Bitmap::EPixe
 	/* Having the 'burn' parameter scale as 1/b^4 provides a nicely behaved knob */
 	Float invWp2 = 1 / (Lwhite * Lwhite * std::pow(burn, (Float) 4));
 
-	if (fmt == Bitmap::ERGB || channels == Bitmap::ERGBA) {
+	if (fmt == Bitmap::ERGB || fmt == Bitmap::ERGBA) {
 		/* RGB[A] version */
 		for (size_t i=0; i < pixels; ++i) {
 			/* Convert ITU-R Rec. BT.709 linear RGB to XYZ tristimulus values */
@@ -828,7 +828,7 @@ template <typename T> void tonemapReinhard(T *data, size_t pixels, Bitmap::EPixe
 
 			data += channels;
 		}
-	} else if (fmt == Bitmap::EXYZ || channels == Bitmap::EXYZA) {
+	} else if (fmt == Bitmap::EXYZ || fmt == Bitmap::EXYZA) {
 		/* XYZ[A] version */
 		for (size_t i=0; i < pixels; ++i) {
 			Float X = static_cast<Float>(data[0]),
@@ -877,14 +877,14 @@ void Bitmap::tonemapReinhard(Float &logAvgLuminance, Float &maxLuminance, Float 
 	size_t pixels = (size_t) m_size.x * (size_t) m_size.y;
 
 	switch (m_componentFormat) {
-		case EFloat16: 
-			mitsuba::tonemapReinhard(getFloat16Data(), pixels, m_pixelFormat, logAvgLuminance, maxLuminance, key, burn); 
+		case EFloat16:
+			mitsuba::tonemapReinhard(getFloat16Data(), pixels, m_pixelFormat, logAvgLuminance, maxLuminance, key, burn);
 			break;
-		case EFloat32: 
-			mitsuba::tonemapReinhard(getFloat32Data(), pixels, m_pixelFormat, logAvgLuminance, maxLuminance, key, burn); 
+		case EFloat32:
+			mitsuba::tonemapReinhard(getFloat32Data(), pixels, m_pixelFormat, logAvgLuminance, maxLuminance, key, burn);
 			break;
 		case EFloat64:
-			mitsuba::tonemapReinhard(getFloat64Data(), pixels, m_pixelFormat, logAvgLuminance, maxLuminance, key, burn); 
+			mitsuba::tonemapReinhard(getFloat64Data(), pixels, m_pixelFormat, logAvgLuminance, maxLuminance, key, burn);
 			break;
 		default:
 			Log(EError, "Bitmap::tonemapReinhard(): Unsupported component format!");
@@ -944,7 +944,7 @@ ref<Bitmap> Bitmap::join(EPixelFormat fmt,
 
 		if (sourceBitmaps[i]->getComponentFormat() != ch0->getComponentFormat())
 			Log(EError, "Bitmap::join(): Detected a component format mismatch!");
-		
+
 		if (sourceBitmaps[i]->getPixelFormat() != ELuminance)
 			Log(EError, "Bitmap::join(): Detected a pixel format mismatch (expected ELuminance)!");
 	}
@@ -959,24 +959,24 @@ ref<Bitmap> Bitmap::join(EPixelFormat fmt,
 
 	uint8_t *dest = result->getUInt8Data();
 
-	for (size_t i = 0; i<pixelCount; ++i) 
-		for (size_t j = 0; j<channelCount; ++j) 
-			for (size_t k= 0; k < componentSize; ++k) 
+	for (size_t i = 0; i<pixelCount; ++i)
+		for (size_t j = 0; j<channelCount; ++j)
+			for (size_t k= 0; k < componentSize; ++k)
 				*dest++ = *pointers[j]++;
 
 	return result;
 }
-	
+
 ref<Bitmap> Bitmap::crop(const Point2i &offset, const Vector2i &size) const {
 	Assert(offset.x >= 0 && offset.y >= 0 &&
 	       offset.x + size.x <= m_size.x &&
 		   offset.y + size.y <= m_size.y);
-	
+
 	size_t pixelStride = getBytesPerPixel();
 	size_t sourceStride = pixelStride * m_size.x;
 	size_t targetStride = pixelStride * size.x;
 
-	ref<Bitmap> result = new Bitmap(m_pixelFormat, m_componentFormat, 
+	ref<Bitmap> result = new Bitmap(m_pixelFormat, m_componentFormat,
 			size, m_channelCount);
 
 	result->setGamma(m_gamma);
@@ -996,9 +996,9 @@ ref<Bitmap> Bitmap::crop(const Point2i &offset, const Vector2i &size) const {
 }
 
 /// Bitmap resampling utility function
-template <typename Scalar> static void resample(const ReconstructionFilter *rfilter, 
-	ReconstructionFilter::EBoundaryCondition bch, 
-	ReconstructionFilter::EBoundaryCondition bcv, 
+template <typename Scalar> static void resample(const ReconstructionFilter *rfilter,
+	ReconstructionFilter::EBoundaryCondition bch,
+	ReconstructionFilter::EBoundaryCondition bcv,
 	const Bitmap *source, Bitmap *target, Float minValue, Float maxValue) {
 	ref<Bitmap> temp; // Pointer to a temporary bitmap
 
@@ -1021,10 +1021,10 @@ template <typename Scalar> static void resample(const ReconstructionFilter *rfil
 		for (int y=0; y<source->getHeight(); ++y) {
 			const Scalar *srcPtr = (Scalar *) source->getUInt8Data()
 				+ y * source->getWidth() * channels;
-			Scalar *trgPtr = (Scalar *) temp->getUInt8Data() 
+			Scalar *trgPtr = (Scalar *) temp->getUInt8Data()
 				+ y * target->getWidth() * channels;
 
-			r.resampleAndClamp(srcPtr, 1, trgPtr, 1, channels, 
+			r.resampleAndClamp(srcPtr, 1, trgPtr, 1, channels,
 					(Scalar) minValue, (Scalar) maxValue);
 		}
 
@@ -1043,13 +1043,13 @@ template <typename Scalar> static void resample(const ReconstructionFilter *rfil
 			const Scalar *srcPtr = (Scalar *) source->getUInt8Data() + x * channels;
 			Scalar *trgPtr = (Scalar *) target->getUInt8Data() + x * channels;
 
-			r.resampleAndClamp(srcPtr, source->getWidth(), trgPtr, target->getWidth(), 
+			r.resampleAndClamp(srcPtr, source->getWidth(), trgPtr, target->getWidth(),
 				channels, (Scalar) minValue, (Scalar) maxValue);
 		}
 	}
 }
 
-void Bitmap::resample(const ReconstructionFilter *rfilter, 
+void Bitmap::resample(const ReconstructionFilter *rfilter,
 		ReconstructionFilter::EBoundaryCondition bch,
 		ReconstructionFilter::EBoundaryCondition bcv,
 		Bitmap *target, Float minValue, Float maxValue) const {
@@ -1073,8 +1073,8 @@ void Bitmap::resample(const ReconstructionFilter *rfilter,
 	}
 }
 
-ref<Bitmap> Bitmap::resample(const ReconstructionFilter *rfilter, 
-		ReconstructionFilter::EBoundaryCondition bch, 
+ref<Bitmap> Bitmap::resample(const ReconstructionFilter *rfilter,
+		ReconstructionFilter::EBoundaryCondition bch,
 		ReconstructionFilter::EBoundaryCondition bcv,
 		const Vector2i &size, Float minValue, Float maxValue) const {
 	ref<Bitmap> result = new Bitmap(m_pixelFormat, m_componentFormat, size);
@@ -1095,7 +1095,7 @@ bool Bitmap::operator==(const Bitmap &bitmap) const {
 
 std::string Bitmap::toString() const {
 	std::ostringstream oss;
-	oss << "Bitmap[" << endl 
+	oss << "Bitmap[" << endl
 		<< "  type = " << m_pixelFormat << endl
 		<< "  componentFormat = " << m_componentFormat << endl
 		<< "  size = " << m_size.toString() << endl;
@@ -1190,7 +1190,7 @@ void Bitmap::readPNG(Stream *stream) {
     png_textp text_ptr;
     png_get_text(png_ptr, info_ptr, &text_ptr, &textIdx);
 
-	for (int i=0; i<textIdx; ++i, text_ptr++) 
+	for (int i=0; i<textIdx; ++i, text_ptr++)
 		m_metadata[text_ptr->key] = text_ptr->text;
 
 	int intent; double gamma;
@@ -1228,8 +1228,8 @@ void Bitmap::writePNG(Stream *stream, int compression) const {
 
 	int colorType, bitDepth;
 	switch (m_pixelFormat) {
-		case ELuminance: colorType = PNG_COLOR_TYPE_GRAY; break; 
-		case ELuminanceAlpha: colorType = PNG_COLOR_TYPE_GRAY_ALPHA; break; 
+		case ELuminance: colorType = PNG_COLOR_TYPE_GRAY; break;
+		case ELuminanceAlpha: colorType = PNG_COLOR_TYPE_GRAY_ALPHA; break;
 		case ERGB: colorType = PNG_COLOR_TYPE_RGB; break;
 		case ERGBA: colorType = PNG_COLOR_TYPE_RGBA; break;
 		default:
@@ -1247,7 +1247,7 @@ void Bitmap::writePNG(Stream *stream, int compression) const {
 	}
 
 	png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, &png_error_func, NULL);
-	if (png_ptr == NULL) 
+	if (png_ptr == NULL)
 		Log(EError, "Error while creating PNG data structure");
 
 	info_ptr = png_create_info_struct(png_ptr);
@@ -1266,7 +1266,7 @@ void Bitmap::writePNG(Stream *stream, int compression) const {
 	png_set_compression_level(png_ptr, compression);
 
 	png_text *text = NULL;
-	
+
 	std::map<std::string, std::string> metadata = m_metadata;
 	metadata["generated-by"] = "Mitsuba version " MTS_VERSION;
 
@@ -1300,7 +1300,7 @@ void Bitmap::writePNG(Stream *stream, int compression) const {
 
 	size_t rowBytes = png_get_rowbytes(png_ptr, info_ptr);
 	Assert(rowBytes == getBufferSize() / m_size.y);
-	for (int i=0; i<m_size.y; i++) 
+	for (int i=0; i<m_size.y; i++)
 		rows[i] = &m_data[rowBytes * i];
 
 	png_write_image(png_ptr, rows);
@@ -1357,14 +1357,14 @@ void Bitmap::readJPEG(Stream *stream) {
 
 	size_t row_stride = (size_t) cinfo.output_width
 		* (size_t) cinfo.output_components;
-	
+
 	m_data = static_cast<uint8_t *>(allocAligned(getBufferSize()));
 
 	boost::scoped_array<uint8_t*> scanlines(new uint8_t*[m_size.y]);
-	for (int i=0; i<m_size.y; ++i) 
+	for (int i=0; i<m_size.y; ++i)
 		scanlines.get()[i] = m_data + row_stride*i;
 
-	/* Process scanline by scanline */	
+	/* Process scanline by scanline */
 	int counter = 0;
 	while (cinfo.output_scanline < cinfo.output_height)
 		counter += jpeg_read_scanlines(&cinfo, scanlines.get() + counter,
@@ -1413,7 +1413,7 @@ void Bitmap::writeJPEG(Stream *stream, int quality) const {
 
 	Log(ETrace, "Writing a %ix%i JPEG file", m_size.x, m_size.y);
 
-	/* Write scanline by scanline */	
+	/* Write scanline by scanline */
 	for (int i=0; i<m_size.y; ++i) {
 		uint8_t *source = m_data + i*m_size.x*cinfo.input_components;
 		jpeg_write_scanlines(&cinfo, &source, 1);
@@ -1456,19 +1456,19 @@ void Bitmap::readOpenEXR(Stream *stream, const std::string &_prefix) {
 		if (!boost::starts_with(name, prefix))
 			continue;
 
-		if (!ch_r && (name == "r" || name == "red" || 
+		if (!ch_r && (name == "r" || name == "red" ||
 				boost::ends_with(name, ".r") || boost::ends_with(name, ".red"))) {
 			ch_r = it.name();
-		} else if (!ch_g && (name == "g" || name == "green" || 
+		} else if (!ch_g && (name == "g" || name == "green" ||
 				boost::ends_with(name, ".g") || boost::ends_with(name, ".green"))) {
 			ch_g = it.name();
-		} else if (!ch_b && (name == "b" || name == "blue" || 
+		} else if (!ch_b && (name == "b" || name == "blue" ||
 				boost::ends_with(name, ".b") || boost::ends_with(name, ".blue"))) {
 			ch_b = it.name();
-		} else if (!ch_a && (name == "a" || name == "alpha" || 
+		} else if (!ch_a && (name == "a" || name == "alpha" ||
 				boost::ends_with(name, ".a") || boost::ends_with(name, ".alpha"))) {
 			ch_a = it.name();
-		} else if (!ch_y && (name == "y" || name == "luminance" || 
+		} else if (!ch_y && (name == "y" || name == "luminance" ||
 				boost::ends_with(name, ".y") || boost::ends_with(name, ".luminance"))) {
 			ch_y = it.name();
 		} else if (!ch_x && (name == "x" || boost::ends_with(name, ".x"))) {
@@ -1496,7 +1496,7 @@ void Bitmap::readOpenEXR(Stream *stream, const std::string &_prefix) {
 		}
 	}
 
-	bool spectral = true, specialColorProcessing = false, 
+	bool spectral = true, specialColorProcessing = false,
 		 luminanceChromaFormat = false;
 	for (int i=0; i<SPECTRUM_SAMPLES; ++i) {
 		if (!ch_spec[i])
@@ -1506,7 +1506,7 @@ void Bitmap::readOpenEXR(Stream *stream, const std::string &_prefix) {
 	std::string formatString;
 	std::vector<const char *> sourceChannels;
 
-	/* Now, try to categorize this image into some sort of 
+	/* Now, try to categorize this image into some sort of
 	   generic class that we know how to deal with */
 	if (spectral) {
 		m_pixelFormat = ESpectrum;
@@ -1577,8 +1577,8 @@ void Bitmap::readOpenEXR(Stream *stream, const std::string &_prefix) {
 		std::string name = it.name(), typeName = it.attribute().typeName();
 		const Imf::StringAttribute *sattr = NULL;
 
-		if (typeName == "string" && 
-			(sattr = header.findTypedAttribute<Imf::StringAttribute>(name.c_str()))) 
+		if (typeName == "string" &&
+			(sattr = header.findTypedAttribute<Imf::StringAttribute>(name.c_str())))
 			m_metadata[name] = sattr->value();
 	}
 
@@ -1639,7 +1639,7 @@ void Bitmap::readOpenEXR(Stream *stream, const std::string &_prefix) {
 
 		if (sampling == Vector2i(1)) {
 			/* This is a full resolution channel. Load the ordinary way */
-			frameBuffer.insert(channelName, Imf::Slice(pxType, ptr, pixelStride, rowStride)); 
+			frameBuffer.insert(channelName, Imf::Slice(pxType, ptr, pixelStride, rowStride));
 			ptr += compSize;
 		} else {
 			/* Uh oh, this is a sub-sampled channel. We will need to scale it up */
@@ -1648,12 +1648,12 @@ void Bitmap::readOpenEXR(Stream *stream, const std::string &_prefix) {
 			uint8_t *resamplePtr = resampleBuffers[i]->getUInt8Data();
 			resamplePtr -= (dataWindow.min.x/sampling.x + dataWindow.min.y/sampling.x * channelSize.x) * compSize;
 			frameBuffer.insert(channelName, Imf::Slice(pxType, (char *) resamplePtr,
-				compSize, compSize*channelSize.x, sampling.x, sampling.y)); 
+				compSize, compSize*channelSize.x, sampling.x, sampling.y));
 			ptr += compSize;
 		}
 	}
 
-	Log(EDebug, "Loading a %ix%i OpenEXR file (%s format, %s encoding)", 
+	Log(EDebug, "Loading a %ix%i OpenEXR file (%s format, %s encoding)",
 		m_size.x, m_size.y, formatString.c_str(), encodingString.c_str());
 
 	file.setFrameBuffer(frameBuffer);
@@ -1674,7 +1674,7 @@ void Bitmap::readOpenEXR(Stream *stream, const std::string &_prefix) {
 		}
 
 		Log(EDebug, "Upsampling layer \"%s\" from %ix%i to %ix%i pixels",
-			sourceChannels[i], resampleBuffers[i]->getWidth(), 
+			sourceChannels[i], resampleBuffers[i]->getWidth(),
 			resampleBuffers[i]->getHeight(), m_size.x, m_size.y);
 
 		resampleBuffers[i] = resampleBuffers[i]->resample(rfilter,
@@ -1693,7 +1693,7 @@ void Bitmap::readOpenEXR(Stream *stream, const std::string &_prefix) {
 
 		resampleBuffers[i] = NULL;
 	}
-	
+
 	if (luminanceChromaFormat) {
 		Imath::V3f yw = Imf::RgbaYca::computeYw(fileChroma);
 
@@ -1811,7 +1811,7 @@ void Bitmap::writeOpenEXR(Stream *stream,
 
 	Imf::Header header(m_size.x, m_size.y);
 	for (std::map<std::string, std::string>::const_iterator it = metadata.begin();
-			it != metadata.end(); ++it) 
+			it != metadata.end(); ++it)
 		header.insert(it->first.c_str(), Imf::StringAttribute(it->second.c_str()));
 
 	if (pixelFormat == EXYZ || pixelFormat == EXYZA) {
@@ -1861,7 +1861,7 @@ void Bitmap::writeOpenEXR(Stream *stream,
 			channels.insert(name.c_str(), Imf::Channel(compType));
 		}
 	} else if (pixelFormat == EMultiChannel) {
-		for (int i=0; i<getChannelCount(); ++i) 
+		for (int i=0; i<getChannelCount(); ++i)
 			channels.insert(formatString("%i", i).c_str(), Imf::Channel(compType));
 	} else {
 		Log(EError, "writeOpenEXR(): Invalid pixel format!");
@@ -2017,7 +2017,7 @@ void Bitmap::readBMP(Stream *stream) {
 
 	if (magic1 != 'B' || magic2 != 'M')
 		Log(EError, "readBMP(): Invalid header identifier!");
-	
+
 	stream->skip(8);
 
 	uint32_t bmpOffset = stream->readUInt();
@@ -2040,7 +2040,7 @@ void Bitmap::readBMP(Stream *stream) {
 	m_gamma = -1.0f;
 
 	switch (bpp) {
-		case 1: 
+		case 1:
 			m_pixelFormat = ELuminance;
 			m_componentFormat = EBitmask;
 			break;
@@ -2115,7 +2115,7 @@ namespace detail {
 	static inline void RGBE_WriteBytes_RLE(Stream *stream, uint8_t *data, int numbytes) {
 		int cur = 0;
 		uint8_t buf[2];
-	
+
 		while (cur < numbytes) {
 			int beg_run = cur;
 			/* find next run of length at least 4 if one exists */
@@ -2138,7 +2138,7 @@ namespace detail {
 			/* write out bytes until we reach the start of the next run */
 			while (cur < beg_run) {
 				int nonrun_count = beg_run - cur;
-				if (nonrun_count > 128) 
+				if (nonrun_count > 128)
 					nonrun_count = 128;
 				buf[0] = nonrun_count;
 				stream->write(buf, 1);
@@ -2199,7 +2199,7 @@ void Bitmap::readRGBE(Stream *stream) {
 		detail::RGBE_ReadPixels(stream, data, (size_t) m_size.x * (size_t) m_size.y);
 		return;
 	}
-		
+
 	uint8_t *buffer = new uint8_t[4*m_size.x];
 
 	try {
@@ -2207,7 +2207,7 @@ void Bitmap::readRGBE(Stream *stream) {
 		for (int y=0; y<m_size.y; ++y) {
 			uint8_t rgbe[4];
 			stream->read(rgbe, 4);
-		
+
 			if (rgbe[0] != 2 || rgbe[1] != 2 || rgbe[2] & 0x80) {
 				/* this file is not run length encoded */
 				detail::RGBE_ToFloat(rgbe, data);
@@ -2215,11 +2215,11 @@ void Bitmap::readRGBE(Stream *stream) {
 				return;
 			}
 
-			if ((((int) rgbe[2]) << 8 | rgbe[3]) != m_size.x) 
+			if ((((int) rgbe[2]) << 8 | rgbe[3]) != m_size.x)
 				Log(EError, "readRGBE(): wrong scanline width!");
 
 			uint8_t *ptr = buffer;
-			
+
 			/* read each of the four channels for the scanline into the buffer */
 			for (int i=0;i<4;i++) {
 				uint8_t *ptr_end = buffer + (i+1) * m_size.x;
@@ -2242,7 +2242,7 @@ void Bitmap::readRGBE(Stream *stream) {
 						if (count == 0 || count > ptr_end - ptr)
 							Log(EError, "readRGBE(): bad scanline data!");
 						*ptr++ = buf[1];
-						if (--count > 0) 
+						if (--count > 0)
 							stream->read(ptr, count);
 						ptr += count;
 					}
@@ -2271,14 +2271,14 @@ void Bitmap::writeRGBE(Stream *stream) const {
 		Log(EError, "writeRGBE(): component format must be EFloat32!");
 	if (m_pixelFormat != ERGB && m_pixelFormat != ERGBA)
 		Log(EError, "writeRGBE(): pixel format must be ERGB or ERGBA!");
-	
+
 	stream->writeLine("#?RGBE");
 	for (std::map<std::string, std::string>::const_iterator it = m_metadata.begin();
 			it != m_metadata.end(); ++it) {
 		stream->writeLine(formatString("# Metadata [%s]:", it->first.c_str()));
 		std::istringstream iss(it->second);
 		std::string buf;
-		while (std::getline(iss, buf)) 
+		while (std::getline(iss, buf))
 			stream->writeLine(formatString("#   %s", buf.c_str()));
 	}
 	stream->writeLine("FORMAT=32-bit_rle_rgbe\n");

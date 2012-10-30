@@ -43,10 +43,10 @@ public:
 		}
 	}
 
-    void logProgress(Float progress, const std::string &name, 
+    void logProgress(Float progress, const std::string &name,
 		const std::string &formatted, const std::string &eta,
 		const void *ptr) {
-		emit progressMessage((RenderJob *) ptr, 
+		emit progressMessage((RenderJob *) ptr,
 			QString::fromUtf8(name.c_str()), (float) progress,
 			QString::fromUtf8(eta.c_str()));
 	}
@@ -57,7 +57,7 @@ public:
 		if (ms > 1000) {
 			Float messagesPerSecond = m_messageCount / (ms / 1000.0f);
 			if (messagesPerSecond > 1000) {
-				emit textMessage(EError, 
+				emit textMessage(EError,
 						QString("Flood alert: received %1 messages in %2 ms! Ignoring "
 							"future messages to prevent the user interface from freezing. "
 							"Note: this only concerns the UI, all messages will still be written to the log file.")
@@ -74,7 +74,7 @@ public:
 signals:
 	void criticalError(const QString &message);
 	void textMessage(ELogLevel level, const QString &message);
-	void progressMessage(const RenderJob *job, const QString &name, 
+	void progressMessage(const RenderJob *job, const QString &name,
 		float progress, const QString &eta);
 private:
 	ref<Timer> m_timer;

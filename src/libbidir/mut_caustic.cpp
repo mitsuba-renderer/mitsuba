@@ -21,9 +21,9 @@
 
 MTS_NAMESPACE_BEGIN
 
-static StatsCounter statsAccepted("Caustic perturbation", 
+static StatsCounter statsAccepted("Caustic perturbation",
 		"Acceptance rate", EPercentage);
-static StatsCounter statsGenerated("Caustic perturbation", 
+static StatsCounter statsGenerated("Caustic perturbation",
 		"Successful generation rate", EPercentage);
 
 CausticPerturbation::CausticPerturbation(const Scene *scene, Sampler *sampler,
@@ -37,14 +37,14 @@ CausticPerturbation::CausticPerturbation(const Scene *scene, Sampler *sampler,
 	Vector2i filmSize = camera->getFilm()->getSize(),
 	         cropSize = camera->getFilm()->getCropSize();
 
-	/* Simple heuristic for choosing a jump size: assumes that each 
+	/* Simple heuristic for choosing a jump size: assumes that each
 	   pixel on the camera subtends the same area on the sphere */
 	Float degPerPixel = std::min(
-				camera->getXFov() / filmSize.x, 
+				camera->getXFov() / filmSize.x,
 				camera->getYFov() / filmSize.y),
 	      radPerPixel = degPerPixel * M_PI / 180.0f;
 
-	Float r1 = minJump, 
+	Float r1 = minJump,
 		  r2 = std::sqrt(coveredArea * cropSize.x*cropSize.y / M_PI); /* [Veach, p. 354] */
 
 	/* These represent the *desired* angle change range as seen from the camera */
@@ -58,7 +58,7 @@ CausticPerturbation::~CausticPerturbation() { }
 Mutator::EMutationType CausticPerturbation::getType() const {
 	return ECausticPerturbation;
 }
-	
+
 Float CausticPerturbation::suitability(const Path &path) const {
 	int k = path.length(), m = k - 1, l = m - 1;
 
@@ -86,7 +86,7 @@ bool CausticPerturbation::sampleMutation(
 	if (l < 1)
 		return false;
 
-	muRec = MutationRecord(ECausticPerturbation, l, m, m-l, 
+	muRec = MutationRecord(ECausticPerturbation, l, m, m-l,
 		source.getPrefixSuffixWeight(l, m));
 	statsAccepted.incrementBase();
 	statsGenerated.incrementBase();
@@ -94,13 +94,13 @@ bool CausticPerturbation::sampleMutation(
 	/* Heuristic perturbation size computation (Veach, p.354) */
 	Float lengthE = source.edge(m-1)->length;
 	Float lengthL = 0;
-	for (int i=l; i<m-1; ++i) 
+	for (int i=l; i<m-1; ++i)
 		lengthL += source.edge(i)->length;
 	Float factor = lengthE/lengthL,
 		theta1 = m_theta1 * factor,
 		theta2 = m_theta2 * factor;
 
-	Vector woSource = normalize(source.vertex(l+1)->getPosition() 
+	Vector woSource = normalize(source.vertex(l+1)->getPosition()
 			- source.vertex(l)->getPosition());
 	Float phi = m_sampler->next1D() * 2 * M_PI;
 	Float theta = theta2 * math::fastexp(m_logRatio * m_sampler->next1D());
@@ -119,12 +119,12 @@ bool CausticPerturbation::sampleMutation(
 	proposal.vertex(m) = proposal.vertex(m)->clone(m_pool);
 	BDAssert(proposal.vertexCount() == source.vertexCount());
 	BDAssert(proposal.edgeCount() == source.edgeCount());
-	
-	Float dist = source.edge(l)->length + 
+
+	Float dist = source.edge(l)->length +
 		perturbMediumDistance(m_sampler, source.vertex(l+1));
 
 	/* Sample a perturbation and propagate it through specular interactions */
-	if (!proposal.vertex(l)->perturbDirection(m_scene, 
+	if (!proposal.vertex(l)->perturbDirection(m_scene,
 			proposal.vertex(l-1), proposal.edge(l-1),
 			proposal.edge(l), proposal.vertex(l+1), wo, dist,
 			source.vertex(l+1)->getType(), EImportance)) {
@@ -132,7 +132,7 @@ bool CausticPerturbation::sampleMutation(
 		return false;
 	}
 
-	Vector woProposal = normalize(proposal.vertex(l+1)->getPosition() 
+	Vector woProposal = normalize(proposal.vertex(l+1)->getPosition()
 			- source.vertex(l)->getPosition());
 	theta = unitAngle(woSource, woProposal);
 	if (theta >= theta2 || theta <= theta1) {
@@ -143,20 +143,20 @@ bool CausticPerturbation::sampleMutation(
 	/* If necessary, propagate the perturbation through a sequence of
 	   ideally specular interactions */
 	for (int i=l+1; i<m-1; ++i) {
-		Float dist = source.edge(i)->length + 
+		Float dist = source.edge(i)->length +
 			perturbMediumDistance(m_sampler, source.vertex(i+1));
 
-		if (!proposal.vertex(i)->propagatePerturbation(m_scene, 
-				proposal.vertex(i-1), proposal.edge(i-1), 
-				proposal.edge(i), proposal.vertex(i+1), 
-				source.vertex(i)->getComponentType(), dist, 
+		if (!proposal.vertex(i)->propagatePerturbation(m_scene,
+				proposal.vertex(i-1), proposal.edge(i-1),
+				proposal.edge(i), proposal.vertex(i+1),
+				source.vertex(i)->getComponentType(), dist,
 				source.vertex(i+1)->getType(), EImportance)) {
 			proposal.release(l, m+1, m_pool);
 			return false;
 		}
 	}
 
-	if (!PathVertex::connect(m_scene, 
+	if (!PathVertex::connect(m_scene,
 			proposal.vertex(m-2),
 			proposal.edge(m-2),
 			proposal.vertex(m-1),
@@ -170,7 +170,7 @@ bool CausticPerturbation::sampleMutation(
 
 	proposal.vertex(k-1)->updateSamplePosition(
 		proposal.vertex(k-2));
-	
+
 	++statsGenerated;
 	return true;
 }
@@ -182,7 +182,7 @@ Float CausticPerturbation::Q(const Path &source, const Path &proposal,
 	/* Heuristic perturbation size computation (Veach, p.354) */
 	Float lengthE = source.edge(m-1)->length;
 	Float lengthL = 0;
-	for (int i=l; i<m-1; ++i) 
+	for (int i=l; i<m-1; ++i)
 		lengthL += source.edge(i)->length;
 	Float factor = lengthE/lengthL,
 		theta1 = m_theta1 * factor,
@@ -200,11 +200,11 @@ Float CausticPerturbation::Q(const Path &source, const Path &proposal,
 		proposal.vertex(m-1), proposal.vertex(m), PathEdge::EEverything);
 
 	for (int i=l; i<m-1; ++i) {
-		const PathVertex *v0 = proposal.vertex(i), 
+		const PathVertex *v0 = proposal.vertex(i),
 			  *v1 = proposal.vertex(i+1);
 		const PathEdge *edge = proposal.edge(i);
 
-		weight *= edge->evalCached(v0, v1, 
+		weight *= edge->evalCached(v0, v1,
 			PathEdge::ETransmittance | PathEdge::EValueCosineImp);
 
 		if (v1->isMediumInteraction())

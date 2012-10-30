@@ -40,7 +40,7 @@ ImportDialog::ImportDialog(QWidget *parent, FileResolver *resolver) :
 ImportDialog::~ImportDialog() {
 	delete ui;
 }
-	
+
 void ImportDialog::changeEvent(QEvent *e) {
 	QDialog::changeEvent(e);
 	switch (e->type()) {
@@ -155,7 +155,7 @@ void ImportDialog::accept() {
 
 	dialog->hide();
 	delete dialog;
-	
+
 	if (!importingThread->getResult().empty()) {
 		size_t warningCount = logger->getWarningCount() - initialWarningCount;
 		if (warningCount > 0)

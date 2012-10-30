@@ -27,8 +27,8 @@ MTS_NAMESPACE_BEGIN
 /**
  * \brief Bidirectional mutatation strategy
  *
- * This class implements a slightly extended version of the bidirectional 
- * mutation proposed by Veach. The main change is that it builds on top of 
+ * This class implements a slightly extended version of the bidirectional
+ * mutation proposed by Veach. The main change is that it builds on top of
  * a two-tailed geometric distribution that is used to sample path
  * configuration proposals in a more flexible manner.
  *
@@ -50,11 +50,11 @@ public:
 	 *     A memory pool used to allocate new path vertices and edges
 	 *
 	 * \param kmin
-	 *     Minimum number of edges in newly proposed paths. This can 
+	 *     Minimum number of edges in newly proposed paths. This can
 	 *     be used to exclude direct illumination.
 	 *
 	 * \param kmax
-	 *     Minimum number of edges in newly proposed paths. 
+	 *     Minimum number of edges in newly proposed paths.
 	 */
 	BidirectionalMutator(const Scene *scene, Sampler *sampler,
 		MemoryPool &pool, int kmin, int kmax);
@@ -75,7 +75,7 @@ public:
 	MTS_DECLARE_CLASS()
 protected:
 	/**
-	 * \brief Compute the probability mass associated with one 
+	 * \brief Compute the probability mass associated with one
 	 * of the internally implemented mutation strategies
 	 */
 	Float pmfMutation(const Path &source, const MutationRecord &muRec) const;

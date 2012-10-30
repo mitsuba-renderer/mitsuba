@@ -36,7 +36,7 @@ MTS_NAMESPACE_BEGIN
  */
 class CaptureParticleWorkResult : public ImageBlock {
 public:
-	inline CaptureParticleWorkResult(const Vector2i &res, const ReconstructionFilter *filter) 
+	inline CaptureParticleWorkResult(const Vector2i &res, const ReconstructionFilter *filter)
 	 : ImageBlock(Bitmap::ESpectrum, res, filter) {
 		setOffset(Point2i(0, 0));
 		setSize(res);
@@ -74,7 +74,7 @@ protected:
  */
 class CaptureParticleWorker : public ParticleTracer {
 public:
-	inline CaptureParticleWorker(int maxDepth, int maxPathDepth, 
+	inline CaptureParticleWorker(int maxDepth, int maxPathDepth,
 		int rrDepth, bool bruteForce) : ParticleTracer(maxDepth, rrDepth, true),
 		m_maxPathDepth(maxPathDepth), m_bruteForce(bruteForce) { }
 
@@ -85,12 +85,12 @@ public:
 	void prepare();
 	ref<WorkProcessor> clone() const;
 	ref<WorkResult> createWorkResult() const;
-	void process(const WorkUnit *workUnit, WorkResult *workResult, 
+	void process(const WorkUnit *workUnit, WorkResult *workResult,
 		const bool &stop);
-	
+
 	/**
 	 * Handles particles emitted by a light source - if a connection to the
-	 * sensor is possible, compute the importance and accumulate in the proper 
+	 * sensor is possible, compute the importance and accumulate in the proper
 	 * pixel of the accumulation buffer.
 	 */
 	void handleEmission(const PositionSamplingRecord &pRec,
@@ -98,7 +98,7 @@ public:
 
 	/**
 	 * Handles particles interacting with a surface - if a connection to the
-	 * sensor is possible, compute the importance and accumulate in the proper 
+	 * sensor is possible, compute the importance and accumulate in the proper
 	 * pixel of the accumulation buffer.
 	 */
 	void handleSurfaceInteraction(int depth, bool caustic,
@@ -107,7 +107,7 @@ public:
 
 	/**
 	 * Handles particles interacting with a medium - if a connection to the
-	 * sensor is possible, compute the importance and accumulate in the proper 
+	 * sensor is possible, compute the importance and accumulate in the proper
 	 * pixel of the accumulation buffer.
 	 */
 	void handleMediumInteraction(int depth, bool caustic,
@@ -135,11 +135,11 @@ private:
  */
 class CaptureParticleProcess : public ParticleProcess {
 public:
-	CaptureParticleProcess(const RenderJob *job, RenderQueue *queue, 
-			size_t sampleCount, size_t granularity, int maxDepth, 
+	CaptureParticleProcess(const RenderJob *job, RenderQueue *queue,
+			size_t sampleCount, size_t granularity, int maxDepth,
 			int maxPathDepth, int rrDepth, bool bruteForce)
-		: ParticleProcess(ParticleProcess::ETrace, sampleCount, 
-		  granularity, "Rendering", job), m_job(job), m_queue(queue), 
+		: ParticleProcess(ParticleProcess::ETrace, sampleCount,
+		  granularity, "Rendering", job), m_job(job), m_queue(queue),
 		  m_maxDepth(maxDepth), m_maxPathDepth(maxPathDepth),
 		  m_rrDepth(rrDepth), m_bruteForce(bruteForce) {
 	}

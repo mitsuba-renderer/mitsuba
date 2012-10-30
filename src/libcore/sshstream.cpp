@@ -57,7 +57,7 @@ SSHStream::SSHStream(const std::string &userName,
  : d(new SSHStreamPrivate(userName, hostName, port, timeout)) {
 	setByteOrder(ENetworkByteOrder);
 
-	Log(EInfo, "Establishing a SSH connection to \"%s@%s\"", 
+	Log(EInfo, "Establishing a SSH connection to \"%s@%s\"",
 		userName.c_str(), hostName.c_str());
 
 #if defined(WIN32)
@@ -98,7 +98,7 @@ SSHStream::SSHStream(const std::string &userName,
 	for (size_t i=0; i<cmdLine.size(); ++i)
 		params = params + " " + cmdLine[i];
 
-	if (!CreateProcess("plink.exe", (LPSTR) params.c_str(), 
+	if (!CreateProcess("plink.exe", (LPSTR) params.c_str(),
 		NULL, NULL, // Process & thread security attributes
 		TRUE, // Inherit handles
 		CREATE_NEW_PROCESS_GROUP, // Ignore Ctrl-C
@@ -185,22 +185,22 @@ SSHStream::~SSHStream() {
 const std::string& SSHStream::getHostName() const {
 	return d->hostName;
 }
-	
+
 const std::string& SSHStream::getUserName() const {
 	return d->userName;
 }
-	
+
 size_t SSHStream::getReceivedBytes() const {
 	return d->received;
 }
-	
+
 size_t SSHStream::getSentBytes() const {
 	return d->sent;
 }
 
 std::string SSHStream::toString() const {
 	std::ostringstream oss;
-	oss << "SSHStream[userName='"<< d->userName << "', hostName='" 
+	oss << "SSHStream[userName='"<< d->userName << "', hostName='"
 		<< d->hostName << "', sent=" << (d->sent / 1024) << " KB, "
 		"received=" << (d->received/1024) << " KB]" << endl;
 	return oss.str();

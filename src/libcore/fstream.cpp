@@ -107,19 +107,19 @@ void FileStream::open(const fs::path &path, EFileMode mode) {
 	case EAppendReadWrite:
 		dwDesiredAccess |= GENERIC_WRITE;
 		break;
-	default: 
+	default:
 		Log(EError, "Unknown file mode");
 		break;
 	}
 
-	d->file = CreateFileW(path.c_str(), dwDesiredAccess, 
-		FILE_SHARE_WRITE | FILE_SHARE_READ, 0, 
+	d->file = CreateFileW(path.c_str(), dwDesiredAccess,
+		FILE_SHARE_WRITE | FILE_SHARE_READ, 0,
 		dwCreationDisposition, FILE_ATTRIBUTE_NORMAL, 0);
 
 	if (d->file == INVALID_HANDLE_VALUE)
-		Log(EError, "Error while trying to open file \"%s\": %s", 
+		Log(EError, "Error while trying to open file \"%s\": %s",
 			d->path.string().c_str(), lastErrorText().c_str());
-	
+
 	if (d->mode == EAppendWrite || d->mode == EAppendReadWrite)
 		seek(getSize());
 #else
@@ -155,7 +155,7 @@ void FileStream::open(const fs::path &path, EFileMode mode) {
 	d->file = fopen(d->path.string().c_str(), modeString);
 
 	if (d->file == NULL) {
-		Log(EError, "Error while trying to open file \"%s\": %s", 
+		Log(EError, "Error while trying to open file \"%s\": %s",
 			d->path.string().c_str(), strerror(errno));
 	}
 #endif
@@ -167,12 +167,12 @@ void FileStream::close() {
 
 #ifdef WIN32
 	if (!CloseHandle(d->file)) {
-		Log(EError, "Error while trying to close file \"%s\": %s", 
+		Log(EError, "Error while trying to close file \"%s\": %s",
 			d->path.string().c_str(), lastErrorText().c_str());
 	}
 #else
 	if (fclose(d->file)) {
-		Log(EError, "Error while trying to close file \"%s\": %s", 
+		Log(EError, "Error while trying to close file \"%s\": %s",
 			d->path.string().c_str(), strerror(errno));
 	}
 #endif
@@ -189,17 +189,17 @@ void FileStream::remove() {
 
 void FileStream::seek(size_t pos) {
 	AssertEx(d->file != 0, "No file is currently open");
-	
+
 #ifdef WIN32
 	LARGE_INTEGER fpos;
 	fpos.QuadPart = pos;
 	if (SetFilePointerEx(d->file, fpos, 0, FILE_BEGIN) == INVALID_SET_FILE_POINTER) {
-		Log(EError, "Error while trying to seek to position %i in file \"%s\": %s", 
+		Log(EError, "Error while trying to seek to position %i in file \"%s\": %s",
 			pos, d->path.string().c_str(), lastErrorText().c_str());
 	}
 #else
 	if (fseek(d->file, pos, SEEK_SET)) {
-		Log(EError, "Error while trying to seek to position %i in file \"%s\": %s", 
+		Log(EError, "Error while trying to seek to position %i in file \"%s\": %s",
 			pos, d->path.string().c_str(), strerror(errno));
 	}
 #endif
@@ -218,7 +218,7 @@ size_t FileStream::getPos() const {
 	long pos;
 	pos = ftell(d->file);
 	if (pos == -1) {
-		Log(EError, "Error while looking up the position in file \"%s\": %s", 
+		Log(EError, "Error while looking up the position in file \"%s\": %s",
 			d->path.string().c_str(), strerror(errno));
 	}
 	return (size_t) pos;
@@ -237,7 +237,7 @@ size_t FileStream::getSize() const {
 	return (size_t) result.QuadPart;
 #else
 	size_t size, tmp;
-	
+
 	tmp = getPos();
 	if (fseek(d->file, 0, SEEK_END)) {
 		Log(EError, "Error while seeking within \"%s\": %s",
@@ -257,7 +257,7 @@ void FileStream::truncate(size_t size) {
 	AssertEx(d->write, "File is not open with write access");
 
 	size_t pos = getPos();
-	if (pos > size) 
+	if (pos > size)
 		pos = size;
 
 #ifdef WIN32
@@ -297,7 +297,7 @@ void FileStream::flush() {
 void FileStream::read(void *pPtr, size_t size) {
 	AssertEx(d->file != 0, "No file is currently open");
 	AssertEx(d->read, "File is not open with read access");
-	
+
 	if (size == 0)
 		return;
 #ifdef WIN32
@@ -306,7 +306,7 @@ void FileStream::read(void *pPtr, size_t size) {
 		Log(EError, "Error while reading from file \"%s\": %s",
 			d->path.string().c_str(), lastErrorText().c_str());
 	}
-	if (lpNumberOfBytesRead != (DWORD) size) 
+	if (lpNumberOfBytesRead != (DWORD) size)
 		throw EOFException(formatString("Read less data than expected (%i bytes required) "
 			"from file \"%s\"", size, d->path.string().c_str()), (size_t) lpNumberOfBytesRead);
 #else
@@ -335,7 +335,7 @@ void FileStream::write(const void *pPtr, size_t size) {
 		Log(EError, "Error while writing to file \"%s\": %s",
 			d->path.string().c_str(), lastErrorText().c_str());
 	}
-	if (lpNumberOfBytesWritten != (DWORD) size) 
+	if (lpNumberOfBytesWritten != (DWORD) size)
 		throw EOFException(formatString("Wrote less data than expected (%i bytes required) "
 			"to file \"%s\"", size, d->path.string().c_str()), (size_t) lpNumberOfBytesWritten);
 #else
@@ -369,10 +369,10 @@ void FileStream::staticInitialization() {
 	/* On Linux + MacOS, strings are assumed to be in UTF-8. On
 	   Windows, they still are, but fs::path is UTF-16. So we need
 	   a codecvt_facet to take care of the necessary conversions */
-	std::locale global_loc = std::locale(); 
+	std::locale global_loc = std::locale();
 	__facet = new boost::filesystem::detail::utf8_codecvt_facet();
 	std::locale locale(global_loc, __facet);
-	boost::filesystem::path::imbue(locale); 
+	boost::filesystem::path::imbue(locale);
 #endif
 }
 

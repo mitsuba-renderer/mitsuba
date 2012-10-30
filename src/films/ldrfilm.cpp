@@ -33,7 +33,7 @@ MTS_NAMESPACE_BEGIN
  *       \default{768, 576}
  *     }
  *     \parameter{fileFormat}{\Integer}{
- *       The desired output file format:  
+ *       The desired output file format:
  *       \code{png} or \code{jpeg}. \default{\code{png}}
  *     }
  *     \parameter{pixelFormat}{\String}{Specifies the pixel format
@@ -42,12 +42,12 @@ MTS_NAMESPACE_BEGIN
  *         and \code{rgb} or \code{luminance} for JPEG output.
  *     }
  *     \parameter{tonemapMethod}{\String}{
- *       Method used to tonemap recorded radiance values 
+ *       Method used to tonemap recorded radiance values
  *       \vspace{-2mm}
  *       \begin{enumerate}[(i)]
  *          \item \code{gamma}: Exposure and gamma correction (default)
  *          \vspace{-1mm}
- *          \item \code{reinhard}: Apply the the 
+ *          \item \code{reinhard}: Apply the the
  *          tonemapping technique by Reinhard et al. \cite{Reinhard2002Photographic}
  *          followd by gamma correction.
  *       \vspace{-4mm}
@@ -64,15 +64,15 @@ MTS_NAMESPACE_BEGIN
  *       \default{0, i.e. do not change the exposure}
  *     }
  *     \parameter{key}{\Float}{
- *       When \code{reinhard} tonemapping is active, this parameter in $(0,1]$ specifies 
- *       whether a low-key or high-key image is desired. 
+ *       When \code{reinhard} tonemapping is active, this parameter in $(0,1]$ specifies
+ *       whether a low-key or high-key image is desired.
  *       \default{0.18, corresponding to a middle-grey}
  *     }
  *     \parameter{burn}{\Float}{
  *       When \code{reinhard} tonemapping is active, this parameter in $[0,1]$ specifies how much
  *       highlights can burn out. \default{0, i.e. map all luminance values into the displayable range}
  *     }
- *     \parameter{banner}{\Boolean}{Include a banner in the 
+ *     \parameter{banner}{\Boolean}{Include a banner in the
  *         output image?\default{\code{true}}
  *     }
  *     \parameter{cropOffsetX, cropOffsetY, cropWidth, cropHeight}{\Integer}{
@@ -81,33 +81,33 @@ MTS_NAMESPACE_BEGIN
  *       regions. \default{Unused}
  *     }
  *     \parameter{highQualityEdges}{\Boolean}{
- *        If set to \code{true}, regions slightly outside of the film 
- *        plane will also be sampled. This may improve image 
+ *        If set to \code{true}, regions slightly outside of the film
+ *        plane will also be sampled. This may improve image
  *        quality at the edges, but is not needed in general.
  *        \default{\code{false}}
  *     }
  *     \parameter{\Unnamed}{\RFilter}{Reconstruction filter that should
  *     be used by the film. \default{\code{gaussian}, a windowed Gaussian filter}}
  * }
- * This plugin implements a low dynamic range film that can write out 8-bit PNG 
- * and JPEG images. It also provides basic tonemapping techniques to map recorded 
+ * This plugin implements a low dynamic range film that can write out 8-bit PNG
+ * and JPEG images. It also provides basic tonemapping techniques to map recorded
  * radiance values into a reasonable displayable range.
  *
  * This film is a good choice when low dynamic range output is desired
  * and the rendering setup can be configured to capture the relevant portion
- * of the dynamic range reliably enough so that the original HDR data can safely 
+ * of the dynamic range reliably enough so that the original HDR data can safely
  * be discarded. When this is not the case, it may be easier to use \pluginref{hdrfilm}
  * along with the batch tonemapper (\secref{tonemapper}).
  *
- * By default, the plugin assumes that no special tonemapping needs to be done and simply 
- * applies an exposure multiplier and sRGB gamma curve to the recorded radiance values 
- * before converting them to 8 bit. When the dynamic range varies greatly, it may be 
- * preferable to use the photographic tonemapping technique by Reinhard et al. 
+ * By default, the plugin assumes that no special tonemapping needs to be done and simply
+ * applies an exposure multiplier and sRGB gamma curve to the recorded radiance values
+ * before converting them to 8 bit. When the dynamic range varies greatly, it may be
+ * preferable to use the photographic tonemapping technique by Reinhard et al.
  * \cite{Reinhard2002Photographic}, which can be activated by setting \code{tonemapMethod=reinhard}.
  *
  * Note that the interactive tonemapper that is available in the graphical user interface \code{mtsgui}
  * interoperates with this plugin. In particular, when saving the scene
- * (\emph{File}$\to$\emph{Save}), the currently active tonemapper 
+ * (\emph{File}$\to$\emph{Save}), the currently active tonemapper
  * settings are automatically exported into the updated scene file.
  *
  * The RGB values exported by this plugin correspond to the ITU-R Rec. BT. 709-3
@@ -179,7 +179,7 @@ public:
 		m_storage = new ImageBlock(Bitmap::ESpectrumAlphaWeight, m_cropSize);
 	}
 
-	LDRFilm(Stream *stream, InstanceManager *manager) 
+	LDRFilm(Stream *stream, InstanceManager *manager)
 		: Film(stream, manager) {
 		m_hasBanner = stream->readBool();
 		m_pixelFormat = (Bitmap::EPixelFormat) stream->readUInt();
@@ -217,7 +217,7 @@ public:
 
 	void addBitmap(const Bitmap *bitmap, Float multiplier) {
 		/* Currently, only accumulating spectrum-valued floating point images
-		   is supported. This function basically just exists to support the 
+		   is supported. This function basically just exists to support the
 		   somewhat peculiar film updates done by BDPT */
 
 		Vector2i size = bitmap->getSize();
@@ -242,7 +242,7 @@ public:
 		}
 	}
 
-	bool develop(const Point2i &sourceOffset, const Vector2i &size, 
+	bool develop(const Point2i &sourceOffset, const Vector2i &size,
 			const Point2i &targetOffset, Bitmap *target) const {
 		const Bitmap *source = m_storage->getBitmap();
 		const FormatConverter *cvt = FormatConverter::getInstance(
@@ -252,9 +252,9 @@ public:
 		size_t sourceBpp = source->getBytesPerPixel();
 		size_t targetBpp = target->getBytesPerPixel();
 
-		const uint8_t *sourceData = source->getUInt8Data() 
+		const uint8_t *sourceData = source->getUInt8Data()
 			+ (sourceOffset.x + sourceOffset.y * source->getWidth()) * sourceBpp;
-		uint8_t *targetData = target->getUInt8Data() 
+		uint8_t *targetData = target->getUInt8Data()
 			+ (targetOffset.x + targetOffset.y * target->getWidth()) * targetBpp;
 
 		if (size.x == m_cropSize.x) {
@@ -283,15 +283,15 @@ public:
 
 	void develop() {
 		Log(EDebug, "Developing film ..");
-	
+
 		ref<Bitmap> bitmap = m_storage->getBitmap();
 		Float multiplier = 1.0f;
-		
+
 		if (m_tonemapMethod == EReinhard) {
 			bitmap = bitmap->convert(m_pixelFormat, Bitmap::EFloat);
 
 			Float logAvgLuminance = 0, maxLuminance = 0; /* Unused */
-			bitmap->tonemapReinhard(logAvgLuminance, maxLuminance, 
+			bitmap->tonemapReinhard(logAvgLuminance, maxLuminance,
 				m_reinhardKey, m_reinhardBurn);
 			Log(EInfo, "Tonemapping finished (log-avg luminance=%f, max luminance=%f)",
 				logAvgLuminance, maxLuminance);
@@ -302,7 +302,7 @@ public:
 		bitmap = bitmap->convert(m_pixelFormat, Bitmap::EUInt8, m_gamma, multiplier);
 
 		if (m_hasBanner && m_cropSize.x > bannerWidth+5 && m_cropSize.y > bannerHeight + 5) {
-			int xoffs = m_cropSize.x - bannerWidth - 5, 
+			int xoffs = m_cropSize.x - bannerWidth - 5,
 			    yoffs = m_cropSize.y - bannerHeight - 5;
 			for (int y=0; y<bannerHeight; y++) {
 				for (int x=0; x<bannerWidth; x++) {
@@ -330,7 +330,7 @@ public:
 
 		bitmap->write(m_fileFormat, stream);
 	}
-	
+
 	bool destinationExists(const fs::path &baseName) const {
 		fs::path filename = baseName;
 		std::string extension;

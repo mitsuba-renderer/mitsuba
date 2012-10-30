@@ -33,7 +33,7 @@ enum ELogLevel {
 	EError = 400  ///< Error message, causes an exception to be thrown
 };
 
-/** \brief Abstract interface for converting log information into 
+/** \brief Abstract interface for converting log information into
  * a human-readable format
  *
  * \ingroup libcore
@@ -51,7 +51,7 @@ public:
 	 */
 
 	virtual std::string format(ELogLevel logLevel, const Class *theClass,
-			const Thread *thread, const std::string &text, 
+			const Thread *thread, const std::string &text,
 			const char *file, int line) = 0;
 
 	MTS_DECLARE_CLASS()
@@ -69,7 +69,7 @@ public:
 	DefaultFormatter();
 
 	std::string format(ELogLevel logLevel, const Class *theClass,
-			const Thread *thread, const std::string &text, 
+			const Thread *thread, const std::string &text,
 			const char *file, int line);
 
 	/// Should date information be included? The default is yes.

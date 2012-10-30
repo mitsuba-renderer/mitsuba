@@ -45,20 +45,20 @@ MTS_NAMESPACE_BEGIN
  *     }
  * }
  *
- * This integrator implements a hardware-accelerated global illumination 
- * rendering technique based on the Instant Radiosity method by Keller 
+ * This integrator implements a hardware-accelerated global illumination
+ * rendering technique based on the Instant Radiosity method by Keller
  * \cite{Keller1997Instant}. This is the same approach that is also used in
  * Mitsuba's real-time preview; the reason for providing it as a separate
  * integrator plugin is to enable automated (e.g. scripted) usage.
  *
- * The method roughly works as follows: during a pre-process pass, any present direct 
- * and indirect illumination is converted into a set of \emph{virtual point light} 
- * sources (VPLs). The scene is then separately rendered many times, each time using 
+ * The method roughly works as follows: during a pre-process pass, any present direct
+ * and indirect illumination is converted into a set of \emph{virtual point light}
+ * sources (VPLs). The scene is then separately rendered many times, each time using
  * a different VPL as a source of illumination. All of the renderings created in this
- * manner are accumulated to create the final output image. 
+ * manner are accumulated to create the final output image.
  *
  * Because the individual rendering steps can be exectuted on a
- * graphics card, it is possible to render many (i.e. 100-1000) VPLs 
+ * graphics card, it is possible to render many (i.e. 100-1000) VPLs
  * per second. The method is not without problems, however. In particular,
  * it performs poorly when rendering glossy materials, and it produces
  * artifacts in corners and creases . Mitsuba automatically limits
@@ -72,7 +72,7 @@ MTS_NAMESPACE_BEGIN
  *     blotches appear in corners and creases.}{integrator_vpl_clamping0}
  *     \rendering{\code{clamping=0.3}: Higher clamping factors remove these
  *     artifacts, but they lead to visible energy loss (the rendering
- *     is too dark in certain areas). The default of \code{0.1} is 
+ *     is too dark in certain areas). The default of \code{0.1} is
  *     usually reasonable.}{integrator_vpl_clamping03}
  * }
  */
@@ -89,7 +89,7 @@ public:
 		m_session = Session::create();
 		m_device = Device::create(m_session);
 		m_renderer = Renderer::create(m_session);
-	
+
 		m_random = new Random();
 	}
 
@@ -104,7 +104,7 @@ public:
 
 		Transform projTransform = sensor->getProjectionTransform(apertureSample, aaSample);
 		Transform worldTransform = sensor->getWorldTransform()->eval(
-			sensor->getShutterOpen() + 
+			sensor->getShutterOpen() +
 			m_random->nextFloat() * sensor->getShutterOpenTime());
 		m_shaderManager->setVPL(vpl);
 		m_framebuffer->activateTarget();
@@ -140,7 +140,7 @@ public:
 		m_cancel = true;
 	}
 
-	bool render(Scene *scene, RenderQueue *queue, 
+	bool render(Scene *scene, RenderQueue *queue,
 		const RenderJob *job, int sceneResID, int sensorResID, int samplerResID) {
 		ref<Sensor> sensor = scene->getSensor();
 		ref<Film> film = sensor->getFilm();
@@ -225,7 +225,7 @@ public:
 			m_renderer->blitTexture(m_framebuffer, true);
 			m_accumBuffer->releaseTarget();
 
-			if ((i%20) == 0) { 
+			if ((i%20) == 0) {
 				m_renderer->flush();
 				m_renderer->checkError();
 			}

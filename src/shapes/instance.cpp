@@ -19,18 +19,18 @@
 #include "instance.h"
 
 MTS_NAMESPACE_BEGIN
- 
+
 /*!\plugin{instance}{Geometry instance}
  * \order{9}
  * \parameters{
- *     \parameter{\Unnamed}{\ShapeGroup}{A reference to a 
+ *     \parameter{\Unnamed}{\ShapeGroup}{A reference to a
  *     shape group that should be instantiated}
  *     \parameter{toWorld}{\Transform}{
  *	      Specifies an optional linear instance-to-world transformation.
  *        \default{none (i.e. instance space $=$ world space)}
  *     }
  * }
- * 
+ *
  * This plugin implements a geometry instance used to efficiently replicate
  * geometry many times. For details, please refer to the \pluginref{shapegroup}
  * plugin.
@@ -42,7 +42,7 @@ Instance::Instance(const Properties &props) : Shape(props) {
 	m_invScale = 1.0f/m_objectToWorld(Vector(0, 0, 1)).length();
 }
 
-Instance::Instance(Stream *stream, InstanceManager *manager) 
+Instance::Instance(Stream *stream, InstanceManager *manager)
 	: Shape(stream, manager) {
 	m_shapeGroup = static_cast<ShapeGroup *>(manager->getInstance(stream));
 	m_objectToWorld = Transform(stream);
@@ -95,7 +95,7 @@ size_t Instance::getEffectivePrimitiveCount() const {
 	return m_shapeGroup->getPrimitiveCount();
 }
 
-bool Instance::rayIntersect(const Ray &_ray, Float mint, 
+bool Instance::rayIntersect(const Ray &_ray, Float mint,
 		Float maxt, Float &t, void *temp) const {
 	const ShapeKDTree *kdtree = m_shapeGroup->getKDTree();
 	Ray ray;
@@ -110,7 +110,7 @@ bool Instance::rayIntersect(const Ray &_ray, Float mint, Float maxt) const {
 	return kdtree->rayIntersect(ray, mint, maxt);
 }
 
-void Instance::fillIntersectionRecord(const Ray &_ray, 
+void Instance::fillIntersectionRecord(const Ray &_ray,
 	const void *temp, Intersection &its) const {
 	const ShapeKDTree *kdtree = m_shapeGroup->getKDTree();
 	Ray ray;
@@ -137,7 +137,7 @@ void Instance::getNormalDerivative(const Intersection &its,
 	temp.dpdv = m_worldToObject(its.dpdv);
 	its.shape->getNormalDerivative(temp, dndu, dndv, shadingFrame);
 
-	/* The following will probably be incorrect for 
+	/* The following will probably be incorrect for
 	   non-rigid transformations */
 	dndu = m_objectToWorld(Normal(dndu))*m_invScale;
 	dndv = m_objectToWorld(Normal(dndv))*m_invScale;

@@ -67,7 +67,7 @@ Spectrum Sensor::eval(const Intersection &its, const Vector &d,
 bool Sensor::getSamplePosition(const PositionSamplingRecord &pRec,
 		const DirectionSamplingRecord &dRec, Point2 &samplePosition) const {
 	Log(EError, "%s::getSamplePosition(const PositionSamplingRecord &, "
-		"const DirectionSamplingRecord &, Point2&) is not implemented!", 
+		"const DirectionSamplingRecord &, Point2&) is not implemented!",
 		getClass()->getName().c_str());
 	return false;
 }
@@ -89,31 +89,31 @@ void Sensor::configure() {
 		m_sampler->configure();
 	}
 
-	m_aspect = m_film->getSize().x / 
+	m_aspect = m_film->getSize().x /
 	   (Float) m_film->getSize().y;
-	
+
 	m_resolution = Vector2(m_film->getCropSize());
 	m_invResolution = Vector2(
 		(Float) 1 / m_resolution.x,
 		(Float) 1 / m_resolution.y);
 }
 
-Spectrum Sensor::sampleRayDifferential(RayDifferential &ray, 
+Spectrum Sensor::sampleRayDifferential(RayDifferential &ray,
 		const Point2 &samplePosition,
 		const Point2 &apertureSample,
 		Float timeSample) const {
-	Spectrum result = sampleRay(ray, samplePosition, 
+	Spectrum result = sampleRay(ray, samplePosition,
 		apertureSample, timeSample);
 
 	/* Sample a ray for X+1 */
 	Ray tempRay;
-	sampleRay(tempRay, samplePosition + Vector2(1, 0), 
+	sampleRay(tempRay, samplePosition + Vector2(1, 0),
 			apertureSample, timeSample);
 	ray.rxOrigin = tempRay.o;
 	ray.rxDirection = tempRay.d;
 
 	/* Sample a ray for Y+1 */
-	sampleRay(tempRay, samplePosition + Vector2(0, 1), 
+	sampleRay(tempRay, samplePosition + Vector2(0, 1),
 			apertureSample, timeSample);
 	ray.ryOrigin = tempRay.o;
 	ray.ryDirection = tempRay.d;
@@ -128,7 +128,7 @@ Float Sensor::pdfTime(const Ray &ray, EMeasure measure) const {
 
 	if (m_shutterOpenTime == 0 && measure == EDiscrete)
 		return 1.0f;
-	else if (m_shutterOpenTime > 0 && measure == ELength) 
+	else if (m_shutterOpenTime > 0 && measure == ELength)
 		return 1.0f / m_shutterOpenTime;
 	else
 		return 0.0f;
@@ -205,7 +205,7 @@ void ProjectiveCamera::setInverseViewTransform(const Transform &trafo) {
 	m_properties.setTransform("toWorld", trafo, false);
 }
 
-PerspectiveCamera::PerspectiveCamera(const Properties &props) 
+PerspectiveCamera::PerspectiveCamera(const Properties &props)
 	: ProjectiveCamera(props), m_xfov(0.0f) {
 	props.markQueried("fov");
 	props.markQueried("fovAxis");
@@ -232,7 +232,7 @@ void PerspectiveCamera::configure() {
 	if (m_properties.hasProperty("fov")) {
 		Float fov = m_properties.getFloat("fov");
 
-		std::string fovAxis = 
+		std::string fovAxis =
 			boost::to_lower_copy(m_properties.getString("fovAxis", "x"));
 
 		if (fovAxis == "smaller")
@@ -240,7 +240,7 @@ void PerspectiveCamera::configure() {
 		else if (fovAxis == "larger")
 			fovAxis = m_aspect > 1 ? "x" : "y";
 
-		if (fovAxis == "x") 
+		if (fovAxis == "x")
 			setXFov(fov);
 		else if (fovAxis == "y")
 			setYFov(fov);

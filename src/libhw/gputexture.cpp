@@ -119,7 +119,7 @@ void GPUTexture::setFrameBufferType(EFrameBufferType type) {
 		case EColorBuffer:
 		case EColorAndDepthBuffer:
 			break;
-		case EDepthBuffer:	
+		case EDepthBuffer:
 			m_pixelFormat = EDepth;
 			m_mipmapped = false;
 			m_wrapTypeU = m_wrapTypeV = EClamp;
@@ -177,7 +177,7 @@ namespace detail {
 	}
 
 	static const char *toString(GPUTexture::EFilterType filter) {
-		switch (filter) {		
+		switch (filter) {
 			case GPUTexture::ENearest: return "nearest";
 			case GPUTexture::ELinear: return "linear";
 			case GPUTexture::EMipMapNearest: return "mipMapNearest";
@@ -187,7 +187,7 @@ namespace detail {
 	}
 
 	static const char *toString(GPUTexture::EWrapType wrap) {
-		switch (wrap) {		
+		switch (wrap) {
 			case GPUTexture::EClamp: return "clamp";
 			case GPUTexture::EClampToEdge: return "clampToEdge";
 			case GPUTexture::EClampToBorder: return "clampToBorder";
@@ -198,7 +198,7 @@ namespace detail {
 	}
 
 	static const char *toString(GPUTexture::EFrameBufferType fbType) {
-		switch (fbType) {		
+		switch (fbType) {
 			case GPUTexture::ENone: return "none";
 			case GPUTexture::EDepthBuffer: return "depthBuffer";
 			case GPUTexture::EColorBuffer: return "colorBuffer";
@@ -208,7 +208,7 @@ namespace detail {
 	}
 
 	static const char *toString(GPUTexture::EDepthMode depthMode) {
-		switch (depthMode) {		
+		switch (depthMode) {
 			case GPUTexture::ENormal: return "normal";
 			case GPUTexture::ECompare: return "compare";
 			default: SLog(EError, "Invalid depth read mode"); return NULL;
@@ -226,7 +226,7 @@ std::string GPUTexture::toString() const {
 		<< "  fbType = " << detail::toString(m_fbType) << "," << endl
 		<< "  size = " << m_size.toString() << "," << endl
 		<< "  filterType = " << detail::toString(m_filterType) << "," << endl
-		<< "  wrapType = [" << detail::toString(m_wrapTypeU) 
+		<< "  wrapType = [" << detail::toString(m_wrapTypeU)
 		<< ", " << detail::toString(m_wrapTypeV) << "]," << endl;
 
 	if (m_samples > 1)

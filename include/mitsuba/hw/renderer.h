@@ -62,7 +62,7 @@ public:
 		m_capabilities[cap] = supported;
 	}
 
-	inline bool isSupported(ECapability cap) const { 
+	inline bool isSupported(ECapability cap) const {
 		return m_capabilities[cap];
 	}
 
@@ -109,8 +109,8 @@ public:
 	}
 
 	/**
-	 * Initialize the renderer. Optionally, an existing renderer instance 
-	 * can be provided as a second argument -- this establishes a link 
+	 * Initialize the renderer. Optionally, an existing renderer instance
+	 * can be provided as a second argument -- this establishes a link
 	 * between them to permit sharing of textures, programs, etc.
 	 */
 	virtual void init(Device *device, Renderer *other = NULL);
@@ -137,7 +137,7 @@ public:
 	/// Clear the viewport
 	virtual void clear() = 0;
 
-	/// Configure the camera 
+	/// Configure the camera
 	virtual void setCamera(const ProjectiveCamera *pCamera,
 		const Point2 &apertureSample = Point2(0.5f),
 		const Point2 &aaSample = Point2(0.5f),
@@ -153,19 +153,19 @@ public:
 	virtual Matrix4x4 getMatrix(EMatrixType type) const = 0;
 
 	/// Set up the renderer for drawing triangle geometry
-	virtual void beginDrawingMeshes(bool transmitOnlyPositions = false) = 0; 
+	virtual void beginDrawingMeshes(bool transmitOnlyPositions = false) = 0;
 
 	/// Send a triangle mesh to the renderer
-	virtual void drawMesh(const TriMesh *shape) = 0; 
+	virtual void drawMesh(const TriMesh *shape) = 0;
 
 	/// Send a triangle mesh to the renderer
-	virtual void drawMesh(const GPUGeometry *geo) = 0; 
+	virtual void drawMesh(const GPUGeometry *geo) = 0;
 
 	/// Clean up the renderer after drawing triangle geometry
-	virtual void endDrawingMeshes() = 0; 
+	virtual void endDrawingMeshes() = 0;
 
 	/**
-	 * \brief Quickly draw all geometry that has been registered 
+	 * \brief Quickly draw all geometry that has been registered
 	 * with the renderer.
 	 *
 	 * Only transmits positions, hence this is mainly useful for
@@ -175,7 +175,7 @@ public:
 
 	/// Draw a quad using the given texture
 	virtual void blitTexture(const GPUTexture *texture,
-		bool flipVertically = false, 
+		bool flipVertically = false,
 		bool centerHoriz = true, bool centerVert = true,
 		const Vector2i &offset = Vector2i(0, 0)) = 0;
 
@@ -186,7 +186,7 @@ public:
 	 * Draw a line of text on the screen. The coordinates are specified
 	 * in pixel coordinates, where the upper left corner is the origin
 	 */
-	virtual void drawText(const Point2i &pos, 
+	virtual void drawText(const Point2i &pos,
 			const Font *font, const std::string &text) = 0;
 
 	/// Set the size of point primitives
@@ -223,7 +223,7 @@ public:
 	virtual void drawFilledRectangle(const Point2i &a, const Point2i &b) = 0;
 
 	/// Draw an ellipse with the specified center and axes
-	virtual void drawEllipse(const Point &center, 
+	virtual void drawEllipse(const Point &center,
 			const Vector &axis1, const Vector &axis2) = 0;
 
 	/// Draw a wire-frame axis-aligned box

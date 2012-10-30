@@ -29,8 +29,8 @@ MTS_NAMESPACE_BEGIN
  *       Number of samples per pixel \default{4}
  *     }
  *     \parameter{scramble}{\Integer}{
- *       This parameter can be used to set a scramble value to break up temporally coherent 
- *       noise patterns. For stills, this is irrelevant. When rendering 
+ *       This parameter can be used to set a scramble value to break up temporally coherent
+ *       noise patterns. For stills, this is irrelevant. When rendering
  *       an animation, simply set it to the current frame index. \default{0}
  *     }
  * }
@@ -41,42 +41,42 @@ MTS_NAMESPACE_BEGIN
  *     \unframedrendering{A projection of the first 1024 points
  *     onto the 32 and 33th dimension.}{sampler_sobol_nonscrambled_32}
  * }
- * 
+ *
  * This plugin implements a Quasi-Monte Carlo (QMC) sample generator based on the
  * Sobol sequence. QMC number sequences are designed to reduce sample clumping
- * across integration dimensions, which can lead to a higher order of 
+ * across integration dimensions, which can lead to a higher order of
  * convergence in renderings. Because of the deterministic character of the samples,
  * errors will manifest as grid or moir\'e patterns rather than random noise, but
- * these diminish as the number of samples is increased. 
+ * these diminish as the number of samples is increased.
  *
  * The Sobol sequence in particular provides a relatively good point set that can
  * be computed extremely efficiently. One downside is the susceptibility to pattern artifacts
  * in the generated image. To minimize these artifacts, it is advisable to use
  * a number of samples per pixel that is a power of two.
  *
- * Because everything that happens inside this sampler is completely 
- * deterministic and independent of operating system scheduling behavior, subsequent 
- * runs of Mitsuba will always compute the same image, and this even holds when rendering 
+ * Because everything that happens inside this sampler is completely
+ * deterministic and independent of operating system scheduling behavior, subsequent
+ * runs of Mitsuba will always compute the same image, and this even holds when rendering
  * with multiple threads and/or machines.
 
  * The plugin relies on a fast implementation of the Sobol sequence by Leonhard
- * Gr\"unschlo\ss\ using direction numbers provided by Joe and Kuo 
- * \cite{Joe2008Constructing}. 
- * These direction numbers are given up to a dimension of 1024. Because of this 
+ * Gr\"unschlo\ss\ using direction numbers provided by Joe and Kuo
+ * \cite{Joe2008Constructing}.
+ * These direction numbers are given up to a dimension of 1024. Because of this
  * upper bound, the maximum path depth of the integrator must be limited (e.g. to 100), or
- * rendering might fail with the following error message: \emph{Lookup dimension 
- * exceeds the direction number table size! You may have to reduce the 'maxDepth' 
+ * rendering might fail with the following error message: \emph{Lookup dimension
+ * exceeds the direction number table size! You may have to reduce the 'maxDepth'
  * parameter of your integrator}.
  *
- * Note that this sampler generates a $(0,2)$-sequence in the first two dimensions, 
+ * Note that this sampler generates a $(0,2)$-sequence in the first two dimensions,
  * and therefore the point plot shown in (a) happens to match the corresponding plots of
  * \pluginref{ldsampler}. In higher dimensions, however, they behave rather differently.
  *
- * When this sampler is used to perform parallel block-based renderings, 
- * the sequence is internally enumerated using a scheme proposed and implemented 
+ * When this sampler is used to perform parallel block-based renderings,
+ * the sequence is internally enumerated using a scheme proposed and implemented
  * by Gr\"unschlo\ss\ et al. \cite{Grunschloss2010Enumerating}.
  * \remarks{
- *   \item This sampler is incompatible with Metropolis Light Transport (all variants). 
+ *   \item This sampler is incompatible with Metropolis Light Transport (all variants).
  * }
  */
 class SobolSampler : public Sampler {
@@ -87,11 +87,11 @@ public:
 		/* Number of samples per pixel when used with a sampling-based integrator */
 		m_sampleCount = props.getSize("sampleCount", 4);
 
-		/* Scramble value, which can be used to break up temporally coherent 
+		/* Scramble value, which can be used to break up temporally coherent
 		   noise patterns when rendering the frames of an animation. */
 		m_scramble = (uint64_t) props.getSize("scramble", 0);
 
-		/* When scrambling was requested, run TEA to turn the frame 
+		/* When scrambling was requested, run TEA to turn the frame
 		   number into a pseudorandom uniformly distributed 64-bit integer */
 		if (m_scramble) {
 			union {
@@ -106,7 +106,7 @@ public:
 		m_pixelPosition = Point2i(0);
 	}
 
-	SobolSampler(Stream *stream, InstanceManager *manager) 
+	SobolSampler(Stream *stream, InstanceManager *manager)
 	 : Sampler(stream, manager) {
 		m_scramble = stream->readULong();
 		m_resolution = stream->readFloat();
@@ -161,7 +161,7 @@ public:
 		uint32_t ctr = 0;
 		for (Iterator it = it2 - 1; it > it1; --it) {
 			size_t size = it - it1;
-			size_t value = std::max((size_t) (size * (sampleTEA(seed, ctr++) 
+			size_t value = std::max((size_t) (size * (sampleTEA(seed, ctr++)
 					/ (Float) std::numeric_limits<uint64_t>::max())), size-1);
 			std::iter_swap(it, it1 + value);
 		}
@@ -208,7 +208,7 @@ public:
 
 		if (m_logResolution > 1 && m_pixelPosition.x >= 0) {
 			/* Find the next sample that is located in the current pixel */
-			m_sobolSampleIndex = sobol::look_up(m_logResolution, (uint32_t) m_sampleIndex, 
+			m_sobolSampleIndex = sobol::look_up(m_logResolution, (uint32_t) m_sampleIndex,
 					m_pixelPosition.x, m_pixelPosition.y, m_scramble);
 		} else {
 			m_sobolSampleIndex = (uint64_t) m_sampleIndex;
@@ -256,7 +256,7 @@ public:
 			<< "  sampleIndex = " << m_sampleIndex << "," << endl
 			<< "  resolution = " << m_resolution << "," << endl
 			<< "  scramble = " << m_scramble << endl
-			<< "]"; 
+			<< "]";
 		return oss.str();
 	}
 

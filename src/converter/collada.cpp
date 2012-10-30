@@ -76,14 +76,14 @@ enum ESourceType {
 struct Vec4 {
 	Float x, y, z, w;
 
-	inline Vec4(Float x=0, Float y=0, Float z=0, Float w=0) 
+	inline Vec4(Float x=0, Float y=0, Float z=0, Float w=0)
 		: x(x), y(y), z(z), w(w) {
 	}
 
 	inline void operator+=(const Vec4 &v) {
 		x += v.x; y += v.y; z += v.z; w += v.w;
 	}
-	
+
 	inline Vec4 operator*(Float f) const {
 		return Vec4(x * f, y * f, z * f, w * f);
 	}
@@ -143,7 +143,7 @@ std::vector<domUint *> tess_cleanup;
 VertexData *tess_vdata = NULL;
 size_t tess_nSources;
 
-VertexData *fetchVertexData(Transform transform, 
+VertexData *fetchVertexData(Transform transform,
 		const domInputLocal_Array &vertInputs,
 		const domInputLocalOffset_Array &inputs) {
 	VertexData *result = new VertexData();
@@ -256,7 +256,7 @@ struct Vertex {
 };
 
 /// For using vertices as keys in an associative structure
-struct vertex_key_order : public 
+struct vertex_key_order : public
 	std::binary_function<Vertex, Vertex, bool> {
 	static int compare(const Vertex &v1, const Vertex &v2) {
 		if (v1.p.x < v2.p.x) return -1;
@@ -343,8 +343,8 @@ static inline Float fromSRGBComponent(Float value) {
 		/ (Float) (1.0 + 0.055), (Float) 2.4);
 }
 
-void writeGeometry(ColladaContext &ctx, const std::string &prefixName, std::string id, 
-		int geomIndex, std::string matID, Transform transform, VertexData *vData, 
+void writeGeometry(ColladaContext &ctx, const std::string &prefixName, std::string id,
+		int geomIndex, std::string matID, Transform transform, VertexData *vData,
 		TriangleMap &triMap, bool exportShapeGroup) {
 	std::vector<Vertex> vertexBuffer;
 	std::vector<Triangle> triangles;
@@ -420,9 +420,9 @@ void writeGeometry(ColladaContext &ctx, const std::string &prefixName, std::stri
 
 	if (duplicates > 0) {
 		if (triangles.size() == 0) {
-			SLog(EWarn, "\"%s/%s\": Only contains duplicates (%i triangles) of already-existing geometry. Ignoring.", 
+			SLog(EWarn, "\"%s/%s\": Only contains duplicates (%i triangles) of already-existing geometry. Ignoring.",
 				prefixName.c_str(), id.c_str(), duplicates);
-			ctx.os << "\t<!-- Ignored shape \"" << prefixName << "/" 
+			ctx.os << "\t<!-- Ignored shape \"" << prefixName << "/"
 				<< id << "\" (mat=\"" << matID << "\"), since it only contains duplicate geometry. -->" << endl << endl;
 			return;
 		} else {
@@ -431,11 +431,11 @@ void writeGeometry(ColladaContext &ctx, const std::string &prefixName, std::stri
 	}
 
 	SAssert(triangleIdx == 0);
-	SLog(EDebug, "\"%s/%s\": Converted " SIZE_T_FMT " triangles, " SIZE_T_FMT 
+	SLog(EDebug, "\"%s/%s\": Converted " SIZE_T_FMT " triangles, " SIZE_T_FMT
 		" vertices (merged " SIZE_T_FMT " vertices).", prefixName.c_str(), id.c_str(),
 		triangles.size(), vertexBuffer.size(), numMerged);
 
-	ref<TriMesh> mesh = new TriMesh(prefixName + "/" + id, 
+	ref<TriMesh> mesh = new TriMesh(prefixName + "/" + id,
 		triangles.size(), vertexBuffer.size(),
 		vData->typeToOffset[ENormal] != -1,
 		vData->typeToOffset[EUV] != -1,
@@ -501,7 +501,7 @@ void writeGeometry(ColladaContext &ctx, const std::string &prefixName, std::stri
 			ctx.os << "\t\t\t<matrix value=\"" << matrixValues.substr(0, matrixValues.length()-1) << "\"/>" << endl;
 			ctx.os << "\t\t</transform>" << endl;
 		}
-		if (matID != "") 
+		if (matID != "")
 			ctx.os << "\t\t<ref name=\"bsdf\" id=\"" << matID << "\"/>" << endl;
 		ctx.os << "\t</shape>" << endl << endl;
 	} else {
@@ -509,12 +509,12 @@ void writeGeometry(ColladaContext &ctx, const std::string &prefixName, std::stri
 		ctx.os << "\t\t\t<string name=\"filename\" value=\"" << filename << "\"/>" << endl;
 		if (ctx.cvt->m_geometryFile)
 			ctx.os << "\t\t\t<integer name=\"shapeIndex\" value=\"" << (ctx.cvt->m_geometryDict.size() - 1)<< "\"/>" << endl;
-		if (matID != "") 
+		if (matID != "")
 			ctx.os << "\t\t\t<ref name=\"bsdf\" id=\"" << matID << "\"/>" << endl;
 		ctx.os << "\t\t</shape>" << endl << endl;
 	}
 }
-		
+
 void exportAnimation(ColladaContext &ctx, const fs::path &path, const std::string &name) {
 	AnimationMap::iterator start = ctx.animations.lower_bound(name);
 	AnimationMap::iterator end = ctx.animations.upper_bound(name);
@@ -524,7 +524,7 @@ void exportAnimation(ColladaContext &ctx, const fs::path &path, const std::strin
 	for (AnimationMap::iterator it = start; it != end; ++it) {
 		AbstractAnimationTrack *track = it->second;
 		int type = track->getType();
-		if (type == FloatTrack::ERotationX 
+		if (type == FloatTrack::ERotationX
 			|| type == FloatTrack::ERotationY
 			|| type == FloatTrack::ERotationZ)
 			continue;
@@ -535,8 +535,8 @@ void exportAnimation(ColladaContext &ctx, const fs::path &path, const std::strin
 	trafo->serialize(fs);
 }
 
-void loadGeometry(ColladaContext &ctx, const std::string &instanceName, 
-		std::string prefixName, Transform transform, domGeometry &geom, 
+void loadGeometry(ColladaContext &ctx, const std::string &instanceName,
+		std::string prefixName, Transform transform, domGeometry &geom,
 		StringMap &matLookupTable) {
 	std::string identifier;
 	if (geom.getId() != NULL) {
@@ -551,7 +551,7 @@ void loadGeometry(ColladaContext &ctx, const std::string &instanceName,
 	}
 	TriangleMap triMap;
 
-	SLog(EDebug, "Converting geometry \"%s\" (instantiated by %s)..", identifier.c_str(), 
+	SLog(EDebug, "Converting geometry \"%s\" (instantiated by %s)..", identifier.c_str(),
 		prefixName == "" ? "/" : prefixName.c_str());
 	domMesh *mesh = geom.getMesh().cast();
 	if (!mesh)
@@ -644,14 +644,14 @@ void loadGeometry(ColladaContext &ctx, const std::string &instanceName,
 			if (invalid)
 				continue;
 
-			for (size_t l = 0; l<indices.getCount(); ++l) 
+			for (size_t l = 0; l<indices.getCount(); ++l)
 				temp[l] = indices.get(l);
 
 			tess_vdata = data;
 			gluTessBeginPolygon(tess, NULL);
 			gluTessBeginContour(tess);
 
-			for (size_t k=0; k<indices.getCount(); k+=data->nSources) 
+			for (size_t k=0; k<indices.getCount(); k+=data->nSources)
 				gluTessVertex(tess, &data->glPos[3*temp[k+posOffset]], (GLvoid *) (temp+k));
 
 			gluTessEndContour(tess);
@@ -713,7 +713,7 @@ void loadGeometry(ColladaContext &ctx, const std::string &instanceName,
 			gluTessBeginPolygon(tess, NULL);
 			gluTessBeginContour(tess);
 
-			for (size_t k=0; k<vertexCount; k++) 
+			for (size_t k=0; k<vertexCount; k++)
 				gluTessVertex(tess, &data->glPos[temp[k*data->nSources+posOffset]*3], (GLvoid *) (temp + k*data->nSources));
 
 			gluTessEndContour(tess);
@@ -756,13 +756,13 @@ void loadGeometry(ColladaContext &ctx, const std::string &instanceName,
 	}
 }
 
-void loadMaterialParam(ColladaContext &ctx, const std::string &name, 
+void loadMaterialParam(ColladaContext &ctx, const std::string &name,
 		domCommon_color_or_texture_type *value, bool handleRefs) {
 	if (!value)
 		return;
-	domCommon_color_or_texture_type_complexType::domColor* color = 
+	domCommon_color_or_texture_type_complexType::domColor* color =
 		value->getColor().cast();
-	domCommon_color_or_texture_type_complexType::domTexture* texture = 
+	domCommon_color_or_texture_type_complexType::domTexture* texture =
 		value->getTexture().cast();
 	if (color && !handleRefs) {
 		domFloat4 &colValue = color->getValue();
@@ -770,7 +770,7 @@ void loadMaterialParam(ColladaContext &ctx, const std::string &name,
 			ctx.os << "\t\t<srgb name=\"" << name << "\" value=\"";
 		else
 			ctx.os << "\t\t<rgb name=\"" << name << "\" value=\"";
-		ctx.os << colValue.get(0) << " " << colValue.get(1) << " " 
+		ctx.os << colValue.get(0) << " " << colValue.get(1) << " "
 		   << colValue.get(2) << "\"/>" << endl;
 	} else if (texture && handleRefs) {
 		if (ctx.idToTexture.find(texture->getTexture()) == ctx.idToTexture.end()) {
@@ -782,7 +782,7 @@ void loadMaterialParam(ColladaContext &ctx, const std::string &name,
 	}
 }
 
-void loadMaterialParam(ColladaContext &ctx, const std::string &name, 
+void loadMaterialParam(ColladaContext &ctx, const std::string &name,
 		domCommon_float_or_param_type *value, bool handleRef) {
 	if (!value)
 		return;
@@ -805,7 +805,7 @@ void loadMaterial(ColladaContext &ctx, domMaterial &mat) {
 			identifier = formatString("unnamedMat_%i", unnamedCtr++);
 		}
 	}
-	
+
 	daeURI &effRef = mat.getInstance_effect()->getUrl();
 	effRef.resolveElement();
 	domEffect *effect = daeSafeCast<domEffect>(effRef.getElement());
@@ -819,7 +819,7 @@ void loadMaterial(ColladaContext &ctx, domMaterial &mat) {
 	if (!commonProfile)
 		SLog(EError, "Common effect profile not found!");
 
-	/* The following supports a subset of the curious ColladaFX output 
+	/* The following supports a subset of the curious ColladaFX output
        produced by the Blender COLLADA exporter */
 	daeTArray<daeSmartRef<domCommon_newparam_type> > &newParamArray = commonProfile->getNewparam_array();
 	for (size_t i=0; i<newParamArray.getCount(); ++i) {
@@ -925,7 +925,7 @@ void loadMaterial(ColladaContext &ctx, domMaterial &mat) {
 		}
 	} else if (constant) {
 		domCommon_float_or_param_type* transparency = constant->getTransparency();
-		domCommon_float_or_param_type::domFloat *transparencyValue = 
+		domCommon_float_or_param_type::domFloat *transparencyValue =
 				transparency ? transparency->getFloat() : NULL;
 		if (transparencyValue && transparencyValue->getValue() > 0.5) {
 			ctx.os << "\t<bsdf id=\"" << identifier << "\" type=\"dielectric\"/>" << endl << endl;
@@ -1054,7 +1054,7 @@ void loadImage(ColladaContext &ctx, domImage &image) {
 	}
 
 	SLog(EDebug, "Converting texture \"%s\" ..", identifier.c_str());
-	
+
 	std::string uri = image.getInit_from()->getValue().str();
 	std::string filename = cdom::uriToFilePath(uri);
 	if (filename.empty()) /* When uriToFilePath fails, try to use the path as is */
@@ -1077,7 +1077,7 @@ void loadImage(ColladaContext &ctx, domImage &image) {
 	fs::path targetPath = ctx.texturesDirectory / path.filename();
 
 	std::string extension = boost::to_lower_copy(path.extension().string());
-	if (extension == ".rgb") 
+	if (extension == ".rgb")
 		SLog(EWarn, "Maya RGB images must be converted to PNG, EXR or JPEG! The 'imgcvt' "
 			"utility found in the Maya binary directory can be used to do this.");
 
@@ -1214,9 +1214,9 @@ void loadNode(ColladaContext &ctx, Transform transform, domNode &node, std::stri
 	for (size_t i=0; i<children.getCount(); ++i) {
 		daeElement *element = children.get(i);
 		if (element->typeID() == domRotate::ID()) {
-			/* Skip rotations labeled as "post-rotationY". Maya and 3ds max export these with some 
+			/* Skip rotations labeled as "post-rotationY". Maya and 3ds max export these with some
 			   cameras, which introduces an incorrect 90 degree rotation unless ignored */
-			if (element->hasAttribute("sid") && element->getAttribute("sid") == "post-rotationY") 
+			if (element->hasAttribute("sid") && element->getAttribute("sid") == "post-rotationY")
 				continue;
 			daeTArray<double> value = daeSafeCast<domRotate>(element)->getValue();
 			Vector axis((Float) value.get(0), (Float) value.get(1), (Float) value.get(2));
@@ -1248,9 +1248,9 @@ void loadNode(ColladaContext &ctx, Transform transform, domNode &node, std::stri
 		} else if (element->typeID() == domMatrix::ID()) {
 			daeTArray<double> value = daeSafeCast<domMatrix>(element)->getValue();
 			Matrix4x4 matrix(
-				(Float) value.get(0), (Float) value.get(1), (Float) value.get(2), (Float) value.get(3), 
-				(Float) value.get(4), (Float) value.get(5), (Float) value.get(6), (Float) value.get(7), 
-				(Float) value.get(8), (Float) value.get(9), (Float) value.get(10), (Float) value.get(11), 
+				(Float) value.get(0), (Float) value.get(1), (Float) value.get(2), (Float) value.get(3),
+				(Float) value.get(4), (Float) value.get(5), (Float) value.get(6), (Float) value.get(7),
+				(Float) value.get(8), (Float) value.get(9), (Float) value.get(10), (Float) value.get(11),
 				(Float) value.get(12), (Float) value.get(13), (Float) value.get(14), (Float) value.get(15)
 			);
 			transform = transform * Transform(matrix);
@@ -1309,7 +1309,7 @@ void loadNode(ColladaContext &ctx, Transform transform, domNode &node, std::stri
 
 	/* Recursively iterate through sub-nodes */
 	domNode_Array &nodes = node.getNode_array();
-	for (size_t i=0; i<nodes.getCount(); ++i) 
+	for (size_t i=0; i<nodes.getCount(); ++i)
 		loadNode(ctx, transform, *nodes[i], prefixName);
 
 	/* Recursively iterate through <instance_node> elements */
@@ -1337,7 +1337,7 @@ void computeRefCounts(ColladaContext &ctx, domNode &node) {
 
 	/* Recursively iterate through sub-nodes */
 	domNode_Array &nodes = node.getNode_array();
-	for (size_t i=0; i<nodes.getCount(); ++i) 
+	for (size_t i=0; i<nodes.getCount(); ++i)
 		computeRefCounts(ctx, *nodes[i]);
 
 	/* Recursively iterate through <instance_node> elements */
@@ -1412,7 +1412,7 @@ void loadAnimation(ColladaContext &ctx, domAnimation &anim) {
 		}
 
 		if (trackType == FloatTrack::EInvalid) {
-			SLog(EWarn, "Skipping unsupported animation track of type %s.%s", 
+			SLog(EWarn, "Skipping unsupported animation track of type %s.%s",
 				target[1].c_str(), target.size() > 2 ? target[2].c_str() : "");
 			continue;
 		}
@@ -1446,19 +1446,19 @@ void loadAnimation(ColladaContext &ctx, domAnimation &anim) {
 			if (semantic == "INPUT") {
 				domListOfFloats &floatArray = source->getFloat_array()->getValue();
 				SAssert(stride == 1);
-				for (size_t i=0; i<size; ++i) 
+				for (size_t i=0; i<size; ++i)
 					track->setTime(i, (Float) floatArray[i]);
 			} else if (semantic == "OUTPUT") {
 				domListOfFloats &floatArray = source->getFloat_array()->getValue();
 				if (trackType == VectorTrack::ETranslationXYZ || trackType == VectorTrack::EScaleXYZ) {
 					SAssert(stride == 3);
 					for (size_t i=0; i<size; ++i)
-						((VectorTrack *) track)->setValue(i, 
-							Vector((Float) floatArray[i*3+0], (Float) floatArray[i*3+1], 
+						((VectorTrack *) track)->setValue(i,
+							Vector((Float) floatArray[i*3+0], (Float) floatArray[i*3+1],
 								(Float) floatArray[i*3+2]));
 				} else {
 					SAssert(stride == 1);
-					for (size_t i=0; i<size; ++i) 
+					for (size_t i=0; i<size; ++i)
 						((FloatTrack *) track)->setValue(i, (Float) floatArray[i]);
 				}
 			} else if (semantic == "INTERPOLATION") {
@@ -1495,7 +1495,7 @@ void mergeRotations(ColladaContext &ctx) {
 			continue;
 		}
 
-		SLog(EDebug, "Converting rotation track of \"%s\" to quaternions ..", 
+		SLog(EDebug, "Converting rotation track of \"%s\" to quaternions ..",
 				key.c_str());
 
 		std::set<Float> times;
@@ -1536,7 +1536,7 @@ GLvoid __stdcall tessVertex(void *data) {
 		tess_data.push_back(raw[i]);
 }
 
-GLvoid __stdcall tessCombine(GLdouble coords[3], void *vertex_data[4], 
+GLvoid __stdcall tessCombine(GLdouble coords[3], void *vertex_data[4],
 	GLfloat weight[4], void **outData) {
 	domUint *result = new domUint[tess_nSources], size = 0;
 	tess_cleanup.push_back(result);
@@ -1581,7 +1581,7 @@ GLvoid __stdcall tessError(GLenum error) {
 	SLog(EError, "The GLU tesselator generated an error: %s!", gluErrorString(error));
 }
 
-void GeometryConverter::convertCollada(const fs::path &inputFile, 
+void GeometryConverter::convertCollada(const fs::path &inputFile,
 	std::ostream &os,
 	const fs::path &texturesDirectory,
 	const fs::path &meshesDirectory) {
@@ -1591,11 +1591,11 @@ void GeometryConverter::convertCollada(const fs::path &inputFile,
 #if COLLADA_DOM_SUPPORT141
 	DAE *dae = new DAE(NULL, NULL, "1.4.1");
 	domCOLLADA *document = dae->open141(inputFile.string());
-	if (document == NULL) 
+	if (document == NULL)
 		SLog(EError, "Could not load \"%s\"!", inputFile.string().c_str());
 #else
 	DAE *dae = new DAE();
-	if (dae->load(inputFile.string().c_str()) != DAE_OK) 
+	if (dae->load(inputFile.string().c_str()) != DAE_OK)
 		SLog(EError, "Could not load \"%s\"!", inputFile.string().c_str());
 	domCOLLADA *document = dae->getDom(inputFile.string().c_str());
 #endif
@@ -1606,7 +1606,7 @@ void GeometryConverter::convertCollada(const fs::path &inputFile,
 
 	/* Configure the GLU tesselator */
 	tess = gluNewTess();
-	if (!tess) 
+	if (!tess)
 		SLog(EError, "Could not allocate a GLU tesselator!");
 
 	gluTessCallback(tess, GLU_TESS_VERTEX, reinterpret_cast<GLvoid (__stdcall *)()>(&tessVertex));
@@ -1637,34 +1637,34 @@ void GeometryConverter::convertCollada(const fs::path &inputFile,
 		domLibrary_images_Array &libraryImages = document->getLibrary_images_array();
 		for (size_t i=0; i<libraryImages.getCount(); ++i) {
 			domImage_Array &images = libraryImages[i]->getImage_array();
-			for (size_t j=0; j<images.getCount(); ++j) 
+			for (size_t j=0; j<images.getCount(); ++j)
 				loadImage(ctx, *images.get(j));
 		}
 
 		domLibrary_materials_Array &libraryMaterials = document->getLibrary_materials_array();
 		for (size_t i=0; i<libraryMaterials.getCount(); ++i) {
 			domMaterial_Array &materials = libraryMaterials[i]->getMaterial_array();
-			for (size_t j=0; j<materials.getCount(); ++j) 
+			for (size_t j=0; j<materials.getCount(); ++j)
 				loadMaterial(ctx, *materials.get(j));
 		}
 	}
-	
+
 	if (m_importAnimations) {
 		SLog(EInfo, "Importing animations ..");
 		domLibrary_animations_Array &libraryAnimations = document->getLibrary_animations_array();
 		for (size_t i=0; i<libraryAnimations.getCount(); ++i) {
 			domAnimation_Array &animations = libraryAnimations[i]->getAnimation_array();
-			for (size_t j=0; j<animations.getCount(); ++j) 
+			for (size_t j=0; j<animations.getCount(); ++j)
 				loadAnimation(ctx, *animations[j]);
 		}
 		mergeRotations(ctx);
 	}
 
 	SLog(EInfo, "Importing scene ..");
-	for (size_t i=0; i<nodes.getCount(); ++i) 
+	for (size_t i=0; i<nodes.getCount(); ++i)
 		computeRefCounts(ctx, *nodes[i]);
 
-	for (size_t i=0; i<nodes.getCount(); ++i) 
+	for (size_t i=0; i<nodes.getCount(); ++i)
 		loadNode(ctx, Transform(), *nodes[i], "");
 
 	for (AnimationMap::iterator it = ctx.animations.begin();

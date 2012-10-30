@@ -21,24 +21,24 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * Box filter: this is the fastest, but also about the worst possible 
- * reconstruction filter, since it is extremely prone to aliasing. 
+ * Box filter: this is the fastest, but also about the worst possible
+ * reconstruction filter, since it is extremely prone to aliasing.
  *
  * It is included mainly for completeness, though some rare situations
  * may warrant its use.
  */
 class BoxFilter : public ReconstructionFilter {
 public:
-	BoxFilter(const Properties &props) 
+	BoxFilter(const Properties &props)
 		: ReconstructionFilter(props) {
 		/* Filter radius in pixels. A tiny epsilon is added, since some
 		   samplers (Hammersley and Halton in particular) place samples
-		   at positions like (0, 0). Without such an epsilon and rounding 
+		   at positions like (0, 0). Without such an epsilon and rounding
 		   errors, samples may end up not contributing to any pixel. */
 		m_radius = 0.5f + 1e-6f;
 	}
 
-	BoxFilter(Stream *stream, InstanceManager *manager) 
+	BoxFilter(Stream *stream, InstanceManager *manager)
 		: ReconstructionFilter(stream, manager) {
 		configure();
 	}
@@ -50,7 +50,7 @@ public:
 	std::string toString() const {
 		return "BoxFilter[]";
 	}
-	
+
 	MTS_DECLARE_CLASS()
 };
 

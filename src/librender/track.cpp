@@ -9,7 +9,7 @@ AnimatedTransform::AnimatedTransform(Stream *stream) {
 		m_transform = Transform(stream);
 	} else {
 		for (size_t i=0; i<nTracks; ++i) {
-			AbstractAnimationTrack::EType type = 
+			AbstractAnimationTrack::EType type =
 				(AbstractAnimationTrack::EType) stream->readUInt();
 			AbstractAnimationTrack *track = NULL;
 			switch (type) {
@@ -47,7 +47,7 @@ void AnimatedTransform::addTrack(AbstractAnimationTrack *track) {
 }
 
 AABB1 AnimatedTransform::getTimeBounds() const {
-	if (m_tracks.size() == 0) 
+	if (m_tracks.size() == 0)
 #if !defined(__clang__)
 		return AABB1(0.0f, 0.0f);
 #else
@@ -96,7 +96,7 @@ AABB AnimatedTransform::getTranslationBounds() const {
 			case AbstractAnimationTrack::ETranslationY:
 			case AbstractAnimationTrack::ETranslationZ: {
 					int idx  = absTrack->getType() - AbstractAnimationTrack::ETranslationX;
-					const FloatTrack *track = 
+					const FloatTrack *track =
 						static_cast<const FloatTrack *>(absTrack);
 					for (size_t j=0; j<track->getSize(); ++j) {
 						Float value = track->getValue(j);
@@ -107,9 +107,9 @@ AABB AnimatedTransform::getTranslationBounds() const {
 				break;
 
 			case AbstractAnimationTrack::ETranslationXYZ: {
-					const VectorTrack *track = 
+					const VectorTrack *track =
 						static_cast<const VectorTrack *>(absTrack);
-					for (size_t j=0; j<track->getSize(); ++j) 
+					for (size_t j=0; j<track->getSize(); ++j)
 						aabb.expandBy(Point(track->getValue(j)));
 				}
 				break;
@@ -173,28 +173,28 @@ void AnimatedTransform::TransformFunctor::operator()(const Float &t, Transform &
 			case AbstractAnimationTrack::ETranslationX:
 				translation.x = static_cast<FloatTrack *>(track)->eval(t);
 				break;
-			case AbstractAnimationTrack::ETranslationY: 
+			case AbstractAnimationTrack::ETranslationY:
 				translation.y = static_cast<FloatTrack *>(track)->eval(t);
 				break;
-			case AbstractAnimationTrack::ETranslationZ: 
+			case AbstractAnimationTrack::ETranslationZ:
 				translation.z = static_cast<FloatTrack *>(track)->eval(t);
 				break;
-			case AbstractAnimationTrack::ETranslationXYZ: 
+			case AbstractAnimationTrack::ETranslationXYZ:
 				translation = static_cast<VectorTrack *>(track)->eval(t);
 				break;
 			case AbstractAnimationTrack::EScaleX:
 				scale.x = static_cast<FloatTrack *>(track)->eval(t);
 				break;
-			case AbstractAnimationTrack::EScaleY: 
+			case AbstractAnimationTrack::EScaleY:
 				scale.y = static_cast<FloatTrack *>(track)->eval(t);
 				break;
-			case AbstractAnimationTrack::EScaleZ: 
+			case AbstractAnimationTrack::EScaleZ:
 				scale.z = static_cast<FloatTrack *>(track)->eval(t);
 				break;
-			case AbstractAnimationTrack::EScaleXYZ: 
+			case AbstractAnimationTrack::EScaleXYZ:
 				scale = static_cast<VectorTrack *>(track)->eval(t);
 				break;
-			case AbstractAnimationTrack::ERotationQuat: 
+			case AbstractAnimationTrack::ERotationQuat:
 				rotation = static_cast<QuatTrack *>(track)->eval(t);
 				break;
 			default:
@@ -203,7 +203,7 @@ void AnimatedTransform::TransformFunctor::operator()(const Float &t, Transform &
 		}
 	}
 
-	trafo = Transform::translate(translation) * 
+	trafo = Transform::translate(translation) *
 		rotation.toTransform() *
 		Transform::scale(scale);
 }

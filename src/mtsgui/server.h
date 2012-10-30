@@ -47,7 +47,7 @@ namespace mitsuba {
 
 class ServerThread : public Thread {
 public:
-	ServerThread(Logger *logger, int listenPort, 
+	ServerThread(Logger *logger, int listenPort,
 		const std::string &nodeName);
 	virtual ~ServerThread();
 
@@ -63,7 +63,7 @@ private:
 class ServerWidget : public QMainWindow {
 	Q_OBJECT
 public:
-	ServerWidget(QWidget *parent, 
+	ServerWidget(QWidget *parent,
 		const QString &nodeName, int listenPort);
 	virtual ~ServerWidget();
 	void show();

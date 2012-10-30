@@ -26,7 +26,7 @@ MTS_NAMESPACE_BEGIN
  * \order{13}
  * \parameters{
  *     \parameter{exponent}{\Float\Or\Texture}{
- *         Specifies the Phong exponent \default{30}. 
+ *         Specifies the Phong exponent \default{30}.
  *     }
  *     \parameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{
  *         Specifies the weight of the specular reflectance component.\default{0.2}}
@@ -38,26 +38,26 @@ MTS_NAMESPACE_BEGIN
  *     \rendering{Exponent$\,=300$}{bsdf_phong_300}
  * }
 
- * This plugin implements the modified Phong reflectance model as described in 
- * \cite{Phong1975Illumination} and \cite{Lafortune1994Using}. This heuristic 
- * model is mainly included for historical reasons---its use in new scenes is 
- * discouraged, since significantly more realistic models have been developed 
+ * This plugin implements the modified Phong reflectance model as described in
+ * \cite{Phong1975Illumination} and \cite{Lafortune1994Using}. This heuristic
+ * model is mainly included for historical reasons---its use in new scenes is
+ * discouraged, since significantly more realistic models have been developed
  * since 1975.
  *
- * If possible, it is recommended to switch to a BRDF that is based on 
- * microfacet theory and includes knowledge about the material's index of 
+ * If possible, it is recommended to switch to a BRDF that is based on
+ * microfacet theory and includes knowledge about the material's index of
  * refraction. In Mitsuba, two good alternatives to \pluginref{phong} are
  * the plugins \pluginref{roughconductor} and \pluginref{roughplastic}
  * (depending on the material type).
  *
  * When using this plugin, note that the diffuse and specular reflectance
- * components should add up to a value less than or equal to one (for each 
- * color channel). Otherwise, they will automatically be scaled appropriately 
+ * components should add up to a value less than or equal to one (for each
+ * color channel). Otherwise, they will automatically be scaled appropriately
  * to ensure energy conservation.
  */
 class Phong : public BSDF {
 public:
-	Phong(const Properties &props) 
+	Phong(const Properties &props)
 		: BSDF(props) {
 		m_diffuseReflectance = new ConstantSpectrumTexture(
 			props.getSpectrum("diffuseReflectance", Spectrum(0.5f)));
@@ -68,7 +68,7 @@ public:
 		m_specularSamplingWeight = 0.0f;
 	}
 
-	Phong(Stream *stream, InstanceManager *manager) 
+	Phong(Stream *stream, InstanceManager *manager)
 	 : BSDF(stream, manager) {
 		m_diffuseReflectance = static_cast<Texture *>(manager->getInstance(stream));
 		m_specularReflectance = static_cast<Texture *>(manager->getInstance(stream));
@@ -98,7 +98,7 @@ public:
 			  sAvg = m_specularReflectance->getAverage().getLuminance();
 		m_specularSamplingWeight = sAvg / (dAvg + sAvg);
 
-		m_usesRayDifferentials = 
+		m_usesRayDifferentials =
 			m_diffuseReflectance->usesRayDifferentials() ||
 			m_specularReflectance->usesRayDifferentials() ||
 			m_exponent->usesRayDifferentials();
@@ -115,7 +115,7 @@ public:
 		return Vector(-wi.x, -wi.y, wi.z);
 	}
 
-	Spectrum eval(const BSDFSamplingRecord &bRec, EMeasure measure) const {	
+	Spectrum eval(const BSDFSamplingRecord &bRec, EMeasure measure) const {
 		if (Frame::cosTheta(bRec.wi) <= 0 ||
 			Frame::cosTheta(bRec.wo) <= 0 || measure != ESolidAngle)
 			return Spectrum(0.0f);
@@ -136,7 +136,7 @@ public:
 			}
 		}
 
-		if (hasDiffuse) 
+		if (hasDiffuse)
 			result += m_diffuseReflectance->eval(bRec.its) * INV_PI;
 
 		return result * Frame::cosTheta(bRec.wo);
@@ -161,7 +161,7 @@ public:
 			Float alpha    = dot(bRec.wo, reflect(bRec.wi)),
 				  exponent = m_exponent->eval(bRec.its).average();
 			if (alpha > 0)
-				specProb = std::pow(alpha, exponent) * 
+				specProb = std::pow(alpha, exponent) *
 					(exponent + 1.0f) / (2.0f * M_PI);
 		}
 
@@ -218,7 +218,7 @@ public:
 			bRec.sampledComponent = 1;
 			bRec.sampledType = EGlossyReflection;
 
-			if (Frame::cosTheta(bRec.wo) <= 0) 
+			if (Frame::cosTheta(bRec.wo) <= 0)
 				return Spectrum(0.0f);
 		} else {
 			bRec.wo = Warp::squareToCosineHemisphere(sample);
@@ -229,7 +229,7 @@ public:
 
 		_pdf = pdf(bRec, ESolidAngle);
 
-		if (_pdf == 0) 
+		if (_pdf == 0)
 			return Spectrum(0.0f);
 		else
 			return eval(bRec, ESolidAngle) / _pdf;
@@ -242,13 +242,13 @@ public:
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
 		if (child->getClass()->derivesFrom(MTS_CLASS(Texture))) {
-			if (name == "exponent") 
+			if (name == "exponent")
 				m_exponent = static_cast<Texture *>(child);
-			else if (name == "specularReflectance") 
+			else if (name == "specularReflectance")
 				m_specularReflectance = static_cast<Texture *>(child);
 			else if (name == "diffuseReflectance")
 				m_diffuseReflectance = static_cast<Texture *>(child);
-			else 
+			else
 				BSDF::addChild(name, child);
 		} else {
 			BSDF::addChild(name, child);
@@ -285,7 +285,7 @@ public:
 		return oss.str();
 	}
 
-	Shader *createShader(Renderer *renderer) const; 
+	Shader *createShader(Renderer *renderer) const;
 
 	MTS_DECLARE_CLASS()
 private:
@@ -295,7 +295,7 @@ private:
 	Float m_specularSamplingWeight;
 };
 
-// ================ Hardware shader implementation ================ 
+// ================ Hardware shader implementation ================
 
 /**
  * The GLSL implementation clamps the exponent to 30 so that a
@@ -305,7 +305,7 @@ class PhongShader : public Shader {
 public:
 	PhongShader(Renderer *renderer, const Texture *exponent,
 			const Texture *diffuseColor, const Texture *specularColor)
-		  : Shader(renderer, EBSDFShader), 
+		  : Shader(renderer, EBSDFShader),
 			m_exponent(exponent),
 			m_diffuseReflectance(diffuseColor),
 			m_specularReflectance(specularColor) {
@@ -339,9 +339,9 @@ public:
 			<< "    if (cosTheta(wi) <= 0.0 || cosTheta(wo) <= 0.0)" << endl
 			<< "    	return vec3(0.0);" << endl
 			<< "    vec3 R = vec3(-wi.x, -wi.y, wi.z);" << endl
-			<< "    float specRef = 0.0, alpha = dot(R, wo);" << endl 
-			<< "    float exponent = min(30.0, " << depNames[0] << "(uv)[0]);" << endl 
-			<< "    if (alpha > 0.0)" << endl 
+			<< "    float specRef = 0.0, alpha = dot(R, wo);" << endl
+			<< "    float exponent = min(30.0, " << depNames[0] << "(uv)[0]);" << endl
+			<< "    if (alpha > 0.0)" << endl
 			<< "    	specRef = pow(alpha, exponent) * " << endl
 			<< "      (exponent + 2) * 0.15915;" << endl
 			<< "    return (" << depNames[1] << "(uv) * inv_pi" << endl
@@ -365,7 +365,7 @@ private:
 	ref<Shader> m_specularReflectanceShader;
 };
 
-Shader *Phong::createShader(Renderer *renderer) const { 
+Shader *Phong::createShader(Renderer *renderer) const {
 	return new PhongShader(renderer, m_exponent.get(),
 		m_diffuseReflectance.get(), m_specularReflectance.get());
 }

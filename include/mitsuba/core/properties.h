@@ -27,10 +27,10 @@ MTS_NAMESPACE_BEGIN
 
 struct PropertyElement;
 
-/** \brief Associative parameter map for constructing 
+/** \brief Associative parameter map for constructing
  * subclasses of \ref ConfigurableObject.
  *
- * Note that the Python bindings for this class do not implement 
+ * Note that the Python bindings for this class do not implement
  * the various type-dependent getters and setters. Instead, they
  * are accessed just like a normal Python map, e.g:
  *
@@ -75,7 +75,7 @@ public:
 
 	/// Construct an empty property container
 	Properties();
-	
+
 	/// Construct an empty property container and set the plugin name
 	Properties(const std::string &pluginName);
 
@@ -89,7 +89,7 @@ public:
 	inline void setPluginName(const std::string &name) { m_pluginName = name; }
 	/// Get the associated plugin name
 	inline const std::string &getPluginName() const { return m_pluginName; }
-	
+
 	/// Returns the associated identifier (or the string "unnamed")
 	inline const std::string &getID() const { return m_id; }
 	/// Set the associated identifier
@@ -150,7 +150,7 @@ public:
 	Spectrum getSpectrum(const std::string &name) const;
 	/// Get a spectral power distribution (with default)
 	Spectrum getSpectrum(const std::string &name, const Spectrum &defVal) const;
-	
+
 	/// Set a 3d point
 	void setPoint(const std::string &name, const Point &value, bool warnDuplicates = true);
 	/// Get a 3d point
@@ -160,7 +160,7 @@ public:
 
 	/// Set a 3d vector
 	void setVector(const std::string &name, const Vector &value, bool warnDuplicates = true);
-	/// Get a 3d vector 
+	/// Get a 3d vector
 	Vector getVector(const std::string &name) const;
 	/// Get a 3d vector (with default)
 	Vector getVector(const std::string &name, const Vector &defVal) const;
@@ -174,7 +174,7 @@ public:
 
 	/// Store an array containing the names of all stored properties
 	void putPropertyNames(std::vector<std::string> &results) const;
-	
+
 	/// Return an array containing the names of all stored properties
 	inline std::vector<std::string> getPropertyNames() const {
 		std::vector<std::string> results;
@@ -190,7 +190,7 @@ public:
 
 	/// Verify if a value with the specified name exists
 	bool hasProperty(const std::string &name) const;
-	
+
 	/**
 	 * \brief Remove a property with the specified name
 	 * \return \c true upon success

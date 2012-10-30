@@ -122,7 +122,7 @@ protected:
 
 ThreadLocal<Thread> *Thread::ThreadPrivate::self = NULL;
 
-Thread::Thread(const std::string &name) 
+Thread::Thread(const std::string &name)
  : d(new ThreadPrivate(name)) { }
 
 Thread::EThreadPriority Thread::getPriority() const {
@@ -312,13 +312,13 @@ void Thread::dispatch(Thread *thread) {
 		// pthread_setname_np(pthread_self(), threadName.c_str());
 
 		prctl(PR_SET_NAME, threadName.c_str());
-#elif defined(__OSX__) 
+#elif defined(__OSX__)
 		pthread_setname_np(threadName.c_str());
 #elif defined(__WINDOWS__)
 		SetThreadName(threadName.c_str());
 #endif
 	}
-	
+
 	try {
 		thread->run();
 	} catch (std::exception &e) {
@@ -434,7 +434,7 @@ Thread *Thread::registerUnmanagedThread(const std::string &name) {
 		thread->d->joined = false;
 		thread->incRef();
 		ThreadPrivate::self->set(thread);
-	
+
 		boost::lock_guard<boost::mutex> guard(__unmanagedMutex);
 		__unmanagedThreads.push_back((UnmanagedThread *) thread);
 	}

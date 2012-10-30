@@ -24,7 +24,7 @@ MTS_NAMESPACE_BEGIN
 static StatsCounter mediumInconsistencies("Bidirectional layer",
 		"Medium inconsistencies in connect()");
 
-bool PathEdge::sampleNext(const Scene *scene, Sampler *sampler, 
+bool PathEdge::sampleNext(const Scene *scene, Sampler *sampler,
 		const PathVertex *pred, const Ray &ray, PathVertex *succ,
 		ETransportMode mode) {
 	/* First, check if there is a surface in the sampled direction */
@@ -64,9 +64,9 @@ bool PathEdge::sampleNext(const Scene *scene, Sampler *sampler,
 	return true;
 }
 
-bool PathEdge::perturbDirection(const Scene *scene, 
-		const PathVertex *pred, const Ray &ray, Float dist, 
-		PathVertex::EVertexType desiredType, PathVertex *succ, 
+bool PathEdge::perturbDirection(const Scene *scene,
+		const PathVertex *pred, const Ray &ray, Float dist,
+		PathVertex::EVertexType desiredType, PathVertex *succ,
 		ETransportMode mode) {
 	/* First, check if there is a surface in the sampled direction */
 	Intersection &its = succ->getIntersection();
@@ -76,14 +76,14 @@ bool PathEdge::perturbDirection(const Scene *scene,
 	   next vertex is invalid or a surface or medium scattering event */
 	MediumSamplingRecord mRec;
 
-	bool wantMedium = 
+	bool wantMedium =
 		desiredType == PathVertex::EMediumInteraction;
 
 	if ((wantMedium && dist > its.t) || dist <= 0)
 		return false;
 
 	if (medium)
-		medium->eval(Ray(ray, 0, 
+		medium->eval(Ray(ray, 0,
 			wantMedium ? std::min(dist, its.t) : its.t), mRec);
 
 	if (medium && wantMedium) {
@@ -109,7 +109,7 @@ bool PathEdge::perturbDirection(const Scene *scene,
 	} else {
 		pdf[mode]   = succ->isMediumInteraction() ? mRec.pdfSuccess    : mRec.pdfFailure;
 		pdf[1-mode] = pred->isMediumInteraction() ? mRec.pdfSuccessRev : mRec.pdfFailure;
-		if (pdf[mode] == 0 || pdf[1-mode] == 0) 
+		if (pdf[mode] == 0 || pdf[1-mode] == 0)
 			return false;
 		weight[mode]   = mRec.transmittance / pdf[mode];
 		weight[1-mode] = mRec.transmittance / pdf[1-mode];
@@ -133,7 +133,7 @@ Spectrum PathEdge::evalTransmittance(const PathVertex *pred, const PathVertex *s
 		Ray(a, d/length, 0, length, pred->getTime()));
 }
 
-Float PathEdge::evalPdf(const PathVertex *pred, 
+Float PathEdge::evalPdf(const PathVertex *pred,
 		const PathVertex *succ) const {
 	if (succ->isSupernode())
 		return 0.0f;
@@ -143,7 +143,7 @@ Float PathEdge::evalPdf(const PathVertex *pred,
 	Point a = pred->getPosition(),
 		  b = succ->getPosition();
 	Vector d(b-a);
-	
+
 	Float length = d.length();
 	Ray ray(a, d/length, 0, length, pred->getTime());
 
@@ -154,9 +154,9 @@ Float PathEdge::evalPdf(const PathVertex *pred,
 		mRec.pdfSuccess : mRec.pdfFailure;
 }
 
-Spectrum PathEdge::evalCached(const PathVertex *pred, const PathVertex *succ, 
+Spectrum PathEdge::evalCached(const PathVertex *pred, const PathVertex *succ,
 		unsigned int what) const {
-	/* Extract the requested information based on what is currently cached in the 
+	/* Extract the requested information based on what is currently cached in the
 	   vertex. The actual computation that has to happen here is pretty awful, but
 	   it works. It might be worth to change the caching scheme to make this function
 	   simpler in a future revision */
@@ -196,18 +196,18 @@ Spectrum PathEdge::evalCached(const PathVertex *pred, const PathVertex *succ,
 			result *= absDot(succ->getShadingNormal(), d);
 		}
 
-		if (what & EInverseSquareFalloff) 
+		if (what & EInverseSquareFalloff)
 			result /= length * length;
 
-		if (what & ETransmittance) 
+		if (what & ETransmittance)
 			result *= weight[EImportance] * pdf[EImportance];
 	}
 
 	return result;
 }
 
-bool PathEdge::connect(const Scene *scene, 
-			const PathEdge *predEdge, const PathVertex *vs, 
+bool PathEdge::connect(const Scene *scene,
+			const PathEdge *predEdge, const PathVertex *vs,
 			const PathVertex *vt, const PathEdge *succEdge) {
 
 	if (vs->isEmitterSupernode() || vt->isSensorSupernode()) {
@@ -227,7 +227,7 @@ bool PathEdge::connect(const Scene *scene,
 		length = d.length();
 		d /= length;
 
-		Ray ray(vtp, d, vt->isOnSurface() ? Epsilon : 0, length * 
+		Ray ray(vtp, d, vt->isOnSurface() ? Epsilon : 0, length *
 			(vs->isOnSurface() ? (1-ShadowEpsilon) : 1), vs->getTime());
 
 		/* Check for occlusion */
@@ -257,7 +257,7 @@ bool PathEdge::connect(const Scene *scene,
 			pdf[ERadiance]   = vs->isMediumInteraction() ? mRec.pdfSuccess    : mRec.pdfFailure;
 
 			/* Fail if there is no throughput */
-			if (mRec.transmittance.isZero() || pdf[EImportance] == 0 || pdf[ERadiance] == 0) 
+			if (mRec.transmittance.isZero() || pdf[EImportance] == 0 || pdf[ERadiance] == 0)
 				return false;
 
 			weight[EImportance] = mRec.transmittance / pdf[EImportance];
@@ -271,8 +271,8 @@ bool PathEdge::connect(const Scene *scene,
 	return true;
 }
 
-bool PathEdge::pathConnect(const Scene *scene, const PathEdge *predEdge, 
-		const PathVertex *vs, Path &result, const PathVertex *vt, 
+bool PathEdge::pathConnect(const Scene *scene, const PathEdge *predEdge,
+		const PathVertex *vs, Path &result, const PathVertex *vt,
 		const PathEdge *succEdge, int maxInteractions, MemoryPool &pool) {
 	BDAssert(result.edgeCount() == 0 && result.vertexCount() == 0);
 
@@ -302,7 +302,7 @@ bool PathEdge::pathConnect(const Scene *scene, const PathEdge *predEdge,
 		}
 
 		Float lengthFactor = vs->isOnSurface() ? (1-ShadowEpsilon) : 1;
-		Ray ray(vtp, d, vt->isOnSurface() ? Epsilon : 0, 
+		Ray ray(vtp, d, vt->isOnSurface() ? Epsilon : 0,
 				remaining * lengthFactor, vs->getTime());
 		const Medium *medium = vt->getTargetMedium(succEdge,  d);
 
@@ -334,7 +334,7 @@ bool PathEdge::pathConnect(const Scene *scene, const PathEdge *predEdge,
 				edge->pdf[EImportance] = (interactions > 0 || !vt->isMediumInteraction())
 					? mRec.pdfFailure : mRec.pdfSuccessRev;
 
-				if (edge->pdf[ERadiance] == 0 || edge->pdf[EImportance] == 0 
+				if (edge->pdf[ERadiance] == 0 || edge->pdf[EImportance] == 0
 						|| mRec.transmittance.isZero()) {
 					/* Zero transmittance */
 					result.release(pool);
@@ -357,7 +357,7 @@ bool PathEdge::pathConnect(const Scene *scene, const PathEdge *predEdge,
 			ray.maxt = remaining * lengthFactor;
 
 			const BSDF *bsdf = its.getBSDF();
-			
+
 			/* Account for the ENull interaction */
 			Vector wo = its.toLocal(ray.d);
 			BSDFSamplingRecord bRec(its, -wo, wo, ERadiance);
@@ -370,18 +370,18 @@ bool PathEdge::pathConnect(const Scene *scene, const PathEdge *predEdge,
 
 			PathVertex *vertex = pool.allocVertex();
 			vertex->type = PathVertex::ESurfaceInteraction;
-			vertex->degenerate = !(bsdf->hasComponent(BSDF::ESmooth) 
+			vertex->degenerate = !(bsdf->hasComponent(BSDF::ESmooth)
 				|| its.shape->isEmitter() || its.shape->isSensor());
 			vertex->measure = EDiscrete;
 			vertex->componentType = BSDF::ENull;
 			vertex->pdf[EImportance] = vertex->pdf[ERadiance] = nullPdf;
-			vertex->weight[EImportance] = vertex->weight[ERadiance] 
+			vertex->weight[EImportance] = vertex->weight[ERadiance]
 				= bsdf->eval(bRec, EDiscrete) / nullPdf;
 			vertex->rrWeight = 1.0f;
 			vertex->getIntersection() = its;
 			result.append(vertex);
 
-			if (its.isMediumTransition()) { 
+			if (its.isMediumTransition()) {
 				const Medium *expected = its.getTargetMedium(-ray.d);
 				if (medium != expected) {
 					#if defined(MTS_BD_TRACE)
@@ -423,8 +423,8 @@ bool PathEdge::pathConnect(const Scene *scene, const PathEdge *predEdge,
 	return true;
 }
 
-bool PathEdge::pathConnectAndCollapse(const Scene *scene, const PathEdge *predEdge, 
-		const PathVertex *vs, const PathVertex *vt, 
+bool PathEdge::pathConnectAndCollapse(const Scene *scene, const PathEdge *predEdge,
+		const PathVertex *vs, const PathVertex *vt,
 		const PathEdge *succEdge, int &interactions) {
 	if (vs->isEmitterSupernode() || vt->isSensorSupernode()) {
 		Float radianceTransport   = vt->isSensorSupernode() ? 1.0f : 0.0f,
@@ -520,7 +520,7 @@ bool PathEdge::pathConnectAndCollapse(const Scene *scene, const PathEdge *predEd
 			pdf[EImportance] *= nullPdf;
 			pdf[ERadiance] *= nullPdf;
 
-			if (its.isMediumTransition()) { 
+			if (its.isMediumTransition()) {
 				const Medium *expected = its.getTargetMedium(-ray.d);
 				if (medium != expected) {
 					#if defined(MTS_BD_TRACE)

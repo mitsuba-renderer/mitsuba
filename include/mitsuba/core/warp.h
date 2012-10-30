@@ -28,7 +28,7 @@ MTS_NAMESPACE_BEGIN
  * \brief Implements common warping techniques that map from the unit
  * square to other domains, such as spheres, hemispheres, etc.
  *
- * The main application of this class is to generate uniformly 
+ * The main application of this class is to generate uniformly
  * distributed or weighted point sets in certain common target domains.
  */
 class MTS_EXPORT_CORE Warp {
@@ -53,11 +53,11 @@ public:
 	static Vector squareToCosineHemisphere(const Point2 &sample);
 
 	/// Density of \ref squareToCosineHemiphere with respect to solid angles
-	static inline Float squareToCosineHemispherePdf(const Vector &d) 
+	static inline Float squareToCosineHemispherePdf(const Vector &d)
 		{ return INV_PI * Frame::cosTheta(d); }
 
 	/**
-	 * \brief Uniformly sample a vector that lies within a given 
+	 * \brief Uniformly sample a vector that lies within a given
 	 * cone of angles around the Z axis
 	 *
 	 * \param cosCutoff Cosine of the cutoff angle
@@ -66,7 +66,7 @@ public:
 	static Vector squareToUniformCone(Float cosCutoff, const Point2 &sample);
 
 	/**
-	 * \brief Uniformly sample a vector that lies within a given 
+	 * \brief Uniformly sample a vector that lies within a given
 	 * cone of angles around the Z axis
 	 *
 	 * \param cosCutoff Cosine of the cutoff angle
@@ -102,7 +102,7 @@ public:
 	static Point2 squareToUniformTriangle(const Point2 &sample);
 
 	/**
-	 * \brief Sample a point on a 2D standard normal distribution 
+	 * \brief Sample a point on a 2D standard normal distribution
 	 *
 	 * Internally uses the Box-Muller transformation
 	 */

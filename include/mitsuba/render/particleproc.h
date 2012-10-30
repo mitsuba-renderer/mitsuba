@@ -30,7 +30,7 @@ MTS_NAMESPACE_BEGIN
  * This class implements a particle tracer similar to what is
  * described in appendix 4.A of Eric Veach's PhD thesis. Particles
  * are emitted from the light source and subsequently perform a random
- * walk that includes both surface and medium scattering events. The 
+ * walk that includes both surface and medium scattering events. The
  * work is spread out over multiple cores/machines. For every such
  * event,a custom routine is invoked.
  *
@@ -48,10 +48,10 @@ public:
 	enum EMode {
 		/**
 		 * \brief Trace a fixed number of \a particles
-		 * 
+		 *
 		 * In this mode, a specified number of particles will be emitted, and
 		 * a customizable action is performed for every scattering event.
-		 * Note that the number of resulting \a events will generally be 
+		 * Note that the number of resulting \a events will generally be
 		 * different from the number of traced \a particles.
 		 *
 		 * This mode is used for instance by the \c ptracer plugin.
@@ -65,7 +65,7 @@ public:
 		 * unknown ahead of time. Instead, the implementation traces
 		 * particles until a a certain number of scattering events
 		 * have been recorded.
-		 * 
+		 *
 		 * This mode is used to create photon maps. See
 		 * \ref GatherPhotonProcess for an implementation.
 		 */
@@ -77,7 +77,7 @@ public:
 	// =============================================================
 
 	virtual EStatus generateWork(WorkUnit *unit, int worker);
-	
+
 	//! @}
 	// =============================================================
 
@@ -85,7 +85,7 @@ public:
 protected:
 
 	/**
-	 * Create a new particle process 
+	 * Create a new particle process
 	 *
 	 * \param mode
 	 *    Particle tracing mode - see above
@@ -133,7 +133,7 @@ public:
 
 	virtual ref<WorkUnit> createWorkUnit() const;
 	virtual void prepare();
-	virtual void process(const WorkUnit *workUnit, WorkResult *workResult, 
+	virtual void process(const WorkUnit *workUnit, WorkResult *workResult,
 		const bool &stop);
 	void serialize(Stream *stream, InstanceManager *manager) const;
 
@@ -176,10 +176,10 @@ public:
 	 * To be overridden in a subclass. The default implementation
 	 * does nothing
 	 *
-	 * \param depth 
+	 * \param depth
 	 *    Depth of the interaction in path space (with 1
-	 *    corresponding to the first bounce) 
-	 * \param delta 
+	 *    corresponding to the first bounce)
+	 * \param delta
 	 *    Denotes if the previous scattering event was a degenerate
 	 *    specular reflection or refraction.
 	 * \param its
@@ -202,10 +202,10 @@ public:
 	 * To be overridden in a subclass. The default implementation
 	 * does nothing
 	 *
-	 * \param depth 
+	 * \param depth
 	 *    Depth of the interaction in path space (with 1
-	 *    corresponding to the first bounce) 
-	 * \param delta 
+	 *    corresponding to the first bounce)
+	 * \param delta
 	 *    Denotes if the previous scattering event was a degenerate
 	 *    specular reflection or refraction.
 	 * \param mRec

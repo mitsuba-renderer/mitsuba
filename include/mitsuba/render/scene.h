@@ -40,7 +40,7 @@ MTS_NAMESPACE_BEGIN
  * \brief Principal scene data structure
  *
  * This class holds information on surfaces, emitters and participating media
- * and coordinates rendering jobs. It also provides useful query routines that 
+ * and coordinates rendering jobs. It also provides useful query routines that
  * are mostly used by the \ref Integrator implementations.
  *
  * \ingroup librender
@@ -51,7 +51,7 @@ public:
 	// =============================================================
 	//! @{ \name Initialization and rendering
 	// =============================================================
-	
+
 	/// Construct a new, empty scene (with the default properties)
 	Scene();
 
@@ -67,16 +67,16 @@ public:
 	/**
 	 * \brief Initialize the scene
 	 *
-	 * This function \a must be called before using any 
+	 * This function \a must be called before using any
 	 * of the methods in this class.
 	 */
 	void initialize();
-	
+
 	/**
 	 * \brief Initialize the scene for bidirectional rendering algorithms.
 	 *
 	 * This ensures that certain "special" shapes (such as the aperture
-	 * of the sensor) are added to the scene. This function should be called 
+	 * of the sensor) are added to the scene. This function should be called
 	 * before using any of the methods in this class.
 	 */
 	void initializeBidirectional();
@@ -84,18 +84,18 @@ public:
 	/**
 	 * \brief Perform any pre-processing steps before rendering
 	 *
-	 * This function should be called after \ref initialize() and 
-	 * before rendering the scene. It might do a variety of things, 
-	 * such as constructing photon maps or executing distributed overture 
-	 * passes. 
+	 * This function should be called after \ref initialize() and
+	 * before rendering the scene. It might do a variety of things,
+	 * such as constructing photon maps or executing distributed overture
+	 * passes.
 	 *
-	 * Progress is tracked by sending status messages to a provided 
-	 * render queue (the parameter \c job is required to discern multiple 
+	 * Progress is tracked by sending status messages to a provided
+	 * render queue (the parameter \c job is required to discern multiple
 	 * render jobs occurring in parallel).
 	 *
-	 * The last three parameters are resource IDs of the associated scene, 
-	 * sensor and sample generator, which have been made available to all 
-	 * local and remote workers. 
+	 * The last three parameters are resource IDs of the associated scene,
+	 * sensor and sample generator, which have been made available to all
+	 * local and remote workers.
 	 *
 	 * \return \c true upon successful completion.
 	 */
@@ -105,13 +105,13 @@ public:
 	/**
 	 * \brief Render the scene as seen by the scene's main sensor.
 	 *
-	 * Progress is tracked by sending status messages to a provided 
-	 * render queue (the parameter \c job is required to discern multiple 
+	 * Progress is tracked by sending status messages to a provided
+	 * render queue (the parameter \c job is required to discern multiple
 	 * render jobs occurring in parallel).
 	 *
-	 * The last three parameters are resource IDs of the associated scene, 
-	 * sensor and sample generator, which have been made available to all 
-	 * local and remote workers. 
+	 * The last three parameters are resource IDs of the associated scene,
+	 * sensor and sample generator, which have been made available to all
+	 * local and remote workers.
 	 *
 	 * \return \c true upon successful completion.
 	 */
@@ -121,13 +121,13 @@ public:
 	/**
 	 * \brief Perform any post-processing steps after rendering
 	 *
-	 * Progress is tracked by sending status messages to a provided 
-	 * render queue (the parameter \c job is required to discern multiple 
+	 * Progress is tracked by sending status messages to a provided
+	 * render queue (the parameter \c job is required to discern multiple
 	 * render jobs occurring in parallel).
 	 *
-	 * The last three parameters are resource IDs of the associated scene, 
-	 * sensor and sample generator, which have been made available to all 
-	 * local and remote workers. 
+	 * The last three parameters are resource IDs of the associated scene,
+	 * sensor and sample generator, which have been made available to all
+	 * local and remote workers.
 	 */
 	void postprocess(RenderQueue *queue, const RenderJob *job,
 		int sceneResID, int sensorResID, int samplerResID);
@@ -139,7 +139,7 @@ public:
 	 * \brief Cancel a running rendering job
 	 *
 	 * This function can be called asynchronously, e.g. from a GUI.
-	 * In this case, \ref render() will quit with a return value of 
+	 * In this case, \ref render() will quit with a return value of
 	 * \c false.
 	 */
 	void cancel();
@@ -167,7 +167,7 @@ public:
 	 *
 	 * \param ray
 	 *    A 3-dimensional ray data structure with minimum/maximum
-	 *    extent information, as well as a time value (which applies 
+	 *    extent information, as well as a time value (which applies
 	 *    when the shapes are in motion)
 	 *
 	 * \param its
@@ -195,7 +195,7 @@ public:
 	 *
 	 * \param t
 	 *    The traveled ray distance will be stored in this parameter
-	 
+
 	 * \param shape
 	 *    A pointer to the intersected shape will be stored in this
 	 *    parameter
@@ -209,7 +209,7 @@ public:
 	 *
 	 * \return \c true if an intersection was found
 	 */
-	inline bool rayIntersect(const Ray &ray, Float &t, 
+	inline bool rayIntersect(const Ray &ray, Float &t,
 			ConstShapePtr &shape, Normal &n, Point2 &uv) const {
 		return m_kdtree->rayIntersect(ray, t, shape, n, uv);
 	}
@@ -220,7 +220,7 @@ public:
 	 *
 	 * This is by far the fastest ray tracing method. This performance
 	 * improvement comes with a major limitation though: this function
-	 * cannot provide any additional information about the detected 
+	 * cannot provide any additional information about the detected
 	 * intersection (not even its position).
 	 *
 	 * \param ray
@@ -244,13 +244,13 @@ public:
 	 * its direction (i.e. geometry with an alpha mask)
 	 *
 	 * The implementation correctly handles arbitrary amounts of index-matched
-	 * medium transitions. The \c interactions parameter can be used to 
-	 * specify a maximum number of possible surface interactions and medium 
-	 * transitions between \c p1 and \c p2. When this number is exceeded, 
+	 * medium transitions. The \c interactions parameter can be used to
+	 * specify a maximum number of possible surface interactions and medium
+	 * transitions between \c p1 and \c p2. When this number is exceeded,
 	 * the function returns zero.
 	 *
 	 * Note that index-mismatched boundaries (i.e. a transition from air to
-	 * water) are not supported by this function. The integrator needs to take 
+	 * water) are not supported by this function. The integrator needs to take
 	 * care of these in some other way.
 	 *
 	 * \param p1
@@ -261,10 +261,10 @@ public:
 	 *     Is the source position located on a surface? This information is
 	 *     necessary to set up the right ray epsilons for the kd-tree traversal
 	 * \param p2OnSurface
-	 *     Is the target position located on a surface? 
+	 *     Is the target position located on a surface?
 	 * \param medium
 	 *     The medium at \c p1
-	 * \param interactions 
+	 * \param interactions
 	 *    Specifies the maximum permissible number of index-matched medium
 	 *    transitions or \ref BSDF::ENull scattering events on the way
 	 *    to the light source. (<tt>interactions<0</tt> means arbitrarily many).
@@ -280,31 +280,31 @@ public:
 	 *     between zero and one.
 	 */
 	Spectrum evalTransmittance(const Point &p1, bool p1OnSurface,
-		const Point &p2, bool p2OnSurface, Float time, const Medium *medium, 
+		const Point &p2, bool p2OnSurface, Float time, const Medium *medium,
 		int &interactions, Sampler *sampler = NULL) const;
 
 	//! @}
 	// =============================================================
-	
+
 	// =============================================================
 	//! @{ \name Ray tracing support for bidirectional algorithms
 	// =============================================================
 
 	/**
-	 * \brief Intersect a ray against all scene primitives \a and 
+	 * \brief Intersect a ray against all scene primitives \a and
 	 * "special" primitives, such as the aperture of a sensor.
 	 *
 	 * This function does exactly the same thing as \ref rayIntersect,
 	 * except that it additionally performs intersections against a
 	 * list of "special" shapes that are intentionally kept outside
-	 * of the main scene kd-tree (e.g. because they are not static 
+	 * of the main scene kd-tree (e.g. because they are not static
 	 * and might change from rendering to rendering). This is needed
-	 * by some bidirectional techniques that e.g. care about 
+	 * by some bidirectional techniques that e.g. care about
 	 * intersections with the sensor aperture.
 	 *
 	 * \param ray
 	 *    A 3-dimensional ray data structure with minimum/maximum
-	 *    extent information, as well as a time value (which applies 
+	 *    extent information, as well as a time value (which applies
 	 *    when the shapes are in motion)
 	 *
 	 * \param its
@@ -326,9 +326,9 @@ public:
 	 * This function does exactly the same thing as \ref rayIntersect,
 	 * except that it additionally performs intersections against a
 	 * list of "special" shapes that are intentionally kept outside
-	 * of the main scene kd-tree (e.g. because they are not static 
+	 * of the main scene kd-tree (e.g. because they are not static
 	 * and might change from rendering to rendering). This is needed
-	 * by some bidirectional techniques that e.g. care about 
+	 * by some bidirectional techniques that e.g. care about
 	 * intersections with the sensor aperture.
 	 *
 	 * \param ray
@@ -338,7 +338,7 @@ public:
 	 *
 	 * \param t
 	 *    The traveled ray distance will be stored in this parameter
-	 
+
 	 * \param shape
 	 *    A pointer to the intersected shape will be stored in this
 	 *    parameter
@@ -352,24 +352,24 @@ public:
 	 *
 	 * \return \c true if an intersection was found
 	 */
-	bool rayIntersectAll(const Ray &ray, Float &t, 
+	bool rayIntersectAll(const Ray &ray, Float &t,
 			ConstShapePtr &shape, Normal &n, Point2 &uv) const;
 
 	/**
-	 * \brief Intersect a ray against all normal and "special" primitives 
+	 * \brief Intersect a ray against all normal and "special" primitives
 	 * and \a only determine whether or not there is an intersection.
 	 *
 	 * This is by far the fastest ray tracing method. This performance
 	 * improvement comes with a major limitation though: this function
-	 * cannot provide any additional information about the detected 
+	 * cannot provide any additional information about the detected
 	 * intersection (not even its position).
 	 *
 	 * This function does exactly the same thing as \ref rayIntersect,
 	 * except that it additionally performs intersections against a
 	 * list of "special" shapes that are intentionally kept outside
-	 * of the main scene kd-tree (e.g. because they are not static 
+	 * of the main scene kd-tree (e.g. because they are not static
 	 * and might change from rendering to rendering). This is needed
-	 * by some bidirectional techniques that e.g. care about 
+	 * by some bidirectional techniques that e.g. care about
 	 * intersections with the sensor aperture.
 	 *
 	 * \param ray
@@ -391,21 +391,21 @@ public:
 	 * its direction (i.e. geometry with an alpha mask)
 	 *
 	 * The implementation correctly handles arbitrary amounts of index-matched
-	 * medium transitions. The \c interactions parameter can be used to 
-	 * specify a maximum number of possible surface interactions and medium 
-	 * transitions between \c p1 and \c p2. When this number is exceeded, 
+	 * medium transitions. The \c interactions parameter can be used to
+	 * specify a maximum number of possible surface interactions and medium
+	 * transitions between \c p1 and \c p2. When this number is exceeded,
 	 * the function returns zero.
 	 *
 	 * Note that index-mismatched boundaries (i.e. a transition from air to
-	 * water) are not supported by this function. The integrator needs to take 
+	 * water) are not supported by this function. The integrator needs to take
 	 * care of these in some other way.
 	 *
 	 * This function does exactly the same thing as \ref evalTransmittance,
 	 * except that it additionally performs intersections against a
 	 * list of "special" shapes that are intentionally kept outside
-	 * of the main scene kd-tree (e.g. because they are not static 
+	 * of the main scene kd-tree (e.g. because they are not static
 	 * and might change from rendering to rendering). This is needed
-	 * by some bidirectional techniques that care about intersections 
+	 * by some bidirectional techniques that care about intersections
 	 * with the sensor aperture, etc.
 	 *
 	 * \param p1
@@ -416,10 +416,10 @@ public:
 	 *     Is the source position located on a surface? This information is
 	 *     necessary to set up the right ray epsilons for the kd-tree traversal
 	 * \param p2OnSurface
-	 *     Is the target position located on a surface? 
+	 *     Is the target position located on a surface?
 	 * \param medium
 	 *     The medium at \c p1
-	 * \param interactions 
+	 * \param interactions
 	 *    Specifies the maximum permissible number of index-matched medium
 	 *    transitions or \ref BSDF::ENull scattering events on the way
 	 *    to the light source. (<tt>interactions<0</tt> means arbitrarily many).
@@ -435,7 +435,7 @@ public:
 	 *     between zero and one.
 	 */
 	Spectrum evalTransmittanceAll(const Point &p1, bool p1OnSurface,
-		const Point &p2, bool p2OnSurface, Float time, const Medium *medium, 
+		const Point &p2, bool p2OnSurface, Float time, const Medium *medium,
 		int &interactions, Sampler *sampler = NULL) const;
 
 	//! @}
@@ -456,7 +456,7 @@ public:
 	 * and the position on the emitter.
 	 *
 	 * \param dRec
-	 *    A direct illumination sampling record that specifies the 
+	 *    A direct illumination sampling record that specifies the
 	 *    reference point and a time value. After the function terminates,
 	 *    it will be populated with the position sample and related information
 	 *
@@ -468,10 +468,10 @@ public:
 	 *    sampled emitter position and the reference point are mutually visible.
 	 *
 	 * \return
-	 *    An importance weight given by the radiance received along 
+	 *    An importance weight given by the radiance received along
 	 *    the sampled ray divided by the sample probability.
 	 */
-	Spectrum sampleEmitterDirect(DirectSamplingRecord &dRec, 
+	Spectrum sampleEmitterDirect(DirectSamplingRecord &dRec,
 			const Point2 &sample, bool testVisibility = true) const;
 
 	/**
@@ -479,7 +479,7 @@ public:
 	 *
 	 * Given an arbitrary reference point in the scene, this method samples a
 	 * position on an sensor that has a nonzero contribution towards that point.
-	 * This function can be interpreted as a generalization of a direct 
+	 * This function can be interpreted as a generalization of a direct
 	 * illumination sampling strategy to sensors.
 	 *
 	 * Ideally, the implementation should importance sample the product of
@@ -487,7 +487,7 @@ public:
 	 * and the position on the emitter.
 	 *
 	 * \param dRec
-	 *    A direct illumination sampling record that specifies the 
+	 *    A direct illumination sampling record that specifies the
 	 *    reference point and a time value. After the function terminates,
 	 *    it will be populated with the position sample and related information
 	 *
@@ -499,10 +499,10 @@ public:
 	 *    sampled sensor position and the reference point are mutually visible.
 	 *
 	 * \return
-	 *    An importance weight given by the importance emitted along 
+	 *    An importance weight given by the importance emitted along
 	 *    the sampled ray divided by the sample probability.
 	 */
-	Spectrum sampleSensorDirect(DirectSamplingRecord &dRec, 
+	Spectrum sampleSensorDirect(DirectSamplingRecord &dRec,
 			const Point2 &sample, bool testVisibility = true) const;
 
 	/**
@@ -511,16 +511,16 @@ public:
 	 *
 	 * Given an arbitrary reference point in the scene, this method samples a
 	 * position on an emitter that has a nonzero contribution towards that point.
-	 * In comparison to \ref sampleEmitterDirect, this version also accounts for 
+	 * In comparison to \ref sampleEmitterDirect, this version also accounts for
 	 * attenuation by participating media and should be used when \c dRec.p
 	 * lies \a inside a medium, i.e. \a not on a surface!
 	 *
 	 * Ideally, the implementation should importance sample the product of
-	 * the emission profile and the geometry term between the reference point 
+	 * the emission profile and the geometry term between the reference point
 	 * and the position on the emitter.
 	 *
 	 * \param dRec
-	 *    A direct illumination sampling record that specifies the 
+	 *    A direct illumination sampling record that specifies the
 	 *    reference point and a time value. After the function terminates,
 	 *    it will be populated with the position sample and related information
 	 *
@@ -544,11 +544,11 @@ public:
 	 *    access to additional random numbers.
 	 *
 	 * \return
-	 *    An importance weight given by the radiance received along 
+	 *    An importance weight given by the radiance received along
 	 *    the sampled ray divided by the sample probability.
 	 */
 	Spectrum sampleAttenuatedEmitterDirect(DirectSamplingRecord &dRec,
-			const Medium *medium, int &interactions, const Point2 &sample, 
+			const Medium *medium, int &interactions, const Point2 &sample,
 			Sampler *sampler = NULL) const;
 
 	/**
@@ -557,18 +557,18 @@ public:
 	 *
 	 * Given an arbitrary reference point in the scene, this method samples a
 	 * position on an sensor that has a nonzero response towards that point.
-	 * In comparison to \ref sampleSensorDirect, this version also accounts for 
+	 * In comparison to \ref sampleSensorDirect, this version also accounts for
 	 * attenuation by participating media and should be used when \c dRec.p
 	 * lies \a inside a medium, i.e. \a not on a surface!
-	 * This function can be interpreted as a generalization of a direct 
+	 * This function can be interpreted as a generalization of a direct
 	 * illumination sampling strategy to sensors.
 	 *
 	 * Ideally, the implementation should importance sample the product of
-	 * the response profile and the geometry term between the reference point 
+	 * the response profile and the geometry term between the reference point
 	 * and the position on the sensor.
 	 *
 	 * \param dRec
-	 *    A direct illumination sampling record that specifies the 
+	 *    A direct illumination sampling record that specifies the
 	 *    reference point and a time value. After the function terminates,
 	 *    it will be populated with the position sample and related information
 	 *
@@ -592,11 +592,11 @@ public:
 	 *    access to additional random numbers.
 	 *
 	 * \return
-	 *    An importance weight given by the radiance received along 
+	 *    An importance weight given by the radiance received along
 	 *    the sampled ray divided by the sample probability.
 	 */
 	Spectrum sampleAttenuatedSensorDirect(DirectSamplingRecord &dRec,
-			const Medium *medium, int &interactions, const Point2 &sample, 
+			const Medium *medium, int &interactions, const Point2 &sample,
 			Sampler *sampler = NULL) const;
 
 	/**
@@ -605,8 +605,8 @@ public:
 	 *
 	 * Given an arbitrary reference point in the scene, this method samples a
 	 * position on an emitter that has a nonzero contribution towards that point.
-	 * In comparison to \ref sampleEmitterDirect, this version also accounts for 
-	 * attenuation by participating media and should be used when the target 
+	 * In comparison to \ref sampleEmitterDirect, this version also accounts for
+	 * attenuation by participating media and should be used when the target
 	 * position lies on a surface.
 	 *
 	 * Ideally, the implementation should importance sample the product of
@@ -614,19 +614,19 @@ public:
 	 * and the position on the emitter.
 	 *
 	 * \param dRec
-	 *    A direct illumination sampling record that specifies the 
+	 *    A direct illumination sampling record that specifies the
 	 *    reference point and a time value. After the function terminates,
 	 *    it will be populated with the position sample and related information
 	 *
 	 * \param its
 	 *    An intersection record associated with the reference point in
-	 *    \c dRec. This record is needed to determine the participating 
+	 *    \c dRec. This record is needed to determine the participating
 	 *    medium between the emitter sample and the reference point
 	 *    when \c its marks a medium transition.
 	 *
 	 * \param medium
 	 *    The medium located at \c its (or \c NULL for vacuum). When the shape
-	 *    associated with \c its marks a medium transition, it does not matter 
+	 *    associated with \c its marks a medium transition, it does not matter
 	 *    which of the two media is specified.
 	 *
 	 * \param interactions
@@ -646,7 +646,7 @@ public:
 	 *    access to additional random numbers.
 	 *
 	 * \return
-	 *    An importance weight given by the radiance received along 
+	 *    An importance weight given by the radiance received along
 	 *    the sampled ray divided by the sample probability.
 	 */
 	Spectrum sampleAttenuatedEmitterDirect(DirectSamplingRecord &dRec,
@@ -659,8 +659,8 @@ public:
 	 *
 	 * Given an arbitrary reference point in the scene, this method samples a
 	 * position on an sensor that has a nonzero response towards that point.
-	 * In comparison to \ref sampleSensorDirect, this version also accounts for 
-	 * attenuation by participating media and should be used when the target 
+	 * In comparison to \ref sampleSensorDirect, this version also accounts for
+	 * attenuation by participating media and should be used when the target
 	 * position lies on a surface.
 	 *
 	 * Ideally, the implementation should importance sample the product of
@@ -668,19 +668,19 @@ public:
 	 * and the position on the sensor.
 	 *
 	 * \param dRec
-	 *    A direct illumination sampling record that specifies the 
+	 *    A direct illumination sampling record that specifies the
 	 *    reference point and a time value. After the function terminates,
 	 *    it will be populated with the position sample and related information
 	 *
 	 * \param its
 	 *    An intersection record associated with the reference point in
-	 *    \c dRec. This record is needed to determine the participating 
+	 *    \c dRec. This record is needed to determine the participating
 	 *    medium between the sensor sample and the reference point
 	 *    when \c its marks a medium transition.
 	 *
 	 * \param medium
 	 *    The medium located at \c its (or \c NULL for vacuum). When the shape
-	 *    associated with \c its marks a medium transition, it does not matter 
+	 *    associated with \c its marks a medium transition, it does not matter
 	 *    which of the two media is specified.
 	 *
 	 * \param interactions
@@ -700,11 +700,11 @@ public:
 	 *    access to additional random numbers.
 	 *
 	 * \return
-	 *    An importance weight given by the radiance received along 
+	 *    An importance weight given by the radiance received along
 	 *    the sampled ray divided by the sample probability.
 	 */
 	Spectrum sampleAttenuatedSensorDirect(DirectSamplingRecord &dRec,
-			const Intersection &its, const Medium *medium, int &interactions, 
+			const Intersection &its, const Medium *medium, int &interactions,
 			const Point2 &sample, Sampler *sampler = NULL) const;
 
 	/**
@@ -712,15 +712,15 @@ public:
 	 * method implemented by the \ref sampleEmitterDirect() method.
 	 *
 	 * \param dRec
-	 *    A direct sampling record, which specifies the query 
-	 *    location. Note that this record need not be completely 
+	 *    A direct sampling record, which specifies the query
+	 *    location. Note that this record need not be completely
 	 *    filled out. The important fields are \c p, \c n, \c ref,
 	 *    \c dist, \c d, \c measure, and \c uv.
 	 *
 	 * \param p
 	 *    The world-space position that would have been passed to \ref
 	 *    sampleEmitterDirect()
-	 *    
+	 *
 	 * \return
 	 *    The density expressed with respect to the requested measure
 	 *    (usually \ref ESolidAngle)
@@ -732,15 +732,15 @@ public:
 	 * method implemented by the \ref sampleSensorDirect() method.
 	 *
 	 * \param dRec
-	 *    A direct sampling record, which specifies the query 
-	 *    location. Note that this record need not be completely 
+	 *    A direct sampling record, which specifies the query
+	 *    location. Note that this record need not be completely
 	 *    filled out. The important fields are \c p, \c n, \c ref,
 	 *    \c dist, \c d, \c measure, and \c uv.
 	 *
 	 * \param p
 	 *    The world-space position that would have been passed to \ref
 	 *    sampleSensorDirect()
-	 *    
+	 *
 	 * \return
 	 *    The density expressed with respect to the requested measure
 	 *    (usually \ref ESolidAngle)
@@ -755,7 +755,7 @@ public:
 	// =============================================================
 
 	/**
-	 * \brief Sample a position according to the emission profile 
+	 * \brief Sample a position according to the emission profile
 	 * defined by the emitters in the scene.
 	 *
 	 * To sample the directional component, please use the
@@ -777,9 +777,9 @@ public:
 		const Point2 &sample) const;
 
 	/**
-	 * \brief Sample a position on the main sensor of the scene. 
+	 * \brief Sample a position on the main sensor of the scene.
 	 *
-	 * This function is provided here mainly for symmetry 
+	 * This function is provided here mainly for symmetry
 	 * with respect to \ref sampleEmitterPosition().
 	 *
 	 * To sample the directional component, please use the
@@ -793,7 +793,7 @@ public:
 	 *    A uniformly distributed 2D vector
 	 *
 	 * \param extra
-	 *    An additional 2D vector provided to the sampling 
+	 *    An additional 2D vector provided to the sampling
 	 *    routine -- its use is implementation-dependent.
 	 *
 	 * \return
@@ -834,7 +834,7 @@ public:
 	}
 
 	/**
-	 * \brief Return the discrete probability of choosing a 
+	 * \brief Return the discrete probability of choosing a
 	 * certain emitter in <tt>sampleEmitter*</tt>
 	 */
 	inline Float pdfEmitterDiscrete(const Emitter *emitter) const {
@@ -842,7 +842,7 @@ public:
 	}
 
 	/**
-	 * \brief Sample a position according to the emission profile 
+	 * \brief Sample a position according to the emission profile
 	 * defined by the emitters in the scene.
 	 *
 	 * To sample the directional component, please use the
@@ -864,19 +864,19 @@ public:
 	 * \brief Importance sample a ray according to the emission profile
 	 * defined by the sensors in the scene
 	 *
-	 * This function combines both steps of choosing a ray origin and 
-	 * direction value. It does not return any auxiliary sampling 
+	 * This function combines both steps of choosing a ray origin and
+	 * direction value. It does not return any auxiliary sampling
 	 * information and is mainly meant to be used by unidirectional
 	 * rendering techniques.
-	 * 
-	 * Note that this function potentially uses a different sampling 
-	 * strategy compared to the sequence of running \ref sampleEmitterPosition() 
+	 *
+	 * Note that this function potentially uses a different sampling
+	 * strategy compared to the sequence of running \ref sampleEmitterPosition()
 	 * and \ref Emitter::sampleDirection(). The reason for this is that it may
 	 * be possible to switch to a better technique when sampling both
 	 * position and direction at the same time.
 	 *
 	 * \param ray
-	 *    A ray data structure to be populated with a position 
+	 *    A ray data structure to be populated with a position
 	 *    and direction value
 	 *
 	 * \param spatialSample
@@ -901,7 +901,7 @@ public:
 
 	//! @}
 	// =============================================================
-	
+
 	// =============================================================
 	//! @{ \name Environment emitters
 	// =============================================================
@@ -919,7 +919,7 @@ public:
 	 * This is primarily meant for path tracing-style integrators.
 	 */
 	inline Spectrum evalEnvironment(const RayDifferential &ray) const {
-		return hasEnvironmentEmitter() ? 
+		return hasEnvironmentEmitter() ?
 			m_environmentEmitter->evalEnvironment(ray) : Spectrum(0.0f);
 	}
 
@@ -930,7 +930,7 @@ public:
 	 *
 	 * This is primarily meant for path tracing-style integrators.
 	 */
-	inline Spectrum evalAttenuatedEnvironment(const RayDifferential &ray, 
+	inline Spectrum evalAttenuatedEnvironment(const RayDifferential &ray,
 			const Medium *medium, Sampler *sampler) const {
 		if (!m_environmentEmitter)
 			return Spectrum(0.0f);
@@ -939,7 +939,7 @@ public:
 			result *= medium->evalTransmittance(ray, sampler);
 		return result;
 	}
-	
+
 	//! @}
 	// =============================================================
 
@@ -953,7 +953,7 @@ public:
 	}
 
 	/**
-	 * \brief Is the main scene sensor degenerate?  (i.e. has it 
+	 * \brief Is the main scene sensor degenerate?  (i.e. has it
 	 * collapsed to a point or line)
 	 *
 	 * Note that this function only cares about the spatial component
@@ -965,9 +965,9 @@ public:
 	/**
 	 * \brief Area \a all emitters in this scene degenerate?
 	 * (i.e. they has collapsed to a point or line)
-	 * 
+	 *
 	 * Note that this function only cares about the spatial component
-	 * of the emitters -- its value does not depend on whether the 
+	 * of the emitters -- its value does not depend on whether the
 	 * directional emission profile is degenerate.
 	 */
 	inline bool hasDegenerateEmitters() const { return m_degenerateEmitters; }
@@ -982,20 +982,20 @@ public:
 	inline bool hasMedia() const { return !m_media.empty(); }
 
 	/**
-	 * \brief Set the main scene sensor. 
+	 * \brief Set the main scene sensor.
 	 *
 	 * Note that the main sensor is not included when this Scene instance
-	 * is serialized -- the sensor field will be \c NULL after 
-	 * unserialization. This is intentional so that the sensor can 
-	 * be changed without having to re-transmit the whole scene. 
-	 * Hence, it needs to be submitted separately and re-attached 
+	 * is serialized -- the sensor field will be \c NULL after
+	 * unserialization. This is intentional so that the sensor can
+	 * be changed without having to re-transmit the whole scene.
+	 * Hence, it needs to be submitted separately and re-attached
 	 * on the remote side using \ref setSensor().
 	 **/
 	void setSensor(Sensor *sensor);
 
 	/// \brief Remove a sensor from the scene's sensor list
 	void removeSensor(Sensor *sensor);
-	
+
 	/// \brief Add a sensor to the scene's sensor list
 	void addSensor(Sensor *sensor);
 
@@ -1030,13 +1030,13 @@ public:
 	inline const ref_vector<Sensor> &getSensors() const { return m_sensors; }
 
 	/**
-	 * \brief Set the scene's integrator. 
+	 * \brief Set the scene's integrator.
 	 *
-	 * Note that the integrator is not included when this Scene instance 
-	 * is serialized -- the integrator field will be \c NULL after 
+	 * Note that the integrator is not included when this Scene instance
+	 * is serialized -- the integrator field will be \c NULL after
 	 * unserialization. This is intentional so that the integrator can
-	 * be changed without having to re-transmit the whole scene. Hence, 
-	 * the integrator needs to be submitted separately and re-attached 
+	 * be changed without having to re-transmit the whole scene. Hence,
+	 * the integrator needs to be submitted separately and re-attached
 	 * on the remote side using \ref setIntegrator().
 	 **/
 	inline void setIntegrator(Integrator *integrator) { m_integrator = integrator; }
@@ -1047,25 +1047,25 @@ public:
 	inline const Integrator *getIntegrator() const { return m_integrator.get(); }
 
 	/**
-	 * \brief Set the scene's sampler. 
+	 * \brief Set the scene's sampler.
 	 *
-	 * Note that the sampler is not included when this Scene instance 
-	 * is serialized -- the sampler field will be \c NULL after 
-	 * unserialization. This is intentional so that the sampler can 
-	 * be changed without having to re-transmit the whole scene. 
+	 * Note that the sampler is not included when this Scene instance
+	 * is serialized -- the sampler field will be \c NULL after
+	 * unserialization. This is intentional so that the sampler can
+	 * be changed without having to re-transmit the whole scene.
 	 * Hence, the sampler needs to be submitted separately
 	 * and re-attached on the remote side using \ref setSampler().
 	 **/
 	inline void setSampler(Sampler *sampler) { m_sampler = sampler; }
 
 	/**
-	 * \brief Return the scene's sampler. 
+	 * \brief Return the scene's sampler.
 	 *
-	 * Note that when rendering using multiple different threads, each 
-	 * thread will be passed a shallow copy of the scene, which has a 
-	 * different sampler instance. This helps to avoid locking/contention 
-	 * issues and ensures that different threads render with different 
-	 * random number sequences. The sampler instance provided here is a 
+	 * Note that when rendering using multiple different threads, each
+	 * thread will be passed a shallow copy of the scene, which has a
+	 * different sampler instance. This helps to avoid locking/contention
+	 * issues and ensures that different threads render with different
+	 * random number sequences. The sampler instance provided here is a
 	 * clone of the original sampler specified in the sensor.
 	 */
 	inline Sampler *getSampler() { return m_sampler; }
@@ -1076,7 +1076,7 @@ public:
 	inline Film *getFilm() { return m_sensor->getFilm(); }
 	/// Return the scene's film
 	inline const Film *getFilm() const { return m_sensor->getFilm(); }
-	
+
 	/// Return the scene's kd-tree accelerator
 	inline ShapeKDTree *getKDTree() { return m_kdtree; }
 	/// Return the scene's kd-tree accelerator

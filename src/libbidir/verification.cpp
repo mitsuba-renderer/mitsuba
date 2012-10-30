@@ -91,8 +91,8 @@ bool PathVertex::verify(const Scene *scene, const PathVertex *pred, const PathVe
 		}
 	}
 
-	weightL = pdfL != 0 ? (weightL / pdfL) : Spectrum(0.0f); 
-	weightE = pdfE != 0 ? (weightE / pdfE) : Spectrum(0.0f); 
+	weightL = pdfL != 0 ? (weightL / pdfL) : Spectrum(0.0f);
+	weightE = pdfE != 0 ? (weightE / pdfE) : Spectrum(0.0f);
 
 	valid &= validateValue("weight[ERadiance]",   weightE, weight[ERadiance], os);
 	valid &= validateValue("weight[EImportance]", weightL, weight[EImportance], os);
@@ -135,7 +135,7 @@ bool PathVertex::verify(const Scene *scene, const PathVertex *pred, const PathVe
 	return valid;
 }
 
-bool PathEdge::verify(const Scene *scene, const PathVertex *pred, 
+bool PathEdge::verify(const Scene *scene, const PathVertex *pred,
 		const PathVertex *succ, ETransportMode mode, std::ostream &os) const {
 	if (mode == ERadiance)
 		std::swap(pred, succ);
@@ -145,8 +145,8 @@ bool PathEdge::verify(const Scene *scene, const PathVertex *pred,
 	Float    pdfL    = evalPdf(pred, succ),
 	         pdfE    = evalPdf(succ, pred);
 
-	weightL = pdfL != 0 ? (weightL / pdfL) : Spectrum(0.0f); 
-	weightE = pdfE != 0 ? (weightE / pdfE) : Spectrum(0.0f); 
+	weightL = pdfL != 0 ? (weightL / pdfL) : Spectrum(0.0f);
+	weightE = pdfE != 0 ? (weightE / pdfE) : Spectrum(0.0f);
 
 	bool valid = true;
 

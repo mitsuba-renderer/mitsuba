@@ -87,7 +87,7 @@ protected:
 		}
 	}
 
-	void generate(int order, 
+	void generate(int order,
 			EDirection front, EDirection right,
 			EDirection back, EDirection left) {
 		if (order == 0) {

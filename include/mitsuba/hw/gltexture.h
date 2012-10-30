@@ -38,7 +38,7 @@ public:
 
 	/// Refresh (re-upload) the texture
 	void refresh();
-	
+
 	/**
 	 * \brief Refresh (re-upload) a subregion of the texture
 	 *
@@ -56,7 +56,7 @@ public:
 	 *     Specifies the unit to which this texture should be bound
 	 * \param textureIndex
 	 *     When this texture has multiple sub-textures (e.g.
-	 *     a color and depth map in the case of a 
+	 *     a color and depth map in the case of a
 	 *     \ref EColorAndDepthBuffer texture), this parameter
 	 *     specifies the one to be bound
 	 */
@@ -67,7 +67,7 @@ public:
 
 	/// Unbind the texture and disable texturing
 	void unbind() const;
-	
+
 	/// Activate the render target
 	void activateTarget();
 
@@ -86,7 +86,7 @@ public:
 	 * \param target
 	 *     Specifies the target render buffer (or NULL for the framebuffer)
 	 * \param what
-	 *     A bitwise-OR of the components in \ref EFrameBufferType to copy 
+	 *     A bitwise-OR of the components in \ref EFrameBufferType to copy
 	 */
 	void blit(GPUTexture *target, int what) const;
 
@@ -96,14 +96,14 @@ public:
 	 * \param target
 	 *     Specifies the target render buffer (or NULL for the framebuffer)
 	 * \param what
-	 *     A bitwise-OR of the components in \ref EFrameBufferType to copy 
-	 * \param sourceOffset 
+	 *     A bitwise-OR of the components in \ref EFrameBufferType to copy
+	 * \param sourceOffset
 	 *     Offset in the source render buffer
-	 * \param sourceOffset 
+	 * \param sourceOffset
 	 *     Size of the region to be copied from the source render buffer
-	 * \param destOffset 
+	 * \param destOffset
 	 *     Offset in the destination render buffer
-	 * \param destOffset 
+	 * \param destOffset
 	 *     Size of the region to be copied into the dest destination buffer
 	 */
 	void blit(GPUTexture *target, int what, const Point2i &sourceOffset,

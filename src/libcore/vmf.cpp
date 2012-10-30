@@ -59,7 +59,7 @@ Vector VonMisesFisherDistr::sample(const Point2 &sample) const {
 
 	math::sincos(2*M_PI * sample.y, &sinPhi, &cosPhi);
 
-	return Vector(cosPhi * sinTheta, 
+	return Vector(cosPhi * sinTheta,
 		sinPhi * sinTheta, cosTheta);
 }
 
@@ -80,7 +80,7 @@ static Float A3(Float kappa) {
 }
 
 static Float dA3(Float kappa) {
-	Float csch = 2.0f / 
+	Float csch = 2.0f /
 		(math::fastexp(kappa)-math::fastexp(-kappa));
 	return 1/(kappa*kappa) - csch*csch;
 }

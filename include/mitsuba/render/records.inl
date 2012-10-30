@@ -20,7 +20,7 @@
 #define __RECORDS_INLINE_H
 
 MTS_NAMESPACE_BEGIN
-	
+
 inline BSDFSamplingRecord::BSDFSamplingRecord(const Intersection &its, Sampler *sampler, ETransportMode mode)
 	: its(its), sampler(sampler), wi(its.wi), mode(mode),
 	typeMask(BSDF::EAll), component(-1), sampledType(0), sampledComponent(-1) {
@@ -30,8 +30,8 @@ inline BSDFSamplingRecord::BSDFSamplingRecord(const Intersection &its, const Vec
 	: its(its), sampler(NULL), wi(its.wi), wo(wo), mode(mode),
     typeMask(BSDF::EAll), component(-1), sampledType(0), sampledComponent(-1) {
 }
-	
-inline BSDFSamplingRecord::BSDFSamplingRecord(const Intersection &its, const Vector &wi, const Vector &wo, ETransportMode mode) 
+
+inline BSDFSamplingRecord::BSDFSamplingRecord(const Intersection &its, const Vector &wi, const Vector &wo, ETransportMode mode)
   : its(its), sampler(NULL), wi(wi), wo(wo), mode(mode),
   typeMask(BSDF::EAll), component(-1), sampledType(0), sampledComponent(-1) {
 }
@@ -57,7 +57,7 @@ inline Spectrum Intersection::Le(const Vector &d) const {
 	return shape->getEmitter()->eval(*this, d);
 }
 
-inline Spectrum Intersection::LoSub(const Scene *scene, 
+inline Spectrum Intersection::LoSub(const Scene *scene,
 		Sampler *sampler, const Vector &d, int depth) const {
 	return shape->getSubsurface()->Lo(scene, sampler, *this, d, depth);
 }
@@ -84,14 +84,14 @@ inline const Medium *Intersection::getTargetMedium(const Vector &d) const {
 	else
 		return shape->getInteriorMedium();
 }
-	
+
 inline const Medium *Intersection::getTargetMedium(Float cosTheta) const {
 	if (cosTheta > 0)
 		return shape->getExteriorMedium();
 	else
 		return shape->getInteriorMedium();
 }
-	
+
 inline const PhaseFunction *MediumSamplingRecord::getPhaseFunction() const {
 	return medium->getPhaseFunction();
 }
@@ -129,13 +129,13 @@ inline PositionSamplingRecord::PositionSamplingRecord(const Intersection &its, E
 inline DirectionSamplingRecord::DirectionSamplingRecord(const Intersection &its, EMeasure measure)
 	: d(its.toWorld(its.wi)), measure(measure) { }
 
-inline DirectSamplingRecord::DirectSamplingRecord(const Intersection &refIts) 
+inline DirectSamplingRecord::DirectSamplingRecord(const Intersection &refIts)
 	: PositionSamplingRecord(refIts.time), ref(refIts.p), refN(0.0f) {
 	if ((refIts.shape->getBSDF()->getType() & BSDF::ETransmission) == 0)
 		refN = refIts.shFrame.n;
 }
 
-inline DirectSamplingRecord::DirectSamplingRecord(const MediumSamplingRecord &refM) 
+inline DirectSamplingRecord::DirectSamplingRecord(const MediumSamplingRecord &refM)
 	: PositionSamplingRecord(refM.time), ref(refM.p), refN(0.0f) {
 }
 

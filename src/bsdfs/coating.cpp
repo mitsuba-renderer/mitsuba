@@ -31,37 +31,37 @@ MTS_NAMESPACE_BEGIN
  *      numerically or using a known material name. \default{\texttt{bk7} / 1.5046}}
  *     \parameter{extIOR}{\Float\Or\String}{Exterior index of refraction specified
  *      numerically or using a known material name. \default{\texttt{air} / 1.000277}}
- *     \parameter{thickness}{\Float}{Denotes the thickness of the layer (to 
+ *     \parameter{thickness}{\Float}{Denotes the thickness of the layer (to
  *      model absorption --- should be specified in inverse units of \code{sigmaA})\default{1}}
- *     \parameter{sigmaA}{\Spectrum\Or\Texture}{The absorption coefficient of the 
+ *     \parameter{sigmaA}{\Spectrum\Or\Texture}{The absorption coefficient of the
  *      coating layer. \default{0, i.e. there is no absorption}}
  *     \parameter{specular\showbreak Transmittance}{\Spectrum\Or\Texture}{Optional
- *         factor that can be used to modulate the specular transmission component. Note 
+ *         factor that can be used to modulate the specular transmission component. Note
  *         that for physical realism, this parameter should never be touched. \default{1.0}}
  *     \parameter{\Unnamed}{\BSDF}{A nested BSDF model that should be coated.}
  * }
- * 
+ *
  * \renderings{
  *     \rendering{Rough copper}
  *         {bsdf_coating_uncoated}
- *     \rendering{The same material coated with a single layer of 
+ *     \rendering{The same material coated with a single layer of
  *         clear varnish (see \lstref{coating-roughcopper})}
  *         {bsdf_coating_roughconductor}
  * }
  *
- * This plugin implements a smooth dielectric coating (e.g. a layer of varnish) 
- * in the style of the paper ``Arbitrarily Layered Micro-Facet Surfaces'' by 
- * Weidlich and Wilkie \cite{Weidlich2007Arbitrarily}. Any BSDF in Mitsuba 
- * can be coated using this plugin, and multiple coating layers can even 
- * be applied in sequence. This allows designing interesting custom materials 
- * like car paint or glazed metal foil. The coating layer can optionally be 
- * tinted (i.e. filled with an absorbing medium), in which case this model also 
+ * This plugin implements a smooth dielectric coating (e.g. a layer of varnish)
+ * in the style of the paper ``Arbitrarily Layered Micro-Facet Surfaces'' by
+ * Weidlich and Wilkie \cite{Weidlich2007Arbitrarily}. Any BSDF in Mitsuba
+ * can be coated using this plugin, and multiple coating layers can even
+ * be applied in sequence. This allows designing interesting custom materials
+ * like car paint or glazed metal foil. The coating layer can optionally be
+ * tinted (i.e. filled with an absorbing medium), in which case this model also
  * accounts for the directionally dependent absorption within the layer.
  *
  * Note that the plugin discards illumination that undergoes internal
  * reflection within the coating. This can lead to a noticeable energy
  * loss for materials that reflect much of their energy near or below the critical
- * angle (i.e. diffuse or very rough materials). 
+ * angle (i.e. diffuse or very rough materials).
  * Therefore, users are discouraged to use this plugin to coat smooth
  * diffuse materials, since there is a separately available plugin
  * named \pluginref{plastic}, which covers the same case and does not
@@ -78,11 +78,11 @@ MTS_NAMESPACE_BEGIN
  *
  * \vspace{4mm}
  *
- * \begin{xml}[caption=Rough copper coated with a transparent layer of 
+ * \begin{xml}[caption=Rough copper coated with a transparent layer of
  *     varnish, label=lst:coating-roughcopper]
  * <bsdf type="coating">
  *     <float name="intIOR" value="1.7"/>
- *     
+ *
  *     <bsdf type="roughconductor">
  *         <string name="material" value="Cu"/>
  *         <float name="alpha" value="0.1"/>
@@ -98,22 +98,22 @@ MTS_NAMESPACE_BEGIN
  * }
  *
  * \subsubsection*{Technical details}
- * Evaluating the internal component of this model entails refracting the 
+ * Evaluating the internal component of this model entails refracting the
  * incident and exitant rays through the dielectric interface, followed by
- * querying the nested material with this modified direction pair. The result 
+ * querying the nested material with this modified direction pair. The result
  * is attenuated by the two Fresnel transmittances and the absorption, if
  * any.
  */
 class SmoothCoating : public BSDF {
 public:
-	SmoothCoating(const Properties &props) 
+	SmoothCoating(const Properties &props)
 			: BSDF(props) {
 		/* Specifies the internal index of refraction at the interface */
 		Float intIOR = lookupIOR(props, "intIOR", "bk7");
 
 		/* Specifies the external index of refraction at the interface */
 		Float extIOR = lookupIOR(props, "extIOR", "air");
-		
+
 		if (intIOR < 0 || extIOR < 0 || intIOR == extIOR)
 			Log(EError, "The interior and exterior indices of "
 				"refraction must be positive and differ!");
@@ -133,7 +133,7 @@ public:
 			props.getSpectrum("specularReflectance", Spectrum(1.0f)));
 	}
 
-	SmoothCoating(Stream *stream, InstanceManager *manager) 
+	SmoothCoating(Stream *stream, InstanceManager *manager)
 			: BSDF(stream, manager) {
 		m_eta = stream->readFloat();
 		m_thickness = stream->readFloat();
@@ -163,7 +163,7 @@ public:
 			extraFlags |= ESpatiallyVarying;
 
 		m_components.clear();
-		for (int i=0; i<m_nested->getComponentCount(); ++i) 
+		for (int i=0; i<m_nested->getComponentCount(); ++i)
 			m_components.push_back(m_nested->getType(i) | extraFlags);
 
 		m_components.push_back(EDeltaReflection | EFrontSide | EBackSide
@@ -241,21 +241,21 @@ public:
 				* (1-R12) * (1-R21);
 
 			Spectrum sigmaA = m_sigmaA->eval(bRec.its) * m_thickness;
-			if (!sigmaA.isZero()) 
+			if (!sigmaA.isZero())
 				result *= (-sigmaA *
 					(1/std::abs(Frame::cosTheta(bRecInt.wi)) +
 					 1/std::abs(Frame::cosTheta(bRecInt.wo)))).exp();
 
 			if (measure == ESolidAngle) {
 				/* Solid angle compression & irradiance conversion factors */
-				result *= m_invEta * m_invEta * 
+				result *= m_invEta * m_invEta *
 					  Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo)
 				   / (Frame::cosTheta(bRecInt.wi) * Frame::cosTheta(bRecInt.wo));
 			}
 
 			return result;
 		}
-	
+
 		return Spectrum(0.0f);
 	}
 
@@ -264,13 +264,13 @@ public:
 			&& (bRec.component == -1 || bRec.component == (int) m_components.size()-1);
 		bool sampleNested = (bRec.typeMask & m_nested->getType() & BSDF::EAll)
 			&& (bRec.component == -1 || bRec.component < (int) m_components.size()-1);
-		
+
 		Float R12;
 		Vector wiPrime = refractIn(bRec.wi, R12);
 
 		/* Reallocate samples */
 		Float probSpecular = (R12*m_specularSamplingWeight) /
-			(R12*m_specularSamplingWeight + 
+			(R12*m_specularSamplingWeight +
 			(1-R12) * (1-m_specularSamplingWeight));
 
 		if (measure == EDiscrete && sampleSpecular &&
@@ -311,7 +311,7 @@ public:
 
 		/* Reallocate samples */
 		Float probSpecular = (R12*m_specularSamplingWeight) /
-			(R12*m_specularSamplingWeight + 
+			(R12*m_specularSamplingWeight +
 			(1-R12) * (1-m_specularSamplingWeight));
 
 		bool choseSpecular = sampleSpecular;
@@ -341,13 +341,13 @@ public:
 			bRec.wi = wiPrime;
 			Spectrum result = m_nested->sample(bRec, pdf, sample);
 			bRec.wi = wiBackup;
-			if (result.isZero()) 
+			if (result.isZero())
 				return Spectrum(0.0f);
 
 			Vector woPrime = bRec.wo;
 
 			Spectrum sigmaA = m_sigmaA->eval(bRec.its) * m_thickness;
-			if (!sigmaA.isZero()) 
+			if (!sigmaA.isZero())
 				result *= (-sigmaA *
 					(1/std::abs(Frame::cosTheta(wiPrime)) +
 					 1/std::abs(Frame::cosTheta(woPrime)))).exp();
@@ -369,7 +369,7 @@ public:
 				result *= Frame::cosTheta(bRec.wi) / Frame::cosTheta(wiPrime);
 				pdf *= m_invEta * m_invEta * Frame::cosTheta(bRec.wo) / Frame::cosTheta(woPrime);
 			}
-			
+
 			return result;
 		}
 	}
@@ -388,7 +388,7 @@ public:
 		std::ostringstream oss;
 		oss << "SmoothCoating[" << endl
 			<< "  id = \"" << getID() << "\"," << endl
-			<< "  eta = " << m_eta << "," << endl 
+			<< "  eta = " << m_eta << "," << endl
 			<< "  specularSamplingWeight = " << m_specularSamplingWeight << "," << endl
 			<< "  sigmaA = " << indent(m_sigmaA->toString()) << "," << endl
 			<< "  specularReflectance = " << indent(m_specularReflectance->toString()) << "," << endl
@@ -410,7 +410,7 @@ protected:
 	Float m_thickness;
 };
 
-// ================ Hardware shader implementation ================ 
+// ================ Hardware shader implementation ================
 
 /**
  * Simple GLSL version -- uses Schlick's approximation and approximates the
@@ -534,7 +534,7 @@ private:
 	Float m_R0, m_eta;
 };
 
-Shader *SmoothCoating::createShader(Renderer *renderer) const { 
+Shader *SmoothCoating::createShader(Renderer *renderer) const {
 	return new SmoothCoatingShader(renderer, m_eta,
 		m_nested.get(), m_sigmaA.get());
 }

@@ -58,7 +58,7 @@ public:
 	virtual Vector lookupVector(const Point &p) const;
 
 	/**
-	 * \brief Return the recommended step size for numerical 
+	 * \brief Return the recommended step size for numerical
 	 * integration or inifinity if this is not known/applicable
 	 */
 	virtual Float getStepSize() const = 0;
@@ -80,7 +80,7 @@ protected:
 	VolumeDataSource(const Properties &props);
 
 	/// Unserialize from a binary data stream
-	VolumeDataSource(Stream *stream, InstanceManager *manager); 
+	VolumeDataSource(Stream *stream, InstanceManager *manager);
 protected:
 	AABB m_aabb;
 };

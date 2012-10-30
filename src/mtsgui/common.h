@@ -61,7 +61,7 @@ struct ServerConnection {
 	inline ServerConnection() : worker(NULL), isRegistered(false) { }
 
 	inline bool operator==(const ServerConnection &c) const {
-		return type == c.type && hostName == c.hostName 
+		return type == c.type && hostName == c.hostName
 			&& userName == c.userName && instDir == c.instDir
 			&& port == c.port && worker == c.worker
 			&& isRegistered == c.isRegistered;
@@ -95,7 +95,7 @@ struct ServerConnection {
 		stream << toVariant();
 		return a;
 	}
-	
+
 	inline void fromByteArray(QByteArray a) {
 		QDataStream stream(a);
 		QList<QVariant> variant;
@@ -104,7 +104,7 @@ struct ServerConnection {
 	}
 
 	bool createWorker(QWidget *parent);
-	
+
 	QString toString() const;
 };
 
@@ -134,7 +134,7 @@ struct PreviewQueueEntry {
 	GPUTexture *buffer;
 	GPUSync *sync;
 
-	inline PreviewQueueEntry(int id = 0) 
+	inline PreviewQueueEntry(int id = 0)
 		: id(id), vplSampleOffset(0), buffer(NULL), sync(NULL) {
 	}
 
@@ -146,7 +146,7 @@ struct VisualWorkUnit {
 	Vector2i size;
 	int worker;
 
-	inline VisualWorkUnit(const Point2i &offset, const Vector2i &size, int worker = 0) 
+	inline VisualWorkUnit(const Point2i &offset, const Vector2i &size, int worker = 0)
 		: offset(offset), size(size), worker(worker) { }
 };
 
@@ -207,7 +207,7 @@ struct SceneContext {
 	std::deque<VPL> vpls;
 	PreviewQueueEntry previewBuffer;
 
-	SceneContext() : scene(NULL), sceneResID(-1), 
+	SceneContext() : scene(NULL), sceneResID(-1),
 		renderJob(NULL), wasRendering(false),
 		selectionMode(ENothing),
 		selectedShape(NULL) { }

@@ -46,7 +46,7 @@ public:
 
 	/**
 	 * \brief Create a new thread object
-	 * \param name An identifying name of this thread 
+	 * \param name An identifying name of this thread
 	 *   (will be shown in debug messages)
 	 * \remark Note that it is currently not possible to
 	 *         construct Thread instances from Python
@@ -56,7 +56,7 @@ public:
 	/**
 	 * \brief Set the thread priority
 	 *
-	 * This does not always work -- for instance, Linux 
+	 * This does not always work -- for instance, Linux
 	 * requires root privileges for this operation.
 	 *
 	 * \return \c true upon success.
@@ -68,9 +68,9 @@ public:
 
 	/**
 	 * \brief Specify whether or not this thread is critical
-	 * 
-	 * When an thread marked critical crashes from an uncaught 
-	 * exception, the whole process is brought down. 
+	 *
+	 * When an thread marked critical crashes from an uncaught
+	 * exception, the whole process is brought down.
 	 * The default is \c false.
 	 */
 	void setCritical(bool critical);
@@ -116,7 +116,7 @@ public:
 
 	/**
 	 * \brief Detach the thread and release resources
-	 * 
+	 *
 	 * After a call to this function, \ref join()
 	 * cannot be used anymore. This releases resources, which
 	 * would otherwise be held until a call to \ref join().
@@ -142,7 +142,7 @@ public:
 	static void initializeOpenMP(size_t threadCount);
 
 	/**
-	 * \brief Register an unmanaged thread with Mitsuba (i.e. one that 
+	 * \brief Register an unmanaged thread with Mitsuba (i.e. one that
 	 * doesn't derive from \c mitsuba::Thread)
 	 *
 	 * Should be called from the thread in question. The function returns
@@ -185,6 +185,9 @@ extern MTS_EXPORT_CORE int mts_omp_get_thread_num();
 #define mts_omp_get_max_threads omp_get_max_threads
 #define mts_omp_get_thread_num omp_get_thread_num
 #endif
+#else
+#define mts_omp_get_max_threads() 1
+#define mts_omp_get_thread_num() 0
 #endif
 
 MTS_NAMESPACE_END

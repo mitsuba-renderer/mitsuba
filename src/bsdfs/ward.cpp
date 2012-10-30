@@ -31,18 +31,18 @@ MTS_NAMESPACE_BEGIN
  *         \begin{enumerate}[(i)]
  *             \item \code{ward}: The original model by Ward \cite{Ward1992Measuring}
  *             --- suffers from energy loss at grazing angles.
- *             \item \code{ward-duer}: Corrected Ward model with lower energy loss 
+ *             \item \code{ward-duer}: Corrected Ward model with lower energy loss
  *             at grazing angles \cite{Dur2006Improved}.
- *             Does not always conserve energy. 
+ *             Does not always conserve energy.
  *             \item \code{balanced}: Improved version of the \code{ward-duer}
  *             model with energy balance at all angles \cite{Geisler2010New}.
  *         \end{enumerate}
  *         Default: \texttt{balanced}
  *     }
  *     \parameter{alphaU, alphaV}{\Float\Or\Texture}{
- *         Specifies the anisotropic roughness values along the tangent and 
- *         bitangent directions. 
- *         \default{0.1}. 
+ *         Specifies the anisotropic roughness values along the tangent and
+ *         bitangent directions.
+ *         \default{0.1}.
  *     }
  *     \parameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{
  *         Specifies the weight of the specular reflectance component.\default{0.2}}
@@ -57,7 +57,7 @@ MTS_NAMESPACE_BEGIN
  * This plugin implements the anisotropic Ward reflectance model and
  * several extensions. They are described in the papers
  * \begin{enumerate}[(i)]
- *    \item ``Measuring and Modeling Anisotropic Reflection'' 
+ *    \item ``Measuring and Modeling Anisotropic Reflection''
  *      by Greg Ward \cite{Ward1992Measuring}
  *    \item ``Notes on the Ward BRDF'' by Bruce Walter \cite{Walter2005Notes}
  *    \item ``An Improved Normalization for the Ward Reflectance Model''
@@ -67,19 +67,19 @@ MTS_NAMESPACE_BEGIN
  * \end{enumerate}
  *
  * Like the Phong BRDF, the Ward model does not take the Fresnel reflectance
- * of the material into account. In an experimental study by Ngan et al. 
+ * of the material into account. In an experimental study by Ngan et al.
  * \cite{Ngan2005Experimental}, the Ward model performed noticeably worse than
  * models based on microfacet theory.
  *
- * For this reason, it is usually preferable to switch to a microfacet model 
- * that incorporates knowledge about the material's index of refraction. In Mitsuba, 
- * two such alternatives to \pluginref{ward} are given by the plugins 
+ * For this reason, it is usually preferable to switch to a microfacet model
+ * that incorporates knowledge about the material's index of refraction. In Mitsuba,
+ * two such alternatives to \pluginref{ward} are given by the plugins
  * \pluginref{roughconductor} and \pluginref{roughplastic} (depending on the
  * material type).
  *
  * When using this plugin, note that the diffuse and specular reflectance
- * components should add up to a value less than or equal to one (for each 
- * color channel). Otherwise, they will automatically be scaled appropriately 
+ * components should add up to a value less than or equal to one (for each
+ * color channel). Otherwise, they will automatically be scaled appropriately
  * to ensure energy conservation.
  */
 class Ward : public BSDF {
@@ -94,14 +94,14 @@ public:
 		EBalanced = 2
 	};
 
-	Ward(const Properties &props) 
+	Ward(const Properties &props)
 		: BSDF(props) {
 		m_diffuseReflectance = new ConstantSpectrumTexture(
 			props.getSpectrum("diffuseReflectance", Spectrum(0.5f)));
 		m_specularReflectance = new ConstantSpectrumTexture(
 			props.getSpectrum("specularReflectance", Spectrum(0.2f)));
-		
-		std::string type = 
+
+		std::string type =
 			boost::to_lower_copy(props.getString("variant", "balanced"));
 		if (type == "ward")
 			m_modelVariant = EWard;
@@ -125,7 +125,7 @@ public:
 		m_specularSamplingWeight = 0.0f;
 	}
 
-	Ward(Stream *stream, InstanceManager *manager) 
+	Ward(Stream *stream, InstanceManager *manager)
 	 : BSDF(stream, manager) {
 		m_modelVariant = (EModelVariant) stream->readUInt();
 		m_diffuseReflectance = static_cast<Texture *>(manager->getInstance(stream));
@@ -161,7 +161,7 @@ public:
 			  sAvg = m_specularReflectance->getAverage().getLuminance();
 		m_specularSamplingWeight = sAvg / (dAvg + sAvg);
 
-		m_usesRayDifferentials = 
+		m_usesRayDifferentials =
 			m_diffuseReflectance->usesRayDifferentials() ||
 			m_specularReflectance->usesRayDifferentials() ||
 			m_alphaU->usesRayDifferentials() ||
@@ -190,19 +190,19 @@ public:
 			Vector H = bRec.wi+bRec.wo;
 			Float alphaU = m_alphaU->eval(bRec.its).average();
 			Float alphaV = m_alphaV->eval(bRec.its).average();
-			
+
 			Float factor1 = 0.0f;
 			switch (m_modelVariant) {
 				case EWard:
-					factor1 = 1.0f / (4.0f * M_PI * alphaU * alphaV * 
+					factor1 = 1.0f / (4.0f * M_PI * alphaU * alphaV *
 						std::sqrt(Frame::cosTheta(bRec.wi)*Frame::cosTheta(bRec.wo)));
 					break;
 				case EWardDuer:
-					factor1 = 1.0f / (4.0f * M_PI * alphaU * alphaV * 
+					factor1 = 1.0f / (4.0f * M_PI * alphaU * alphaV *
 						Frame::cosTheta(bRec.wi)*Frame::cosTheta(bRec.wo));
 					break;
 				case EBalanced:
-					factor1 = dot(H,H) / (M_PI * alphaU * alphaV 
+					factor1 = dot(H,H) / (M_PI * alphaU * alphaV
 						* std::pow(Frame::cosTheta(H),4));
 					break;
 				default:
@@ -219,7 +219,7 @@ public:
 				result += m_specularReflectance->eval(bRec.its) * specRef;
 		}
 
-		if (hasDiffuse) 
+		if (hasDiffuse)
 			result += m_diffuseReflectance->eval(bRec.its) * INV_PI;
 
 		return result * Frame::cosTheta(bRec.wo);
@@ -241,7 +241,7 @@ public:
 			Float alphaU = m_alphaU->eval(bRec.its).average();
 			Float alphaV = m_alphaV->eval(bRec.its).average();
 			Vector H = normalize(bRec.wi+bRec.wo);
-			Float factor1 = 1.0f / (4.0f * M_PI * alphaU * alphaV * 
+			Float factor1 = 1.0f / (4.0f * M_PI * alphaU * alphaV *
 				dot(H, bRec.wi) * std::pow(Frame::cosTheta(H), 3));
 			Float factor2 = H.x / alphaU, factor3 = H.y / alphaV;
 
@@ -249,11 +249,11 @@ public:
 			specProb = factor1 * math::fastexp(exponent);
 		}
 
-		if (hasDiffuse) 
+		if (hasDiffuse)
 			diffuseProb = Warp::squareToCosineHemispherePdf(bRec.wo);
 
 		if (hasDiffuse && hasSpecular)
-			return m_specularSamplingWeight * specProb + 
+			return m_specularSamplingWeight * specProb +
 				   (1-m_specularSamplingWeight) * diffuseProb;
 		else if (hasDiffuse)
 			return diffuseProb;
@@ -290,7 +290,7 @@ public:
 			Float alphaU = m_alphaU->eval(bRec.its).average();
 			Float alphaV = m_alphaV->eval(bRec.its).average();
 
-			Float phiH = std::atan(alphaV/alphaU 
+			Float phiH = std::atan(alphaV/alphaU
 				* std::tan(2.0f * M_PI * sample.y));
 			if (sample.y > 0.5f)
 				phiH += M_PI;
@@ -319,7 +319,7 @@ public:
 
 		_pdf = pdf(bRec, ESolidAngle);
 
-		if (_pdf == 0) 
+		if (_pdf == 0)
 			return Spectrum(0.0f);
 		else
 			return eval(bRec, ESolidAngle) / _pdf;
@@ -367,7 +367,7 @@ public:
 			return std::numeric_limits<Float>::infinity();
 	}
 
-	Shader *createShader(Renderer *renderer) const; 
+	Shader *createShader(Renderer *renderer) const;
 
 	std::string toString() const {
 		std::ostringstream oss;
@@ -401,21 +401,21 @@ private:
 	Float m_specularSamplingWeight;
 };
 
-// ================ Hardware shader implementation ================ 
+// ================ Hardware shader implementation ================
 
 /**
  * GLSL port of the Ward shader. This version only implements the variant
- * with energy balance. When the roughness is lower than 
+ * with energy balance. When the roughness is lower than
  * \alpha < 0.2, the shader clamps it to 0.2 so that it will still perform
  * reasonably well in a VPL-based preview.
  */
 class WardShader : public Shader {
 public:
-	WardShader(Renderer *renderer, 
+	WardShader(Renderer *renderer,
 			const Texture *diffuseColor,
 			const Texture *specularColor,
 			const Texture *alphaU,
-			const Texture *alphaV) : Shader(renderer, EBSDFShader), 
+			const Texture *alphaV) : Shader(renderer, EBSDFShader),
 			m_diffuseReflectance(diffuseColor),
 			m_specularReflectance(specularColor),
 			m_alphaU(alphaU), m_alphaV(alphaV) {
@@ -459,7 +459,7 @@ public:
 			<< "    float factor1 = dot(H, H)/(3.1415*alphaU*alphaV*cosSqr*cosSqr);"  << endl
 			<< "    float factor2 = H.x / alphaU, factor3 = H.y / alphaV;" << endl
 			<< "    float exponent = -(factor2*factor2 + factor3*factor3)/(H.z*H.z);" << endl
-			<< "    float specRef = factor1 * exp(exponent);" << endl 
+			<< "    float specRef = factor1 * exp(exponent);" << endl
 			<< "    return (" << depNames[0] << "(uv) * inv_pi" << endl
 			<< "           + " << depNames[1] << "(uv) * specRef) * cosTheta(wo);" << endl
 			<< "}" << endl
@@ -482,7 +482,7 @@ private:
 	ref<Shader> m_alphaVShader;
 };
 
-Shader *Ward::createShader(Renderer *renderer) const { 
+Shader *Ward::createShader(Renderer *renderer) const {
 	return new WardShader(renderer, m_diffuseReflectance.get(),
 		m_specularReflectance.get(), m_alphaU.get(), m_alphaV.get());
 }

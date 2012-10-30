@@ -27,17 +27,17 @@ MTS_NAMESPACE_BEGIN
 
 
 /** \brief Stream implementation based on an encrypted SSH tunnel
- * 
- * This class remotely starts a program and exposes its stdin/stdout 
- * streams through an instance of \ref Stream. To make all 
- * of this work, passwordless authentication must be enabled (for 
- * example by using public key authentication in addition to a 
+ *
+ * This class remotely starts a program and exposes its stdin/stdout
+ * streams through an instance of \ref Stream. To make all
+ * of this work, passwordless authentication must be enabled (for
+ * example by using public key authentication in addition to a
  * running ssh-agent, which stores the decrypted private key).
  *
  * On Windows, things are implemented a bit differently: Instead
  * of OpenSSH, plink.exe (from PUTTY) is used and must be available
  * in $PATH. For passwordless authentication, convert your private
- * key to PuTTY's format (with the help of puttygen.exe). Afterwards, 
+ * key to PuTTY's format (with the help of puttygen.exe). Afterwards,
  * pageant.exe is required to load and authenticate the key.
  *
  * Note: SSH streams are set to use network byte order by default.
@@ -52,19 +52,19 @@ public:
 	// =============================================================
 
 	/**
-	 * \brief Create a new SSH stream. 
+	 * \brief Create a new SSH stream.
 	 *
-	 * The timeout parameter specifies specifies the maximum amount of 
-	 * time that can be spent before failing to create the initial 
+	 * The timeout parameter specifies specifies the maximum amount of
+	 * time that can be spent before failing to create the initial
 	 * connection. This feature is unsupported (and ignored) on Windows.
-	 * 
+	 *
 	 * \param userName Username to use for the authentication
 	 * \param hostName Destination host name
 	 * \param cmdLine  Command (with arguments) to be executed on the remote side
 	 * \param port     Destination port
 	 * \param timeout  Maximum time to use for the connection attempt (in seconds)
 	 */
-	SSHStream(const std::string &userName, 
+	SSHStream(const std::string &userName,
 		const std::string &hostName,
 		const std::vector<std::string> &cmdLine,
 		int port = 22, int timeout = 10
@@ -79,13 +79,13 @@ public:
 
 	/// Return the destination machine's host name
 	const std::string &getHostName() const;
-	
+
 	/// Return the user name used for authentication
 	const std::string &getUserName() const;
-	
+
 	/// Return the number of received bytes
 	size_t getReceivedBytes() const;
-	
+
 	/// Return the number of sent bytes
 	size_t getSentBytes() const;
 
@@ -105,7 +105,7 @@ public:
 	void flush();
 	bool canWrite() const;
 	bool canRead() const;
-	
+
 	//! @}
 	// =============================================================
 

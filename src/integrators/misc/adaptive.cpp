@@ -33,11 +33,11 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{maxSampleFactor}{\Integer}{
  *         Maximum number of samples to be generated \emph{relative} to the
  *         number of configured pixel samples. The adaptive integrator
- *         will stop after this many samples, regardless of whether 
+ *         will stop after this many samples, regardless of whether
  *         or not the error criterion was satisfied.
  *         A negative value will be interpreted as $\infty$.
- *         \default{32---for instance, when 64 pixel samples are configured in 
- *         the \code{sampler}, this means that the adaptive integrator 
+ *         \default{32---for instance, when 64 pixel samples are configured in
+ *         the \code{sampler}, this means that the adaptive integrator
  *         will give up after 32*64=2048 samples}
  *     }
  * }
@@ -71,8 +71,8 @@ public:
 		/* Maximum relative error threshold */
 		m_maxError = props.getFloat("maxError", 0.05f);
 		/* Maximum number of samples to take (relative to the number of pixel samples
-		   that were configured in the sampler). The sample collection 
-		   will stop after this many samples even if the variance is still 
+		   that were configured in the sampler). The sample collection
+		   will stop after this many samples even if the variance is still
 		   too high. A negative value will be interpreted as infinity. */
 		m_maxSampleFactor = props.getInteger("maxSampleFactor", 32);
 		/* Required P-value to accept a sample. */
@@ -80,7 +80,7 @@ public:
 		m_verbose = props.getBoolean("verbose", false);
 	}
 
-	AdaptiveIntegrator(Stream *stream, InstanceManager *manager) 
+	AdaptiveIntegrator(Stream *stream, InstanceManager *manager)
 	 : SamplingIntegrator(stream, manager) {
 		m_subIntegrator = static_cast<SamplingIntegrator *>(manager->getInstance(stream));
 		m_maxSampleFactor = stream->readInt();
@@ -108,7 +108,7 @@ public:
 		m_subIntegrator->configureSampler(scene, sampler);
 	}
 
-	bool preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job, 
+	bool preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job,
 			int sceneResID, int sensorResID, int samplerResID) {
 		if (!SamplingIntegrator::preprocess(scene, queue, job, sceneResID, sensorResID, samplerResID))
 			return false;
@@ -160,12 +160,12 @@ public:
 
 		boost::math::normal dist(0, 1);
 		m_quantile = (Float) boost::math::quantile(dist, 1-m_pValue/2);
-		Log(EInfo, "Configuring for a %.1f%% confidence interval, quantile=%f, avg. luminance=%f", 
+		Log(EInfo, "Configuring for a %.1f%% confidence interval, quantile=%f, avg. luminance=%f",
 			(1-m_pValue)*100, m_quantile, m_averageLuminance);
 		return true;
 	}
 
-	void renderBlock(const Scene *scene, const Sensor *sensor, 
+	void renderBlock(const Scene *scene, const Sensor *sensor,
 			Sampler *sampler, ImageBlock *block, const bool &stop,
 			const std::vector< TPoint2<uint8_t> > &points) const {
 		typedef TSpectrum<Float, SPECTRUM_SAMPLES + 2> SpectrumAlphaWeight;
@@ -180,7 +180,7 @@ public:
 		RayDifferential eyeRay;
 		RadianceQueryRecord rRec(scene, sampler);
 
-		Float diffScaleFactor = 1.0f / 
+		Float diffScaleFactor = 1.0f /
 			std::sqrt((Float) sampler->getSampleCount());
 
 		Point2 apertureSample(0.5f);
@@ -198,12 +198,12 @@ public:
 			Point2i offset = Point2i(points[i]) + Vector2i(block->getOffset());
 			sampler->generate(offset);
 
-			/* Before starting to place samples within the area of a single pixel, the 
-			   following takes a snapshot of all surrounding spectrum+weight+alpha 
+			/* Before starting to place samples within the area of a single pixel, the
+			   following takes a snapshot of all surrounding spectrum+weight+alpha
 			   values. Those are then used later to ensure that adjacent pixels will
 			   not be disproportionately biased by this pixel's contributions. */
 			for (int y=0; y<2*borderSize+1; ++y) {
-				SpectrumAlphaWeight *src = target + ((y+points[i].y) 
+				SpectrumAlphaWeight *src = target + ((y+points[i].y)
 					* block->getBitmap()->getWidth() + points[i].x);
 				SpectrumAlphaWeight *dst = snapshot + y*(2*borderSize+1);
 				memcpy(dst, src, sizeof(SpectrumAlphaWeight) * (2*borderSize+1));
@@ -258,24 +258,24 @@ public:
 					/* Relative error heuristic */
 					Float base = std::max(mean, m_averageLuminance * 0.01f);
 
-					if (m_verbose && (sampleCount % 100) == 0) 
-						Log(EDebug, "%i samples, mean=%f, stddev=%f, std error=%f, ci width=%f, max allowed=%f", sampleCount, mean, 
+					if (m_verbose && (sampleCount % 100) == 0)
+						Log(EDebug, "%i samples, mean=%f, stddev=%f, std error=%f, ci width=%f, max allowed=%f", sampleCount, mean,
 							std::sqrt(variance), stdError, ciWidth, base * m_maxError);
 
 					if (ciWidth <= m_maxError * base)
 						break;
 				}
 			}
- 
-			/* Ensure that a large amounts of samples in one pixel do not 
+
+			/* Ensure that a large amounts of samples in one pixel do not
 			   bias neighboring pixels (due to the reconstruction filter) */
 			Float factor = 1.0f / sampleCount;
 			for (int y=0; y<2*borderSize+1; ++y) {
-				SpectrumAlphaWeight *dst = target + ((y+points[i].y) 
+				SpectrumAlphaWeight *dst = target + ((y+points[i].y)
 					* block->getBitmap()->getWidth() + points[i].x);
 				SpectrumAlphaWeight *backup = snapshot + y*(2*borderSize+1);
 
-				for (int x=0; x<2*borderSize+1; ++x) 
+				for (int x=0; x<2*borderSize+1; ++x)
 					dst[x] = backup[x] * (1-factor) + dst[x] * factor;
 			}
 		}
@@ -285,8 +285,8 @@ public:
 		return m_subIntegrator->Li(ray, rRec);
 	}
 
-	Spectrum E(const Scene *scene, const Intersection &its, const Medium *medium, 
-			Sampler *sampler, int nSamples, bool includeIndirect) const { 
+	Spectrum E(const Scene *scene, const Intersection &its, const Medium *medium,
+			Sampler *sampler, int nSamples, bool includeIndirect) const {
 		return m_subIntegrator->E(scene, its, medium,
 			sampler, nSamples, includeIndirect);
 	}
@@ -301,7 +301,7 @@ public:
 		stream->writeFloat(m_averageLuminance);
 		stream->writeFloat(m_pValue);
 	}
-	
+
 	void bindUsedResources(ParallelProcess *proc) const {
 		m_subIntegrator->bindUsedResources(proc);
 	}

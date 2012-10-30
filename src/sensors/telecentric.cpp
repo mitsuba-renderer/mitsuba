@@ -36,7 +36,7 @@ MTS_NAMESPACE_BEGIN
  *         \default{\code{0}}
  *     }
  *     \parameter{focusDistance}{\Float}{
- *         Denotes the world-space distance from the camera's aperture to the 
+ *         Denotes the world-space distance from the camera's aperture to the
  *         focal plane. \default{\code{0}}
  *     }
  *     \parameter{shutterOpen, shutterClose}{\Float}{
@@ -46,7 +46,7 @@ MTS_NAMESPACE_BEGIN
  *     }
  *     \parameter{nearClip, farClip}{\Float}{
  *         Distance to the near/far clip
- *         planes.\default{\code{near\code}-\code{Clip=1e-2} (i.e. 
+ *         planes.\default{\code{near\code}-\code{Clip=1e-2} (i.e.
  *         \code{0.01}) and {\code{farClip=1e4} (i.e. \code{10000})}}
  *     }
  * }
@@ -58,15 +58,15 @@ MTS_NAMESPACE_BEGIN
  * }
  *
  * This plugin implements a simple model of a camera with a \emph{telecentric lens}.
- * This is a type of lens that produces an in-focus orthographic view on a 
- * plane at some distance from the sensor. Points away from this plane are out of focus 
+ * This is a type of lens that produces an in-focus orthographic view on a
+ * plane at some distance from the sensor. Points away from this plane are out of focus
  * and project onto a circle of confusion. In comparison to idealized orthographic cameras,
  * telecentric lens cameras exist in the real world and find use in some computer
  * vision applications where perspective effects cause problems.
  * This sensor relates to the \pluginref{orthographic} plugin in the same way
  * that \pluginref{thinlens} does to \pluginref{perspective}.
  *
- * The configuration is identical to the \pluginref{orthographic} plugin, except that 
+ * The configuration is identical to the \pluginref{orthographic} plugin, except that
  * the additional parameters \code{apertureRadius} and \code{focusDistance} must be provided.
  */
 class TelecentricLensCamera : public ProjectiveCamera {
@@ -81,7 +81,7 @@ public:
 		m_apertureRadius = props.getFloat("apertureRadius", 0.0f);
 	}
 
-	TelecentricLensCamera(Stream *stream, InstanceManager *manager) 
+	TelecentricLensCamera(Stream *stream, InstanceManager *manager)
 			: ProjectiveCamera(stream, manager) {
 		m_apertureRadius = stream->readFloat();
 		configure();
@@ -116,7 +116,7 @@ public:
 		 * 4+5. Translate and scale the coordinates once more to account
 		 *     for a cropping window (if there is any)
 		 */
-		m_cameraToSample = 
+		m_cameraToSample =
 			  Transform::scale(Vector(1.0f / relSize.x, 1.0f / relSize.y, 1.0f))
 			* Transform::translate(Vector(-relOffset.x, -relOffset.y, 0.0f))
 			* Transform::scale(Vector(-0.5f, -0.5f*m_aspect, 1.0f))
@@ -126,9 +126,9 @@ public:
 		m_sampleToCamera = m_cameraToSample.inverse();
 
 		/* Position differentials on the near plane */
-		m_dx = m_sampleToCamera(Point(m_invResolution.x, 0.0f, 0.0f)) 
+		m_dx = m_sampleToCamera(Point(m_invResolution.x, 0.0f, 0.0f))
 			 - m_sampleToCamera(Point(0.0f));
-		m_dy = m_sampleToCamera(Point(0.0f, m_invResolution.y, 0.0f)) 
+		m_dy = m_sampleToCamera(Point(0.0f, m_invResolution.y, 0.0f))
 			 - m_sampleToCamera(Point(0.0f));
 
 		/* Clip-space transformation for OpenGL */
@@ -153,10 +153,10 @@ public:
 	}
 
 	/**
-	 * \brief Compute the percentage of overlap between an arbitrary disk and a 
+	 * \brief Compute the percentage of overlap between an arbitrary disk and a
 	 * rectangle that is centered at the origin
 	 *
-	 * \remark To restrict the possible number of cases to a sane amount, the 
+	 * \remark To restrict the possible number of cases to a sane amount, the
 	 * implementation here assumes that <tt>size.{x,y}/2 < radius</tt>.
 	 *
 	 * \param center
@@ -164,7 +164,7 @@ public:
 	 * \param radius
 	 *    Radius of the disk
 	 * \param size
-	 *    Total width and height of the rectangular region 
+	 *    Total width and height of the rectangular region
 	 * \author Wenzel Jakob
 	 */
 	Float convolve(const Point2 &center, Float radius, const Vector2 &size) const {
@@ -198,7 +198,7 @@ public:
 			* (m_apertureRadius / m_scale.x);
 		ray.time = sampleTime(timeSample);
 
-		/* Compute the corresponding position on the 
+		/* Compute the corresponding position on the
 		   near plane (in local camera space) */
 		Point focusP = m_sampleToCamera.transformAffine(Point(
 			pixelSample.x * m_invResolution.x,
@@ -206,7 +206,7 @@ public:
 		focusP.z = m_focusDistance/m_scale.z;
 
 		/* Compute the ray origin */
-		Point orig(diskSample.x+focusP.x, 
+		Point orig(diskSample.x+focusP.x,
 			diskSample.y+focusP.y, 0.0f);
 
 		/* Turn these into a normalized ray direction, and
@@ -227,7 +227,7 @@ public:
 			* (m_apertureRadius / m_scale.x);
 		ray.time = sampleTime(timeSample);
 
-		/* Compute the corresponding position on the 
+		/* Compute the corresponding position on the
 		   near plane (in local camera space) */
 		Point focusP = m_sampleToCamera.transformAffine(Point(
 			pixelSample.x * m_invResolution.x,
@@ -235,7 +235,7 @@ public:
 		focusP.z = m_focusDistance/m_scale.z;
 
 		/* Compute the ray origin */
-		Point orig(diskSample.x+focusP.x, 
+		Point orig(diskSample.x+focusP.x,
 			diskSample.y+focusP.y, 0.0f);
 
 		/* Turn these into a normalized ray direction, and
@@ -260,11 +260,11 @@ public:
 		Log(EError, "The telecentric lens camera is currently incompatible "
 			"with bidirectional rendering algorithms!");
 
-		/* This function should sample from a rectangle that has been 
+		/* This function should sample from a rectangle that has been
 		   convolved with a circle, but using only two random numbers.
 		   Turns out that this is actually fairly difficult to do.
-		   Since the precision requirements are modest, we can get away 
-		   with the following *terrible* hack, which makes four random 
+		   Since the precision requirements are modest, we can get away
+		   with the following *terrible* hack, which makes four random
 		   numbers out of two and then does convolution the "trivial" way */
 
 		#if defined(SINGLE_PRECISION)
@@ -286,7 +286,7 @@ public:
 		#endif
 
 		Point2 aperturePos = Warp::squareToUniformDiskConcentric(Point2(rand1, rand2))
-			* (m_apertureRadius / m_scale.x);		
+			* (m_apertureRadius / m_scale.x);
 		Point2 samplePos(rand3, rand4);
 
 		if (extra) {
@@ -319,14 +319,14 @@ public:
 		return (pRec.measure == EArea) ? m_aperturePdf : 0.0f;
 	}
 
-	Spectrum sampleDirection(DirectionSamplingRecord &dRec, 
+	Spectrum sampleDirection(DirectionSamplingRecord &dRec,
 			PositionSamplingRecord &pRec,
 			const Point2 &sample, const Point2 *extra) const {
 		Log(EError, "The telecentric lens camera is currently incompatible "
 			"with bidirectional rendering algorithms!");
 		const Transform &trafo = m_worldTransform->eval(pRec.time);
 
-		/* Compute the corresponding position on the 
+		/* Compute the corresponding position on the
 		   near plane (in local camera space) */
 		Point nearP = m_sampleToCamera(Point(
 			sample.x, sample.y, 0.0f));
@@ -414,7 +414,7 @@ public:
 		return 0.0f;
 	}
 
-	Transform getProjectionTransform(const Point2 &apertureSample, 
+	Transform getProjectionTransform(const Point2 &apertureSample,
 			const Point2 &aaSample) const {
 		Point2 offset(
 			2.0f * m_invResolution.x * (aaSample.x-.5f),

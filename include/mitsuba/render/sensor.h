@@ -31,42 +31,42 @@ MTS_NAMESPACE_BEGIN
  *
  * This class provides an abstract interface to all sensor plugins in Mitsuba.
  * It exposes functions for evaluating and sampling the response function of the
- * sensor, and it allows querying the probability density of the sampling method. 
+ * sensor, and it allows querying the probability density of the sampling method.
  *
- * Somewhat curiously, the \ref Sensor class derives from \ref AbstractEmitter. 
- * The reason for this is that much like radiance, the spectral response of a 
- * sensor can be interpreted as emitted quantity named \a importance. The 
- * \ref Sensor interface thus inherits almost all of the emitter API and only 
+ * Somewhat curiously, the \ref Sensor class derives from \ref AbstractEmitter.
+ * The reason for this is that much like radiance, the spectral response of a
+ * sensor can be interpreted as emitted quantity named \a importance. The
+ * \ref Sensor interface thus inherits almost all of the emitter API and only
  * needs to add a few camera-specific methods on top.
  *
  * The concept of interpreting sensor response as an emitted quantity and
- * the resulting flexibility of being able to dynamically transition between 
- * emitter and receiver interpretations of luminaires and sensors is a key 
- * insight that enables the construction of powerful bidirectional rendering 
- * techniques It is the reason why the API to these components may seem 
+ * the resulting flexibility of being able to dynamically transition between
+ * emitter and receiver interpretations of luminaires and sensors is a key
+ * insight that enables the construction of powerful bidirectional rendering
+ * techniques It is the reason why the API to these components may seem
  * somewhat unorthodox.
  *
- * In Mitsuba, a sensor can be as simple as an irradiance meter that performs a 
+ * In Mitsuba, a sensor can be as simple as an irradiance meter that performs a
  * single measurement along a specified ray, but it can also represent sensors
- * that are more commonly used in computer graphics, such as a perspective camera 
+ * that are more commonly used in computer graphics, such as a perspective camera
  * based on the thin lens equation.
  *
  * An important difference between a luminaire and a sensor is that the sensor
  * records spectral measurements to a film, and for that reason it needs a
  * mapping between rays and film pixel coordinates. Apart from that, the
  * interfaces are almost identical.
- * 
- * Mitsuba assumes that a sensor always has a form of "shutter", which opens 
+ *
+ * Mitsuba assumes that a sensor always has a form of "shutter", which opens
  * for a certain time, during which the exposure takes place. The sensor
- * itself may also undergo motion while the shutter is open, but a more 
+ * itself may also undergo motion while the shutter is open, but a more
  * complicated dependence on time is not allowed.
- * 
+ *
  * \ingroup librender
  */
 class MTS_EXPORT_RENDER Sensor : public AbstractEmitter {
 public:
 	/**
-	 * \brief This list of flags is used to additionally characterize 
+	 * \brief This list of flags is used to additionally characterize
 	 * and classify the response functions of different types of sensors
 	 *
 	 * \sa AbstractEmitter::EEmitterType
@@ -102,23 +102,23 @@ public:
 	 * \brief Importance sample a ray according to the sensor response
 	 *
 	 * This function combines all three of the steps of sampling a time,
-	 * ray position, and direction value. It does not return any auxiliary 
+	 * ray position, and direction value. It does not return any auxiliary
 	 * sampling information and is mainly meant to be used by unidirectional
 	 * rendering techniques.
-	 * 
-	 * Note that this function potentially uses a different sampling 
-	 * strategy compared to the sequence of running \ref sampleArea() 
+	 *
+	 * Note that this function potentially uses a different sampling
+	 * strategy compared to the sequence of running \ref sampleArea()
 	 * and \ref sampleDirection(). The reason for this is that it may
 	 * be possible to switch to a better technique when sampling both
 	 * position and direction at the same time.
 	 *
 	 * \param ray
-	 *    A ray data structure to be populated with a position 
+	 *    A ray data structure to be populated with a position
 	 *    and direction value
 	 *
 	 * \param samplePosition
 	 *    Denotes the desired sample position in fractional pixel
-	 *    coordinates relative to the crop window of the underlying 
+	 *    coordinates relative to the crop window of the underlying
 	 *    film.
 	 *
 	 * \param apertureSample
@@ -142,31 +142,31 @@ public:
 		Float timeSample) const = 0;
 
 	/**
-	 * \brief Importance sample a ray differential according to the 
+	 * \brief Importance sample a ray differential according to the
 	 * sensor response
 	 *
 	 * This function combines all three of the steps of sampling a time,
-	 * ray position, and direction value. It does not return any auxiliary 
+	 * ray position, and direction value. It does not return any auxiliary
 	 * sampling information and is mainly meant to be used by unidirectional
 	 * rendering techniques.
-	 * 
-	 * Note that this function potentially uses a different sampling 
-	 * strategy compared to the sequence of running \ref sampleArea() 
+	 *
+	 * Note that this function potentially uses a different sampling
+	 * strategy compared to the sequence of running \ref sampleArea()
 	 * and \ref sampleDirection(). The reason for this is that it may
 	 * be possible to switch to a better technique when sampling both
 	 * position and direction at the same time.
 	 *
-	 * The default implementation computes differentials using several 
+	 * The default implementation computes differentials using several
 	 * internal calls to \ref sampleRay(). Subclasses of the \ref Sensor
 	 * interface may optionally provide a more efficient approach.
 	 *
 	 * \param ray
-	 *    A ray data structure to be populated with a position 
+	 *    A ray data structure to be populated with a position
 	 *    and direction value
  	 *
 	 * \param samplePosition
 	 *    Denotes the desired sample position in fractional pixel
-	 *    coordinates relative to the crop window of the underlying 
+	 *    coordinates relative to the crop window of the underlying
 	 *    film.
 	 *
 	 * \param apertureSample
@@ -204,7 +204,7 @@ public:
 	/**
 	 * \brief Return the emitted importance for the given surface intersection
 	 *
-	 * This is function is used when a sensor has been hit by a 
+	 * This is function is used when a sensor has been hit by a
 	 * ray in a particle tracing-style integrator, and it subsequently needs to
 	 * be queried for the emitted importance along the negative ray direction.
 	 *
@@ -212,21 +212,21 @@ public:
 	 * and \ref evalDirection(), though note that it does not include the
 	 * cosine foreshortening factor of the latter method.
 	 *
-	 * This function is provided here as a fast convenience function for 
+	 * This function is provided here as a fast convenience function for
 	 * unidirectional rendering techniques that support intersecting the
-	 * sensor. The default implementation throws an exception, which 
+	 * sensor. The default implementation throws an exception, which
 	 * states that the method is not implemented.
 	 *
-	 * \param its 
+	 * \param its
 	 *    An intersect record that specfies the query position
 	 *
 	 * \param d
 	 *    A unit vector, which specifies the query direction
 	 *
 	 * \param result
-	 *    This argument is used to return the 2D sample position 
-	 *    (i.e. the fractional pixel coordinates) associated 
-	 *    with the intersection. 
+	 *    This argument is used to return the 2D sample position
+	 *    (i.e. the fractional pixel coordinates) associated
+	 *    with the intersection.
 	 *
 	 * \return
 	 *    The emitted importance
@@ -235,7 +235,7 @@ public:
 			Point2 &samplePos) const;
 
 	/**
-	 * \brief Return the sample position associated with a given 
+	 * \brief Return the sample position associated with a given
 	 * position and direction sampling record
 	 *
 	 * \param dRec
@@ -250,7 +250,7 @@ public:
 			const DirectionSamplingRecord &dRec, Point2 &position) const;
 
 	/**
-	 * \brief Evaluate the temporal component of the sampling density 
+	 * \brief Evaluate the temporal component of the sampling density
 	 * implemented by the \ref sampleRay() method.
 	 */
 	Float pdfTime(const Ray &ray, EMeasure measure) const;
@@ -262,7 +262,7 @@ public:
 	inline Float getShutterOpenTime() const { return m_shutterOpenTime; }
 
 	/**
-	 * \brief Does the method \ref sampleRay() require a uniformly distributed 
+	 * \brief Does the method \ref sampleRay() require a uniformly distributed
 	 * sample for the time-dependent component?
 	 */
 	inline bool needsTimeSample() const { return !(m_type & EDeltaTime); }
@@ -275,7 +275,7 @@ public:
 	// =============================================================
 
 	/**
-	 * \brief Does the method \ref sampleRay() require a uniformly 
+	 * \brief Does the method \ref sampleRay() require a uniformly
 	 * distributed sample for the aperture component?
 	 */
 	inline bool needsApertureSample() const { return m_type & ENeedsApertureSample; }
@@ -292,10 +292,10 @@ public:
 	/**
 	 * \brief Return the sensor's sample generator
 	 *
-	 * This is the \a root sampler, which will later be cloned a 
-	 * number of times to provide each participating worker thread 
-	 * with its own instance (see \ref Scene::getSampler()). 
-	 * Therefore, this sampler should never be used for anything 
+	 * This is the \a root sampler, which will later be cloned a
+	 * number of times to provide each participating worker thread
+	 * with its own instance (see \ref Scene::getSampler()).
+	 * Therefore, this sampler should never be used for anything
 	 * except creating clones.
 	 */
 	inline Sampler *getSampler() { return m_sampler; }
@@ -303,22 +303,22 @@ public:
 	/**
 	 * \brief Return the sensor's sampler (const version).
 	 *
-	 * This is the \a root sampler, which will later be cloned a 
-	 * number of times to provide each participating worker thread 
-	 * with its own instance (see \ref Scene::getSampler()). 
-	 * Therefore, this sampler should never be used for anything 
+	 * This is the \a root sampler, which will later be cloned a
+	 * number of times to provide each participating worker thread
+	 * with its own instance (see \ref Scene::getSampler()).
+	 * Therefore, this sampler should never be used for anything
 	 * except creating clones.
 	 */
 	inline const Sampler *getSampler() const { return m_sampler.get(); }
 
-	/// Serialize this sensor to a binary data stream	
+	/// Serialize this sensor to a binary data stream
 	virtual void serialize(Stream *stream, InstanceManager *manager) const;
 
 	//! @}
 	// =============================================================
 
 	// =============================================================
-	//! @{ \name ConfigurableObject interface 
+	//! @{ \name ConfigurableObject interface
 	// =============================================================
 	/// Add a child ConfigurableObject
 	virtual void addChild(const std::string &name, ConfigurableObject *child);
@@ -359,11 +359,11 @@ protected:
  * are commonly used in computer graphics, such as perspective and orthographic
  * camera models.
  *
- * The interface is meant to be implemented by any kind of sensor, whose 
- * world to clip space transformation can be explained using only linear 
- * operations on homogeneous coordinates. 
+ * The interface is meant to be implemented by any kind of sensor, whose
+ * world to clip space transformation can be explained using only linear
+ * operations on homogeneous coordinates.
  *
- * A useful feature of \ref ProjectiveCamera sensors is that their view can be 
+ * A useful feature of \ref ProjectiveCamera sensors is that their view can be
  * rendered using the traditional OpenGL pipeline.
  *
  * \ingroup librender
@@ -371,17 +371,17 @@ protected:
 class MTS_EXPORT_RENDER ProjectiveCamera : public Sensor {
 public:
 	/// Return the world-to-view (aka "view") transformation at time \c t
-	inline const Transform getViewTransform(Float t) const { 
+	inline const Transform getViewTransform(Float t) const {
 		return getWorldTransform()->eval(t).inverse();
 	}
 
 	/// Return the view-to-world transformation at time \c t
-	inline const Transform getInverseViewTransform(Float t) const { 
+	inline const Transform getInverseViewTransform(Float t) const {
 		return getWorldTransform()->eval(t);
 	}
 
 	/**
-	 * \brief Overwrite the inverse world-to-view transformation 
+	 * \brief Overwrite the inverse world-to-view transformation
 	 * with a static (i.e. non-animated) transformation.
 	 */
 	virtual void setInverseViewTransform(const Transform &trafo);
@@ -390,17 +390,17 @@ public:
 	 * \brief Return a projection matrix suitable for rendering the
 	 * scene using OpenGL
 	 *
-	 * For scenes involving a narrow depth of field and antialiasing, 
+	 * For scenes involving a narrow depth of field and antialiasing,
 	 * it is necessary to average many separately rendered images using
 	 * different pixel offsets and aperture positions.
 	 *
 	 * \param apertureSample
-	 *     Sample for rendering with defocus blur. This should be a 
+	 *     Sample for rendering with defocus blur. This should be a
 	 *     uniformly distributed random point in [0,1]^2 (or any value
 	 *     when \ref needsApertureSample() == \c false)
 	 *
 	 * \param aaSample
-	 *     Sample for antialiasing. This should be a uniformly 
+	 *     Sample for antialiasing. This should be a uniformly
 	 *     distributed random point in [0,1]^2.
 	 */
 	virtual Transform getProjectionTransform(const Point2 &apertureSample,
@@ -450,11 +450,11 @@ protected:
  * are commonly used in computer graphics, such as perspective and orthographic
  * camera models.
  *
- * The interface is meant to be implemented by any kind of sensor, whose 
- * world to clip space transformation can be explained using only linear 
- * operations on homogeneous coordinates. 
+ * The interface is meant to be implemented by any kind of sensor, whose
+ * world to clip space transformation can be explained using only linear
+ * operations on homogeneous coordinates.
  *
- * A useful feature of \ref ProjectiveCamera sensors is that their view can be 
+ * A useful feature of \ref ProjectiveCamera sensors is that their view can be
  * rendered using the traditional OpenGL pipeline.
  *
  * \ingroup librender
@@ -476,13 +476,13 @@ public:
 
 	/// Set the vertical field of view in degrees
 	void setYFov(Float yfov);
-	
+
 	/// Return the diagonal field of view in degrees
 	Float getDiagonalFov() const;
-	
+
 	/// Set the diagonal field of view in degrees
 	void setDiagonalFov(Float dfov);
-	
+
 	//! @}
 	// =============================================================
 

@@ -23,10 +23,10 @@ MTS_NAMESPACE_BEGIN
 
 class Null : public BSDF {
 public:
-	Null(const Properties &props) 
+	Null(const Properties &props)
 		: BSDF(props) { }
 
-	Null(Stream *stream, InstanceManager *manager) 
+	Null(Stream *stream, InstanceManager *manager)
 		: BSDF(stream, manager) {
 		configure();
 	}
@@ -88,7 +88,7 @@ public:
 	MTS_DECLARE_CLASS()
 };
 
-// ================ Hardware shader implementation ================ 
+// ================ Hardware shader implementation ================
 
 /* Null shader-- render as a 'black box' */
 class NullShader : public Shader {
@@ -111,7 +111,7 @@ public:
 	MTS_DECLARE_CLASS()
 };
 
-Shader *Null::createShader(Renderer *renderer) const { 
+Shader *Null::createShader(Renderer *renderer) const {
 	return new NullShader(renderer);
 }
 

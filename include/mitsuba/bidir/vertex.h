@@ -34,12 +34,12 @@ MTS_NAMESPACE_BEGIN
  * or Veach-style Metropolis Light Transport.
  *
  * This data structure can describe a several different types of interactions,
- * including surface and medium scattering events, as well as emission events 
- * by a light source or a sensor (in the bidirectional framework, the response 
+ * including surface and medium scattering events, as well as emission events
+ * by a light source or a sensor (in the bidirectional framework, the response
  * of a sensor is treated as an emitted quantity)
  *
  * A path vertex only describes what happens at the location of a scattering
- * or emission event -- what happens <em>in between</em> such interactions is 
+ * or emission event -- what happens <em>in between</em> such interactions is
  * captured in a separate data structure named \ref PathEdge.
  *
  * \author Wenzel Jakob
@@ -47,12 +47,12 @@ MTS_NAMESPACE_BEGIN
  */
 struct MTS_EXPORT_BIDIR PathVertex {
 	/* ==================================================================== */
-	//! @{ \name             Enumerations and Fields 
+	//! @{ \name             Enumerations and Fields
 	/* ==================================================================== */
 
 	/// Denotes the size of the auxiliary data section associated with each node
 	enum {
-		EDataSize = MAX(MAX(sizeof(Intersection), 
+		EDataSize = MAX(MAX(sizeof(Intersection),
 			sizeof(MediumSamplingRecord)), MAX(
 			sizeof(PositionSamplingRecord), sizeof(EndpointRecord)))
 	};
@@ -60,7 +60,7 @@ struct MTS_EXPORT_BIDIR PathVertex {
 	/**
 	 * \brief What kind of vertex is this (e.g. medium, surface, emitter)?
 	 *
-	 * The two special 'supernode' types are used as path endpoints, which greatly 
+	 * The two special 'supernode' types are used as path endpoints, which greatly
 	 * simplifies the control flow of various functions in this data structure and the
 	 * MLT/BDPT implementations.
 	 */
@@ -71,7 +71,7 @@ struct MTS_EXPORT_BIDIR PathVertex {
 		ESensorSupernode = 1,
 		/// Special emitter 'supernode' -- just before the emitter sample
 		EEmitterSupernode = 2,
-		/// Sampled position on the surface of a sensor 
+		/// Sampled position on the surface of a sensor
 		ESensorSample = 4,
 		/// Sampled position on the surface of an emitter
 		EEmitterSample = 8,
@@ -94,14 +94,14 @@ struct MTS_EXPORT_BIDIR PathVertex {
 	uint8_t type : 7;
 
 	/**
-	 * \brief Denotes whether this vertex \a only supports 
+	 * \brief Denotes whether this vertex \a only supports
 	 * sampling from degenerate distributions.
 	 *
 	 * It's useful to cache this information, since it allows
-	 * to quickly determine when certain pairs of vertices 
+	 * to quickly determine when certain pairs of vertices
 	 * cannot be deterministically connected.
 	 *
-	 * Examples of degenerate vertices are surface interactions with 
+	 * Examples of degenerate vertices are surface interactions with
 	 * dielectric boundaries and certain special cases. For instance, the
 	 * sensor supernode can be degenerate when the used sensor does not
 	 * cover any area (e.g. because it is a point camera).
@@ -113,15 +113,15 @@ struct MTS_EXPORT_BIDIR PathVertex {
 	 * probability densities stored in \ref pdf.
 	 *
 	 * Certain vertices use sampling methods, whose probability
-	 * mass lies on domains that have different associated 
-	 * measures. An example would be a surface interaction with 
+	 * mass lies on domains that have different associated
+	 * measures. An example would be a surface interaction with
 	 * a smooth plastic material, where the specular reflection
-	 * component is degenerate and the glossy reflection component 
+	 * component is degenerate and the glossy reflection component
 	 * is non-degenerate.
 	 *
 	 * This attribute stores the actual measure (an enumeration
-	 * item of type \ref EMeasure) and therefore clarifies whether 
-	 * or not a degenerate component was sampled. When no sampling 
+	 * item of type \ref EMeasure) and therefore clarifies whether
+	 * or not a degenerate component was sampled. When no sampling
 	 * event was generated yet, it is undefined.
 	 *
 	 * Currently, only three values are permissible:
@@ -134,7 +134,7 @@ struct MTS_EXPORT_BIDIR PathVertex {
 	/**
 	 * \brief When the current vertex supports sampling
 	 * from several components (this currently only applies
-	 * to %BSDF lobes), this attribute records the type 
+	 * to %BSDF lobes), this attribute records the type
 	 * sampled component.
 	 *
 	 * Otherwise, it will be set to zero.
@@ -145,8 +145,8 @@ struct MTS_EXPORT_BIDIR PathVertex {
 	 * \brief Measurement contribution weight
 	 *
 	 * This field stores the terms of the path-space measurement contribution
-	 * function that are coupled to this specific vertex, divided by the 
-	 * density of the adjacent vertices in the radiance and importance transport 
+	 * function that are coupled to this specific vertex, divided by the
+	 * density of the adjacent vertices in the radiance and importance transport
 	 * directions (hence, it is an array with two entries).
 	 *
 	 * More precisely, it stores
@@ -163,9 +163,9 @@ struct MTS_EXPORT_BIDIR PathVertex {
 	 * G(\mathbf{x}_i\leftrightarrow\mathbf{x}_{i-1})\,p_A(\mathbf{x}_{i+1}\to
 	 * \mathbf{x}_i\to\mathbf{x}_{i-1})^{-1}
 	 * \f]
-	 * 
+	 *
 	 * Where \f$G\f$ is the geometric term, \f$p_A\f$ is an area density, and
-	 * increasing indices are closer to the sensor. Generally much cancellation 
+	 * increasing indices are closer to the sensor. Generally much cancellation
 	 * will occur in the above expressions. For instance, for a surface
 	 * iteractions, this is equal to the BRDF times a cosine foreshortening
 	 * factor divided by the solid angle density of the default sampling
@@ -179,13 +179,13 @@ struct MTS_EXPORT_BIDIR PathVertex {
 	/**
 	 * \brief Area density of the two adjacent vertices
 	 *
-	 * This field stores the density of the predecessor and sucessor nodes 
-	 * with respect of the sampling technique implemented by \ref sampleNext(). 
+	 * This field stores the density of the predecessor and sucessor nodes
+	 * with respect of the sampling technique implemented by \ref sampleNext().
 	 * The measure of this value is specified by the \ref measure field
-	 * (generally, it is the density per unit area). 
+	 * (generally, it is the density per unit area).
 	 *
-	 * When one of the adjacent vertices is a medium interaction (i.e. it is 
-	 * not located on a surface), the stored probability will specify the density 
+	 * When one of the adjacent vertices is a medium interaction (i.e. it is
+	 * not located on a surface), the stored probability will specify the density
 	 * on a hypothetical surface oriented perpendicularly to the transport
 	 * direction.
 	 *
@@ -207,7 +207,7 @@ struct MTS_EXPORT_BIDIR PathVertex {
 	 * which wreaks havoc with strict aliasing (and hence it is disabled
 	 * for all bidirectional code).
 	 *
-	 * Once C++11 is widely supported across all target platforms, this 
+	 * Once C++11 is widely supported across all target platforms, this
 	 * should be replaced by an unrestricted union.
 	 */
 	uint8_t data[EDataSize];
@@ -220,13 +220,13 @@ struct MTS_EXPORT_BIDIR PathVertex {
 	/* ==================================================================== */
 
 	/**
-	 * \brief Generate a path endpoint that can be used to start 
+	 * \brief Generate a path endpoint that can be used to start
 	 * a random walk
 	 *
 	 * \param scene
 	 *     Pointer to the underlying scene
 	 * \param mode
-	 *     Specifies the desired mode of transport, i.e. radiance or 
+	 *     Specifies the desired mode of transport, i.e. radiance or
 	 *     importance transport
 	 * \param time
 	 *     Denotes the time value that will be associated with this
@@ -235,7 +235,7 @@ struct MTS_EXPORT_BIDIR PathVertex {
 	void makeEndpoint(const Scene *scene, Float time, ETransportMode mode);
 
 	/**
-	 * \brief Sample the next vertex in a random walk using the default 
+	 * \brief Sample the next vertex in a random walk using the default
 	 * sampling technique implemented by the current vertex.
 	 *
 	 * Given a vertex, its predecessor, as well as the edge in between them,
@@ -250,12 +250,12 @@ struct MTS_EXPORT_BIDIR PathVertex {
 	 * \param predEdge
 	 *     Edge to the preceding edge (if any) and \c NULL otherwise
 	 * \param succEdge
-	 *     Pointer to an unused edge data structure, which will be filled 
+	 *     Pointer to an unused edge data structure, which will be filled
 	 *     with information about the edge between the current vertex and
 	 *     the newly sampled successor.
 	 * \param succ
-	 *     Pointer to an unused vertex data structure, which will be filled 
-	 *     with information about the successor vertex 
+	 *     Pointer to an unused vertex data structure, which will be filled
+	 *     with information about the successor vertex
 	 * \param mode
 	 *     Specifies whether radiance or importance is being transported
 	 * \param russianRoulette
@@ -270,21 +270,21 @@ struct MTS_EXPORT_BIDIR PathVertex {
 	 * \return \c true on success
 	 */
 	bool sampleNext(const Scene *scene, Sampler *sampler,
-		const PathVertex *pred, const PathEdge *predEdge, 
-		PathEdge *succEdge, PathVertex *succ, 
+		const PathVertex *pred, const PathEdge *predEdge,
+		PathEdge *succEdge, PathVertex *succ,
 		ETransportMode mode, bool russianRoulette = false,
 		Spectrum *throughput = NULL);
 
 	/**
 	 * \brief \a Direct sampling: given the current vertex as a reference
-	 * sample an emitter (or sensor) position that has a nonzero emission 
+	 * sample an emitter (or sensor) position that has a nonzero emission
 	 * (or response) towards it.
 	 *
 	 * This can be seen as a generalization of direct illumination sampling
 	 * that can be used for both emitter and sensor endpoints.
 	 *
 	 * Ideally, the implementation should importance sample the product of
-	 * the emission or response profile and the geometry term between the 
+	 * the emission or response profile and the geometry term between the
 	 * reference point and the sampled position. In practice, one of these
 	 * usually has to be sacrificed.
 	 *
@@ -303,11 +303,11 @@ struct MTS_EXPORT_BIDIR PathVertex {
 	 *     sampled sensor or emitter position
 	 * \param mode
 	 *     Specifies whether radiance or importance is being transported
-	 * \return The emitted radiance or importance divided by the 
+	 * \return The emitted radiance or importance divided by the
 	 *     sample probability per unit area per unit solid angle.
 	 */
-	Spectrum sampleDirect(const Scene *scene, Sampler *sampler, 
-		PathVertex *endpoint, PathEdge *edge, PathVertex *sample, 
+	Spectrum sampleDirect(const Scene *scene, Sampler *sampler,
+		PathVertex *endpoint, PathEdge *edge, PathVertex *sample,
 		ETransportMode mode) const;
 
 	/**
@@ -316,8 +316,8 @@ struct MTS_EXPORT_BIDIR PathVertex {
 	 *
 	 * This function samples the spatial and directional components of the sensor
 	 * and is similar to calling \ref sampleNext() two times in sequence starting
-	 * from a sensor supernode. The main difference is that the resulting subpath 
-	 * passes through a specified pixel position, which is important to implement 
+	 * from a sensor supernode. The main difference is that the resulting subpath
+	 * passes through a specified pixel position, which is important to implement
 	 * algorithms that parallelize rendering of images by processing it in separate
 	 * blocks. If this function is called once for every pixel in the output
 	 * image, the resulting path distribution is identical to what would have
@@ -332,17 +332,17 @@ struct MTS_EXPORT_BIDIR PathVertex {
 	 *     Pointer to a sample generator
 	 * \param pixelPosition
 	 *     Specifies the desired pixel position
-	 * \param e0 
+	 * \param e0
 	 *     Pointer to the first edge on the sensor subpath
-	 * \param e0 
+	 * \param e0
 	 *     Pointer to the first edge on the sensor subpath
-	 * \param v1 
+	 * \param v1
 	 *     Pointer to the second vertex on the sensor subpath
-	 * \param v2 
+	 * \param v2
 	 *     Pointer to the third vertex on the sensor subpath
-	 * \return The number of successful sampling operations (i.e. 
-	 *    \c 0 if sensor sampling failed, \c 1 if no surface/medium 
-	 *    interaction was encountered, or \c 2 if all data structures 
+	 * \return The number of successful sampling operations (i.e.
+	 *    \c 0 if sensor sampling failed, \c 1 if no surface/medium
+	 *    interaction was encountered, or \c 2 if all data structures
 	 *    were successfully filled)
 	 */
 	int sampleSensor(const Scene *scene, Sampler *sampler, const Point2i &pixelPosition,
@@ -351,11 +351,11 @@ struct MTS_EXPORT_BIDIR PathVertex {
 	/**
 	 * \brief Create a perturbed successor vertex and edge
 	 *
-	 * This function behaves similar to \ref sampleNext() in that it 
-	 * generates a successor edge and vertex. 
+	 * This function behaves similar to \ref sampleNext() in that it
+	 * generates a successor edge and vertex.
 	 *
-	 * The main difference is that the desired direction, distance, and 
-	 * type of the successor vertex are all specified, which makes the 
+	 * The main difference is that the desired direction, distance, and
+	 * type of the successor vertex are all specified, which makes the
 	 * sampling process completely deterministic. This is useful for
 	 * implementing path-space perturbation strategies.
 	 *
@@ -368,25 +368,25 @@ struct MTS_EXPORT_BIDIR PathVertex {
 	 * \param predEdge
 	 *     Edge to the preceding edge (if any) and \c NULL otherwise
 	 * \param succEdge
-	 *     Pointer to an unused edge data structure, which will be filled 
+	 *     Pointer to an unused edge data structure, which will be filled
 	 *     with information about the edge between the current vertex and
 	 *     the new successor.
 	 * \param succ
-	 *     Pointer to an unused vertex data structure, which will be filled 
-	 *     with information about the successor vertex 
+	 *     Pointer to an unused vertex data structure, which will be filled
+	 *     with information about the successor vertex
 	 * \param d
 	 *     Specifies the desired outgoing direction at the current vertex
 	 * \param dist
 	 *     Specifies the desired distance between the current vertex and \c succ
 	 *     (this only applies when <tt>desiredType=EMediumInteraction</tt>)
 	 * \param desiredType
-	 *     Specifies the desired vertex type of \c succ. 
+	 *     Specifies the desired vertex type of \c succ.
 	 * \param mode
 	 *     Specifies whether radiance or importance is being transported
 	 * \return \c true on success
 	 */
-	bool perturbDirection(const Scene *scene, const PathVertex *pred, 
-		const PathEdge *predEdge, PathEdge *succEdge, PathVertex *succ, 
+	bool perturbDirection(const Scene *scene, const PathVertex *pred,
+		const PathEdge *predEdge, PathEdge *succEdge, PathVertex *succ,
 		const Vector &d, Float dist, EVertexType desiredType, ETransportMode mode);
 
 	/**
@@ -399,12 +399,12 @@ struct MTS_EXPORT_BIDIR PathVertex {
 	 * \brief Propagate a perturbation through an ideally specular interaction
 	 *
 	 * This function behaves similar to \ref sampleNext() and \ref
-	 * perturbDirection() in that it generates a successor edge and vertex. 
+	 * perturbDirection() in that it generates a successor edge and vertex.
 	 *
 	 * The main difference is that it only works for specular interactions,
 	 * where the requested type of interaction (reflection/refraction) is
 	 * additionally specified, which makese the sampling process completely
-	 * deterministic. This is useful for implementing path-space 
+	 * deterministic. This is useful for implementing path-space
 	 * perturbation strategies. For now, it is only used by the perturbations
 	 * of Veach and Guibas.
 	 *
@@ -417,29 +417,29 @@ struct MTS_EXPORT_BIDIR PathVertex {
 	 * \param predEdge
 	 *     Edge to the preceding edge (if any) and \c NULL otherwise
 	 * \param succEdge
-	 *     Pointer to an unused edge data structure, which will be filled 
+	 *     Pointer to an unused edge data structure, which will be filled
 	 *     with information about the edge between the current vertex and
 	 *     the new successor.
 	 * \param dist
 	 *     Specifies the desired distance between the current vertex and \c succ
 	 *     (this only applies when <tt>desiredType=EMediumInteraction</tt>)
 	 * \param desiredType
-	 *     Specifies the desired vertex type of \c succ. 
+	 *     Specifies the desired vertex type of \c succ.
 	 * \param componentType
 	 *     Specifies the desired type of scattering interaction (equivalent
 	 *     to \ref BSDF::typeMask)
 	 * \param succ
-	 *     Pointer to an unused vertex data structure, which will be filled 
-	 *     with information about the successor vertex 
+	 *     Pointer to an unused vertex data structure, which will be filled
+	 *     with information about the successor vertex
 	 * \param dist
-	 *     Specifies the desired distance between the current vertex and 
+	 *     Specifies the desired distance between the current vertex and
 	 *     \c succ (this only applies to medium interactions)
 	 * \param mode
 	 *     Specifies whether radiance or importance is being transported
 	 * \return \c true on success
 	 */
-	bool propagatePerturbation(const Scene *scene, const PathVertex *pred, 
-		const PathEdge *predEdge, PathEdge *succEdge, PathVertex *succ, 
+	bool propagatePerturbation(const Scene *scene, const PathVertex *pred,
+		const PathEdge *predEdge, PathEdge *succEdge, PathVertex *succ,
 		unsigned int componentType, Float dist, EVertexType desiredType,
 		ETransportMode mode);
 
@@ -455,12 +455,12 @@ struct MTS_EXPORT_BIDIR PathVertex {
 	 * that are associated with this vertex.
 	 *
 	 * Compute a single term of the contribution weighting function associated
-	 * with the current node given a predecessor and successor node. 
+	 * with the current node given a predecessor and successor node.
 	 *
 	 * Note: this function only accounts for the factor associated with this
 	 * specific vertex -- to account for an adjacent edge, refer to
 	 * \ref PathEdge::eval.
-	 * 
+	 *
 	 * \param scene
 	 *     Pointer to the underlying scene
 	 * \param pred
@@ -471,23 +471,23 @@ struct MTS_EXPORT_BIDIR PathVertex {
 	 *     Specifies whether radiance or importance is being transported
 	 * \param measure
 	 *     Specifies the measure of the queried component. This is necessary
-	 *     to handle mixture scattering functions, whose components are 
+	 *     to handle mixture scattering functions, whose components are
 	 *     defined on spaces with different measures.
 	 * \return The contribution weighting factor
 	 */
-	Spectrum eval(const Scene *scene, const PathVertex *pred, 
+	Spectrum eval(const Scene *scene, const PathVertex *pred,
 		const PathVertex *succ, ETransportMode mode, EMeasure measure = EArea) const;
 
 	/**
 	 * \brief Compute the density of a successor node
 	 *
-	 * This function computes the hypothetical scattering-related sampling density 
-	 * of a given successor node when using the sampling technique implemented by 
-	 * \ref sampleNext(). Since this technique conditions on a predecessor vertex, 
+	 * This function computes the hypothetical scattering-related sampling density
+	 * of a given successor node when using the sampling technique implemented by
+	 * \ref sampleNext(). Since this technique conditions on a predecessor vertex,
 	 * it must also be provided here. The desired measure (e.g. area/solid angle/discrete)
 	 * can be provided as an extra parameter.
-	 * 
-	 * Note: this function only computes probability associated with the 
+	 *
+	 * Note: this function only computes probability associated with the
 	 * vertices -- to account for edges, refer to \ref PathEdge::evalPdf.
 	 *
 	 * \param scene
@@ -500,11 +500,11 @@ struct MTS_EXPORT_BIDIR PathVertex {
 	 *     Specifies whether radiance or importance is being transported
 	 * \param measure
 	 *     Specifies the measure of the queried component. This is necessary
-	 *     to handle mixture scattering functions, whose components are 
+	 *     to handle mixture scattering functions, whose components are
 	 *     defined on spaces with different measures.
 	 * \return The computed probability density
 	 */
-	Float evalPdf(const Scene *scene, const PathVertex *pred, 
+	Float evalPdf(const Scene *scene, const PathVertex *pred,
 		const PathVertex *succ, ETransportMode mode, EMeasure measure = EArea) const;
 
 	/**
@@ -523,11 +523,11 @@ struct MTS_EXPORT_BIDIR PathVertex {
 	 *     An emitter or sensor sample
 	 * \param measure
 	 *     Specifies the measure of the queried component. This is necessary
-	 *     to handle scattering functions, whose components are 
+	 *     to handle scattering functions, whose components are
 	 *     defined on spaces with different measures.
 	 * \return The density of \c sample conditioned on this vertex.
 	 */
-	Float evalPdfDirect(const Scene *scene, const PathVertex *sample, 
+	Float evalPdfDirect(const Scene *scene, const PathVertex *sample,
 		ETransportMode mode, EMeasure measure = EArea) const;
 
 	/**
@@ -545,7 +545,7 @@ struct MTS_EXPORT_BIDIR PathVertex {
 	 * \return
 	 *    The medium between \c this and \c succ
 	 */
-	const Medium *getTargetMedium(const PathEdge *predEdge, 
+	const Medium *getTargetMedium(const PathEdge *predEdge,
 			const PathVertex *succ) const;
 
 	/**
@@ -558,7 +558,7 @@ struct MTS_EXPORT_BIDIR PathVertex {
 	 * \return
 	 *    The medium containing the ray <tt>(this->getPosition(), d)</tt>
 	 */
-	const Medium *getTargetMedium(const PathEdge *predEdge, 
+	const Medium *getTargetMedium(const PathEdge *predEdge,
 			const Vector &d) const;
 
 	//! @}
@@ -572,7 +572,7 @@ struct MTS_EXPORT_BIDIR PathVertex {
 	inline EVertexType getType() const { return (EVertexType) type; }
 
 	/**
-	 * \brief Return the position associated with this vertex 
+	 * \brief Return the position associated with this vertex
 	 *
 	 * Throws an exception when called on a supernode
 	 */
@@ -580,34 +580,34 @@ struct MTS_EXPORT_BIDIR PathVertex {
 
 	/// Check if the vertex lies on a surface
 	inline bool isOnSurface() const {
-		return (type == ESurfaceInteraction) || ((type == EEmitterSample || 
+		return (type == ESurfaceInteraction) || ((type == EEmitterSample ||
 			type == ESensorSample) && static_cast<const AbstractEmitter *>(
 			getPositionSamplingRecord().object)->getType() & AbstractEmitter::EOnSurface);
 	}
 
 	/**
 	 * \brief Returns whether or not this vertex describes a "null" scattering interaction.
-	 * 
-	 * A null interaction is a degenerate scattering event with a Dirac delta peak in the 
-	 * forward direction. Apart from a potential influence on their weight, particles 
+	 *
+	 * A null interaction is a degenerate scattering event with a Dirac delta peak in the
+	 * forward direction. Apart from a potential influence on their weight, particles
 	 * will pass through such an interface unchanged.
  	 */
-	inline bool isNullInteraction() const { 
+	inline bool isNullInteraction() const {
 		return type == ESurfaceInteraction && componentType == BSDF::ENull;
 	}
 
 	/**
-	 * \brief Returns whether or not this vertex describes a diffuse surface 
+	 * \brief Returns whether or not this vertex describes a diffuse surface
 	 * scattering interaction.
  	 */
-	inline bool isDiffuseInteraction() const { 
-		return type == ESurfaceInteraction && 
+	inline bool isDiffuseInteraction() const {
+		return type == ESurfaceInteraction &&
 			(componentType == BSDF::EDiffuseReflection || componentType == BSDF::EDiffuseTransmission);
 	}
 
 	/**
 	 * \brief Returns whether or not this vertex describes a 100% absorbing surface
-	 * 
+	 *
 	 * Such is the case on emitters/sensors that don't have an explicit BSDF assigned
 	 * to them. It is useful to be able to query this to avoid some useless connection
 	 * attempts involving these vertices.
@@ -731,7 +731,7 @@ struct MTS_EXPORT_BIDIR PathVertex {
 	inline bool isDegenerate() const { return degenerate; }
 
 	/**
-	 * \brief Returns whether or not this vertex can be deterministically 
+	 * \brief Returns whether or not this vertex can be deterministically
 	 * connected to other vertices.
 	 *
 	 * This is the case when <tt>\ref degenerate == false</tt> and
@@ -746,7 +746,7 @@ struct MTS_EXPORT_BIDIR PathVertex {
 	 * \param v
 	 *    Pointer to the target vertex
 	 *
-	 * \return \c true upon success (i.e. when the point is in the 
+	 * \return \c true upon success (i.e. when the point is in the
 	 *     sensor's field of view)
 	 */
 	bool updateSamplePosition(const PathVertex *succ);
@@ -762,7 +762,7 @@ struct MTS_EXPORT_BIDIR PathVertex {
 	 *    Reference to a 2D point that will be set to the fractional
 	 *    pixel coordinates associated with \c succ.
 	 *
-	 * \return \c true upon success (i.e. when the point is in the 
+	 * \return \c true upon success (i.e. when the point is in the
 	 *     sensor's field of view)
 	 */
 	bool getSamplePosition(const PathVertex *succ, Point2 &result) const;
@@ -771,7 +771,7 @@ struct MTS_EXPORT_BIDIR PathVertex {
 	/* ==================================================================== */
 
 	/* ==================================================================== */
-	//! @{ \name                    Miscellaneous 
+	//! @{ \name                    Miscellaneous
  	/* ==================================================================== */
 
 	/**
@@ -779,8 +779,8 @@ struct MTS_EXPORT_BIDIR PathVertex {
 	 *
 	 * Sometimes it is necessary to cast a vertex into a different type.
 	 * An example when this occurs is when a surface interaction vertex
-	 * lies on the surface of an emitter or a sensor. In such a situation, 
-	 * it may be useful to retroactively turn it into an emitter or sensor 
+	 * lies on the surface of an emitter or a sensor. In such a situation,
+	 * it may be useful to retroactively turn it into an emitter or sensor
 	 * sample vertex located at the same position. This function allows
 	 * to do precisely that.
 	 *
@@ -788,7 +788,7 @@ struct MTS_EXPORT_BIDIR PathVertex {
 	 *     A pointer to the underlying scene
 	 * \param desired
 	 *     Desired type after the cast
-	 * \return \c true on success. When returning \c false, the 
+	 * \return \c true on success. When returning \c false, the
 	 *     function did not make any changes.
 	 */
 	bool cast(const Scene *scene, EVertexType desired);
@@ -814,39 +814,39 @@ struct MTS_EXPORT_BIDIR PathVertex {
 	 * \param os
 	 *     Target output stream for error messages
 	 */
-	bool verify(const Scene *scene, const PathVertex *adjL, 
+	bool verify(const Scene *scene, const PathVertex *adjL,
 		const PathVertex *adjE, ETransportMode mode, std::ostream &os) const;
 
 	/**
 	 * \brief Given the specified predecessor and successor, update
 	 * the cached values stored in this vertex
-	 * 
+	 *
 	 * \param pred
 	 *     Pointer to the predecessor vertex (if any) and \c NULL otherwise
 	 * \param succ
 	 *     Pointer to the successor vertex (if any) and \c NULL otherwise
 	 * \param mode
-	 *     Specifies the direction of light transport 
+	 *     Specifies the direction of light transport
 	 * \return \c false when there is no throughput
 	 */
-	bool update(const Scene *scene, const PathVertex *pred, 
+	bool update(const Scene *scene, const PathVertex *pred,
 		const PathVertex *succ, ETransportMode mode, EMeasure measure = EArea);
 
 	/**
 	 * \brief Create a connection between two disconnected subpaths
 	 *
 	 * This function can be used to connect two seperately created emitter
-	 * and sensor subpaths so that they can be merged into a \ref Path data 
-	 * structure. The function checks that the vertices \c vs and \c vt are 
-	 * mutually visible, and that there is a nonzero throughput between them. 
-	 * If that is the case, it updates the cached values stored in \c vs, 
+	 * and sensor subpaths so that they can be merged into a \ref Path data
+	 * structure. The function checks that the vertices \c vs and \c vt are
+	 * mutually visible, and that there is a nonzero throughput between them.
+	 * If that is the case, it updates the cached values stored in \c vs,
 	 * \c edge, and \c vt.
 	 *
 	 * The expected order of the parameters in path-space is
 	 * <pre>
 	 * (pred) -> predEdge -> (vs) -> edge -> (vt) -> succEdge -> (succ)
 	 * </pre>
-	 * where entries in parentheses denote vertices, 
+	 * where entries in parentheses denote vertices,
 	 * \c pred is the closer to the light source, and \c succ
 	 * is the closer to the sensor.
 	 *
@@ -875,15 +875,15 @@ struct MTS_EXPORT_BIDIR PathVertex {
 	 * \return \c true upon success, \c false when there is no
 	 *     throughput or an inconsistency has been detected.
 	 */
-	static bool connect(const Scene *scene, 
+	static bool connect(const Scene *scene,
 			const PathVertex *pred, const PathEdge *predEdge,
-			PathVertex *vs, PathEdge *edge, PathVertex *vt, 
+			PathVertex *vs, PathEdge *edge, PathVertex *vt,
 			const PathEdge *succEdge, const PathVertex *succ);
 
 	/// Like the above, but can be used to connect delta endpoints
-	static bool connect(const Scene *scene, 
+	static bool connect(const Scene *scene,
 			const PathVertex *pred, const PathEdge *predEdge,
-			PathVertex *vs, PathEdge *edge, PathVertex *vt, 
+			PathVertex *vs, PathEdge *edge, PathVertex *vt,
 			const PathEdge *succEdge, const PathVertex *succ,
 			EMeasure vsMeasure, EMeasure vtMeasure);
 
@@ -895,7 +895,7 @@ struct MTS_EXPORT_BIDIR PathVertex {
 
 	/// Compare this vertex against another vertex
 	bool operator==(const PathVertex &vertex) const;
-	
+
 	/// Compare this vertex against another vertex
 	inline bool operator!=(const PathVertex &vertex) const {
 		return !operator==(vertex);

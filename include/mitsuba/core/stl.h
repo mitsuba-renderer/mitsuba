@@ -19,7 +19,7 @@
 #pragma once
 #if !defined(__MITSUBA_CORE_STL_H_)
 #define __MITSUBA_CORE_STL_H_
- 
+
 /* Include some SGI STL extensions, which might be missing */
 #ifdef __GNUC__
 #include <ext/functional>
@@ -36,7 +36,7 @@ namespace std {
 			return __x.first;
 		}
 	};
-	
+
 	template <class _Pair> struct _Select2nd : public unary_function<_Pair, typename _Pair::second_type> {
 		const typename _Pair::second_type& operator()(const _Pair& __x) const {
 			return __x.second;
@@ -66,7 +66,7 @@ namespace std {
 
 	#define snprintf _snprintf
 	#define vsnprintf _vsnprintf
-	
+
 	inline char tolower(char c) {
 		return ::tolower(c);
 	}

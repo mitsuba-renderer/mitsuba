@@ -29,7 +29,7 @@ MTS_NAMESPACE_BEGIN
 class MemoryPool {
 public:
 	/// Create a new memory pool with aninitial set of 128 entries
-	MemoryPool(size_t nEntries = 128) 
+	MemoryPool(size_t nEntries = 128)
 		: m_vertexPool(nEntries), m_edgePool(nEntries) { }
 
 	/// Destruct the memory pool and release all entries
@@ -72,7 +72,7 @@ public:
 	inline size_t edgeSize() {
 		return m_edgePool.size();
 	}
-	
+
 	/// Return the currently allocated amount of storage for vertices
 	inline size_t vertexSize() {
 		return m_vertexPool.size();

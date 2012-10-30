@@ -55,7 +55,7 @@ extern bool create_symlinks();
 static int localWorkerCtr = 0, remoteWorkerCtr = 0;
 
 MainWindow::MainWindow(QWidget *parent) :
-	QMainWindow(parent), ui(new Ui::MainWindow), 
+	QMainWindow(parent), ui(new Ui::MainWindow),
 	m_networkReply(NULL), m_activeWindowHack(false) {
 	Logger *logger = Thread::getThread()->getLogger();
 
@@ -70,9 +70,9 @@ MainWindow::MainWindow(QWidget *parent) :
 
 	m_consoleAppender = new QConsoleAppender();
 	logger->addAppender(m_consoleAppender);
-	connect(m_consoleAppender, SIGNAL(textMessage(ELogLevel, const QString &)), 
+	connect(m_consoleAppender, SIGNAL(textMessage(ELogLevel, const QString &)),
 		m_logWidget, SLOT(onTextMessage(ELogLevel, const QString &)), Qt::QueuedConnection);
-	connect(m_consoleAppender, SIGNAL(criticalError(const QString &)), 
+	connect(m_consoleAppender, SIGNAL(criticalError(const QString &)),
 		m_logWidget, SLOT(onCriticalError(const QString &)), Qt::QueuedConnection);
 
 	SLog(EInfo, "Mitsuba version %s, Copyright (c) " MTS_YEAR " Wenzel Jakob",
@@ -92,7 +92,7 @@ MainWindow::MainWindow(QWidget *parent) :
 				oss << ", ";
 		}
 	}
-	
+
 	SLog(EInfo, "Configured for spectral rendering using "
 		"the wavelength discretization %s", oss.str().c_str());
 #endif
@@ -173,7 +173,7 @@ MainWindow::MainWindow(QWidget *parent) :
 	/* Load defaults from app settings file */
 	ui->glView->setInvertMouse(settings.value("invertMouse", false).toBool());
 	ui->glView->setMouseSensitivity(settings.value("mouseSensitivity", 3).toInt());
-	ui->glView->setNavigationMode((ENavigationMode) settings.value("navMode", 
+	ui->glView->setNavigationMode((ENavigationMode) settings.value("navMode",
 		EStandard).toInt());
 	m_searchPaths = settings.value("searchPaths", QStringList()).toStringList();
 	m_blockSize = settings.value("blockSize", 32).toInt();
@@ -184,21 +184,21 @@ MainWindow::MainWindow(QWidget *parent) :
 	m_renderListener = new QRenderListener();
 	m_renderQueue->registerListener(m_renderListener);
 
-	connect(m_renderListener, SIGNAL(jobFinished(const RenderJob *, bool)), 
+	connect(m_renderListener, SIGNAL(jobFinished(const RenderJob *, bool)),
 		this, SLOT(onJobFinished(const RenderJob *, bool)), Qt::QueuedConnection);
-	connect(m_renderListener, SIGNAL(workEnd(const RenderJob *, const ImageBlock *)), 
+	connect(m_renderListener, SIGNAL(workEnd(const RenderJob *, const ImageBlock *)),
 		this, SLOT(onWorkEnd(const RenderJob *, const ImageBlock *)), Qt::DirectConnection);
-	connect(m_renderListener, SIGNAL(workCanceled(const RenderJob *, const Point2i &, const Vector2i &)), 
+	connect(m_renderListener, SIGNAL(workCanceled(const RenderJob *, const Point2i &, const Vector2i &)),
 		this, SLOT(onWorkCanceled(const RenderJob *, const Point2i &, const Vector2i &)), Qt::DirectConnection);
 	connect(m_renderListener, SIGNAL(workBegin(const RenderJob *, const RectangularWorkUnit *, int)),
         this, SLOT(onWorkBegin(const RenderJob *, const RectangularWorkUnit *, int)), Qt::DirectConnection);
 	connect(m_renderListener, SIGNAL(refresh()), this, SLOT(onRefresh()), Qt::QueuedConnection);
-	connect(m_consoleAppender, 
-		SIGNAL(progressMessage(const RenderJob *, const QString &, float, const QString &)), 
-		this, SLOT(onProgressMessage(const RenderJob *, const QString &, float, const QString &)), 
+	connect(m_consoleAppender,
+		SIGNAL(progressMessage(const RenderJob *, const QString &, float, const QString &)),
+		this, SLOT(onProgressMessage(const RenderJob *, const QString &, float, const QString &)),
 		Qt::QueuedConnection);
 	connect(this, SIGNAL(updateView()), ui->glView, SLOT(onUpdateView()));
-	
+
 	QPoint windowPos;
 	if (settings.contains("pos")) {
 		windowPos = settings.value("pos").toPoint();
@@ -206,7 +206,7 @@ MainWindow::MainWindow(QWidget *parent) :
 		QDesktopWidget *desktop = QApplication::desktop();
 		QRect geo = desktop->screenGeometry();
 		windowPos = QPoint(
-			geo.left() + (geo.width() - width()) / 2, 
+			geo.left() + (geo.width() - width()) / 2,
 			geo.top() + (geo.height() - height())/2
 		);
 	}
@@ -215,8 +215,8 @@ MainWindow::MainWindow(QWidget *parent) :
 	ui->toolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
 	QToolButton *previewButton = static_cast<QToolButton *>(ui->toolBar->widgetForAction(ui->actionPreviewSettings));
 	previewButton->setStyleSheet("margin-left: -5px; margin-right:-5px");
-	
-	/* Weird Qt/OSX bug -- moving while a window while it is invisible causes 
+
+	/* Weird Qt/OSX bug -- moving while a window while it is invisible causes
 	   it to appear move up by 65 pixels (this is related to the unified toolbar) */
 	move(windowPos + QPoint(0, 65));
 #else
@@ -305,7 +305,7 @@ void MainWindow::initWorkers() {
 		for (int i=0; i<m_connections.size(); ++i)
 			connectionData.append(m_connections[i].toByteArray());
 		settings.setValue("connections", connectionData);
-	
+
 		dialog->hide();
 		delete dialog;
 	}
@@ -382,7 +382,7 @@ void MainWindow::onNetworkFinished(QNetworkReply *reply) {
 						.arg(local.toString().c_str()), QMessageBox::Ok);
 			}
 		} catch (const std::exception &e) {
-			/* Got something weird and couldn't parse the version string -- 
+			/* Got something weird and couldn't parse the version string --
 			   very likely due to some Internet cafe login page. Ignore unless
 			   a manual update check was done. */
 			if (m_manualUpdateCheck)
@@ -401,7 +401,7 @@ void MainWindow::on_actionImport_triggered() {
 #if defined(MTS_HAS_COLLADA)
 	ref<FileResolver> resolver = Thread::getThread()->getFileResolver();
 	ref<FileResolver> newResolver = resolver->clone();
-	for (int i=(int) m_searchPaths.size()-1; i>=0; --i) 
+	for (int i=(int) m_searchPaths.size()-1; i>=0; --i)
 		newResolver->prependPath(toFsPath(m_searchPaths[i]));
 
 	ImportDialog *dialog = new ImportDialog(this, newResolver);
@@ -417,7 +417,7 @@ void MainWindow::on_actionImport_triggered() {
 	QMessageBox::critical(this, tr("Importer disabled"),
 		tr("The importer is disabled in this build. To use it, you will need "
 		"to install COLLADA-DOM and recompile Mitsuba -- please see the "
-		"documentation for more details."), 
+		"documentation for more details."),
 		QMessageBox::Ok);
 #endif
 }
@@ -484,7 +484,7 @@ void MainWindow::on_actionSceneDescription_triggered() {
 	QDesktopWidget *desktop = QApplication::desktop();
 	QRect geo = desktop->screenGeometry(geometry().center());
 	QPoint windowPos(
-		geo.left() + (geo.width() - dialog->width()) / 2, 
+		geo.left() + (geo.width() - dialog->width()) / 2,
 		geo.top() + (geo.height() - dialog->height())/2
 	);
 	dialog->move(windowPos);
@@ -512,7 +512,7 @@ void MainWindow::changeEvent(QEvent *e) {
         break;
     }
 }
-	
+
 SceneContext *MainWindow::getContext(const RenderJob *job, bool failIfNotFound) {
 	m_contextMutex.lock();
 	for (int i=0; i<m_context.size(); ++i) {
@@ -527,7 +527,7 @@ SceneContext *MainWindow::getContext(const RenderJob *job, bool failIfNotFound) 
 	return NULL;
 }
 
-void MainWindow::onProgressMessage(const RenderJob *job, const QString &name, 
+void MainWindow::onProgressMessage(const RenderJob *job, const QString &name,
 	float progress, const QString &eta) {
 	SceneContext *context = getContext(job, false);
 	if (context == NULL)
@@ -578,7 +578,7 @@ SceneContext *MainWindow::loadScene(const QString &qFileName) {
 	fs::path filename = resolver->resolve(toFsPath(qFileName));
 	fs::path filePath = fs::absolute(filename).parent_path();
 	ref<FileResolver> newResolver = resolver->clone();
-	for (int i=(int) m_searchPaths.size()-1; i>=0; --i) 
+	for (int i=(int) m_searchPaths.size()-1; i>=0; --i)
 		newResolver->prependPath(toFsPath(m_searchPaths[i]));
 	newResolver->prependPath(filePath);
 	LoadDialog *loaddlg = new LoadDialog(this);
@@ -656,7 +656,7 @@ void MainWindow::loadFile(QString filename) {
 	fInfo.makeAbsolute();
 
 	SceneContext *context = loadScene(filename);
-	if (context == NULL) 
+	if (context == NULL)
 		return;
 	m_contextMutex.lock();
 	m_context.append(context);
@@ -794,7 +794,7 @@ void MainWindow::resizeEvent(QResizeEvent *event) {
 	QMainWindow::resizeEvent(event);
 	ui->glView->updateScrollBars();
 }
-	
+
 void MainWindow::on_tabBar_customContextMenuRequested(const QPoint &pt) {
 	if (pt.isNull())
 		return;
@@ -818,7 +818,7 @@ void MainWindow::on_tabBar_tabMoved(int from, int to) {
 }
 
 void MainWindow::on_tabBar_currentChanged(int index) {
-	if (m_lastTab != NULL) { 
+	if (m_lastTab != NULL) {
 		m_lastTab->windowSize = size();
 		m_lastTab->wasRendering = m_lastTab->renderJob != NULL;
 	}
@@ -871,7 +871,7 @@ void MainWindow::on_tabBar_currentChanged(int index) {
 		}
 
 		m_lastTab = context;
-	
+
 		const Scene *scene = context->scene;
 		if (scene) {
 			const ref_vector<Sensor> &sensors = scene->getSensors();
@@ -879,7 +879,7 @@ void MainWindow::on_tabBar_currentChanged(int index) {
 				const Sensor *sensor = sensors[i].get();
 				const Properties &props = sensor->getProperties();
 				QAction *act = new QAction(ui->menuCamera);
-				act->setText(formatString("\"%s\" (%s)", 
+				act->setText(formatString("\"%s\" (%s)",
 					props.getID().c_str(), props.getPluginName().c_str()).c_str());
 				act->setData(qVariantFromValue((void *) sensor));
 				ui->menuCamera->addAction(act);
@@ -908,7 +908,7 @@ void MainWindow::on_actionAdjustSize_triggered() {
 bool MainWindow::on_tabBar_tabCloseRequested(int index) {
 	SceneContext *context = m_context[index];
 	if (context->renderJob != NULL) {
-		QMessageBox box(QMessageBox::Question, tr("Really close?"), 
+		QMessageBox box(QMessageBox::Question, tr("Really close?"),
 			tr("Rendering of scene \"%1\" is unfinished - all progress "
 				"will be lost. Are you sure you want to continue?").arg(context->shortName),
 			QMessageBox::Yes | QMessageBox::No, this,
@@ -954,7 +954,7 @@ void MainWindow::on_actionCrop_triggered() {
 void MainWindow::on_actionMagnify_triggered() {
 	ui->glView->startCrop(GLWidget::ECropAndMagnify);
 }
-	
+
 void MainWindow::on_glView_crop(int type, int x, int y, int width, int height) {
 	int currentIndex = ui->tabBar->currentIndex();
 	if (currentIndex < 0)
@@ -984,9 +984,9 @@ void MainWindow::on_glView_crop(int type, int x, int y, int width, int height) {
 		width = floorToInt(width*magnification);
 		height = floorToInt(height*magnification);
 
-		filmProps.setInteger("cropOffsetX", floorToInt(magnification 
+		filmProps.setInteger("cropOffsetX", floorToInt(magnification
 				* (x + oldCropOffset.x)), false);
-		filmProps.setInteger("cropOffsetY", floorToInt(magnification 
+		filmProps.setInteger("cropOffsetY", floorToInt(magnification
 				* (y + oldCropOffset.y)), false);
 		filmProps.setInteger("cropWidth", width);
 		filmProps.setInteger("cropHeight", height);
@@ -1003,13 +1003,13 @@ void MainWindow::on_glView_crop(int type, int x, int y, int width, int height) {
 		filmProps.setInteger("height", height, false);
 	}
 
-	if (oldCropOffset == Point2i(0) && 
+	if (oldCropOffset == Point2i(0) &&
 		Vector2i(width, height) == oldCropSize)
 		return;
 
 	on_tabBar_currentChanged(-1);
 	ref<PluginManager> pluginMgr = PluginManager::getInstance();
-	ref<Sensor> newSensor = static_cast<Sensor *> 
+	ref<Sensor> newSensor = static_cast<Sensor *>
 		(pluginMgr->createObject(MTS_CLASS(Sensor), sensorProps));
 	ref<Film> newFilm = static_cast<Film *> (
 		pluginMgr->createObject(MTS_CLASS(Film), filmProps));
@@ -1025,7 +1025,7 @@ void MainWindow::on_glView_crop(int type, int x, int y, int width, int height) {
 	scene->addSensor(newSensor);
 	scene->setSensor(newSensor);
 
-	context->framebuffer = new Bitmap(Bitmap::ERGBA, 
+	context->framebuffer = new Bitmap(Bitmap::ERGBA,
 		Bitmap::EFloat32, Vector2i(width, height));
 	context->framebuffer->clear();
 	context->scrollOffset = Vector2i(0, 0);
@@ -1053,7 +1053,7 @@ bool MainWindow::isActive() {
 	else if (m_currentChild != NULL && m_currentChild->isActiveWindow())
 		return true;
 #if defined(__OSX__)
-	if (m_previewSettings != NULL && m_previewSettings->isActiveWindow()) 
+	if (m_previewSettings != NULL && m_previewSettings->isActiveWindow())
 		return true;
 #endif
 	return false;
@@ -1201,7 +1201,7 @@ void MainWindow::on_actionSettings_triggered() {
 	Logger *logger = Thread::getThread()->getLogger();
 	ref<Scheduler> sched = Scheduler::getInstance();
 	std::vector<Worker *> localWorkers;
-	
+
 	if (m_renderQueue->getJobCount() != 0) {
 		QMessageBox::warning(this, tr("Rendering in progress"),
 			tr("The program settings cannot be changed while a rendering is in progress."),
@@ -1277,11 +1277,11 @@ void MainWindow::on_actionSettings_triggered() {
 				sched->unregisterWorker(worker);
 				localWorkers.pop_back();
 			}
-			QList<ServerConnection> removeList, 
+			QList<ServerConnection> removeList,
 				&newConnections = d.getConnections();
 			for (int i=0; i<m_connections.size(); ++i) {
 				ServerConnection &c = m_connections[i];
-				if (!newConnections.contains(c)) 
+				if (!newConnections.contains(c))
 					removeList.append(c);
 			}
 			for (int i=0; i<newConnections.size(); ++i) {
@@ -1338,7 +1338,7 @@ void MainWindow::on_actionRender_triggered() {
 		return;
 
 	scene->setBlockSize(m_blockSize);
-	context->renderJob = new RenderJob("rend", scene, m_renderQueue,  
+	context->renderJob = new RenderJob("rend", scene, m_renderQueue,
 		context->sceneResID, -1, -1, false, true);
 	context->cancelMode = ERender;
 	if (context->mode != ERender)
@@ -1375,7 +1375,7 @@ void MainWindow::on_actionRefresh_triggered() {
 	SceneContext *context = m_context[index];
 	on_tabBar_currentChanged(-1);
 	SceneContext *newContext = loadScene(context->fileName);
-	if (newContext == NULL) 
+	if (newContext == NULL)
 		return;
 	delete context;
 	m_contextMutex.lock();
@@ -1438,13 +1438,13 @@ void MainWindow::on_actionExportImage_triggered() {
 
 				Float burn = (ctx->reinhardBurn + 10) / 20.0f;
 				bitmap = bitmap->clone();
-				bitmap->tonemapReinhard(logAvgLuminance, maxLuminance, 
+				bitmap->tonemapReinhard(logAvgLuminance, maxLuminance,
 					ctx->reinhardKey, burn);
 			}
 
-			bitmap = bitmap->convert(Bitmap::ERGB, Bitmap::EUInt8, 
-				ctx->srgb ? (Float) -1 : ctx->gamma, 
-				ctx->toneMappingMethod == EReinhard 
+			bitmap = bitmap->convert(Bitmap::ERGB, Bitmap::EUInt8,
+				ctx->srgb ? (Float) -1 : ctx->gamma,
+				ctx->toneMappingMethod == EReinhard
 				? (Float) 1.0f : std::pow((Float) 2.0f, ctx->exposure));
 		}
 
@@ -1503,7 +1503,7 @@ void MainWindow::onSaveAsDialogClose(int reason) {
 void MainWindow::on_actionReferenceManual_triggered() {
 	QDesktopServices::openUrl(QUrl("http://www.mitsuba-renderer.org/docs.html"));
 }
-	
+
 void MainWindow::on_actionAbout_triggered() {
 	AboutDialog about(this);
 	about.exec();
@@ -1518,7 +1518,7 @@ void MainWindow::onJobFinished(const RenderJob *job, bool cancelled) {
 	if (cancelled) {
 		if (!context->cancelled) {
 			QMessageBox::critical(this, tr("Error while rendering"),
-				tr("The rendering job did not complete successfully. Please check the log."), 
+				tr("The rendering job did not complete successfully. Please check the log."),
 				QMessageBox::Ok);
 		} else {
 			context->mode = context->cancelMode;
@@ -1534,7 +1534,7 @@ void MainWindow::onJobFinished(const RenderJob *job, bool cancelled) {
 		m_context[ui->tabBar->currentIndex()] == context)
 		resize(size() - context->sizeIncrease);
 }
-	
+
 void MainWindow::onStatusMessage(const QString &status) {
 	m_statusMessage = status;
 	updateStatus();
@@ -1543,10 +1543,10 @@ void MainWindow::onStatusMessage(const QString &status) {
 void MainWindow::updateStatus() {
 	if (m_statusMessage == "")
 		setWindowTitle(tr("Mitsuba renderer"));
-	else 
+	else
 		setWindowTitle(tr("Mitsuba renderer [%1]").arg(m_statusMessage));
 }
-    
+
 void MainWindow::on_actionStartServer_triggered() {
 	m_serverWidget = new ServerWidget(NULL, m_nodeName, m_listenPort);
 	ui->actionStartServer->setEnabled(false);
@@ -1563,7 +1563,7 @@ void MainWindow::on_actionEnableCommandLine_triggered() {
 			QMessageBox::Yes | QMessageBox::No) != QMessageBox::Yes)
 		return;
 	if (!create_symlinks())
-		QMessageBox::critical(this, tr("Authentication error"), 
+		QMessageBox::critical(this, tr("Authentication error"),
 			tr("Unable to create the symbolic links!"), QMessageBox::Ok);
 }
 
@@ -1682,7 +1682,7 @@ void MainWindow::onWorkEnd(const RenderJob *job, const ImageBlock *block) {
 				" rectangular work unit.");
 	}
 	for (std::set<VisualWorkUnit, block_comparator>::const_iterator it =
-		context->workUnits.begin(); it != context->workUnits.end(); ++it) 
+		context->workUnits.begin(); it != context->workUnits.end(); ++it)
 		drawVisualWorkUnit(context, *it);
 	m_contextMutex.unlock();
 	if (isCurrentView)
@@ -1702,7 +1702,7 @@ void MainWindow::refresh(const RenderJob *job) {
 		return;
 
 	Bitmap *target = context->framebuffer;
-	context->scene->getFilm()->develop(Point2i(0, 0), 
+	context->scene->getFilm()->develop(Point2i(0, 0),
 		target->getSize(), Point2i(0, 0), target);
 
 	/* This is executed by worker threads -- take some precautions */
@@ -1710,7 +1710,7 @@ void MainWindow::refresh(const RenderJob *job) {
 	bool isCurrentView = ui->tabBar->currentIndex() < m_context.size() &&
 		m_context[ui->tabBar->currentIndex()] == context;
 	for (std::set<VisualWorkUnit, block_comparator>::const_iterator it =
-		context->workUnits.begin(); it != context->workUnits.end(); ++it) 
+		context->workUnits.begin(); it != context->workUnits.end(); ++it)
 		drawVisualWorkUnit(context, *it);
 	m_contextMutex.unlock();
 	if (isCurrentView)
@@ -1730,7 +1730,7 @@ void MainWindow::onActivateCamera() {
 	Vector2i size = sensor->getFilm()->getSize();
 	context->scene->setSensor(sensor);
 
-	context->framebuffer = new Bitmap(Bitmap::ERGBA, 
+	context->framebuffer = new Bitmap(Bitmap::ERGBA,
 		Bitmap::EFloat32, size);
 	context->framebuffer->clear();
 	context->scrollOffset = Vector2i(0, 0);
@@ -1760,7 +1760,7 @@ bool ServerConnection::createWorker(QWidget *parent) {
 		} else {
 			std::vector<std::string> cmdLine;
 			cmdLine.push_back(formatString("bash -c 'cd %s; . setpath.sh; mtssrv -ls'", instDir.toLatin1().constData()));
-			stream = new SSHStream(userName.toStdString(), 
+			stream = new SSHStream(userName.toStdString(),
 				hostName.toStdString(), cmdLine, port);
 		}
 		worker = new RemoteWorker(formatString("net%i", remoteWorkerCtr++), stream);
@@ -1807,11 +1807,11 @@ SceneContext::SceneContext(SceneContext *ctx) {
 		scene = new Scene(ctx->scene);
 		ref<PluginManager> pluginMgr = PluginManager::getInstance();
 		ref<Sensor> oldSensor = static_cast<Sensor *>(ctx->scene->getSensor());
-		ref<Sensor> newSensor = static_cast<Sensor *> 
+		ref<Sensor> newSensor = static_cast<Sensor *>
 			(pluginMgr->createObject(MTS_CLASS(Sensor), oldSensor->getProperties()));
-		ref<Sampler> sampler = static_cast<Sampler *> 
+		ref<Sampler> sampler = static_cast<Sampler *>
 			(pluginMgr->createObject(MTS_CLASS(Sampler), ctx->scene->getSampler()->getProperties()));
-		ref<Film> film = static_cast<Film *> 
+		ref<Film> film = static_cast<Film *>
 			(pluginMgr->createObject(MTS_CLASS(Film), oldSensor->getFilm()->getProperties()));
 		const Integrator *oldIntegrator = ctx->scene->getIntegrator();
 		ref<Integrator> currentIntegrator;
@@ -1821,9 +1821,9 @@ SceneContext::SceneContext(SceneContext *ctx) {
 		while (oldIntegrator != NULL) {
 			ref<Integrator> integrator = static_cast<Integrator *> (pluginMgr->createObject(
 				MTS_CLASS(Integrator), oldIntegrator->getProperties()));
-			if (depth++ == 0) 
+			if (depth++ == 0)
 				scene->setIntegrator(integrator);
-			else 
+			else
 				currentIntegrator->addChild(integrator);
 			currentIntegrator = integrator;
 			integratorList.push_back(integrator);
@@ -1833,7 +1833,7 @@ SceneContext::SceneContext(SceneContext *ctx) {
 		for (int i=(int) integratorList.size()-1; i>=0; --i)
 			integratorList[i]->configure();
 
-		ref<ReconstructionFilter> rfilter = static_cast<ReconstructionFilter *> 
+		ref<ReconstructionFilter> rfilter = static_cast<ReconstructionFilter *>
 			(pluginMgr->createObject(MTS_CLASS(ReconstructionFilter), oldSensor->getFilm()->
 				getReconstructionFilter()->getProperties()));
 
@@ -1893,9 +1893,9 @@ SceneContext::SceneContext(SceneContext *ctx) {
 SceneContext::~SceneContext() {
 	if (scene && sceneResID != -1)
 		Scheduler::getInstance()->unregisterResource(sceneResID);
-	if (previewBuffer.buffer) 
+	if (previewBuffer.buffer)
 		previewBuffer.buffer->decRef();
-	if (previewBuffer.sync) 
+	if (previewBuffer.sync)
 		previewBuffer.sync->decRef();
 }
 

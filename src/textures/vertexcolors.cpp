@@ -28,12 +28,12 @@ MTS_NAMESPACE_BEGIN
  * this plugin exposes the underlying color data as a texture.
  * Currently, this is only supported by the \code{PLY}
  * file format loader.
- * 
+ *
  * Here is an example:
  * \begin{xml}[caption=Rendering a PLY file with vertex colors]
  * <shape type="ply">
  *     <string name="filename" value="mesh.ply"/>
- *     
+ *
  *     <bsdf type="diffuse">
  *         <texture type="vertexcolors" name="reflectance"/>
  *     </bsdf>
@@ -45,7 +45,7 @@ public:
 	VertexColors(const Properties &props) : Texture(props) {
 	}
 
-	VertexColors(Stream *stream, InstanceManager *manager) 
+	VertexColors(Stream *stream, InstanceManager *manager)
 	 : Texture(stream, manager) {
 	}
 
@@ -91,7 +91,7 @@ protected:
 	Spectrum m_reflectance;
 };
 
-// ================ Hardware shader implementation ================ 
+// ================ Hardware shader implementation ================
 
 class VertexColorShader : public Shader {
 public:
@@ -116,7 +116,7 @@ private:
 Shader *VertexColors::createShader(Renderer *renderer) const {
 	return new VertexColorShader(renderer);
 }
-	
+
 MTS_IMPLEMENT_CLASS(VertexColorShader, false, Shader)
 MTS_IMPLEMENT_CLASS_S(VertexColors, false, Texture)
 MTS_EXPORT_PLUGIN(VertexColors, "Vertex color texture");

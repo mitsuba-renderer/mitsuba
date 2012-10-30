@@ -57,7 +57,7 @@ void HemisphereSampler::generateDirections(const Intersection &its) {
 		}
 	}
 
-	/* Precompute planar vectors - see "Practical Global Illumination" by Jaroslav Krivanek 
+	/* Precompute planar vectors - see "Practical Global Illumination" by Jaroslav Krivanek
 	   and Pascal Gautron for more details on this notation */
 	for (uint32_t k=0; k<m_N; k++) {
 		Float phi     =  2*M_PI*(k+.5f)/m_N,
@@ -98,7 +98,7 @@ void HemisphereSampler::process(const Intersection &its) {
 			const SampleEntry &entry = m_entries[j*m_N + k];
 
 			/* Rotational gradient - \pi/(MN) * \sum_{k=0}^{N-1}(v_k \sum_{j=0}^{M-1}) \tan\theta_j * L_{jk}) */
-			for (int i=0; i<3; ++i) 
+			for (int i=0; i<3; ++i)
 				m_rGrad[i] += entry.L * (-tanTheta * m_vk[k][i]);
 
 			if (j>1) {
@@ -123,7 +123,7 @@ void HemisphereSampler::process(const Intersection &its) {
 			if (minDist > 0) {
 				const Spectrum spec = (entry.L - other.L) * (cosTheta * cosThetaDiff
 						/ (minDist * sinTheta));
-				for (int i=0; i<3; ++i) 
+				for (int i=0; i<3; ++i)
 					m_tGrad[i] += spec * m_vkMinus[k][i];
 			}
 
@@ -139,7 +139,7 @@ void HemisphereSampler::process(const Intersection &its) {
 	}
 	if (invDists > 0)
 		m_hMean = (m_M*m_N) / invDists;
-	for (int i=0; i<3; ++i) 
+	for (int i=0; i<3; ++i)
 		m_rGrad[i] *= M_PI/(m_M*m_N);
 	m_E *= M_PI / (m_M*m_N);
 }
@@ -171,7 +171,7 @@ struct clamp_neighbors_functor {
 			/* Update valid range and clamp back into the
 			   permitted interval */
 			sample->originalR0 = distanceLimit;
-			sample->R0 = std::min(sample->R0_max, 
+			sample->R0 = std::min(sample->R0_max,
 				std::max(sample->R0_min, sample->originalR0));
 		}
 	}
@@ -182,7 +182,7 @@ struct clamp_neighbors_functor {
 
 /* Irradiance interpolation functor */
 struct irr_interp_functor {
-	irr_interp_functor(const Intersection &its, Float kappa, bool gradients) : its(its), 
+	irr_interp_functor(const Intersection &its, Float kappa, bool gradients) : its(its),
 		kappa(kappa), weightSum(0), gradients(gradients), E(0.0f) {
 	}
 
@@ -199,7 +199,7 @@ struct irr_interp_functor {
 
 			for (int i=0; i<SPECTRUM_SAMPLES; ++i) {
 				for (int j=0; j<3; ++j) {
-					extrapolated[i] += 
+					extrapolated[i] +=
 						crossN[j] * sample->rGrad[j][i]
 						+ diff[j] * sample->tGrad[j][i];
 				}
@@ -217,7 +217,7 @@ struct irr_interp_functor {
 	Spectrum E;
 };
 
-IrradianceCache::IrradianceCache(const AABB &aabb) 
+IrradianceCache::IrradianceCache(const AABB &aabb)
  : m_octree(aabb) {
 	/* Use the longest AABB axis as an estimate of the scene dimensions */
 	m_sceneSize = (aabb.max-aabb.min)[aabb.getLargestAxis()];
@@ -230,7 +230,7 @@ IrradianceCache::IrradianceCache(const AABB &aabb)
 	clampScreen(true);
 }
 
-IrradianceCache::IrradianceCache(Stream *stream, InstanceManager *manager) : 
+IrradianceCache::IrradianceCache(Stream *stream, InstanceManager *manager) :
 	m_octree(AABB(stream)) {
 	m_mutex = new Mutex();
 	m_kappa = stream->readFloat();
@@ -268,7 +268,7 @@ void IrradianceCache::serialize(Stream *stream, InstanceManager *manager) const 
 		m_records[i]->serialize(stream);
 }
 
-IrradianceCache::Record *IrradianceCache::put(const RayDifferential &ray, const Intersection &its, 
+IrradianceCache::Record *IrradianceCache::put(const RayDifferential &ray, const Intersection &its,
 		const HemisphereSampler &hs) {
 	const Spectrum &E = hs.getIrradiance();
 	TranslationalGradient tGrad;
@@ -281,17 +281,17 @@ IrradianceCache::Record *IrradianceCache::put(const RayDifferential &ray, const 
 	}
 	Float R0_min = 0, R0_max = std::numeric_limits<Float>::infinity();
 
-	/* Clamping recommended by Tabellion and Lamourlette ("An Approximate Global 
+	/* Clamping recommended by Tabellion and Lamourlette ("An Approximate Global
 	   Illumination System for Computer Generated Films") */
 	if (m_clampScreen && ray.hasDifferentials) {
 		const Float d = -dot(its.geoFrame.n, Vector(its.p));
 		const Float txRecip = dot(its.geoFrame.n, ray.rxDirection),
 		            tyRecip = dot(its.geoFrame.n, ray.ryDirection);
 		if (txRecip != 0 && tyRecip != 0) {
-			// Ray distances traveled 
-			const Float tx = -(dot(its.geoFrame.n, Vector(ray.rxOrigin)) + d) / 
+			// Ray distances traveled
+			const Float tx = -(dot(its.geoFrame.n, Vector(ray.rxOrigin)) + d) /
 				txRecip;
-			const Float ty = -(dot(its.geoFrame.n, Vector(ray.ryOrigin)) + d) / 
+			const Float ty = -(dot(its.geoFrame.n, Vector(ray.ryOrigin)) + d) /
 				tyRecip;
 			Point px = ray.rxOrigin + ray.rxDirection * tx,
 				  py = ray.ryOrigin + ray.ryDirection * ty;
@@ -313,12 +313,12 @@ IrradianceCache::Record *IrradianceCache::put(const RayDifferential &ray, const 
 
 		/* Limit the translational gradient magnitude [Krivanek et al.] */
 		for (int i=0; i<3; ++i)
-			tGrad[i] = tGrad[i] * 
+			tGrad[i] = tGrad[i] *
 				std::min((Float) 1, hs.getMinimumDistance() / R0_min);
 	}
 
 	if (m_clampNeighbor) {
-		/* Perform neighbor clamping [Krivanek et al.] to distribute 
+		/* Perform neighbor clamping [Krivanek et al.] to distribute
 		   geometric feature information amongst neighboring hss */
 		clamp_self_functor clampSelf(its.p, R0);
 		m_octree.searchSphere(BSphere(its.p, R0), clampSelf);

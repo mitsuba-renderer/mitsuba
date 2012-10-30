@@ -30,7 +30,7 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{maxDepth}{\Integer}{Specifies the longest path depth
  *         in the generated output image (where \code{-1} corresponds to $\infty$).
  *	       A value of \code{1} will only render directly visible light sources.
- *	       \code{2} will lead to single-bounce (direct-only) illumination, 
+ *	       \code{2} will lead to single-bounce (direct-only) illumination,
  *	       and so on. \default{\code{-1}}
  *	   }
  *	   \parameter{numChains}{\Float}{
@@ -55,10 +55,10 @@ MTS_NAMESPACE_BEGIN
  *	   }
  *	   \parameter{[lens,multiChain,\!\!\!\!\newline caustic,manifold]\showbreak
  *	     \newline Perturbation}{\Boolean}{
- *	     These parameters can be used to pick the individual perturbation 
+ *	     These parameters can be used to pick the individual perturbation
  *	     strategies that will be used to explore path space. By default, the original set
  *	     by Veach and Guibas is enabled (i.e. everything except the manifold
- *	     perturbation). 
+ *	     perturbation).
  *	   }
  *	   \parameter{lambda}{\Float}{
  *	       Jump size of the manifold perturbation \default{\code{50}}}
@@ -69,7 +69,7 @@ MTS_NAMESPACE_BEGIN
  *  chandelier on the left}{integrator_mept_tableware}
  *  \vspace{-2mm}
  *  \caption{An interior scene with complex specular and near-specular light paths,
- *  illuminated entirely through caustics. Rendered by this plugin 
+ *  illuminated entirely through caustics. Rendered by this plugin
  *  using the manifold perturbation. This scene was designed by Olesya
  *  Isaenko.\vspace{2mm}}
  * }
@@ -79,7 +79,7 @@ MTS_NAMESPACE_BEGIN
  *  the torus.}{integrator_erpt_seeds}
  * \medrendering{Result after running the perturbations of Veach and Guibas
  *  for 800 steps. Some convergence issues remain.}{integrator_erpt_mlt}
- * \medrendering{Result after running the manifold 
+ * \medrendering{Result after running the manifold
  * perturbation for the same amount of time}{integrator_erpt_mept}
  * }
  *
@@ -87,8 +87,8 @@ MTS_NAMESPACE_BEGIN
  * combines Path Tracing with the perturbation strategies of Metropolis Light Transport.
  *
  *
- * An initial set of \emph{seed paths} is generated using a standard bidirectional 
- * path tracer, and for each one, a MLT-style Markov Chain is subsequently started 
+ * An initial set of \emph{seed paths} is generated using a standard bidirectional
+ * path tracer, and for each one, a MLT-style Markov Chain is subsequently started
  * and executed for some number of steps.
  * This has the effect of redistributing the energy of the individual samples
  * over a larger area, hence the name of this method.
@@ -98,9 +98,9 @@ MTS_NAMESPACE_BEGIN
  *  \caption{Another view, now with exterior lighting.}
  *  \vspace{-2mm}
  * \end{wrapfigure}
- * This is often a good choice when a (bidirectional) path tracer produces mostly reasonable 
+ * This is often a good choice when a (bidirectional) path tracer produces mostly reasonable
  * results except that it finds certain important types of light paths too rarely.
- * ERPT can 
+ * ERPT can
  * then explore all of the neighborhing paths as well, to prevent the
  * original sample from showing up as a ``bright pixel'' in the output image.
  *
@@ -108,7 +108,7 @@ MTS_NAMESPACE_BEGIN
  * the same rules for selecting them apply. In contrast to the original
  * paper by Cline et al., the Mitsuba implementation uses a bidirectional
  * (rather than an unidirectional) bidirectional path tracer to create seed paths.
- * Also, since they add bias to the output, this plugin does not use the image 
+ * Also, since they add bias to the output, this plugin does not use the image
  * post-processing filters proposed by the authors.
  *
  * The mechanism for selecting Markov Chain seed paths deserves an
@@ -118,8 +118,8 @@ MTS_NAMESPACE_BEGIN
  * generator. This should be large enough so that the integrator has a
  * representative set of light paths to work with.
  *
- * Subsequently, one or more of these candidates are chosen (determined by 
- * \code{numChains} and \code{maxChains} parameter). For each one, a Markov 
+ * Subsequently, one or more of these candidates are chosen (determined by
+ * \code{numChains} and \code{maxChains} parameter). For each one, a Markov
  * Chain is created that has an initial configuration matching the seed path.
  * It is simulated for \code{chainLength} iterations, and each intermediate
  * state is recorded in the output image.
@@ -142,11 +142,11 @@ public:
 		m_config.separateDirect = m_config.directSamples >= 0;
 
 		/* Number of samples used to estimate the average contribution of a
-		   single sample. In contrast to MLT/PSSMLT, this parameter just 
+		   single sample. In contrast to MLT/PSSMLT, this parameter just
 		   influences the heuristics that guide how many Markov Chains to start
 		   for a sample. Usually, there is little reason to change it */
 		m_config.luminanceSamples = props.getInteger("luminanceSamples", 15000);
-	
+
 		/* Selectively enable/disable the bidirectional mutation. This is
 		   probably not desireable for ERPT, since the path tracing stage is
 		   responsible for generating good seed paths.. */
@@ -161,7 +161,7 @@ public:
 		/* Selectively enable/disable the multi-chain perturbation */
 		m_config.multiChainPerturbation = props.getBoolean("multiChainPerturbation", true);
 
-		/* Selectively enable/disable the manifold perturbation */ 
+		/* Selectively enable/disable the manifold perturbation */
 		m_config.manifoldPerturbation = props.getBoolean("manifoldPerturbation", false);
 		m_config.probFactor = props.getFloat("probFactor", props.getFloat("lambda", 50));
 		m_config.avgAngleChangeSurface = props.getFloat("avgAngleChangeSurface", 0);
@@ -179,7 +179,7 @@ public:
 
 	virtual ~EnergyRedistributionPathTracing() { }
 
-	void configureSampler(const Scene *scene, Sampler *sampler) { 
+	void configureSampler(const Scene *scene, Sampler *sampler) {
 		/* Prepare the sampler for tile-based rendering */
 		sampler->setFilmResolution(scene->getFilm()->getCropSize(), true);
 	}
@@ -189,7 +189,7 @@ public:
 		m_config.serialize(stream);
 	}
 
-	bool preprocess(const Scene *scene, RenderQueue *queue, 
+	bool preprocess(const Scene *scene, RenderQueue *queue,
 			const RenderJob *job, int sceneResID, int sensorResID,
 			int samplerResID) {
 		Integrator::preprocess(scene, queue, job, sceneResID,
@@ -218,15 +218,15 @@ public:
 		size_t sampleCount = sampler->getSampleCount();
 
 		Log(EInfo, "Starting render job (%ix%i, " SIZE_T_FMT
-			" %s, " SSE_STR ", " SIZE_T_FMT " samples/pixel) ..", 
-			film->getCropSize().x, film->getCropSize().y, nCores, 
+			" %s, " SSE_STR ", " SIZE_T_FMT " samples/pixel) ..",
+			film->getCropSize().x, film->getCropSize().y, nCores,
 			nCores == 1 ? "core" : "cores", sampleCount);
 
 		ref<Sampler> indepSampler = static_cast<Sampler *> (PluginManager::getInstance()->
 			createObject(MTS_CLASS(Sampler), Properties("independent")));
 		indepSampler->configure();
 
-		ref<PathSampler> pathSampler = new PathSampler(PathSampler::EBidirectional, scene, 
+		ref<PathSampler> pathSampler = new PathSampler(PathSampler::EBidirectional, scene,
 			indepSampler, indepSampler, indepSampler, m_config.maxDepth, 10,
 			m_config.separateDirect, true, true);
 
@@ -238,7 +238,7 @@ public:
 
 		ref<Bitmap> directImage;
 		if (m_config.separateDirect && m_config.directSamples > 0) {
-			directImage = BidirectionalUtils::renderDirectComponent(scene, 
+			directImage = BidirectionalUtils::renderDirectComponent(scene,
 				sceneResID, sensorResID, queue, job, m_config.directSamples);
 			if (directImage == NULL)
 				return false;
@@ -253,10 +253,10 @@ public:
 			clonedSampler->incRef();
 			indepSamplers[i] = clonedSampler.get();
 		}
-		int indepSamplerResID = sched->registerMultiResource(indepSamplers); 
+		int indepSamplerResID = sched->registerMultiResource(indepSamplers);
 		for (size_t i=0; i<indepSamplers.size(); ++i)
 			indepSamplers[i]->decRef();
-	
+
 		process->bindResource("scene", sceneResID);
 		process->bindResource("sensor", sensorResID);
 		process->bindResource("sampler", samplerResID);

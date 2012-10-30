@@ -30,7 +30,7 @@ AboutDialog::AboutDialog(QWidget *parent) :
 	configFlags += "SINGLE_PRECISION ";
 #elif defined(DOUBLE_PRECISION)
 	configFlags += "DOUBLE_PRECISION ";
-#else 
+#else
 #error Unknown precision
 #endif
 
@@ -92,7 +92,7 @@ AboutDialog::AboutDialog(QWidget *parent) :
 AboutDialog::~AboutDialog() {
 	delete ui;
 }
-	
+
 void AboutDialog::onCredits() {
 	AcknowledgmentDialog ackdlg(this);
 	ackdlg.exec();

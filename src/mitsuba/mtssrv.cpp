@@ -111,7 +111,7 @@ int mtssrv(int argc, char **argv) {
 			switch (optchar) {
 				case 'a': {
 						std::vector<std::string> paths = tokenize(optarg, ";");
-						for (int i=(int)paths.size()-1; i>=0; --i) 
+						for (int i=(int)paths.size()-1; i>=0; --i)
 							fileResolver->prependPath(paths[i]);
 					}
 					break;
@@ -195,7 +195,7 @@ int mtssrv(int argc, char **argv) {
 
 		/* Initialize OpenMP */
 		Thread::initializeOpenMP(nprocs);
-		
+
 		/* Disable the default appenders */
 		for (size_t i=0; i<log->getAppenderCount(); ++i) {
 			Appender *appender = log->getAppender(i);
@@ -221,7 +221,7 @@ int mtssrv(int argc, char **argv) {
 			scheduler->registerWorker(new LocalWorker(formatString("wrk%i", i)));
 		std::vector<std::string> hosts = tokenize(networkHosts, ";");
 
-		/* Establish network connections to nested servers */ 
+		/* Establish network connections to nested servers */
 		for (size_t i=0; i<hosts.size(); ++i) {
 			const std::string &hostName = hosts[i];
 			ref<Stream> stream;
@@ -267,7 +267,7 @@ int mtssrv(int argc, char **argv) {
 		scheduler->start();
 
 		if (listenPort == -1) {
-			ref<StreamBackend> backend = new StreamBackend("con0", 
+			ref<StreamBackend> backend = new StreamBackend("con0",
 					scheduler, nodeName, new ConsoleStream(), false);
 			backend->start();
 			backend->join();
@@ -284,8 +284,8 @@ int mtssrv(int argc, char **argv) {
 		int rv, one = 1;
 		sock = INVALID_SOCKET;
 
-		snprintf(portName, sizeof(portName), "%i", listenPort); 
-		if ((rv = getaddrinfo(hostNameSet ? hostName.c_str() : NULL, portName, &hints, &servinfo)) != 0) 
+		snprintf(portName, sizeof(portName), "%i", listenPort);
+		if ((rv = getaddrinfo(hostNameSet ? hostName.c_str() : NULL, portName, &hints, &servinfo)) != 0)
 			SLog(EError, "Error in getaddrinfo(%s:%i): %s", hostName.c_str(), listenPort, gai_strerror(rv));
 
 		for (p = servinfo; p != NULL; p = p->ai_next) {
@@ -313,7 +313,7 @@ int mtssrv(int argc, char **argv) {
 
 		if (p == NULL)
 			SLog(EError, "Failed to bind to port %i!", listenPort);
-		freeaddrinfo(servinfo);	
+		freeaddrinfo(servinfo);
 
 		if (listen(sock, CONN_BACKLOG) == -1)
 			SocketStream::handleError("bind");
@@ -361,7 +361,7 @@ int mtssrv(int argc, char **argv) {
 				continue;
 			}
 
-			ref<StreamBackend> backend = new StreamBackend(formatString("con%i", connectionIndex++), 
+			ref<StreamBackend> backend = new StreamBackend(formatString("con%i", connectionIndex++),
 				scheduler, nodeName, new SocketStream(newSocket), true);
 			backend->start();
 		}
@@ -399,7 +399,7 @@ int mts_main(int argc, char **argv) {
 #if defined(__WINDOWS__)
 	/* Initialize WINSOCK2 */
 	WSADATA wsaData;
-	if (WSAStartup(MAKEWORD(2,2), &wsaData)) 
+	if (WSAStartup(MAKEWORD(2,2), &wsaData))
 		SLog(EError, "Could not initialize WinSock2!");
 	if (LOBYTE(wsaData.wVersion) != 2 || HIBYTE(wsaData.wVersion) != 2)
 		SLog(EError, "Could not find the required version of winsock.dll!");
@@ -423,7 +423,7 @@ int mts_main(int argc, char **argv) {
 	PluginManager::staticShutdown();
 	Object::staticShutdown();
 	Class::staticShutdown();
-	
+
 
 #if defined(__WINDOWS__)
 	/* Shut down WINSOCK2 */

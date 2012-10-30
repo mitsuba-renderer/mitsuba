@@ -52,7 +52,7 @@ namespace math {
 	extern MTS_EXPORT_CORE __m128 cos_ps(__m128 x);
 
 	/**
-	 * \brief SIMD (SSE2) implementation which simultaneously 
+	 * \brief SIMD (SSE2) implementation which simultaneously
 	 * computes the sine and cosine of a given value
 	 * \author Julien Pommier
 	 */

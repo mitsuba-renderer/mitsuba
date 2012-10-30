@@ -21,11 +21,11 @@ void PhaseFunction::configure() {
 Float PhaseFunction::pdf(const PhaseFunctionSamplingRecord &pRec) const {
 	return eval(pRec);
 }
-	
+
 bool PhaseFunction::needsDirectionallyVaryingCoefficients() const {
 	return false;
 }
-	
+
 Float PhaseFunction::sigmaDir(Float cosTheta) const {
 	Log(EError, "%s::sigmaDir(Float) is not implemented (this is not "
 		"an anisotropic medium!)", getClass()->getName().c_str());
@@ -37,7 +37,7 @@ Float PhaseFunction::sigmaDirMax() const {
 		"an anisotropic medium!)", getClass()->getName().c_str());
 	return 0.0f;
 }
-	
+
 Float PhaseFunction::getMeanCosine() const {
 	Log(EError, "%s::getMeanCosine() is not implemented!",
 		getClass()->getName().c_str());

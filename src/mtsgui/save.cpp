@@ -52,7 +52,7 @@ static QList<QDomElement> findAllChildren(QDomElement element, const char *tagNa
 }
 
 
-static void setProperties(QDomDocument &doc, QDomElement &element, 
+static void setProperties(QDomDocument &doc, QDomElement &element,
 		const Properties &props) {
 	element.setAttribute("type", props.getPluginName().c_str());
 
@@ -117,7 +117,7 @@ static void setProperties(QDomDocument &doc, QDomElement &element,
 				}
 				break;
 			default:
-				SLog(EError, "setProperties(): \"%s\": Unable to handle elements of type %i", 
+				SLog(EError, "setProperties(): \"%s\": Unable to handle elements of type %i",
 					(*it).c_str(), props.getType(*it));
 		}
 		property.setAttribute("name", (*it).c_str());
@@ -131,17 +131,17 @@ void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile) {
 	// ====================================================================
 	//   Serialize the sensor configuration
 	// ====================================================================
-		
+
 	QList<QDomElement> oldSensors = findAllChildren(root, "sensor");
 
 	const ref_vector<Sensor> sensors = ctx->scene->getSensors();
-	ref_vector<Sensor>::const_iterator it = std::find(sensors.begin(), 
+	ref_vector<Sensor>::const_iterator it = std::find(sensors.begin(),
 			sensors.end(), ctx->scene->getSensor());
 	if (it == sensors.end())
 		SLog(EError, "Number of sensors did not match between loaded scene and XML file!");
 
 	QDomElement sensor, oldSensor;
-	
+
 	if (oldSensors.size() == 0)
 		; // ok -- scene did not contain a sensor before
 	else if ((size_t) oldSensors.size() != ctx->scene->getSensors().size())
@@ -163,11 +163,11 @@ void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile) {
 	// ====================================================================
 	//   Serialize the sampler configuration
 	// ====================================================================
-		
+
 	QDomElement sampler = ctx->doc.createElement("sampler");
 	sensor.appendChild(sampler);
 
-	setProperties(ctx->doc, sampler, 
+	setProperties(ctx->doc, sampler,
 		ctx->scene->getSampler()->getProperties());
 
 	// ====================================================================
@@ -176,7 +176,7 @@ void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile) {
 
 	QDomElement film = ctx->doc.createElement("film");
 	sensor.appendChild(film);
-		
+
 	Properties filmProps(ctx->scene->getFilm()->getProperties());
 	if (filmProps.getPluginName() == "ldrfilm") {
 		/* Also export the tonemapper settings */
@@ -203,7 +203,7 @@ void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile) {
 	QDomElement rfilter = ctx->doc.createElement("rfilter");
 	film.appendChild(rfilter);
 
-	setProperties(ctx->doc, rfilter, 
+	setProperties(ctx->doc, rfilter,
 		ctx->scene->getFilm()->getReconstructionFilter()->getProperties());
 
 	// ====================================================================
@@ -249,7 +249,7 @@ void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile) {
 }
 
 void cleanupXML(QTextStream &input, QTextStream &output) {
-	QRegExp 
+	QRegExp
 		filenameRegExp("filename=\"[^\"]*\""),
 		nameRegExp("name=\"[^\"]*\""),
 		tagRegExp("^\\s*<([a-zA-Z]+) "),

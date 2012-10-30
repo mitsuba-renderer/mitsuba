@@ -27,8 +27,8 @@ MTS_NAMESPACE_BEGIN
 /**
  * \brief Blocked generic 2D array data type
  *
- * This class implements a blocked 2D array for cache-efficient 
- * access to two-dimensional data. 
+ * This class implements a blocked 2D array for cache-efficient
+ * access to two-dimensional data.
  */
 template <typename Value, size_t logblockSize = 2> class BlockedArray {
 public:
@@ -38,20 +38,20 @@ public:
 	BlockedArray() : m_data(NULL), m_size(-1), m_owner(false) { }
 
 	/**
-	 * \brief Allocate memory for a new blocked array of 
+	 * \brief Allocate memory for a new blocked array of
 	 * the specified width and height
 	 */
-	BlockedArray(const Vector2i &size) : m_data(NULL), 
+	BlockedArray(const Vector2i &size) : m_data(NULL),
 			m_size(-1), m_owner(false) {
 		alloc(size);
 	}
 
 	/**
-	 * \brief Allocate memory for a blocked array of 
+	 * \brief Allocate memory for a blocked array of
 	 * the specified width and height
 	 */
 	void alloc(const Vector2i &size) {
-		if (m_data && m_owner) 
+		if (m_data && m_owner)
 			delete[] m_data;
 
 		m_xBlocks = (size.x + blockSize - 1) / blockSize;
@@ -59,7 +59,7 @@ public:
 		m_data = (Value *) allocAligned(m_xBlocks * m_yBlocks
 			* blockSize * blockSize * sizeof(Value));
 		m_owner = true; /* We own this pointer */
-		m_size = size;	
+		m_size = size;
 	}
 
 	/**
@@ -76,7 +76,7 @@ public:
 		m_yBlocks = (size.y + blockSize - 1) / blockSize;
 		m_data = (Value *) ptr;
 		m_owner = false; /* We do not own this pointer */
-		m_size = size;	
+		m_size = size;
 	}
 
 	/**
@@ -94,13 +94,13 @@ public:
 	/**
 	 * \brief Initialize the contents of the blocked array with values
 	 * from a non-blocked source in row-major order and collect component-wise
-	 * minimum, maximum, and average information. 
+	 * minimum, maximum, and average information.
 	 *
 	 * Assumes that \c AltValue is some kind of \c TVector or \c TSpectrum instance.
 	 *
 	 * \remark This function performs type casts when <tt>Value != AltValue</tt>
 	 */
-	template <typename AltValue> void init(const AltValue *data, 
+	template <typename AltValue> void init(const AltValue *data,
 			AltValue &min_, AltValue &max_, AltValue &avg_) {
 		typedef typename AltValue::Scalar Scalar;
 
@@ -128,7 +128,7 @@ public:
 	/**
 	 * \brief Copy the contents of the blocked array to a non-blocked
 	 * destination buffer in row-major order.
-	 * 
+	 *
 	 * This is effectively the opposite of \ref init().
 	 *
 	 * \remark This function performs type casts when <tt>Value != AltValue</tt>
@@ -143,9 +143,9 @@ public:
 	/**
 	 * \brief Zero out unused memory portions
 	 *
-	 * This is useful in case we want to write the internal representation to 
-	 * disk and avoid accessing uninitialized memory (otherwise, valgrind 
-	 * or other similar tools will complain..) 
+	 * This is useful in case we want to write the internal representation to
+	 * disk and avoid accessing uninitialized memory (otherwise, valgrind
+	 * or other similar tools will complain..)
 	 */
 	void cleanup() {
 		size_t unusedColsRight = m_xBlocks * blockSize - m_size.x,
@@ -194,7 +194,7 @@ public:
 	inline Value &operator()(int x, int y) {
 		size_t xb = getBlock(x),  yb = getBlock(y),
 		       xo = getOffset(x), yo = getOffset(y);
- 
+
 		return m_data[
 			// Offset to block
 			blockSize * blockSize * (xb + yb * m_xBlocks) +
@@ -224,7 +224,7 @@ public:
 protected:
 	/// Determine the index of the block which contains the given global index
 	inline size_t getBlock(int a) const { return (size_t) (a >> logblockSize); }
-	
+
 	/// Determine the offset within the block that contains the given global index
 	inline size_t getOffset(int a) const { return (size_t) (a & (blockSize - 1)); }
 private:
@@ -247,25 +247,25 @@ public:
 	LinearArray() : m_data(NULL), m_size(-1), m_owner(false) { }
 
 	/**
-	 * \brief Allocate memory for a new linear array of 
+	 * \brief Allocate memory for a new linear array of
 	 * the specified width and height
 	 */
-	LinearArray(const Vector2i &size) : m_data(NULL), 
+	LinearArray(const Vector2i &size) : m_data(NULL),
 			m_size(-1), m_owner(false) {
 		alloc(size);
 	}
 
 	/**
-	 * \brief Allocate memory for a linear array of 
+	 * \brief Allocate memory for a linear array of
 	 * the specified width and height
 	 */
 	void alloc(const Vector2i &size) {
-		if (m_data && m_owner) 
+		if (m_data && m_owner)
 			delete[] m_data;
 
 		size_t arraySize = (size_t) size.x * (size_t) size.y * sizeof(Value);
 		m_data = (Value *) allocAligned(arraySize);
-		m_size = size;	
+		m_size = size;
 	}
 
 	/*
@@ -280,7 +280,7 @@ public:
 
 		m_data = (Value *) ptr;
 		m_owner = false; /* We do not own this pointer */
-		m_size = size;	
+		m_size = size;
 	}
 
 	/**
@@ -299,13 +299,13 @@ public:
 	/**
 	 * \brief Initialize the contents of the linear array with values
 	 * from a non-blocked source in row-major order and collect component-wise
-	 * minimum, maximum, and average information. 
+	 * minimum, maximum, and average information.
 	 *
 	 * Assumes that \c AltValue is some kind of \c TVector or \c TSpectrum instance.
 	 *
 	 * \remark This function performs type casts when <tt>Value != AltValue</tt>
 	 */
-	template <typename AltValue> void init(const AltValue *data, 
+	template <typename AltValue> void init(const AltValue *data,
 			AltValue &min_, AltValue &max_, AltValue &avg_) {
 		typedef typename AltValue::Scalar Scalar;
 
@@ -313,7 +313,7 @@ public:
 			min(+std::numeric_limits<Scalar>::infinity()),
 			max(-std::numeric_limits<Scalar>::infinity()),
 			avg((Scalar) 0);
-		
+
 		Value *ptr = m_data;
 
 		for (int y=0; y<m_size.y; ++y) {
@@ -335,7 +335,7 @@ public:
 	/**
 	 * \brief Copy the contents of the linear array to a non-blocked
 	 * destination buffer in row-major order.
-	 * 
+	 *
 	 * This is effectively the opposite of \ref init().
 	 *
 	 * \remark This function performs type casts when <tt>Value != AltValue</tt>

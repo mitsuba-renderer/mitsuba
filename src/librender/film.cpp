@@ -47,14 +47,14 @@ Film::Film(const Properties &props)
 		m_cropOffset.y + m_cropSize.y > m_size.y )
 		Log(EError, "Invalid crop window specification!");
 
-	/* If set to true, regions slightly outside of the film 
-	   plane will also be sampled, which improves the image 
-	   quality at the edges especially with large reconstruction 
+	/* If set to true, regions slightly outside of the film
+	   plane will also be sampled, which improves the image
+	   quality at the edges especially with large reconstruction
 	   filters. */
 	m_highQualityEdges = props.getBoolean("highQualityEdges", false);
 }
 
-Film::Film(Stream *stream, InstanceManager *manager) 
+Film::Film(Stream *stream, InstanceManager *manager)
  : ConfigurableObject(stream, manager) {
 	m_size = Vector2i(stream);
 	m_cropOffset = Point2i(stream);

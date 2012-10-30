@@ -39,7 +39,7 @@ void BlockedImageProcess::init(const Point2i &offset, const Vector2i &size, uint
 	m_stepsLeft = 1;
 	m_numSteps = 1;
 }
-	
+
 ParallelProcess::EStatus BlockedImageProcess::generateWork(WorkUnit *unit, int worker) {
 	/* Reimplementation of the spiraling block generator by Adam Arbree */
 	RectangularWorkUnit &rect = *static_cast<RectangularWorkUnit *>(unit);
@@ -66,7 +66,7 @@ ParallelProcess::EStatus BlockedImageProcess::generateWork(WorkUnit *unit, int w
 
 		if (--m_stepsLeft == 0) {
 			m_direction = (m_direction + 1) % 4;
-			if (m_direction == ELeft || m_direction == ERight) 
+			if (m_direction == ELeft || m_direction == ERight)
 				++m_numSteps;
 			m_stepsLeft = m_numSteps;
 		}

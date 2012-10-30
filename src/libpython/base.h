@@ -86,7 +86,7 @@
 		.def("__len__", &FixedSizeSupport<Name, Scalar, Size>::len) \
 		.def("__getitem__", &FixedSizeSupport<Name, Scalar, Size>::get) \
 		.def("__setitem__", &FixedSizeSupport<Name, Scalar, Size>::set)
-			
+
 #define BP_SETSCOPE(value) do { \
 		bp::detail::current_scope = value.ptr(); \
 	} while (0);
@@ -137,7 +137,7 @@ public:
 	static void set(T &value, int i, Scalar arg) {
 		using namespace mitsuba;
 
-		if (i < 0 || i >= Size) 
+		if (i < 0 || i >= Size)
 			SLog(EError, "Index %i is out of range!", i);
 		else
 			value[i] = arg;

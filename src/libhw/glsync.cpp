@@ -46,7 +46,7 @@ void GLSync::cleanup() {
 }
 
 void GLSync::wait() {
-	GLenum retval = glClientWaitSync(m_sync, 
+	GLenum retval = glClientWaitSync(m_sync,
 		GL_SYNC_FLUSH_COMMANDS_BIT, MTS_SYNC_TIMEOUT);
 
 	while (true) {

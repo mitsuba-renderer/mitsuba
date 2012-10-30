@@ -27,10 +27,10 @@ MTS_NAMESPACE_BEGIN
 /**
  * \brief Bidirectional path edge data structure
  *
- * The path edge data structure is responsible for representing the transport of 
+ * The path edge data structure is responsible for representing the transport of
  * light between pairs of scattering or emission events.
- * Amongst other things, it keeps track of the medium that fills the space between 
- * adjacent vertices of a \ref Path. Furthermore, it can be used to evaluate and 
+ * Amongst other things, it keeps track of the medium that fills the space between
+ * adjacent vertices of a \ref Path. Furthermore, it can be used to evaluate and
  * sample the visibility and transmittance functions of the scene.
  *
  * Although they do not correspond to any real transport, this implementation
@@ -45,7 +45,7 @@ MTS_NAMESPACE_BEGIN
  */
 struct MTS_EXPORT_BIDIR PathEdge {
 	/* ==================================================================== */
-	//! @{ \name             Enumerations and Fields 
+	//! @{ \name             Enumerations and Fields
 	/* ==================================================================== */
 
 	/// Pointer to the medium that contains this edge (where \c NULL is vacuum)
@@ -59,7 +59,7 @@ struct MTS_EXPORT_BIDIR PathEdge {
 	/**
 	 * \brief Length of this edge in world-space distance units
 	 *
-	 * Note that edges adjacent to supernodes have length zero to 
+	 * Note that edges adjacent to supernodes have length zero to
 	 * mark them as such.
 	 */
 	Float length;
@@ -84,14 +84,14 @@ struct MTS_EXPORT_BIDIR PathEdge {
 	/**
 	 * \brief Medium sampling density of the adjacent vertices
 	 *
-	 * This field stores the probability of sampling the preceding and 
+	 * This field stores the probability of sampling the preceding and
 	 * successive path vertices using the sampling technique implemented by
 	 * the function \ref PathEdge::sampleNext(). Depending on whether or not
 	 * they are medium interactions, this eintries either store a density per
 	 * unit length or a discrete probability.
 	 */
 	Float pdf[ETransportModes];
-	
+
 	//! @}
 	/* ==================================================================== */
 
@@ -100,7 +100,7 @@ struct MTS_EXPORT_BIDIR PathEdge {
 	/* ==================================================================== */
 
 	/**
-	 * \brief Given a ray \c ray, sample a distance in this direction and 
+	 * \brief Given a ray \c ray, sample a distance in this direction and
 	 * fill the edge data structure, as well as its target vertex with content.
 	 *
 	 * \param scene
@@ -114,24 +114,24 @@ struct MTS_EXPORT_BIDIR PathEdge {
 	 *     endpoint of the edge. The sampling routine will then determine
 	 *     the other endpoint.
 	 * \param succ
-	 *     Pointer to an unused vertex data structure, which will be filled 
-	 *     with information about the successor vertex 
+	 *     Pointer to an unused vertex data structure, which will be filled
+	 *     with information about the successor vertex
 	 * \param mode
 	 *     Specifies whether radiance or importance is being transported
 	 * \return \c true on success
 	 */
-	bool sampleNext(const Scene *scene, Sampler *sampler, 
+	bool sampleNext(const Scene *scene, Sampler *sampler,
 			const PathVertex *pred, const Ray &ray, PathVertex *next,
 			ETransportMode mode);
 
 	/**
 	 * \brief Create a perturbed successor vertex and edge
 	 *
-	 * This function behaves similar to \ref sampleNext() in that it 
-	 * generates a successor edge and vertex. 
+	 * This function behaves similar to \ref sampleNext() in that it
+	 * generates a successor edge and vertex.
 	 *
-	 * The main difference is that the desired direction, distance, and 
-	 * type of the successor vertex are all specified, which makes the 
+	 * The main difference is that the desired direction, distance, and
+	 * type of the successor vertex are all specified, which makes the
 	 * sampling process completely deterministic. This is useful for
 	 * implementing path-space perturbation strategies.
 	 *
@@ -147,15 +147,15 @@ struct MTS_EXPORT_BIDIR PathEdge {
 	 *     Specifies the desired distance between the current vertex and \c succ
 	 *     (this only applies when <tt>desiredType=EMediumInteraction</tt>)
 	 * \param desiredType
-	 *     Specifies the desired vertex type of \c succ. 
+	 *     Specifies the desired vertex type of \c succ.
 	 * \param succ
-	 *     Pointer to an unused vertex data structure, which will be filled 
-	 *     with information about the successor vertex 
+	 *     Pointer to an unused vertex data structure, which will be filled
+	 *     with information about the successor vertex
 	 * \param mode
 	 *     Specifies whether radiance or importance is being transported
 	 * \return \c true on success
 	 */
-	bool perturbDirection(const Scene *scene, const PathVertex *pred, 
+	bool perturbDirection(const Scene *scene, const PathVertex *pred,
 			const Ray &ray, Float dist, PathVertex::EVertexType desiredType,
 			PathVertex *next, ETransportMode mode);
 
@@ -187,7 +187,7 @@ struct MTS_EXPORT_BIDIR PathEdge {
 	 *
 	 * This function computes the product of certain terms that are cached
 	 * in this edge and its adjacent vertices. The \c what parameter specifies
-	 * the terms to be included; it must be a combination of the flags 
+	 * the terms to be included; it must be a combination of the flags
 	 * in the enumeration \ref ECachedValues.
 	 *
 	 * \remark This function assumes that \c pred and \c succ are the
@@ -199,28 +199,28 @@ struct MTS_EXPORT_BIDIR PathEdge {
 	 * \param succ
 	 *     The successor vertex of this edge
 	 */
-	Spectrum evalCached(const PathVertex *pred, const PathVertex *succ, 
+	Spectrum evalCached(const PathVertex *pred, const PathVertex *succ,
 			unsigned int what) const;
 
 	/**
 	 * \brief Compute the density of a successor node
 	 *
-	 * This function computes the hypothetical transport-related sampling density 
-	 * of a given successor node conditioned on a specified predecessor when 
-	 * using the sampling technique implemented by \ref sampleNext(). Depending 
-	 * on whether or not the successor node is a medium interaction, the returned 
+	 * This function computes the hypothetical transport-related sampling density
+	 * of a given successor node conditioned on a specified predecessor when
+	 * using the sampling technique implemented by \ref sampleNext(). Depending
+	 * on whether or not the successor node is a medium interaction, the returned
 	 * value is either a density per unit length or a discrete probability.
 	 *
-	 * Note: this function only computes terms associated with the transport 
-	 * between vertices -- to account for the vertices themselves, 
+	 * Note: this function only computes terms associated with the transport
+	 * between vertices -- to account for the vertices themselves,
 	 * refer to  \ref PathEdge::evalPdf.
 	 *
 	 * \param scene
 	 *     Pointer to the underlying scene
 	 * \param pred
-	 *     Pointer to the preceding vertex 
+	 *     Pointer to the preceding vertex
 	 * \param succ
-	 *     Pointer to the successor vertex 
+	 *     Pointer to the successor vertex
 	 *
 	 * \return The computed probability density
 	 */
@@ -234,9 +234,9 @@ struct MTS_EXPORT_BIDIR PathEdge {
 	 * transmittance between an arbitrary pair of nodes, \c pred and \c succ.
 	 *
 	 * \param pred
-	 *     Pointer to the preceding vertex 
+	 *     Pointer to the preceding vertex
 	 * \param succ
-	 *     Pointer to the successor vertex 
+	 *     Pointer to the successor vertex
 	 *
 	 * \return A spectrally varying transmittance value
 	 */
@@ -246,9 +246,9 @@ struct MTS_EXPORT_BIDIR PathEdge {
 	 * \brief Return the transmittance value associated with this edge
 	 *
 	 * \param pred
-	 *     Pointer to the preceding vertex 
+	 *     Pointer to the preceding vertex
 	 * \param succ
-	 *     Pointer to the successor vertex 
+	 *     Pointer to the successor vertex
 	 *
 	 * \return A spectrally varying transmittance value
 	 */
@@ -259,13 +259,13 @@ struct MTS_EXPORT_BIDIR PathEdge {
 	 * term over an edge
 	 */
 	Float evalCosine(const PathVertex *pred, const PathVertex *succ, const PathVertex *base) const;
-	
+
 
 	//! @}
 	/* ==================================================================== */
 
 	/* ==================================================================== */
-	//! @{ \name                    Miscellaneous 
+	//! @{ \name                    Miscellaneous
   	/* ==================================================================== */
 
 	/**
@@ -274,7 +274,7 @@ struct MTS_EXPORT_BIDIR PathEdge {
 	 *
 	 * This function re-evaluates a series of quantities associated with
 	 * this edge and compares them to locally cached values.
-	 * If any mismatch is found, the function sends debug output to a 
+	 * If any mismatch is found, the function sends debug output to a
 	 * specified output stream and returns \c false.
 	 *
 	 * \param scene
@@ -288,7 +288,7 @@ struct MTS_EXPORT_BIDIR PathEdge {
 	 * \param os
 	 *     Target output stream for error messages
 	 */
-	bool verify(const Scene *scene, const PathVertex *adjL, 
+	bool verify(const Scene *scene, const PathVertex *adjL,
 		const PathVertex *adjE, ETransportMode mode, std::ostream &os) const;
 
 	/**
@@ -315,19 +315,19 @@ struct MTS_EXPORT_BIDIR PathEdge {
 	 *     throughput or an inconsistency has been detected.
 	 */
 	bool connect(const Scene *scene, const PathEdge *predEdge,
-		const PathVertex *vs, const PathVertex *vt, 
+		const PathVertex *vs, const PathVertex *vt,
 		const PathEdge *succEdge);
 
 	/**
 	 * \brief Create a connection path between two vertices
 	 *
-	 * This function is conceptually similar to \ref connect(). 
-	 * However, instead of a single edge, it potentially generates 
+	 * This function is conceptually similar to \ref connect().
+	 * However, instead of a single edge, it potentially generates
 	 * an entire connection path, where intermediate vertices are
-	 * either index-matched medium transitions or other surface 
+	 * either index-matched medium transitions or other surface
 	 * scattering events of type \ref BSDF::ENull.
 	 *
-	 * This is important to support efficient direct illumination sampling 
+	 * This is important to support efficient direct illumination sampling
 	 * through such surfaces (e.g. a heterogeneous medium or a leaf with
 	 * textured alpha transparency).
 	 *
@@ -364,22 +364,22 @@ struct MTS_EXPORT_BIDIR PathEdge {
 	 * collapse it into a single edge that summarizes its properties
 	 *
 	 * This function can be thought of as being half-way in between
-	 * \c connect() and \c pathConnect(). Like \c pathConnect(), it 
+	 * \c connect() and \c pathConnect(). Like \c pathConnect(), it
 	 * potentially generates an entire connection path between the
 	 * specified endpoints, where intermediate vertices are
-	 * either index-matched medium transitions or other surface 
+	 * either index-matched medium transitions or other surface
 	 * scattering events of type \ref BSDF::ENull.
 	 *
-	 * This is important to support efficient direct illumination sampling 
+	 * This is important to support efficient direct illumination sampling
 	 * through such surfaces (e.g. a heterogeneous medium or a leaf with
 	 * textured alpha transparency).
 	 *
 	 * However, this variant does not return the intermediate vertices
 	 * and edges -- instead, everything is collapsed into a single
 	 * edge that captures the aggregate weight and probability densities.
-	 * 
-	 * This function is used by bidirectional path tracing, since it creates 
-	 * connections through index-matched boundaries but does not require 
+	 *
+	 * This function is used by bidirectional path tracing, since it creates
+	 * connections through index-matched boundaries but does not require
 	 * explicit knowledge about the associated path vertices.
 	 *
 	 * \param scene
@@ -394,7 +394,7 @@ struct MTS_EXPORT_BIDIR PathEdge {
 	 * \param succEdge
 	 *     Pointer to an edge between \c vt and its successor
 	 *     (which is not needed by this function)
-	 * \param interactions 
+	 * \param interactions
 	 *    Specifies the maximum permissible number of index-matched medium
 	 *    transitions or \ref BSDF::ENull scattering events on the way
 	 *    to the light source. (<tt>interactions<0</tt> means arbitrarily many).
@@ -404,8 +404,8 @@ struct MTS_EXPORT_BIDIR PathEdge {
 	 * \return \c true upon success, \c false when there is no
 	 *     throughput or an inconsistency has been detected.
 	 */
-	bool pathConnectAndCollapse(const Scene *scene, const PathEdge *predEdge, 
-		const PathVertex *vs, const PathVertex *vt, 
+	bool pathConnectAndCollapse(const Scene *scene, const PathEdge *predEdge,
+		const PathVertex *vs, const PathVertex *vt,
 		const PathEdge *succEdge, int &interactions);
 
 	/// Create a deep copy of this edge
@@ -413,7 +413,7 @@ struct MTS_EXPORT_BIDIR PathEdge {
 
 	/// Compare this edge against another edge
 	bool operator==(const PathEdge &edge) const;
-	
+
 	/// Compare this edge against another edge
 	inline bool operator!=(const PathEdge &edge) const {
 		return !operator==(edge);
@@ -421,7 +421,7 @@ struct MTS_EXPORT_BIDIR PathEdge {
 
 	/// Return a string representation of the information stored in this vertex
 	std::string toString() const;
-	
+
 	//! @}
 	/* ==================================================================== */
 };

@@ -37,7 +37,7 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_RENDER BlockedRenderProcess : public BlockedImageProcess {
 public:
-	BlockedRenderProcess(const RenderJob *parent, RenderQueue *queue, 
+	BlockedRenderProcess(const RenderJob *parent, RenderQueue *queue,
 		int blockSize);
 
 	// ======================================================================
@@ -48,7 +48,7 @@ public:
 	void processResult(const WorkResult *result, bool cancelled);
 	void bindResource(const std::string &name, int id);
 	EStatus generateWork(WorkUnit *unit, int worker);
-	
+
 	//! @}
 	// ======================================================================
 

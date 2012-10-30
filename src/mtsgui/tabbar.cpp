@@ -32,7 +32,7 @@ public:
 				QStyleOptionTabV3 so(*tabOptV3);
 				if (m_parent->isActive())
 					so.state |= QStyle::State_Active;
-				
+
 				QProxyStyle::drawControl(ce, &so, painter, widget);
 				return;
 			}

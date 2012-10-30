@@ -63,7 +63,7 @@ public:
 			m_type = EGGX;
 		else if (distr == "as")
 			m_type = EAshikhminShirley;
-		else 
+		else
 			SLog(EError, "Specified an invalid distribution \"%s\", must be "
 				"\"beckmann\", \"phong\", \"ggx\", or \"as\"!", distr.c_str());
 	}
@@ -80,12 +80,12 @@ public:
 	 * \brief Convert the roughness values so that they behave similarly to the
 	 * Beckmann distribution.
 	 *
-	 * Also clamps to the minimal exponent to to avoid numerical issues 
+	 * Also clamps to the minimal exponent to to avoid numerical issues
 	 * (For lower roughness values, please switch to the smooth BSDF variants)
 	 */
 	Float transformRoughness(Float value) const {
 		value = std::max(value, (Float) 1e-5f);
-		if (m_type == EPhong || m_type == EAshikhminShirley) 
+		if (m_type == EPhong || m_type == EAshikhminShirley)
 			value = std::max(2 / (value * value) - 2, (Float) 0.1f);
 		return value;
 	}
@@ -116,26 +116,26 @@ public:
 			case EBeckmann: {
 					/* Beckmann distribution function for Gaussian random surfaces */
 					const Float ex = Frame::tanTheta(m) / alphaU;
-					result = math::fastexp(-(ex*ex)) / (M_PI * alphaU*alphaU * 
+					result = math::fastexp(-(ex*ex)) / (M_PI * alphaU*alphaU *
 							std::pow(Frame::cosTheta(m), (Float) 4.0f));
 				}
 				break;
-	
+
 			case EGGX: {
 					/* Empirical GGX distribution function for rough surfaces */
 					const Float tanTheta = Frame::tanTheta(m),
 						        cosTheta = Frame::cosTheta(m);
-	
-					const Float root = alphaU / (cosTheta*cosTheta * 
+
+					const Float root = alphaU / (cosTheta*cosTheta *
 								(alphaU*alphaU + tanTheta*tanTheta));
-	
+
 					result = INV_PI * (root * root);
 				}
 				break;
 
 			case EPhong: {
 					/* Phong distribution function */
-					result = (alphaU + 2) * INV_TWOPI 
+					result = (alphaU + 2) * INV_TWOPI
 							* std::pow(Frame::cosTheta(m), alphaU);
 				}
 				break;
@@ -145,7 +145,7 @@ public:
 					const Float ds = 1 - cosTheta * cosTheta;
 					if (ds < 0)
 						return 0.0f;
-					const Float exponent = (alphaU * m.x * m.x 
+					const Float exponent = (alphaU * m.x * m.x
 							+ alphaV * m.y * m.y) / ds;
 					result = std::sqrt((alphaU + 2) * (alphaV + 2))
 						* INV_TWOPI * std::pow(cosTheta, exponent);
@@ -160,7 +160,7 @@ public:
 		/* Prevent potential numerical issues in other stages of the model */
 		if (result < 1e-20f)
 			result = 0;
-	
+
 		return result;
 	}
 
@@ -168,7 +168,7 @@ public:
 	 * \brief Returns the density function associated with
 	 * the \ref sample() function.
 	 * \param m The microsurface normal
-	 * \param alpha  The surface roughness 
+	 * \param alpha  The surface roughness
 	 */
 	inline Float pdf(const Vector &m, Float alpha) const {
 		return pdf(m, alpha, alpha);
@@ -193,7 +193,7 @@ public:
 		const Float ds = 1 - cosTheta * cosTheta;
 		if (ds < 0)
 			return 0.0f;
-		const Float exponent = (alphaU * m.x * m.x 
+		const Float exponent = (alphaU * m.x * m.x
 				+ alphaV * m.y * m.y) / ds;
 		Float result = std::sqrt((alphaU + 1) * (alphaV + 1))
 			* INV_TWOPI * std::pow(cosTheta, exponent);
@@ -215,7 +215,7 @@ public:
 				std::sqrt((alphaU + 1.0f) / (alphaV + 1.0f)) *
 				std::tan(M_PI * u1 * 0.5f));
 		const Float cosPhi = std::cos(phi), sinPhi = std::sin(phi);
-		cosTheta = std::pow(u2, 1.0f / 
+		cosTheta = std::pow(u2, 1.0f /
 			(alphaU * cosPhi * cosPhi + alphaV * sinPhi * sinPhi + 1.0f));
 	}
 
@@ -223,7 +223,7 @@ public:
 	 * \brief Draw a sample from the microsurface normal distribution
 	 *
 	 * \param sample  A uniformly distributed 2D sample
-	 * \param alpha  The surface roughness 
+	 * \param alpha  The surface roughness
 	 */
 	inline Normal sample(const Point2 &sample, Float alpha) const {
 		return MicrofacetDistribution::sample(sample, alpha, alpha);
@@ -237,7 +237,7 @@ public:
 	 * \param alphaV  The surface roughness in the bitangent direction
 	 */
 	Normal sample(const Point2 &sample, Float alphaU, Float alphaV) const {
-		/* The azimuthal component is always selected 
+		/* The azimuthal component is always selected
 		   uniformly regardless of the distribution */
 		Float cosThetaM = 0.0f, phiM = (2.0f * M_PI) * sample.y;
 
@@ -279,7 +279,7 @@ public:
 					}
 				}
 				break;
-			default: 
+			default:
 				SLog(EError, "Invalid distribution function!");
 		}
 
@@ -307,7 +307,7 @@ public:
 	 * \param pdf     The probability density wrt. solid angles
 	 */
 	Normal sample(const Point2 &sample, Float alphaU, Float alphaV, Float &pdf) const {
-		/* The azimuthal component is always selected 
+		/* The azimuthal component is always selected
 		   uniformly regardless of the distribution */
 		Float cosThetaM = 0.0f;
 
@@ -370,11 +370,11 @@ public:
 							+ alphaV * sinPhiM*sinPhiM;
 					pdf = std::sqrt((alphaU + 1) * (alphaV + 1))
 						* INV_TWOPI * std::pow(cosThetaM, exponent);
-						
+
 					/* Prevent potential numerical issues in other stages of the model */
 					if (pdf < 1e-20f)
 						pdf = 0;
-					
+
 					return Vector(
 						sinThetaM * cosPhiM,
 						sinThetaM * sinPhiM,
@@ -390,7 +390,7 @@ public:
 		/* Prevent potential numerical issues in other stages of the model */
 		if (pdf < 1e-20f)
 			pdf = 0;
-					
+
 		const Float sinThetaM = std::sqrt(
 			std::max((Float) 0, 1 - cosThetaM*cosThetaM));
 		Float phiM = (2.0f * M_PI) * sample.y;
@@ -410,16 +410,16 @@ public:
 	 * \param alpha The surface roughness
 	 */
 	Float smithG1(const Vector &v, const Vector &m, Float alpha) const {
-		const Float tanTheta = std::abs(Frame::tanTheta(v)); 
+		const Float tanTheta = std::abs(Frame::tanTheta(v));
 
 		/* perpendicular incidence -- no shadowing/masking */
 		if (tanTheta == 0.0f)
 			return 1.0f;
-	
+
 		/* Can't see the back side from the front and vice versa */
 		if (dot(v, m) * Frame::cosTheta(v) <= 0)
 			return 0.0f;
-	
+
 		switch (m_type) {
 			case EPhong:
 			case EBeckmann: {
@@ -434,21 +434,21 @@ public:
 
 					if (a >= 1.6f)
 						return 1.0f;
-	
+
 					/* Use a fast and accurate (<0.35% rel. error) rational
 					   approximation to the shadowing-masking function */
 					const Float aSqr = a * a;
-					return (3.535f * a + 2.181f * aSqr) 
+					return (3.535f * a + 2.181f * aSqr)
 						 / (1.0f + 2.276f * a + 2.577f * aSqr);
 				}
 				break;
-	
+
 			case EGGX: {
 					const Float root = alpha * tanTheta;
 					return 2.0f / (1.0f + std::sqrt(1.0f + root*root));
 				}
 				break;
-	
+
 			default:
 				SLog(EError, "Invalid distribution function!");
 				return 0.0f;
@@ -456,7 +456,7 @@ public:
 	}
 
 	/**
-	 * \brief Shadow-masking function for each of the supported 
+	 * \brief Shadow-masking function for each of the supported
 	 * microfacet distributions
 	 *
 	 * \param wi The incident direction
@@ -469,7 +469,7 @@ public:
 	}
 
 	/**
-	 * \brief Shadow-masking function for each of the supported 
+	 * \brief Shadow-masking function for each of the supported
 	 * microfacet distributions
 	 *
 	 * \param wi The incident direction
@@ -495,7 +495,7 @@ public:
 						woDotM = dot(wo, m),
 						wiDotM = dot(wi, m);
 
-			return std::min((Float) 1, 
+			return std::min((Float) 1,
 				std::min(std::abs(2 * nDotM * nDotWo / woDotM),
 						 std::abs(2 * nDotM * nDotWi / wiDotM)));
 		}

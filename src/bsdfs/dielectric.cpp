@@ -31,32 +31,32 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{extIOR}{\Float\Or\String}{Exterior index of refraction specified
  *      numerically or using a known material name. \default{\texttt{air} / 1.000277}}
  *     \parameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
- *         factor that can be used to modulate the specular reflection component. Note 
+ *         factor that can be used to modulate the specular reflection component. Note
  *         that for physical realism, this parameter should never be touched. \default{1.0}}
  *     \parameter{specular\showbreak Transmittance}{\Spectrum\Or\Texture}{Optional
- *         factor that can be used to modulate the specular transmission component. Note 
+ *         factor that can be used to modulate the specular transmission component. Note
  *         that for physical realism, this parameter should never be touched. \default{1.0}}
  * }
  *
  * \renderings{
- *     \medrendering{Air$\leftrightarrow$Water (IOR: 1.33) interface. 
+ *     \medrendering{Air$\leftrightarrow$Water (IOR: 1.33) interface.
  *         See \lstref{dielectric-water}.}{bsdf_dielectric_water}
  *     \medrendering{Air$\leftrightarrow$Diamond (IOR: 2.419)}{bsdf_dielectric_diamond}
- *     \medrendering{Air$\leftrightarrow$Glass (IOR: 1.504) interface with absorption. 
+ *     \medrendering{Air$\leftrightarrow$Glass (IOR: 1.504) interface with absorption.
  *         See \lstref{dielectric-glass}.}{bsdf_dielectric_glass}
  * }
  *
- * This plugin models an interface between two dielectric materials having mismatched 
+ * This plugin models an interface between two dielectric materials having mismatched
  * indices of refraction (for instance, water and air). Exterior and interior IOR values
- * can be specified independently, where ``exterior'' refers to the side that contains 
+ * can be specified independently, where ``exterior'' refers to the side that contains
  * the surface normal. When no parameters are given, the plugin activates the defaults, which
  * describe a borosilicate glass BK7/air interface.
  *
- * In this model, the microscopic structure of the surface is assumed to be perfectly 
+ * In this model, the microscopic structure of the surface is assumed to be perfectly
  * smooth, resulting in a degenerate\footnote{Meaning that for any given incoming ray of light,
- * the model always scatters into a discrete set of directions, as opposed to a continuum.} 
- * BSDF described by a Dirac delta distribution. For a similar model that instead describes a 
- * rough surface microstructure, take a look at the \pluginref{roughdielectric} plugin. 
+ * the model always scatters into a discrete set of directions, as opposed to a continuum.}
+ * BSDF described by a Dirac delta distribution. For a similar model that instead describes a
+ * rough surface microstructure, take a look at the \pluginref{roughdielectric} plugin.
  *
  * \begin{xml}[caption=A simple air-to-water interface, label=lst:dielectric-water]
  * <shape type="...">
@@ -70,12 +70,12 @@ MTS_NAMESPACE_BEGIN
  * When using this model, it is crucial that the scene contains
  * meaningful and mutually compatible indices of refraction changes---see
  * \figref{glass-explanation} for a description of what this entails.
- * 
+ *
  * In many cases, we will want to additionally describe the \emph{medium} within a
  * dielectric material. This requires the use of a rendering technique that is
  * aware of media (e.g. the volumetric path tracer). An example of how one might
  * describe a slightly absorbing piece of glass is shown below:
- * \begin{xml}[caption=A glass material with absorption (based on the 
+ * \begin{xml}[caption=A glass material with absorption (based on the
  *    Beer-Lambert law). This material can only be used by an integrator
  *    that is aware of participating media., label=lst:dielectric-glass]
  * <shape type="...">
@@ -134,7 +134,7 @@ MTS_NAMESPACE_BEGIN
  *          \pluginref{dielectric},\
  *          \pluginref{roughdielectric},\
  *          \pluginref{plastic}, \
- *          \pluginref{roughplastic}, as well as 
+ *          \pluginref{roughplastic}, as well as
  *          \pluginref{coating}.
  *     }
  * \end{table}
@@ -164,7 +164,7 @@ public:
 			props.getSpectrum("specularTransmittance", Spectrum(1.0f)));
 	}
 
-	SmoothDielectric(Stream *stream, InstanceManager *manager) 
+	SmoothDielectric(Stream *stream, InstanceManager *manager)
 			: BSDF(stream, manager) {
 		m_eta = stream->readFloat();
 		m_specularReflectance = static_cast<Texture *>(manager->getInstance(stream));
@@ -187,17 +187,17 @@ public:
 			m_specularReflectance, "specularReflectance", 1.0f);
 		m_specularTransmittance = ensureEnergyConservation(
 			m_specularTransmittance, "specularTransmittance", 1.0f);
-		
+
 		m_components.clear();
 		m_components.push_back(EDeltaReflection | EFrontSide | EBackSide
 			| (m_specularReflectance->isConstant() ? 0 : ESpatiallyVarying));
 		m_components.push_back(EDeltaTransmission | EFrontSide | EBackSide | ENonSymmetric
 			| (m_specularTransmittance->isConstant() ? 0 : ESpatiallyVarying));
-		
-		m_usesRayDifferentials = 
+
+		m_usesRayDifferentials =
 			m_specularReflectance->usesRayDifferentials() ||
 			m_specularTransmittance->usesRayDifferentials();
-		
+
 		BSDF::configure();
 	}
 
@@ -219,7 +219,7 @@ public:
 		return Vector(-wi.x, -wi.y, wi.z);
 	}
 
-	/// Refraction in local coordinates 
+	/// Refraction in local coordinates
 	inline Vector refract(const Vector &wi, Float cosThetaT) const {
 		Float scale = -(cosThetaT < 0 ? m_invEta : m_eta);
 		return Vector(scale*wi.x, scale*wi.y, cosThetaT);
@@ -243,9 +243,9 @@ public:
 			if (!sampleTransmission || absDot(refract(bRec.wi, cosThetaT), bRec.wo) < 1-DeltaEpsilon)
 				return Spectrum(0.0f);
 
-			/* Radiance must be scaled to account for the solid angle compression 
+			/* Radiance must be scaled to account for the solid angle compression
 			   that occurs when crossing the interface. */
-			Float factor = (bRec.mode == ERadiance) 
+			Float factor = (bRec.mode == ERadiance)
 				? (cosThetaT < 0 ? m_invEta : m_eta) : 1.0f;
 
 			return m_specularTransmittance->eval(bRec.its)  * factor * factor * (1 - F);
@@ -299,9 +299,9 @@ public:
 				bRec.eta = cosThetaT < 0 ? m_eta : m_invEta;
 				pdf = 1-F;
 
-				/* Radiance must be scaled to account for the solid angle compression 
+				/* Radiance must be scaled to account for the solid angle compression
 				   that occurs when crossing the interface. */
-				Float factor = (bRec.mode == ERadiance) 
+				Float factor = (bRec.mode == ERadiance)
 					? (cosThetaT < 0 ? m_invEta : m_eta) : 1.0f;
 
 				return m_specularTransmittance->eval(bRec.its) * (factor * factor);
@@ -321,9 +321,9 @@ public:
 			bRec.eta = cosThetaT < 0 ? m_eta : m_invEta;
 			pdf = 1.0f;
 
-			/* Radiance must be scaled to account for the solid angle compression 
+			/* Radiance must be scaled to account for the solid angle compression
 			   that occurs when crossing the interface. */
-			Float factor = (bRec.mode == ERadiance) 
+			Float factor = (bRec.mode == ERadiance)
 				? (cosThetaT < 0 ? m_invEta : m_eta) : 1.0f;
 
 			return m_specularTransmittance->eval(bRec.its) * (factor * factor * (1-F));
@@ -355,9 +355,9 @@ public:
 				bRec.wo = refract(bRec.wi, cosThetaT);
 				bRec.eta = cosThetaT < 0 ? m_eta : m_invEta;
 
-				/* Radiance must be scaled to account for the solid angle compression 
+				/* Radiance must be scaled to account for the solid angle compression
 				   that occurs when crossing the interface. */
-				Float factor = (bRec.mode == ERadiance) 
+				Float factor = (bRec.mode == ERadiance)
 					? (cosThetaT < 0 ? m_invEta : m_eta) : 1.0f;
 
 				return m_specularTransmittance->eval(bRec.its) * (factor * factor);
@@ -375,9 +375,9 @@ public:
 			bRec.wo = refract(bRec.wi, cosThetaT);
 			bRec.eta = cosThetaT < 0 ? m_eta : m_invEta;
 
-			/* Radiance must be scaled to account for the solid angle compression 
+			/* Radiance must be scaled to account for the solid angle compression
 			   that occurs when crossing the interface. */
-			Float factor = (bRec.mode == ERadiance) 
+			Float factor = (bRec.mode == ERadiance)
 				? (cosThetaT < 0 ? m_invEta : m_eta) : 1.0f;
 
 			return m_specularTransmittance->eval(bRec.its) * (factor * factor * (1-F));
@@ -398,7 +398,7 @@ public:
 		std::ostringstream oss;
 		oss << "SmoothDielectric[" << endl
 			<< "  id = \"" << getID() << "\"," << endl
-			<< "  eta = " << m_eta << "," << endl 
+			<< "  eta = " << m_eta << "," << endl
 			<< "  specularReflectance = " << indent(m_specularReflectance->toString()) << "," << endl
 			<< "  specularTransmittance = " << indent(m_specularTransmittance->toString()) << endl
 			<< "]";
@@ -415,7 +415,7 @@ private:
 };
 
 /* Fake glass shader -- it is really hopeless to visualize
-   this material in the VPL renderer, so let's try to do at least 
+   this material in the VPL renderer, so let's try to do at least
    something that suggests the presence of a transparent boundary */
 class SmoothDielectricShader : public Shader {
 public:
@@ -446,7 +446,7 @@ public:
 	MTS_DECLARE_CLASS()
 };
 
-Shader *SmoothDielectric::createShader(Renderer *renderer) const { 
+Shader *SmoothDielectric::createShader(Renderer *renderer) const {
 	return new SmoothDielectricShader(renderer);
 }
 

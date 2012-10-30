@@ -29,7 +29,7 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * \brief This data structured contains all information 
+ * \brief This data structured contains all information
  * that is required to sample or query a BSDF.
  *
  * \sa BSDF::f()
@@ -40,17 +40,17 @@ MTS_NAMESPACE_BEGIN
 struct MTS_EXPORT_RENDER BSDFSamplingRecord {
 public:
 	/**
-	 * \brief Given a surface interaction and an incident direction, 
-	 * construct a query record which can be used to sample an outgoing 
+	 * \brief Given a surface interaction and an incident direction,
+	 * construct a query record which can be used to sample an outgoing
 	 * direction.
 	 *
-	 * By default, all components will be sampled irregardless of 
-	 * what measure they live on. For convenience, this function 
-	 * uses the local incident direction vector contained in the 
+	 * By default, all components will be sampled irregardless of
+	 * what measure they live on. For convenience, this function
+	 * uses the local incident direction vector contained in the
 	 * supplied intersection record. The mode of transport is
-	 * set to \ref ERadiance -- the \ref mode fie 
+	 * set to \ref ERadiance -- the \ref mode fie
 	 *
-	 * \param its 
+	 * \param its
 	 *      An reference to the underlying intersection record
 	 *
 	 * \param sampler
@@ -62,21 +62,21 @@ public:
 	 * \param mode
 	 *      The transported mode (\ref ERadiance or \ref EImportance)
 	 */
-	explicit inline BSDFSamplingRecord(const Intersection &its, Sampler *sampler, 
+	explicit inline BSDFSamplingRecord(const Intersection &its, Sampler *sampler,
 			ETransportMode mode = ERadiance);
 
 	/**
-	 * \brief Given a surface interaction an an incident/exitant direction 
+	 * \brief Given a surface interaction an an incident/exitant direction
 	 * pair (wi, wo), create a query record to evaluate the BSDF or its
 	 * sampling density.
 	 *
-	 * For convenience, this function uses the local incident direction 
+	 * For convenience, this function uses the local incident direction
 	 * vector contained in the supplied intersection record.
 	 *
-	 * \param its 
+	 * \param its
 	 *      An reference to the underlying intersection record
 	 * \param wo
-	 *      An outgoing direction in local coordinates. This should 
+	 *      An outgoing direction in local coordinates. This should
 	 *      be a normalized direction vector that points \a away from
 	 *      the scattering event.
 	 * \param mode
@@ -86,32 +86,32 @@ public:
 		ETransportMode mode = ERadiance);
 
 	/**
-	 * \brief Given a surface interaction an an incident/exitant direction 
+	 * \brief Given a surface interaction an an incident/exitant direction
 	 * pair (wi, wo), create a query record to evaluate the BSDF or its
 	 * sampling density.
 	 *
-	 * \param its 
+	 * \param its
 	 *      An reference to the underlying intersection record
 	 * \param wi
 	 *      An incident direction in local coordinates. This should
 	 *      be a normalized direction vector that points \a away from
 	 *      the scattering event.
 	 * \param wo
-	 *      An outgoing direction in local coordinates. This should 
+	 *      An outgoing direction in local coordinates. This should
 	 *      be a normalized direction vector that points \a away from
 	 *      the scattering event.
 	 * \param mode
 	 *      The transported mode (\ref ERadiance or \ref EImportance)
 	 *
 	 */
-	inline BSDFSamplingRecord(const Intersection &its, 
+	inline BSDFSamplingRecord(const Intersection &its,
 		const Vector &wi, const Vector &wo,
 		ETransportMode mode = ERadiance);
 
 	/**
 	 * \brief Reverse the direction of light transport in the record
 	 *
-	 * This function essentially swaps \c wi and \c wo and adjusts 
+	 * This function essentially swaps \c wi and \c wo and adjusts
 	 * \c mode appropriately, so that non-symmetric scattering
 	 * models can be queried in the reverse direction.
 	 */
@@ -126,10 +126,10 @@ public:
 	/**
 	 * \brief Pointer to a \ref Sampler instance (optional).
 	 *
-	 * Some BSDF implementations can significantly improve 
-	 * the quality of their importance sampling routines 
+	 * Some BSDF implementations can significantly improve
+	 * the quality of their importance sampling routines
 	 * when having access to extra random numbers. This
-	 * attribute provides a means of providing this 
+	 * attribute provides a means of providing this
 	 * capability to the BSDF.
 	 */
 	Sampler *sampler;
@@ -137,7 +137,7 @@ public:
 	/**
 	 * \brief Normalized incident direction in local coordinates
 	 *
-	 * Mitsuba uses the convention that \c wi and \c wo 
+	 * Mitsuba uses the convention that \c wi and \c wo
 	 * point away from the scattering event
 	 */
 	Vector wi;
@@ -145,7 +145,7 @@ public:
 	/**
 	 * \brief Normalized outgoing direction in local coordinates
 	 *
-	 * Mitsuba uses the convention that \c wi and \c wo 
+	 * Mitsuba uses the convention that \c wi and \c wo
 	 * point away from the scattering event
 	 */
 	Vector wo;
@@ -154,25 +154,25 @@ public:
 	Float eta;
 
 	/** \brief Transported mode (radiance or importance)
-	 * 
-	 * This information is required for rendering with non-reciprocal 
+	 *
+	 * This information is required for rendering with non-reciprocal
 	 * BSDFs such as transmission through a dielectric material
 	 */
 	ETransportMode mode;
 
 	/**
-	 * \brief Bit mask containing the requested BSDF component types that 
+	 * \brief Bit mask containing the requested BSDF component types that
 	 * should be sampled/evaluated.
 	 *
-	 * Set to \c BSDF::EAll by default. After sampling has been performed, 
+	 * Set to \c BSDF::EAll by default. After sampling has been performed,
 	 * the component type is stored inside \ref sampledType.
-	 * 
+	 *
 	 * \sa BSDF::EBSDFType
 	 */
 	unsigned int typeMask;
 
 	/**
-	 * \brief Integer value specifying the requested BSDF component index that 
+	 * \brief Integer value specifying the requested BSDF component index that
 	 * should be sampled/evaluated (for multi-lobed BSDFs).
 	 *
 	 * After sampling has been performed, the component index is stored
@@ -193,7 +193,7 @@ public:
 };
 
 
-/** 
+/**
  * \brief Abstract %BSDF base-class.
  *
  * This class implements an abstract interface to all BSDF plugins in Mitsuba.
@@ -202,10 +202,10 @@ public:
  * two-dimensional density functions, as well as degenerate one-dimensional
  * and discrete densities are all handled within the same framework.
  *
- * For improved flexibility with respect to the various rendering algorithms, 
+ * For improved flexibility with respect to the various rendering algorithms,
  * this class can sample and evaluate a complete BSDF, but it also allows to
- * pick and choose individual components of multi-lobed BSDFs based on their 
- * properties and component indices. This selection is specified using a 
+ * pick and choose individual components of multi-lobed BSDFs based on their
+ * properties and component indices. This selection is specified using a
  * special record that is provided along with every query.
  *
  * \ref BSDFSamplingRecord.
@@ -227,9 +227,9 @@ public:
 		// =============================================================
 
 		/// 'null' scattering event, i.e. particles do not undergo deflection
-		ENull                 = 0x00001, 
+		ENull                 = 0x00001,
 		/// Ideally diffuse reflection
-		EDiffuseReflection    = 0x00002, 
+		EDiffuseReflection    = 0x00002,
 		/// Ideally diffuse transmission
 		EDiffuseTransmission  = 0x00004,
 		/// Glossy reflection
@@ -253,7 +253,7 @@ public:
 		/// The BSDF depends on the UV coordinates
 		ESpatiallyVarying     = 0x02000,
 		/// Flags non-symmetry (e.g. transmission in dielectric materials)
-		ENonSymmetric         = 0x04000,  
+		ENonSymmetric         = 0x04000,
 		/// Supports interactions on the front-facing side
 		EFrontSide            = 0x08000,
 		/// Supports interactions on the back-facing side
@@ -265,10 +265,10 @@ public:
 	/// Convenient combinations of flags from \ref EBSDFType
 	enum ETypeCombinations {
 		/// Any reflection component (scattering into discrete, 1D, or 2D set of directions)
-		EReflection   = EDiffuseReflection | EDeltaReflection 
+		EReflection   = EDiffuseReflection | EDeltaReflection
 			| EDelta1DReflection | EGlossyReflection,
 		/// Any transmission component (scattering into discrete, 1D, or 2D set of directions)
-		ETransmission = EDiffuseTransmission | EDeltaTransmission 
+		ETransmission = EDiffuseTransmission | EDeltaTransmission
 			| EDelta1DTransmission | EGlossyTransmission | ENull,
 		/// Diffuse scattering into a 2D set of directions
 		EDiffuse      = EDiffuseReflection | EDiffuseTransmission,
@@ -338,23 +338,23 @@ public:
 
 	/**
 	 * \brief Sample the BSDF and return the importance weight (i.e. the
-	 * value of the BSDF divided by the probability density of the sample). 
+	 * value of the BSDF divided by the probability density of the sample).
 	 *
 	 * When the probability density is not explicitly required, this function
 	 * should be preferred, since it is potentially faster by making use of
 	 * cancellations during the division.
-	 * 
-	 * If a component mask or a specific component index is specified, the 
+	 *
+	 * If a component mask or a specific component index is specified, the
 	 * sample is drawn from the matching component, if it exists. Depending
-	 * on the provided transport type, either the BSDF or its adjoint version 
-	 * is used. 
+	 * on the provided transport type, either the BSDF or its adjoint version
+	 * is used.
 	 *
 	 * \param bRec    A BSDF query record
 	 * \param sample  A uniformly distributed sample on \f$[0,1]^2\f$
 	 *
 	 * \return The BSDF value divided by the probability density of the sample
 	 *         sample (multiplied by the cosine foreshortening factor when a
-	 *         non-delta component is sampled) A zero spectrum means that 
+	 *         non-delta component is sampled) A zero spectrum means that
 	 *         sampling failed.
 	 *
 	 * \remark This function is not exposed by the Python API. See the other
@@ -365,15 +365,15 @@ public:
 
 	/**
 	 * \brief Sample the BSDF and return the probability density \a and the
-	 * importance weight of the sample (i.e. the value of the BSDF divided 
+	 * importance weight of the sample (i.e. the value of the BSDF divided
 	 * by the probability density)
 	 *
-	 * If a component mask or a specific component index is specified, the 
+	 * If a component mask or a specific component index is specified, the
 	 * sample is drawn from the matching component, if it exists. Depending
-	 * on the provided transport type, either the BSDF or its adjoint version 
-	 * is used. 
-	 * 
-	 * When sampling a continuous/non-delta component, this method also 
+	 * on the provided transport type, either the BSDF or its adjoint version
+	 * is used.
+	 *
+	 * When sampling a continuous/non-delta component, this method also
 	 * multiplies by the cosine foreshorening factor with respect to the
 	 * sampled direction.
 	 *
@@ -382,19 +382,19 @@ public:
 	 * \param pdf     Will record the probability with respect to solid angles
 	 *                (or the discrete probability when a delta component is sampled)
 	 *
-	 * \return The BSDF value (multiplied by the cosine foreshortening 
+	 * \return The BSDF value (multiplied by the cosine foreshortening
 	 *         factor when a non-delta component is sampled). A zero spectrum
 	 *         means that sampling failed.
-	 * 
+	 *
 	 * \remark From Python, this function is is called using the syntax
 	 *         <tt>value, pdf = bsdf.sample(bRec, sample)</tt>
 	 */
-	virtual Spectrum sample(BSDFSamplingRecord &bRec, Float &pdf, 
+	virtual Spectrum sample(BSDFSamplingRecord &bRec, Float &pdf,
 		const Point2 &sample) const = 0;
 
 	/**
 	 * \brief Evaluate the BSDF f(wi, wo) or its adjoint version f^{*}(wi, wo)
-	 * 
+	 *
 	 * This method allows to query the BSDF as a whole or pick out
 	 * individual components. When querying a smooth (i.e. non-degenerate)
 	 * component, it already multiplies the result by the cosine
@@ -402,7 +402,7 @@ public:
 	 *
 	 * \param bRec
 	 *     A record with detailed information on the BSDF query
-	 * 
+	 *
 	 * \param measure
 	 *     Specifies the measure of the component. This is necessary
 	 *     to handle BSDFs, whose components live on spaces with
@@ -413,15 +413,15 @@ public:
 		EMeasure measure = ESolidAngle) const = 0;
 
 	/**
-	 * \brief Compute the probability of sampling \c bRec.wo (given 
+	 * \brief Compute the probability of sampling \c bRec.wo (given
 	 * \c bRec.wi).
 	 *
 	 * This method provides access to the probability density that
-	 * would result when supplying the same BSDF query record to the 
+	 * would result when supplying the same BSDF query record to the
 	 * \ref sample() method. It correctly handles changes in probability
 	 * when only a subset of the components is chosen for sampling
-	 * (this can be done using the \ref BSDFSamplingRecord::component and 
-	 * \ref BSDFSamplingRecord::typeMask fields). 
+	 * (this can be done using the \ref BSDFSamplingRecord::component and
+	 * \ref BSDFSamplingRecord::typeMask fields).
 	 *
 	 * \param bRec
 	 *     A record with detailed information on the BSDF query
@@ -436,7 +436,7 @@ public:
 		EMeasure measure = ESolidAngle) const = 0;
 
 	/**
-	 * \brief For transmissive BSDFs: return the material's 
+	 * \brief For transmissive BSDFs: return the material's
 	 * relative index of refraction
 	 *
 	 * The default implementation returns <tt>1.0</tt>.
@@ -446,15 +446,15 @@ public:
 	virtual Float getEta() const;
 
 	/**
-	 * \brief For rough BSDFs: return the root mean square 
+	 * \brief For rough BSDFs: return the root mean square
 	 * surface roughness of the given BSDF component
 	 *
 	 * An infinite value indicates a component that is ideally diffuse
 	 */
 	virtual Float getRoughness(const Intersection &its, int index) const;
-	
+
 	// =============================================================
-	//! @{ \name ConfigurableObject interface 
+	//! @{ \name ConfigurableObject interface
 	// =============================================================
 
 	/// Configure the material (called after construction by the XML parser)
@@ -471,7 +471,7 @@ public:
 
 	/// Set the parent object
 	virtual void setParent(ConfigurableObject *parent);
-	
+
 	//! @}
 	// =============================================================
 
@@ -479,7 +479,7 @@ public:
 protected:
 	/// Create a new BSDF instance
 	BSDF(const Properties &props);
-	
+
 	/// Unserialize a BSDF instance
 	BSDF(Stream *stream, InstanceManager *manager);
 
@@ -489,11 +489,11 @@ protected:
 	 * This function determines the component-wise maximum of the
 	 * texture \c tex and checks if it is below \c max. If yes,
 	 * it returns the texture unmodified. Otherwise, it wraps
-	 * the texture into a \ref ScaleTexture instance (with a 
-	 * scaling factor chosen so that the desired maximum \c max 
+	 * the texture into a \ref ScaleTexture instance (with a
+	 * scaling factor chosen so that the desired maximum \c max
 	 * is abided) and prints a warning.
 	 */
-	Texture *ensureEnergyConservation(Texture *tex, 
+	Texture *ensureEnergyConservation(Texture *tex,
 		const std::string &paramName, Float max) const;
 
 	/**
@@ -502,8 +502,8 @@ protected:
 	 * This function determines the component-wise maximum of the
 	 * sum \c tex1 + \c tex2 and checks if it is below \c max. If yes,
 	 * it returns the texture unmodified. Otherwise, it wraps
-	 * each the texture into a \ref ScaleTexture instance (with a 
-	 * scaling factor chosen so that the desired maximum \c max 
+	 * each the texture into a \ref ScaleTexture instance (with a
+	 * scaling factor chosen so that the desired maximum \c max
 	 * is abided) and prints a warning.
 	 */
 	std::pair<Texture *, Texture *> ensureEnergyConservation(

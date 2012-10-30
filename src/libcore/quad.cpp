@@ -136,7 +136,7 @@ void gaussLegendre(int n, Float *nodes, Float *weights) {
 		while (true) {
 			if (++it > 20)
 				SLog(EError, "gaussLegendre(): did not converge after 20 iterations!");
-		
+
 			/* Search for the interior roots of P_{n+1}(x) using Newton's method. */
 			std::pair<double, double> L = legendrePD(n+1, x);
 			double step = L.first / L.second;
@@ -179,8 +179,8 @@ void gaussLobatto(int n, Float *nodes, Float *weights) {
 		while (true) {
 			if (++it > 20)
 				SLog(EError, "gaussLobatto(): did not converge after 20 iterations!");
-		
-			/* Search for the interior roots of P_n'(x) using Newton's method. The same 
+
+			/* Search for the interior roots of P_n'(x) using Newton's method. The same
 			   roots are also shared by P_{n+1}-P_{n-1}, which is nicer to evaluate. */
 
 			std::pair<double, double> Q = legendreQ(n, x);
@@ -225,15 +225,15 @@ void gaussLobatto(int n, Float *nodes, Float *weights) {
  FOR A PARTICULAR PURPOSE. See the license for more details.
 */
 
-const Float GaussLobattoIntegrator::m_alpha = (Float) std::sqrt(2.0/3.0); 
+const Float GaussLobattoIntegrator::m_alpha = (Float) std::sqrt(2.0/3.0);
 const Float GaussLobattoIntegrator::m_beta  = (Float) (1.0/std::sqrt(5.0));
-const Float GaussLobattoIntegrator::m_x1	= (Float) 0.94288241569547971906; 
+const Float GaussLobattoIntegrator::m_x1	= (Float) 0.94288241569547971906;
 const Float GaussLobattoIntegrator::m_x2	= (Float) 0.64185334234578130578;
 const Float GaussLobattoIntegrator::m_x3	= (Float) 0.23638319966214988028;
 
 GaussLobattoIntegrator::GaussLobattoIntegrator(size_t maxEvals,
 	Float absError, Float relError, bool useConvergenceEstimate, bool warn)
-	: m_absError(absError), 
+	: m_absError(absError),
 	  m_relError(relError),
 	  m_maxEvals(maxEvals),
 	  m_useConvergenceEstimate(useConvergenceEstimate),
@@ -265,7 +265,7 @@ Float GaussLobattoIntegrator::integrate(
 
 Float GaussLobattoIntegrator::calculateAbsTolerance(
 		const boost::function<Float (Float)>& f, Float a, Float b, size_t &evals) const {
-	const Float m = (a+b)/2; 
+	const Float m = (a+b)/2;
 	const Float h = (b-a)/2;
 	const Float y1 = f(a);
 	const Float y3 = f(m-m_alpha*h);
@@ -279,9 +279,9 @@ Float GaussLobattoIntegrator::calculateAbsTolerance(
 				 + (Float) 0.0942738402188500455*(f(m-m_x1*h)+f(m+m_x1*h))
 				 + (Float) 0.1550719873365853963*(y3+y11)
 				 + (Float) 0.1888215739601824544*(f(m-m_x2*h)+ f(m+m_x2*h))
-				 + (Float) 0.1997734052268585268*(y5+y9) 
+				 + (Float) 0.1997734052268585268*(y5+y9)
 				 + (Float) 0.2249264653333395270*(f(m-m_x3*h)+f(m+m_x3*h))
-				 + (Float) 0.2426110719014077338*y7);  
+				 + (Float) 0.2426110719014077338*y7);
 	evals += 13;
 
 	Float r = 1.0;
@@ -290,7 +290,7 @@ Float GaussLobattoIntegrator::calculateAbsTolerance(
 		const Float integral1 = (h/1470)*
 			(77*(y1+y13) + 432*(y3+y11) + 625*(y5+y9) + 672*y7);
 
-		if (std::abs(integral2-acc) != 0.0) 
+		if (std::abs(integral2-acc) != 0.0)
 			r = std::abs(integral1-acc)/std::abs(integral2-acc);
 		if (r == 0.0 || r > 1.0)
 			r = 1.0;
@@ -303,7 +303,7 @@ Float GaussLobattoIntegrator::calculateAbsTolerance(
 			/ (r*std::numeric_limits<Float>::epsilon());
 
 	if (m_absError != 0)
-		result = std::min(result, m_absError 
+		result = std::min(result, m_absError
 			/ (r*std::numeric_limits<Float>::epsilon()));
 
 	return result;
@@ -313,14 +313,14 @@ Float GaussLobattoIntegrator::adaptiveGaussLobattoStep(
 								 const boost::function<Float (Float)>& f,
 								 Float a, Float b, Float fa, Float fb,
 								 Float acc, size_t &evals) const {
-	const Float h=(b-a)/2; 
+	const Float h=(b-a)/2;
 	const Float m=(a+b)/2;
-	
-	const Float mll=m-m_alpha*h; 
-	const Float ml =m-m_beta*h; 
-	const Float mr =m+m_beta*h; 
+
+	const Float mll=m-m_alpha*h;
+	const Float ml =m-m_beta*h;
+	const Float mr =m+m_beta*h;
 	const Float mrr=m+m_alpha*h;
-	
+
 	const Float fmll= f(mll);
 	const Float fml = f(ml);
 	const Float fm  = f(m);
@@ -333,14 +333,14 @@ Float GaussLobattoIntegrator::adaptiveGaussLobattoStep(
 
 	evals += 5;
 
-	if (evals >= m_maxEvals) 
+	if (evals >= m_maxEvals)
 		return integral1;
 
 	Float dist = acc + (integral1-integral2);
 	if (dist==acc || mll<=a || b<=mrr) {
 		return integral1;
 	} else {
-		return  adaptiveGaussLobattoStep(f,a,mll,fa,fmll,acc,evals)  
+		return  adaptiveGaussLobattoStep(f,a,mll,fa,fmll,acc,evals)
 			  + adaptiveGaussLobattoStep(f,mll,ml,fmll,fml,acc,evals)
 			  + adaptiveGaussLobattoStep(f,ml,m,fml,fm,acc,evals)
 			  + adaptiveGaussLobattoStep(f,m,mr,fm,fmr,acc,evals)
@@ -396,7 +396,7 @@ Float GaussLobattoIntegrator::adaptiveGaussLobattoStep(
    3) Goto (1).
 
  The basic algorithm is based on the adaptive cubature described in
- 
+
      A. C. Genz and A. A. Malik, "An adaptive algorithm for numeric
      integration over an N-dimensional rectangular region,"
      J. Comput. Appl. Math. 6 (4), 295-302 (1980).
@@ -534,7 +534,7 @@ static bool cut_region(region *R, region *R2) {
 struct rule_s; /* forward declaration */
 
 typedef NDIntegrator::EResult (*evalError_func)(struct rule_s *r,
-			      unsigned int fdim, const VectorizedIntegrand &f, 
+			      unsigned int fdim, const VectorizedIntegrand &f,
 			      unsigned int nR, region *R);
 typedef void (*destroy_func)(struct rule_s *r);
 
@@ -565,7 +565,7 @@ static NDIntegrator::EResult alloc_rule_pts(rule *r, unsigned int num_regions) {
 		/* allocate extra so that repeatedly calling alloc_rule_pts with
 		   growing num_regions only needs a logarithmic number of allocations */
 		num_regions *= 2;
-		r->pts = (Float *) malloc(sizeof(Float) * 
+		r->pts = (Float *) malloc(sizeof(Float) *
 			     (num_regions * r->num_points * (r->dim + r->fdim)));
 		if (r->fdim + r->dim > 0 && !r->pts)
 			return NDIntegrator::EFailure;
@@ -595,7 +595,7 @@ static rule *make_rule(size_t sz, /* >= sizeof(rule) */
 }
 
 /* note: all regions must have same fdim */
-static int eval_regions(unsigned int nR, region *R, 
+static int eval_regions(unsigned int nR, region *R,
 			const VectorizedIntegrand & f, rule *r)
 {
 	unsigned int iR;
@@ -773,10 +773,10 @@ static NDIntegrator::EResult rule75genzmalik_evalError(rule *r_, unsigned int fd
 	for (unsigned int iR = 0; iR < nR; ++iR) {
 		const Float *center = R[iR].h.data;
 		const Float *halfwidth = R[iR].h.data + dim;
-	  
+
 		for (i = 0; i < dim; ++i)
 			r->p[i] = center[i];
-	  
+
 		for (i = 0; i < dim; ++i)
 			r->widthLambda2[i] = halfwidth[i] * lambda2;
 		for (i = 0; i < dim; ++i)
@@ -784,7 +784,7 @@ static NDIntegrator::EResult rule75genzmalik_evalError(rule *r_, unsigned int fd
 
 		/* Evaluate points in the center, in (lambda2,0,...,0) and
 			(lambda3=lambda4, 0,...,0).  */
-		evalR0_0fs4d(pts + npts*dim, dim, r->p, center, 
+		evalR0_0fs4d(pts + npts*dim, dim, r->p, center,
 			r->widthLambda2, r->widthLambda);
 		npts += num0_0(dim) + 2 * numR0_0fs(dim);
 
@@ -802,8 +802,8 @@ static NDIntegrator::EResult rule75genzmalik_evalError(rule *r_, unsigned int fd
 	/* Evaluate the const Integrand & function(s) at all the points */
 	f((size_t) npts, pts, vals);
 
-	/* we are done with the points, and so we can re-use the pts 
-	   array to store the maximum difference diff[i] in each dimension 
+	/* we are done with the points, and so we can re-use the pts
+	   array to store the maximum difference diff[i] in each dimension
 	   for each hypercube */
 	diff = pts;
 	for (i = 0; i < dim * nR; ++i)
@@ -814,7 +814,7 @@ static NDIntegrator::EResult rule75genzmalik_evalError(rule *r_, unsigned int fd
 			Float result, res5th;
 			Float val0, sum2=0, sum3=0, sum4=0, sum5=0;
 			unsigned int k, k0 = 0;
-	       
+
 			/* accumulate j-th function values into j-th integrals
 			   NOTE: this relies on the ordering of the eval functions
 			   above, as well as on the internal structure of
@@ -828,11 +828,11 @@ static NDIntegrator::EResult rule75genzmalik_evalError(rule *r_, unsigned int fd
 				Float v1 = vals[(k0 + 4*k) + 1];
 				Float v2 = vals[(k0 + 4*k) + 2];
 				Float v3 = vals[(k0 + 4*k) + 3];
-		    
+
 				sum2 += v0 + v1;
 				sum3 += v2 + v3;
-		    
-				diff[iR * dim + k] += 
+
+				diff[iR * dim + k] +=
 					std::abs(v0 + v1 - 2*val0 - ratio * (v2 + v3 - 2*val0));
 			}
 			k0 += 4*k;
@@ -840,10 +840,10 @@ static NDIntegrator::EResult rule75genzmalik_evalError(rule *r_, unsigned int fd
 			for (k = 0; k < numRR0_0fs(dim); ++k)
 				sum4 += vals[k0 + k];
 			k0 += k;
-	       
+
 			for (k = 0; k < numR_Rfs(dim); ++k)
 				sum5 += vals[k0 + k];
-	       
+
 			/* Calculate fifth and seventh order results */
 			result = R[iR].h.vol * (r->weight1 * val0 + weight2 * sum2 + r->weight3 * sum3 + weight4 * sum4 + r->weight5 * sum5);
 			res5th = R[iR].h.vol * (r->weightE1 * val0 + weightE2 * sum2 + r->weightE3 * sum3 + weightE4 * sum4);
@@ -900,7 +900,7 @@ static rule *make_rule75genzmalik(unsigned int dim, unsigned int fdim) {
 	r->p = (Float *) malloc(sizeof(Float) * dim * 3);
 	if (!r->p) {
 		destroy_rule((rule *) r);
-		return NULL; 
+		return NULL;
 	}
 	r->widthLambda = r->p + dim;
 	r->widthLambda2 = r->p + 2 * dim;
@@ -927,7 +927,7 @@ static NDIntegrator::EResult rule15gauss_evalError(rule *r,
 		(Float) 0.405845151377397166906606412076961,
 		(Float) 0.207784955007898467600689403773245,
 		(Float) 0.000000000000000000000000000000000
-		/* xgk[1], xgk[3], ... abscissae of the 7-point gauss rule. 
+		/* xgk[1], xgk[3], ... abscissae of the 7-point gauss rule.
 		   xgk[0], xgk[2], ... to optimally extend the 7-point gauss rule */
 	};
 	static const Float wg[4] = {  /* weights of the 7-point gauss rule */
@@ -957,7 +957,7 @@ static NDIntegrator::EResult rule15gauss_evalError(rule *r,
 	for (unsigned int iR = 0; iR < nR; ++iR) {
 		const Float center = R[iR].h.data[0];
 		const Float halfwidth = R[iR].h.data[1];
-		
+
 		pts[npts++] = center;
 
 		for (j = 0; j < (n - 1) / 2; ++j) {
@@ -977,7 +977,7 @@ static NDIntegrator::EResult rule15gauss_evalError(rule *r,
 	}
 
 	f((size_t) npts, pts, vals);
- 
+
 	for (unsigned int k = 0; k < fdim; ++k) {
 		for (unsigned int iR = 0; iR < nR; ++iR) {
 			const Float halfwidth = R[iR].h.data[1];
@@ -1085,7 +1085,7 @@ static heap heap_alloc(unsigned int nalloc, unsigned int fdim) {
 	h.fdim = fdim;
 	h.ee = (esterr *) malloc(sizeof(esterr) * fdim);
 	if (h.ee) {
-		for (i = 0; i < fdim; ++i) 
+		for (i = 0; i < fdim; ++i)
 			h.ee[i].val = h.ee[i].err = 0;
 		heap_resize(&h, nalloc);
 	}
@@ -1184,7 +1184,7 @@ static NDIntegrator::EResult ruleadapt_integrate(rule *r, unsigned int fdim,
 	ee = (esterr *) malloc(sizeof(esterr) * fdim);
 	if (!ee)
 		goto bad;
-     
+
 	nR_alloc = 2;
 	R = (region *) malloc(sizeof(region) * nR_alloc);
 	if (!R)
@@ -1193,7 +1193,7 @@ static NDIntegrator::EResult ruleadapt_integrate(rule *r, unsigned int fdim,
 	if (!R[0].ee || eval_regions(1, R, f, r) || heap_push(&regions, R[0]))
 		goto bad;
 	numEval += r->num_points;
-     
+
 	while (numEval < maxEval || !maxEval) {
 		for (j = 0; j < fdim && (regions.ee[j].err <= reqAbsError ||
 			relError(regions.ee[j]) <= reqRelError); ++j)
@@ -1207,8 +1207,8 @@ static NDIntegrator::EResult ruleadapt_integrate(rule *r, unsigned int fdim,
 			   adapted from I. Gladwell, "Vectorization of one dimensional
 			   quadrature codes," pp. 230--238 in _Numerical Integration. Recent
 			   Developments, Software and Applications_, G. Fairweather and
-			   P. M. Keast, eds., NATO ASI Series C203, Dordrecht (1987), as 
-			   described in J. M. Bull and T. L. Freeman, "Parallel Globally 
+			   P. M. Keast, eds., NATO ASI Series C203, Dordrecht (1987), as
+			   described in J. M. Bull and T. L. Freeman, "Parallel Globally
 			   Adaptive Algorithms for Multi-dimensional Integration,"
 			   http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.42.6638
 
@@ -1264,9 +1264,9 @@ static NDIntegrator::EResult ruleadapt_integrate(rule *r, unsigned int fdim,
 
      /* re-sum integral and errors */
 	for (j = 0; j < fdim; ++j)
-		val[j] = err[j] = 0;  
+		val[j] = err[j] = 0;
 	for (i = 0; i < regions.n; ++i) {
-		for (j = 0; j < fdim; ++j) { 
+		for (j = 0; j < fdim; ++j) {
 			val[j] += regions.items[i].ee[j].val;
 			err[j] += regions.items[i].ee[j].err;
 		}
@@ -1286,9 +1286,9 @@ bad:
 	return NDIntegrator::EFailure;
 }
 
-static NDIntegrator::EResult integrate(unsigned fdim, const VectorizedIntegrand & f, 
-		     unsigned dim, const Float *xmin, const Float *xmax, 
-		     size_t maxEval, Float reqAbsError, Float reqRelError, 
+static NDIntegrator::EResult integrate(unsigned fdim, const VectorizedIntegrand & f,
+		     unsigned dim, const Float *xmin, const Float *xmax,
+		     size_t maxEval, Float reqAbsError, Float reqRelError,
 		     Float *val, Float *err, size_t &numEval, int parallel) {
 	NDIntegrator::EResult status;
 
@@ -1303,10 +1303,10 @@ static NDIntegrator::EResult integrate(unsigned fdim, const VectorizedIntegrand 
 	}
 	rule *r = dim == 1 ? make_rule15gauss(dim, fdim)
 		: make_rule75genzmalik(dim, fdim);
-	if (!r) { 
+	if (!r) {
 		for (unsigned int i = 0; i < fdim; ++i) {
 			val[i] = 0;
-			err[i] = std::numeric_limits<Float>::infinity(); 
+			err[i] = std::numeric_limits<Float>::infinity();
 		}
 		return NDIntegrator::EFailure;
 	}
@@ -1345,11 +1345,11 @@ private:
 };
 
 NDIntegrator::NDIntegrator(size_t fDim, size_t dim,
-			size_t maxEvals, Float absError, Float relError) 
+			size_t maxEvals, Float absError, Float relError)
  : m_fdim(fDim), m_dim(dim), m_maxEvals(maxEvals), m_absError(absError),
   m_relError(relError) { }
 
-NDIntegrator::EResult NDIntegrator::integrate(const Integrand &f, const Float *min, 
+NDIntegrator::EResult NDIntegrator::integrate(const Integrand &f, const Float *min,
 		const Float *max, Float *result, Float *error, size_t *_evals) const {
 	VectorizationAdapter adapter(f, m_fdim, m_dim);
 	size_t evals = 0;
@@ -1361,7 +1361,7 @@ NDIntegrator::EResult NDIntegrator::integrate(const Integrand &f, const Float *m
 	return retval;
 }
 
-NDIntegrator::EResult NDIntegrator::integrateVectorized(const VectorizedIntegrand &f, const Float *min, 
+NDIntegrator::EResult NDIntegrator::integrateVectorized(const VectorizedIntegrand &f, const Float *min,
 		const Float *max, Float *result, Float *error, size_t *_evals) const {
 	size_t evals = 0;
 	EResult retval = mitsuba::integrate((unsigned int) m_fdim, f, (unsigned int) m_dim,

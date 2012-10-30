@@ -26,17 +26,17 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{maxDepth}{\Integer}{Specifies the longest path depth
  *         in the generated output image (where \code{-1} corresponds to $\infty$).
  *	       A value of \code{1} will only render directly visible light sources.
- *	       \code{2} will lead to single-bounce (direct-only) illumination, 
+ *	       \code{2} will lead to single-bounce (direct-only) illumination,
  *	       and so on. \default{\code{-1}}
  *	   }
- *	   \parameter{rrDepth}{\Integer}{Specifies the minimum path depth, after 
- *	      which the implementation will start to use the ``russian roulette'' 
+ *	   \parameter{rrDepth}{\Integer}{Specifies the minimum path depth, after
+ *	      which the implementation will start to use the ``russian roulette''
  *	      path termination criterion. \default{\code{5}}
  *	   }
  *	   \parameter{granularity}{\Integer}{
- *        Specifies the work unit granularity used to parallize the the particle 
+ *        Specifies the work unit granularity used to parallize the the particle
  *        tracing task. This should be set high enough so that accumulating
- *        partially exposed images (and potentially sending them over the network) 
+ *        partially exposed images (and potentially sending them over the network)
  *        is not the bottleneck.
  *        \default{200K particles per work unit, i.e. \code{200000}}
  *     }
@@ -48,30 +48,30 @@ MTS_NAMESPACE_BEGIN
  *     }
  * }
  *
- * This plugin implements a simple adjoint particle tracer. It does 
+ * This plugin implements a simple adjoint particle tracer. It does
  * essentially the exact opposite of the simple volumetric path tracer
- * (\pluginref[volpathsimple]{volpath\_simple}): instead of tracing rays from 
- * the sensor and attempting to connect them to the light source, this 
- * integrator shoots particles from the light source and attempts to connect 
+ * (\pluginref[volpathsimple]{volpath\_simple}): instead of tracing rays from
+ * the sensor and attempting to connect them to the light source, this
+ * integrator shoots particles from the light source and attempts to connect
  * them to the sensor.
  *
  * Usually, this is a relatively useless rendering technique due to
  * its high variance, but there are some cases where it excels.
- * In particular, it does a good job on scenes where most scattering 
+ * In particular, it does a good job on scenes where most scattering
  * events are directly visible to the camera.
  *
- * When rendering with a finite-aperture sensor (e.g. \pluginref{thinlens}) 
- * this integrator is able to intersect the actual aperture, which allows 
+ * When rendering with a finite-aperture sensor (e.g. \pluginref{thinlens})
+ * this integrator is able to intersect the actual aperture, which allows
  * it to handle certain caustic paths that would otherwise not be visible.
  *
  * It also supports a specialized ``brute force'' mode, where the integrator
  * does not attempt to create connections to the sensor and purely relies on
  * hitting it via ray tracing. This is one of the worst conceivable rendering
- * and not recommended for any applications. It is mainly included for 
+ * and not recommended for any applications. It is mainly included for
  * debugging purposes.
  *
  * The number of traced particles is given by the number of ``samples per
- * pixel'' of the sample generator times the pixel count of the output image. 
+ * pixel'' of the sample generator times the pixel count of the output image.
  * For instance, 16 samples per pixel on a 512$\times$512 image will cause 4M particles
  * to be generated.
  *
@@ -88,11 +88,11 @@ public:
 
 		/* Longest visualized path length (<tt>-1</tt>=infinite).
 		   A value of <tt>1</tt> will produce a black image, since this integrator
-		   does not visualize directly visible light sources, 
+		   does not visualize directly visible light sources,
 		   <tt>2</tt> will lead to single-bounce (direct-only) illumination, and so on. */
 		m_maxDepth = props.getInteger("maxDepth", -1);
 
-		/* Granularity of the work units used in parallelizing 
+		/* Granularity of the work units used in parallelizing
 		   the particle tracing task (default: 200K samples).
 		   Should be high enough so that sending and accumulating
 		   the partially exposed films is not the bottleneck. */
@@ -107,8 +107,8 @@ public:
 		if (m_maxDepth <= 0 && m_maxDepth != -1)
 			Log(EError, "'maxDepth' must be set to -1 (infinite) or a value greater than zero!");
 	}
-	
-	AdjointParticleTracer(Stream *stream, InstanceManager *manager) 
+
+	AdjointParticleTracer(Stream *stream, InstanceManager *manager)
 		: Integrator(stream, manager) {
 		m_maxDepth = stream->readInt();
 		m_rrDepth = stream->readInt();
@@ -142,15 +142,15 @@ public:
 		Scheduler::getInstance()->cancel(m_process);
 	}
 
-	bool render(Scene *scene, RenderQueue *queue, 
+	bool render(Scene *scene, RenderQueue *queue,
 		const RenderJob *job, int sceneResID, int sensorResID, int samplerResID) {
 		ref<Scheduler> scheduler = Scheduler::getInstance();
 		ref<Sensor> sensor = scene->getSensor();
 		const Film *film = sensor->getFilm();
 		size_t sampleCount = scene->getSampler()->getSampleCount();
 		size_t nCores = scheduler->getCoreCount();
-		Log(EInfo, "Starting render job (%ix%i, " SIZE_T_FMT " samples, " SIZE_T_FMT 
-			" %s, " SSE_STR ") ..", film->getCropSize().x, film->getCropSize().y, 
+		Log(EInfo, "Starting render job (%ix%i, " SIZE_T_FMT " samples, " SIZE_T_FMT
+			" %s, " SSE_STR ") ..", film->getCropSize().x, film->getCropSize().y,
 			sampleCount, nCores, nCores == 1 ? "core" : "cores");
 
 		int maxPtracerDepth = m_maxDepth - 1;

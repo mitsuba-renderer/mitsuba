@@ -41,7 +41,7 @@ public:
 	void testF2(const Float *in, Float *out) const {
 		*out = std::sin(*in);
 	}
-	
+
 	inline Float gauss3(Vector x, Float stddev) const {
 		return math::fastexp(-0.5f * dot(x, x)/stddev)/(std::pow(2*M_PI * stddev, (Float) 3 / (Float) 2));
 	}
@@ -49,7 +49,7 @@ public:
 	void testF3(size_t nPoints, const Float *in, Float *out) const {
 		for (size_t i=0; i<nPoints; ++i) {
 			Vector v(in[0], in[1], in[2]);
-			Float weight = 
+			Float weight =
 				(1 + v.x*v.x) / std::pow(1-v.x*v.x, 2) *
 				(1 + v.y*v.y) / std::pow(1-v.y*v.y, 2) *
 				(1 + v.z*v.z) / std::pow(1-v.z*v.z, 2);

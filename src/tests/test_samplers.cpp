@@ -70,7 +70,7 @@ public:
 		int pos = 0;
 		sampler->generate(Point2i(0));
 		for (int i=0; i<5; ++i) {
-			for (int j=0; j<6; ++j) 
+			for (int j=0; j<6; ++j)
 				assertEqualsEpsilon(sampler->next1D(), comparison[pos++], 1e-7);
 			sampler->advance();
 		}

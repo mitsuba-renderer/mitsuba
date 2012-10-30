@@ -60,7 +60,7 @@ Font::Font(EFont font) {
 	m_bitmap = new Bitmap(Bitmap::EPNG, pngStream);
 	for (int i=0; i<256; ++i) {
 		Glyph &g = m_glyphs[i];
-		
+
 		g.tx.x = dscStream->readSingle();
 		g.tx.y = dscStream->readSingle();
 		g.ts.x = dscStream->readSingle();

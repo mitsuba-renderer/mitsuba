@@ -27,12 +27,12 @@ MTS_NAMESPACE_BEGIN
 /**
  * \headerfile mitsuba/core/ref.h mitsuba/mitsuba.h
  * \brief Reference counting helper
- * 
- * The \a ref refeference template is a simple wrapper to store a 
+ *
+ * The \a ref refeference template is a simple wrapper to store a
  * pointer to an object. It takes care of increasing and decreasing
  * the reference count of the object. When the last reference goes
  * out of scope, the associated object will be deallocated.
- * 
+ *
  * \author Wenzel Jakob
  * \ingroup libcore
  */
@@ -61,7 +61,7 @@ public:
 			((Object *) m_ptr)->incRef();
 		return *this;
 	}
-	
+
 	/// Overwrite this reference with a pointer to another object
 	inline ref& operator= (T *ptr) {
 		if (m_ptr == ptr)
@@ -76,13 +76,13 @@ public:
 
 	/// Compare this reference with another reference
 	inline bool operator== (const ref &pref) const { return (m_ptr == pref.m_ptr); }
-	
+
 	/// Compare this reference with another reference
 	inline bool operator!= (const ref &pref) const { return (m_ptr != pref.m_ptr); }
-	
+
 	/// Compare this reference with a pointer
 	inline bool operator== (const T* ptr) const { return (m_ptr == ptr); }
-	
+
 	/// Compare this reference with a pointer
 	inline bool operator!= (const T* ptr) const { return (m_ptr != ptr); }
 
@@ -91,13 +91,13 @@ public:
 
 	/// Access the object referenced by this reference
 	inline T* operator-> () { return m_ptr; }
-	
+
 	/// Access the object referenced by this reference
 	inline const T* operator-> () const { return m_ptr; }
 
 	/// Return a C++ reference to the referenced object
 	inline T& operator*() { return *m_ptr; }
-	
+
 	/// Return a C++ reference to the referenced object
 	inline const T& operator*() const { return *m_ptr; }
 
@@ -106,7 +106,7 @@ public:
 
 	/// Return a pointer to the referenced object
 	inline T* get() { return m_ptr; }
-	
+
 	/// Return a pointer to the referenced object
 	inline const T* get() const { return m_ptr; }
 

@@ -24,8 +24,8 @@
 
 MTS_NAMESPACE_BEGIN
 
-/** \brief Utility class for creating different kinds of shadow maps (cube, 
- * directional, and paraboloid shadow maps) using hardware rasterization 
+/** \brief Utility class for creating different kinds of shadow maps (cube,
+ * directional, and paraboloid shadow maps) using hardware rasterization
  *
  * \ingroup libhw
  */
@@ -79,7 +79,7 @@ public:
 	 * \param trafo
 	 *    View transformation of the source
 	 */
-	void render(Renderer *renderer, GPUTexture *shadowMap, EShadowMapType type, 
+	void render(Renderer *renderer, GPUTexture *shadowMap, EShadowMapType type,
 		const Transform &trafo, Float minDepth, Float maxDepth,
 		const std::vector<Renderer::TransformedGPUGeometry> &geo);
 

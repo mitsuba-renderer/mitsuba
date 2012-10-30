@@ -20,13 +20,13 @@
 
 MTS_NAMESPACE_BEGIN
 
-ImageBlock::ImageBlock(Bitmap::EPixelFormat fmt, const Vector2i &size, 
-		const ReconstructionFilter *filter, int channels) : m_offset(0), 
+ImageBlock::ImageBlock(Bitmap::EPixelFormat fmt, const Vector2i &size,
+		const ReconstructionFilter *filter, int channels) : m_offset(0),
 		m_size(size), m_filter(filter), m_weightsX(NULL), m_weightsY(NULL) {
 	m_borderSize = filter ? filter->getBorderSize() : 0;
 
 	/* Allocate a small bitmap data structure for the block */
-	m_bitmap = new Bitmap(fmt, Bitmap::EFloat, 
+	m_bitmap = new Bitmap(fmt, Bitmap::EFloat,
 		size + Vector2i(2 * m_borderSize), channels);
 
 	if (filter) {
@@ -46,7 +46,7 @@ void ImageBlock::load(Stream *stream) {
 	m_offset = Point2i(stream);
 	m_size = Vector2i(stream);
 	stream->readFloatArray(
-		m_bitmap->getFloatData(), 
+		m_bitmap->getFloatData(),
 		(size_t) m_bitmap->getSize().x *
 		(size_t) m_bitmap->getSize().y * m_bitmap->getChannelCount());
 }
@@ -55,7 +55,7 @@ void ImageBlock::save(Stream *stream) const {
 	m_offset.serialize(stream);
 	m_size.serialize(stream);
 	stream->writeFloatArray(
-		m_bitmap->getFloatData(), 
+		m_bitmap->getFloatData(),
 		(size_t) m_bitmap->getSize().x *
 		(size_t) m_bitmap->getSize().y * m_bitmap->getChannelCount());
 }

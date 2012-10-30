@@ -23,13 +23,13 @@ MTS_NAMESPACE_BEGIN
 /**
  * Separable cubic spline reconstruction filter by Mitchell and Netravali.
  * This is often a good compromise between sharpness and ringing.
- * 
- * D. Mitchell, A. Netravali, Reconstruction filters for computer graphics, 
+ *
+ * D. Mitchell, A. Netravali, Reconstruction filters for computer graphics,
  * Proceedings of SIGGRAPH 88, Computer Graphics 22(4), pp. 221-228, 1988.
  */
 class MitchellNetravaliFilter : public ReconstructionFilter {
 public:
-	MitchellNetravaliFilter(const Properties &props) 
+	MitchellNetravaliFilter(const Properties &props)
 		: ReconstructionFilter(props) {
 		/* Filter radius */
 		m_radius = 2.0f;
@@ -39,13 +39,13 @@ public:
 		m_C = props.getFloat("C", 1.0f / 3.0f);
 	}
 
-	MitchellNetravaliFilter(Stream *stream, InstanceManager *manager) 
+	MitchellNetravaliFilter(Stream *stream, InstanceManager *manager)
 		: ReconstructionFilter(stream, manager) {
 		m_B = stream->readFloat();
 		m_C = stream->readFloat();
 		configure();
 	}
- 
+
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		ReconstructionFilter::serialize(stream, manager);
 		stream->writeFloat(m_B);
@@ -58,7 +58,7 @@ public:
 		Float x2 = x*x, x3 = x2*x;
 
 		if (x < 1) {
-			return 1.0f/6.0f * ((12-9*m_B-6*m_C)*x3 
+			return 1.0f/6.0f * ((12-9*m_B-6*m_C)*x3
 					+ (-18+12*m_B+6*m_C) * x2 + (6-2*m_B));
 		} else if (x < 2) {
 			return 1.0f/6.0f * ((-m_B-6*m_C)*x3 + (6*m_B+30*m_C) * x2

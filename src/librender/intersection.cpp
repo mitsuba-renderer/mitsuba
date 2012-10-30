@@ -6,7 +6,7 @@ void Intersection::computePartials(const RayDifferential &ray) {
 	Float A[2][2], Bx[2], By[2], x[2];
 	int axes[2];
 
-	/* Compute the texture coordinates partials wrt. 
+	/* Compute the texture coordinates partials wrt.
 	   changes in the screen-space position. Based on PBRT */
 	if (hasUVPartials || !ray.hasDifferentials)
 		return;
@@ -61,7 +61,7 @@ void Intersection::computePartials(const RayDifferential &ray) {
 	Bx[1] = px[axes[1]] - p[axes[1]];
 	By[0] = py[axes[0]] - p[axes[0]];
 	By[1] = py[axes[1]] - p[axes[1]];
-	
+
 	if (EXPECT_TAKEN(solveLinearSystem2x2(A, Bx, x))) {
 		dudx = x[0]; dvdx = x[1];
 	} else {

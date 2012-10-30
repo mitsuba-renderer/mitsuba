@@ -15,7 +15,7 @@
 
 #include <mitsuba/mitsuba.h>
 
-/* Use strict IEEE 754 floating point computations 
+/* Use strict IEEE 754 floating point computations
    for the following code */
 #pragma float_control(precise, on)
 
@@ -128,7 +128,7 @@ double nextafter(double x, double y) {
 	    y = x*x;
 	    if (y==x)
 			return y;
-		else 
+		else
 			return x; /* raise underflow flag */
 	}
 

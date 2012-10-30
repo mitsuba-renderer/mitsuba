@@ -37,7 +37,7 @@ MTS_NAMESPACE_BEGIN
  *         Denotes the radius of the camera's aperture in scene units.
  *     }
  *     \parameter{focusDistance}{\Float}{
- *         Denotes the world-space distance from the camera's aperture to the 
+ *         Denotes the world-space distance from the camera's aperture to the
  *         focal plane. \default{\code{0}}
  *     }
  *     \parameter{focalLength}{\String}{
@@ -48,24 +48,24 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{fov}{\Float}{
  *         An alternative to \code{focalLength}:
  *         denotes the camera's field of view in degrees---must be
- *         between 0 and 180, excluding the extremes. 
+ *         between 0 and 180, excluding the extremes.
  *     }
  *     \parameter{fovAxis}{\String}{
  *         When the parameter \code{fov} is given (and only then),
- *         this parameter further specifies the image axis, to 
+ *         this parameter further specifies the image axis, to
  *         which it applies.
  *         \begin{enumerate}[(i)]
- *             \item \code{\textbf{x}}: \code{fov} maps to the 
+ *             \item \code{\textbf{x}}: \code{fov} maps to the
  *                 \code{x}-axis in screen space.\vspace{-1mm}
- *             \item \code{\textbf{y}}: \code{fov} maps to the 
+ *             \item \code{\textbf{y}}: \code{fov} maps to the
  *                 \code{y}-axis in screen space.\vspace{-1mm}
  *             \item \code{\textbf{diagonal}}: \code{fov}
  *                maps to the screen diagonal.\vspace{-1mm}
  *             \item \code{\textbf{smaller}}: \code{fov}
- *                maps to the smaller dimension 
+ *                maps to the smaller dimension
  *                (e.g. \code{x} when \code{width}<\code{height})\vspace{-1mm}
  *             \item \code{\textbf{larger}}: \code{fov}
- *                maps to the larger dimension 
+ *                maps to the larger dimension
  *                (e.g. \code{y} when \code{width}<\code{height})
  *                \vspace{-1mm}
  *         \end{enumerate}
@@ -78,7 +78,7 @@ MTS_NAMESPACE_BEGIN
  *     }
  *     \parameter{nearClip, farClip}{\Float}{
  *         Distance to the near/far clip
- *         planes.\default{\code{near\code}-\code{Clip=1e-2} (i.e. 
+ *         planes.\default{\code{near\code}-\code{Clip=1e-2} (i.e.
  *         \code{0.01}) and {\code{farClip=1e4} (i.e. \code{10000})}}
  *     }
  * }
@@ -89,15 +89,15 @@ MTS_NAMESPACE_BEGIN
  * \medrendering{A rendering of the Cornell box}{sensor_thinlens_2}
  * }
  *
- * This plugin implements a simple perspective camera model with a thin lens 
+ * This plugin implements a simple perspective camera model with a thin lens
  * at its circular aperture. It is very similar to the \pluginref{perspective} plugin
- * except that the extra lens element permits rendering with a 
+ * except that the extra lens element permits rendering with a
  * specifiable (i.e. non-infinite) depth of field. To configure this, it has two
  * extra parameters named \code{apertureRadius} and \code{focusDistance}.
  *
  * By default, the camera's field of view is specified using a 35mm film
- * equivalent focal length, which is first converted into a diagonal field 
- * of view and subsequently applied to the camera. This assumes that 
+ * equivalent focal length, which is first converted into a diagonal field
+ * of view and subsequently applied to the camera. This assumes that
  * the film's aspect ratio matches that of 35mm film (1.5:1), though the
  * parameter still behaves intuitively when this is not the case.
  * Alternatively, it is also possible to specify a field of view in degrees
@@ -137,12 +137,12 @@ public:
 			m_apertureRadius = Epsilon;
 		}
 
-		if (props.getTransform("toWorld", Transform()).hasScale()) 
+		if (props.getTransform("toWorld", Transform()).hasScale())
 			Log(EError, "Scale factors in the camera-to-world "
 				"transformation are not allowed!");
 	}
 
-	ThinLens(Stream *stream, InstanceManager *manager) 
+	ThinLens(Stream *stream, InstanceManager *manager)
 			: PerspectiveCamera(stream, manager) {
 		m_apertureRadius = stream->readFloat();
 		configure();
@@ -177,7 +177,7 @@ public:
 		 * 4+5. Translate and scale the coordinates once more to account
 		 *     for a cropping window (if there is any)
 		 */
-		m_cameraToSample = 
+		m_cameraToSample =
 			  Transform::scale(Vector(1.0f / relSize.x, 1.0f / relSize.y, 1.0f))
 			* Transform::translate(Vector(-relOffset.x, -relOffset.y, 0.0f))
 			* Transform::scale(Vector(-0.5f, -0.5f*m_aspect, 1.0f))
@@ -187,12 +187,12 @@ public:
 		m_sampleToCamera = m_cameraToSample.inverse();
 
 		/* Position differentials on the near plane */
-		m_dx = m_sampleToCamera(Point(m_invResolution.x, 0.0f, 0.0f)) 
+		m_dx = m_sampleToCamera(Point(m_invResolution.x, 0.0f, 0.0f))
 			 - m_sampleToCamera(Point(0.0f));
-		m_dy = m_sampleToCamera(Point(0.0f, m_invResolution.y, 0.0f)) 
+		m_dy = m_sampleToCamera(Point(0.0f, m_invResolution.y, 0.0f))
 			 - m_sampleToCamera(Point(0.0f));
 
-		/* Precompute some data for importance(). Please 
+		/* Precompute some data for importance(). Please
 		   look at that function for further details */
 		Point min(m_sampleToCamera(Point(0, 0, 0))),
 			  max(m_sampleToCamera(Point(1, 1, 0)));
@@ -212,20 +212,20 @@ public:
 	}
 
 	/**
-	 * \brief Compute the directional sensor response function 
+	 * \brief Compute the directional sensor response function
 	 * of the camera multiplied with the cosine foreshortening
 	 * factor associated with the image plane
 	 *
 	 * \param p
 	 *     A position on the aperture
 	 *
-	 * \param d 
+	 * \param d
 	 *     A normalized direction vector from the aperture position to the
 	 *     reference point in question (all in local camera space)
 	 *
 	 * \param sample
-	 *     Optional: a pointer to a 2D point data structure, which will be 
-	 *     used to return the fractional pixel position associated with the 
+	 *     Optional: a pointer to a 2D point data structure, which will be
+	 *     used to return the fractional pixel position associated with the
 	 *     reference point
 	 */
 	inline Float importance(const Point &p, const Vector &d, Point2 *sample = NULL) const {
@@ -236,14 +236,14 @@ public:
 
 		      A = (2 * tan(0.5 * xfov in radians))^2 / aspect
 
-		   Since we allow crop regions, the actual visible area is 
+		   Since we allow crop regions, the actual visible area is
 		   potentially reduced:
 
 		      A' = A * (cropX / filmX) * (cropY / filmY)
 
 		   Perspective transformations of such aligned rectangles produce
-		   an equivalent scaled (but otherwise undistorted) rectangle 
-		   in screen space. This means that a strategy, which uniformly 
+		   an equivalent scaled (but otherwise undistorted) rectangle
+		   in screen space. This means that a strategy, which uniformly
 		   generates samples in screen space has an associated area
 		   density of 1/A' on this rectangle.
 
@@ -255,7 +255,7 @@ public:
 		   where theta is the angle that the unit direction vector from
 		   the origin to P makes with the rectangle. Since
 
-		      distance(P, origin)^2 = Px^2 + Py^2 + 1 
+		      distance(P, origin)^2 = Px^2 + Py^2 + 1
 
 		   and
 
@@ -275,10 +275,10 @@ public:
 		Float invCosTheta = 1.0f / cosTheta;
 
 		/* Check if the associated pixel is visible */
-		Point scr = m_cameraToSample(p 
+		Point scr = m_cameraToSample(p
 			+ d * (m_focusDistance*invCosTheta));
 		if (scr.x < 0 || scr.x > 1 ||
-			scr.y < 0 || scr.y > 1) 
+			scr.y < 0 || scr.y > 1)
 			return 0.0f;
 
 		if (sample) {
@@ -286,7 +286,7 @@ public:
 			sample->y = scr.y * m_resolution.y;
 		}
 
-		return m_normalization * invCosTheta * 
+		return m_normalization * invCosTheta *
 			invCosTheta * invCosTheta;
 	}
 
@@ -296,7 +296,7 @@ public:
 			* m_apertureRadius;
 		ray.time = sampleTime(timeSample);
 
-		/* Compute the corresponding position on the 
+		/* Compute the corresponding position on the
 		   near plane (in local camera space) */
 		Point nearP = m_sampleToCamera(Point(
 			pixelSample.x * m_invResolution.x,
@@ -327,7 +327,7 @@ public:
 			* m_apertureRadius;
 		ray.time = sampleTime(timeSample);
 
-		/* Compute the corresponding position on the 
+		/* Compute the corresponding position on the
 		   near plane (in local camera space) */
 		Point nearP = m_sampleToCamera(Point(
 			pixelSample.x * m_invResolution.x,
@@ -383,7 +383,7 @@ public:
 		return (pRec.measure == EArea) ? m_aperturePdf : 0.0f;
 	}
 
-	Spectrum sampleDirection(DirectionSamplingRecord &dRec, 
+	Spectrum sampleDirection(DirectionSamplingRecord &dRec,
 			PositionSamplingRecord &pRec,
 			const Point2 &sample, const Point2 *extra) const {
 		const Transform &trafo = m_worldTransform->eval(pRec.time);
@@ -399,7 +399,7 @@ public:
 		pRec.uv = Point2(samplePos.x * m_resolution.x,
 			samplePos.y * m_resolution.y);
 
-		/* Compute the corresponding position on the 
+		/* Compute the corresponding position on the
 		   near plane (in local camera space) */
 		Point nearP = m_sampleToCamera(samplePos);
 		nearP.x = nearP.x * (m_focusDistance / nearP.z);
@@ -453,7 +453,7 @@ public:
 			* m_apertureRadius;
 		Point apertureP(tmp.x, tmp.y, 0);
 
-		/* Compute the normalized direction vector from the 
+		/* Compute the normalized direction vector from the
 		   aperture position to the reference point */
 		Vector localD(refP - apertureP);
 		Float dist = localD.length(),
@@ -473,7 +473,7 @@ public:
 		dRec.pdf = m_aperturePdf * dist*dist/(Frame::cosTheta(localD));
 		dRec.measure = ESolidAngle;
 
-		/* intentionally missing a cosine factor wrt. the aperture 
+		/* intentionally missing a cosine factor wrt. the aperture
 		   disk (it is already accounted for in importance()) */
 		return Spectrum(value * invDist * invDist);
 	}
@@ -491,7 +491,7 @@ public:
 			return 0.0f;
 	}
 
-	Transform getProjectionTransform(const Point2 &apertureSample, 
+	Transform getProjectionTransform(const Point2 &apertureSample,
 			const Point2 &aaSample) const {
 		Float right = std::tan(m_xfov * M_PI/360) * m_nearClip, left = -right;
 		Float top = right / m_aspect, bottom = -top;
@@ -508,7 +508,7 @@ public:
 			(top-bottom)/m_film->getSize().y * (aaSample.y-0.5f));
 
 		return m_clipTransform *
-			Transform::glFrustum(left+offset.x, right+offset.x, 
+			Transform::glFrustum(left+offset.x, right+offset.x,
 				bottom+offset.y, top+offset.y, m_nearClip, m_farClip)
 		  * Transform::translate(Vector(apertureP.x, apertureP.y, 0));
 	}
@@ -549,11 +549,11 @@ public:
 
 		Point screenSample = m_cameraToSample(intersection);
 		if (screenSample.x < 0 || screenSample.x > 1 ||
-			screenSample.y < 0 || screenSample.y > 1) 
+			screenSample.y < 0 || screenSample.y > 1)
 			return false;
 
 		samplePosition = Point2(
-				screenSample.x * m_resolution.x, 
+				screenSample.x * m_resolution.x,
 				screenSample.y * m_resolution.y);
 
 		return true;

@@ -83,15 +83,15 @@ public:
 
 		/* Determine the necessary random walk depths based on properties of
 		   the endpoints */
-		int emitterDepth = m_config.maxDepth, 
+		int emitterDepth = m_config.maxDepth,
 		    sensorDepth = m_config.maxDepth;
 
 		/* Go one extra step if the sensor can be intersected */
-		if (!m_scene->hasDegenerateSensor() && emitterDepth != -1) 
+		if (!m_scene->hasDegenerateSensor() && emitterDepth != -1)
 			++emitterDepth;
 
 		/* Go one extra step if there are emitters that can be intersected */
-		if (!m_scene->hasDegenerateEmitters() && sensorDepth != -1) 
+		if (!m_scene->hasDegenerateEmitters() && sensorDepth != -1)
 			++sensorDepth;
 
 		for (size_t i=0; i<m_hilbertCurve.getPointCount(); ++i) {
@@ -99,7 +99,7 @@ public:
 			m_sampler->generate(offset);
 
 			for (size_t j = 0; j<m_sampler->getSampleCount(); j++) {
-				if (stop) 
+				if (stop)
 					break;
 
 				if (needsTimeSample)
@@ -110,8 +110,8 @@ public:
 				sensorSubpath.initialize(m_scene, time, ERadiance, m_pool);
 
 				/* Perform a random walk using alternating steps on each path */
-				Path::alternatingRandomWalkFromPixel(m_scene, m_sampler, 
-					emitterSubpath, emitterDepth, sensorSubpath, 
+				Path::alternatingRandomWalkFromPixel(m_scene, m_sampler,
+					emitterSubpath, emitterDepth, sensorSubpath,
 					sensorDepth, offset, m_config.rrDepth, m_pool);
 
 				evaluate(result, emitterSubpath, sensorSubpath);
@@ -147,7 +147,7 @@ public:
 		for (size_t i=1; i<emitterSubpath.vertexCount(); ++i)
 			importanceWeights[i] = importanceWeights[i-1] *
 				emitterSubpath.vertex(i-1)->weight[EImportance] *
-				emitterSubpath.vertex(i-1)->rrWeight * 
+				emitterSubpath.vertex(i-1)->rrWeight *
 				emitterSubpath.edge(i-1)->weight[EImportance];
 
 		for (size_t i=1; i<sensorSubpath.vertexCount(); ++i)
@@ -160,18 +160,18 @@ public:
 		for (int s = (int) emitterSubpath.vertexCount()-1; s >= 0; --s) {
 			/* Determine the range of sensor vertices to be traversed,
 			   while respecting the specified maximum path length */
-			int minT = std::max(2-s, m_config.lightImage ? 0 : 2), 
+			int minT = std::max(2-s, m_config.lightImage ? 0 : 2),
 			    maxT = (int) sensorSubpath.vertexCount() - 1;
 			if (m_config.maxDepth != -1)
 				maxT = std::min(maxT, m_config.maxDepth + 1 - s);
 
 			for (int t = maxT; t >= minT; --t) {
-				PathVertex 
+				PathVertex
 					*vsPred = emitterSubpath.vertexOrNull(s-1),
 					*vtPred = sensorSubpath.vertexOrNull(t-1),
 					*vs = emitterSubpath.vertex(s),
 					*vt = sensorSubpath.vertex(t);
-				PathEdge   
+				PathEdge
 					*vsEdge = emitterSubpath.edgeOrNull(s-1),
 					*vtEdge = sensorSubpath.edgeOrNull(t-1);
 
@@ -190,7 +190,7 @@ public:
 				/* Will receive the path weight of the (s, t)-connection */
 				Spectrum value;
 
-				/* Account for the terms of the measurement contribution 
+				/* Account for the terms of the measurement contribution
 				   function that are coupled to the connection endpoints */
 				if (vs->isEmitterSupernode()) {
 					/* If possible, convert 'vt' into an emitter sample */
@@ -218,7 +218,7 @@ public:
 						if (vt->isDegenerate())
 							continue;
 						/* Generate a position on an emitter using direct sampling */
-						value = radianceWeights[t] * vt->sampleDirect(scene, m_sampler, 
+						value = radianceWeights[t] * vt->sampleDirect(scene, m_sampler,
 							&tempEndpoint, &tempEdge, &tempSample, EImportance);
 						if (value.isZero())
 							continue;
@@ -229,7 +229,7 @@ public:
 						if (vs->isDegenerate())
 							continue;
 						/* Generate a position on the sensor using direct sampling */
-						value = importanceWeights[s] * vs->sampleDirect(scene, m_sampler, 
+						value = importanceWeights[s] * vs->sampleDirect(scene, m_sampler,
 							&tempEndpoint, &tempEdge, &tempSample, ERadiance);
 						if (value.isZero())
 							continue;
@@ -257,10 +257,10 @@ public:
 				   the creation of additional vertices (index-matched boundaries etc.) */
 				int interactions = remaining; // backup
 				if (value.isZero() || !connectionEdge.pathConnectAndCollapse(
-						scene, vsEdge, vs, vt, vtEdge, interactions)) 
+						scene, vsEdge, vs, vt, vtEdge, interactions))
 					continue;
 
-				/* Account for the terms of the measurement contribution 
+				/* Account for the terms of the measurement contribution
 				   function that are coupled to the connection edge */
 				if (!sampleDirect)
 					value *= connectionEdge.evalCached(vs, vt, PathEdge::EGeneralizedGeometricTerm);
@@ -285,7 +285,7 @@ public:
 				if (sampleDirect) {
 					/* Now undo the previous change */
 					if (t == 1)
-						sensorSubpath.swapEndpoints(vtPred, vtEdge, vt); 
+						sensorSubpath.swapEndpoints(vtPred, vtEdge, vt);
 					else
 						emitterSubpath.swapEndpoints(vsPred, vsEdge, vs);
 				}
@@ -295,11 +295,11 @@ public:
 					continue;
 
 				#if BDPT_DEBUG == 1
-					/* When the debug mode is on, collect samples 
-					   separately for each sampling strategy. Note: the 
-					   following piece of code artificially increases the 
+					/* When the debug mode is on, collect samples
+					   separately for each sampling strategy. Note: the
+					   following piece of code artificially increases the
 					   exposure of longer paths */
-					Spectrum splatValue = value * (m_config.showWeighted 
+					Spectrum splatValue = value * (m_config.showWeighted
 						? miWeight : 1.0f);// * std::pow(2.0f, s+t-3.0f));
 					wr->putDebugSample(s, t, samplePos, splatValue);
 				#endif
@@ -365,7 +365,7 @@ void BDPTProcess::processResult(const WorkResult *wr, bool cancelled) {
 		const ImageBlock *lightImage = m_result->getLightImage();
 		m_result->put(result);
 		if (m_parent->isInteractive()) {
-			/* Modify the finished image block so that it includes the light image contributions, 
+			/* Modify the finished image block so that it includes the light image contributions,
 			   which creates a more intuitive preview of the rendering process. This is
 			   not 100% correct but doesn't matter, as the shown image will be properly re-developed
 			   every 2 seconds and once more when the rendering process finishes */
@@ -378,7 +378,7 @@ void BDPTProcess::processResult(const WorkResult *wr, bool cancelled) {
 			Vector2i size = block->getSize();
 
 			for (int y=0; y<size.y; ++y) {
-				const Float *source = sourceBitmap->getFloatData() 
+				const Float *source = sourceBitmap->getFloatData()
 					+ (offset.x + (y+offset.y) * sourceBitmap->getWidth()) * SPECTRUM_SAMPLES;
 				Float *dest = destBitmap->getFloatData()
 					+ (borderSize + (y + borderSize) * destBitmap->getWidth()) * (SPECTRUM_SAMPLES + 2);
@@ -395,10 +395,10 @@ void BDPTProcess::processResult(const WorkResult *wr, bool cancelled) {
 
 	m_film->put(block);
 
-	/* Re-develop the entire image every two seconds if partial results are 
-	   visible (e.g. in a graphical user interface). This only applies when 
+	/* Re-develop the entire image every two seconds if partial results are
+	   visible (e.g. in a graphical user interface). This only applies when
 	   there is a light image. */
-	bool developFilm = m_config.lightImage && 
+	bool developFilm = m_config.lightImage &&
 		(m_parent->isInteractive() && m_refreshTimer->getMilliseconds() > 2000);
 
 	m_queue->signalWorkEnd(m_parent, result->getImageBlock());

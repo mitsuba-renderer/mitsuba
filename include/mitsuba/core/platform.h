@@ -66,8 +66,8 @@
 #ifdef __MSVC__
 	#define MTS_DONT_EXPORT // not supported on MSVC
 	#define SIZE_T_FMT "%Iu"
-	#define BOOST_FILESYSTEM_NO_LIB 
-	#define BOOST_SYSTEM_NO_LIB 
+	#define BOOST_FILESYSTEM_NO_LIB
+	#define BOOST_SYSTEM_NO_LIB
 	#define MTS_EXPORT __declspec(dllexport)
 	#define MTS_IMPORT __declspec(dllimport)
 	#define MTS_MAY_ALIAS // not supported on Windows
@@ -159,7 +159,7 @@
 #endif
 
 /* Compile with Boost::Filesystem v3 */
-#define BOOST_FILESYSTEM_VERSION 3 
+#define BOOST_FILESYSTEM_VERSION 3
 
 #include <string>
 
@@ -186,8 +186,8 @@ extern MTS_EXPORT_CORE void __mts_set_appdefaults();
 #define MTS_AUTORELEASE_END() __mts_autorelease_end();
 #define MTS_AMBIGUOUS_SIZE_T 1
 #else
-#define MTS_AUTORELEASE_BEGIN() 
-#define MTS_AUTORELEASE_END() 
+#define MTS_AUTORELEASE_BEGIN()
+#define MTS_AUTORELEASE_END()
 #endif
 MTS_NAMESPACE_END
 

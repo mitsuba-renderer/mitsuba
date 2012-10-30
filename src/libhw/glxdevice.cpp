@@ -42,7 +42,7 @@ void GLXDevice::flip() {
 
 	X11Session *session = static_cast<X11Session *>(getSession());
 	glFinish();
-	if (m_doubleBuffer) 
+	if (m_doubleBuffer)
 		glXSwapBuffers(session->m_display, m_window);
 }
 

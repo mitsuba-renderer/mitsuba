@@ -4,7 +4,7 @@ This source is published under the following 3-clause BSD license.
 Copyright (c) 2012, Lukas Hosek and Alexander Wilkie
 All rights reserved.
 
-Redistribution and use in source and binary forms, with or without 
+Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
 
     * Redistributions of source code must retain the above copyright
@@ -12,8 +12,8 @@ modification, are permitted provided that the following conditions are met:
     * Redistributions in binary form must reproduce the above copyright
       notice, this list of conditions and the following disclaimer in the
       documentation and/or other materials provided with the distribution.
-    * None of the names of the contributors may be used to endorse or promote 
-      products derived from this software without specific prior written 
+    * None of the names of the contributors may be used to endorse or promote
+      products derived from this software without specific prior written
       permission.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
@@ -37,25 +37,25 @@ presented in the SIGGRAPH 2012 paper
 
            "An Analytic Model for Full Spectral Sky-Dome Radiance"
 
-                                    by 
+                                    by
 
                        Lukas Hosek and Alexander Wilkie
                 Charles University in Prague, Czech Republic
 
 
                         Version: 1.2, August 23rd, 2012
-                        
+
 Version history:
 
 1.2  RGB version added.
 
-1.1  The coefficients of the spectral model are now scaled so that the output 
-     is given in physical units: W / (m^-2 * sr * nm). Also, the output of the   
+1.1  The coefficients of the spectral model are now scaled so that the output
+     is given in physical units: W / (m^-2 * sr * nm). Also, the output of the
      XYZ model is now no longer scaled to the range [0...1]. Instead, it is
      the result of a simple conversion from spectral data via the CIE 2 degree
-     standard observer matching functions. Therefore, after multiplication 
+     standard observer matching functions. Therefore, after multiplication
      with 683 lm / W, the Y channel now corresponds to luminance in lm.
-     
+
 1.0  Initial release (May 11th, 2012).
 
 
@@ -68,9 +68,9 @@ an updated version of this code has been published!
 /*
 
 This code is taken from ART, a rendering research system written in a
-mix of C99 / Objective C. Since ART is not a small system and is intended to 
-be inter-operable with other libraries, and since C does not have namespaces, 
-the structures and functions in ART all have to have the somewhat wordy 
+mix of C99 / Objective C. Since ART is not a small system and is intended to
+be inter-operable with other libraries, and since C does not have namespaces,
+the structures and functions in ART all have to have the somewhat wordy
 canonical names that begin with Ar.../ar..., like those seen in this example.
 
 Usage information:
@@ -91,7 +91,7 @@ assume that "albedo" is defined as
 
     double  albedo[num_channels];
 
-with a ground albedo value between [0,1] for each channel. The solar elevation  
+with a ground albedo value between [0,1] for each channel. The solar elevation
 is given in radians.
 
     for ( unsigned int i = 0; i < num_channels; i++ )
@@ -119,7 +119,7 @@ on the skydome determined via the angles theta and gamma works as follows:
                 gamma,
                 channel_center[i]
               );
-              
+
 The variable "channel_center" is assumed to hold the channel center wavelengths
 for each of the num_channels samples of the spectrum we are building.
 
@@ -161,12 +161,12 @@ typedef struct ArHosekSkyModelState
 {
     ArHosekSkyModelConfiguration  configs[11];
     double                        radiances[11];
-} 
+}
 ArHosekSkyModelState;
 
 ArHosekSkyModelState  * arhosekskymodelstate_alloc_init(
-        const double  turbidity, 
-        const double  albedo, 
+        const double  turbidity,
+        const double  albedo,
         const double  elevation
         );
 
@@ -176,8 +176,8 @@ void arhosekskymodelstate_free(
 
 double arhosekskymodel_radiance(
         ArHosekSkyModelState  * state,
-        double                  theta, 
-        double                  gamma, 
+        double                  theta,
+        double                  gamma,
         double                  wavelength
         );
 
@@ -189,18 +189,18 @@ typedef struct ArHosekTristimSkyModelState
 {
     ArHosekSkyModelConfiguration  configs[3];
     double                        radiances[3];
-} 
+}
 ArHosekTristimSkyModelState;
 
 ArHosekTristimSkyModelState  * arhosek_xyz_skymodelstate_alloc_init(
-        const double  turbidity, 
-        const double  albedo, 
+        const double  turbidity,
+        const double  albedo,
         const double  elevation
         );
 
 ArHosekTristimSkyModelState  * arhosek_rgb_skymodelstate_alloc_init(
-        const double  turbidity, 
-        const double  albedo, 
+        const double  turbidity,
+        const double  albedo,
         const double  elevation
         );
 
@@ -210,7 +210,7 @@ void arhosek_tristim_skymodelstate_free(
 
 double arhosek_tristim_skymodel_radiance(
         ArHosekTristimSkyModelState * state,
-        double                  theta, 
-        double                  gamma, 
+        double                  theta,
+        double                  gamma,
         int                     channel
         );

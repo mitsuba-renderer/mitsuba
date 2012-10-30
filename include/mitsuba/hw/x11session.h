@@ -38,7 +38,7 @@ public:
 
 	/// Set the display name (eg. "localhost:0.0")
 	void setDisplayName(const std::string &displayname);
-	
+
 	/// Initialize the session
 	void init();
 
@@ -51,7 +51,7 @@ public:
 	/**
 	 * \brief Process all events and call event callbacks.
 	 *
-	 * This function will run until the \c stop parameter is set 
+	 * This function will run until the \c stop parameter is set
 	 * to \c true from within an event callback.
 	 */
 	void processEventsBlocking(bool &stop);

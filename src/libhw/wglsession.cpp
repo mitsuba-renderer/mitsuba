@@ -46,7 +46,7 @@ void WGLSession::init() {
 	wndclass.hCursor = LoadCursor(NULL, IDC_ARROW);
 	wndclass.hbrBackground = (HBRUSH) GetStockObject(NULL_BRUSH);
 	wndclass.lpszMenuName = NULL;
-	
+
 	for (int i=0; i<100; ++i) {
 		m_wndClassName = formatString("Mitsuba_WGL_%i", i);
 		wndclass.lpszClassName = m_wndClassName.c_str();
@@ -58,7 +58,7 @@ void WGLSession::init() {
 		}
 	}
 
-	if (!m_initialized) 
+	if (!m_initialized)
 		Log(EError, "Unable to register window class!");
 }
 
@@ -77,7 +77,7 @@ void WGLSession::processEvents() {
 	MSG msg;
 
 	while (PeekMessage(&msg, NULL, 0, 0, PM_NOREMOVE)) {
-		if (GetMessage(&msg, NULL, 0, 0) > 0) 
+		if (GetMessage(&msg, NULL, 0, 0) > 0)
 			DispatchMessage(&msg);
 	}
 }
@@ -88,7 +88,7 @@ void WGLSession::processEventsBlocking(bool &stop) {
 	while (true) {
 		if (!PeekMessage(&msg, NULL, 0, 0, PM_NOREMOVE) && stop)
 			break;
-		if (GetMessage(&msg, NULL, 0, 0) > 0) 
+		if (GetMessage(&msg, NULL, 0, 0) > 0)
 			DispatchMessage(&msg);
 	}
 }

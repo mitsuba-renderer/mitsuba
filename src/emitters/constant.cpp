@@ -32,7 +32,7 @@ MTS_NAMESPACE_BEGIN
  *         power per unit area per unit steradian.
  *     }
  *     \parameter{samplingWeight}{\Float}{
- *         Specifies the relative amount of samples 
+ *         Specifies the relative amount of samples
  *         allocated to this emitter. \default{1}
  *     }
  * }
@@ -40,7 +40,7 @@ MTS_NAMESPACE_BEGIN
  * This plugin implements a constant environment emitter, which surrounds
  * the scene and radiates diffuse illumination towards it. This is often
  * a good default light source when the goal is to visualize some loaded
- * geometry that uses basic (e.g. diffuse) materials. 
+ * geometry that uses basic (e.g. diffuse) materials.
  */
 class ConstantBackgroundEmitter : public Emitter {
 public:
@@ -49,7 +49,7 @@ public:
 		m_radiance = props.getSpectrum("radiance", Spectrum(1.0f));
 	}
 
-	ConstantBackgroundEmitter(Stream *stream, InstanceManager *manager) 
+	ConstantBackgroundEmitter(Stream *stream, InstanceManager *manager)
 	 : Emitter(stream, manager) {
 		m_radiance = Spectrum(stream);
 		m_sceneBSphere = BSphere(stream);
@@ -76,7 +76,7 @@ public:
 			configure();
 		}
 
-		Transform trafo = 
+		Transform trafo =
 			Transform::translate(Vector(m_sceneBSphere.center)) *
 			Transform::scale(Vector(m_sceneBSphere.radius));
 
@@ -93,7 +93,7 @@ public:
 
 	void configure() {
 		Emitter::configure();
-		Float surfaceArea = 4 * M_PI * 
+		Float surfaceArea = 4 * M_PI *
 			m_sceneBSphere.radius * m_sceneBSphere.radius;
 		m_invSurfaceArea = 1 / surfaceArea;
 		m_power = m_radiance * surfaceArea * M_PI;
@@ -126,7 +126,7 @@ public:
 		return m_invSurfaceArea;
 	}
 
-	Spectrum sampleDirection(DirectionSamplingRecord &dRec, 
+	Spectrum sampleDirection(DirectionSamplingRecord &dRec,
 			PositionSamplingRecord &pRec,
 			const Point2 &sample, const Point2 *extra) const {
 		Vector local = Warp::squareToCosineHemisphere(sample);
@@ -142,7 +142,7 @@ public:
 
 		if (dRec.measure != ESolidAngle || dp < 0)
 			dp = 0.0f;
-	
+
 		return Spectrum(INV_PI * dp);
 	}
 
@@ -170,7 +170,7 @@ public:
 		return m_radiance * (4 * M_PI * M_PI * m_geoBSphere.radius * m_geoBSphere.radius);
 	}
 
-	Spectrum sampleDirect(DirectSamplingRecord &dRec, 
+	Spectrum sampleDirect(DirectSamplingRecord &dRec,
 			const Point2 &sample) const {
 		Vector d;
 		Float pdf;
@@ -193,10 +193,10 @@ public:
 		Ray ray(dRec.ref, d, 0);
 		Float nearT, farT;
 		dRec.pdf = 0.0f;
-		if (!m_sceneBSphere.rayIntersect(ray, nearT, farT)) 
+		if (!m_sceneBSphere.rayIntersect(ray, nearT, farT))
 			return Spectrum(0.0f);
 
-		if (nearT >= 0 || farT <= 0) 
+		if (nearT >= 0 || farT <= 0)
 			return Spectrum(0.0f);
 
 		dRec.p = ray(farT);
@@ -217,24 +217,24 @@ public:
 	Float pdfDirect(const DirectSamplingRecord &dRec) const {
 		Float pdfSA;
 
-		if (!dRec.refN.isZero()) 
+		if (!dRec.refN.isZero())
 			pdfSA = INV_PI * std::max((Float) 0.0f, dot(dRec.d, dRec.refN));
-		else 
+		else
 			pdfSA = Warp::squareToUniformSpherePdf();
 
 		if (dRec.measure == ESolidAngle)
 			return pdfSA;
 		else if (dRec.measure == EArea)
-			return pdfSA * absDot(dRec.d, dRec.n) 
+			return pdfSA * absDot(dRec.d, dRec.n)
 				/ (dRec.dist * dRec.dist);
 		else
 			return 0.0f;
 	}
 
 	AABB getAABB() const {
-		/* The scene sets its bounding box so that it contains all shapes and 
+		/* The scene sets its bounding box so that it contains all shapes and
 		   emitters, but this particular emitter always wants to be *a little*
-		   bigger than the scene. To avoid a silly recursion, just return a 
+		   bigger than the scene. To avoid a silly recursion, just return a
 		   point here. */
 		return AABB(m_sceneBSphere.center);
 	}
@@ -247,7 +247,7 @@ public:
 		Float nearT, farT;
 
 		if (!m_sceneBSphere.rayIntersect(ray, nearT, farT) || nearT > 0 || farT < 0) {
-			Log(EWarn, "fillDirectSamplingRecord(): internal error!"); 
+			Log(EWarn, "fillDirectSamplingRecord(): internal error!");
 			return false;
 		}
 
@@ -285,15 +285,15 @@ protected:
 	Float m_invSurfaceArea;
 };
 
-// ================ Hardware shader implementation ================ 
+// ================ Hardware shader implementation ================
 
 class ConstantBackgroundEmitterShader : public Shader {
 public:
-	ConstantBackgroundEmitterShader(Renderer *renderer, const Spectrum &radiance) 
+	ConstantBackgroundEmitterShader(Renderer *renderer, const Spectrum &radiance)
 		: Shader(renderer, EEmitterShader), m_radiance(radiance * M_PI) {
 	}
 
-	void resolve(const GPUProgram *program, const std::string &evalName, 
+	void resolve(const GPUProgram *program, const std::string &evalName,
 			std::vector<int> &parameterIDs) const {
 		parameterIDs.push_back(program->getParameterID(evalName + "_radiance", false));
 	}
@@ -312,7 +312,7 @@ public:
 			<< "}" << endl;
 	}
 
-	void bind(GPUProgram *program, const std::vector<int> &parameterIDs, 
+	void bind(GPUProgram *program, const std::vector<int> &parameterIDs,
 		int &textureUnitOffset) const {
 		program->setParameter(parameterIDs[0], m_radiance);
 	}
@@ -322,7 +322,7 @@ private:
 	Spectrum m_radiance;
 };
 
-Shader *ConstantBackgroundEmitter::createShader(Renderer *renderer) const { 
+Shader *ConstantBackgroundEmitter::createShader(Renderer *renderer) const {
 	return new ConstantBackgroundEmitterShader(renderer, m_radiance);
 }
 

@@ -53,7 +53,7 @@ void Logger::setErrorLevel(ELogLevel level) {
 	m_errorLevel = level;
 }
 
-void Logger::log(ELogLevel level, const Class *theClass, 
+void Logger::log(ELogLevel level, const Class *theClass,
 	const char *file, int line, const char *fmt, ...) {
 
 	if (level < m_logLevel)
@@ -66,7 +66,7 @@ void Logger::log(ELogLevel level, const Class *theClass,
 	va_start(iterator, fmt);
 	size_t size = _vscprintf(fmt, iterator) + 1;
 
-	if (size >= sizeof(tmp)) 
+	if (size >= sizeof(tmp))
 		msg = new char[size];
 
 	vsnprintf_s(msg, size, size-1, fmt, iterator);
@@ -90,7 +90,7 @@ void Logger::log(ELogLevel level, const Class *theClass,
 		exit(-1);
 	}
 
-	std::string text = m_formatter->format(level, theClass, 
+	std::string text = m_formatter->format(level, theClass,
 		Thread::getThread(), msg, file, line);
 
 	if (msg != tmp)
@@ -105,7 +105,7 @@ void Logger::log(ELogLevel level, const Class *theClass,
 	} else {
 #if defined(__LINUX__)
 		/* A critical error occurred: trap if we're running in a debugger */
-		
+
 		char exePath[PATH_MAX];
 		pid_t ppid = getppid();
 		memset(exePath, 0, PATH_MAX);
@@ -130,7 +130,7 @@ void Logger::log(ELogLevel level, const Class *theClass,
 		if (runningInDebugger)
 			__asm__ ("int $3");
 #elif defined(WIN32)
-		if (IsDebuggerPresent()) 
+		if (IsDebuggerPresent())
 			__debugbreak();
 #endif
 
@@ -154,7 +154,7 @@ void Logger::addAppender(Appender *appender) {
 
 void Logger::removeAppender(Appender *appender) {
 	LockGuard lock(m_mutex);
-	m_appenders.erase(std::remove(m_appenders.begin(), 
+	m_appenders.erase(std::remove(m_appenders.begin(),
 		m_appenders.end(), appender), m_appenders.end());
 	appender->decRef();
 }
@@ -165,7 +165,7 @@ bool Logger::readLog(std::string &target) {
 	for (size_t i=0; i<m_appenders.size(); ++i) {
 		Appender *appender = m_appenders[i];
 		if (appender->getClass()->derivesFrom(MTS_CLASS(StreamAppender))) {
-			StreamAppender *streamAppender = 
+			StreamAppender *streamAppender =
 				static_cast<StreamAppender *>(appender);
 			if (streamAppender->logsToFile()) {
 				streamAppender->readLog(target);

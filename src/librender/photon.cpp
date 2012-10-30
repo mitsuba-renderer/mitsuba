@@ -79,7 +79,7 @@ void Photon::serialize(Stream *stream) const {
 Photon::Photon(const Point &p, const Normal &normal,
 			   const Vector &dir, const Spectrum &P,
 			   uint16_t _depth) {
-	if (!P.isValid()) 
+	if (!P.isValid())
 		SLog(EWarn, "Creating an invalid photon with power: %s", P.toString().c_str());
 	/* Possibly convert to single precision floating point
 	   (if Mitsuba is configured to use double precision) */
@@ -87,7 +87,7 @@ Photon::Photon(const Point &p, const Normal &normal,
 	data.depth = _depth;
 	flags = 0;
 
-	/* Convert the direction into an approximate spherical 
+	/* Convert the direction into an approximate spherical
 	   coordinate format to reduce storage requirements */
 	data.theta = (uint8_t) std::min(255,
 		(int) (math::safe_acos(dir.z) * (256.0 / M_PI)));
@@ -98,7 +98,7 @@ Photon::Photon(const Point &p, const Normal &normal,
 		data.phi = (uint8_t) (tmp + 256);
 	else
 		data.phi = (uint8_t) tmp;
-	
+
 	if (normal.isZero()) {
 		data.thetaN = data.phiN = 0;
 	} else {
@@ -132,6 +132,6 @@ std::string Photon::toString() const {
 		<< "]";
 	return oss.str();
 }
-	
+
 
 MTS_NAMESPACE_END

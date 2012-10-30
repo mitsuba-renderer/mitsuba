@@ -28,10 +28,10 @@ MTS_NAMESPACE_BEGIN
  *         \default{1}}
  *
  *     \parameter{rayLength}{\Float}{Specifies the world-space length of the
- *     	   ambient occlusion rays that will be cast. \default{\code{-1}, i.e. automatic}}. 
+ *     	   ambient occlusion rays that will be cast. \default{\code{-1}, i.e. automatic}}.
  * }
  * \renderings{
- *    \rendering{A view of the scene on page \pageref{fig:rungholt}, rendered using 
+ *    \rendering{A view of the scene on page \pageref{fig:rungholt}, rendered using
  *               the Ambient Occlusion integrator}{integrator_ao}
  *    \rendering{A corresponding rendering created using the standard \pluginref{path} tracer}{integrator_ao_path}
  * }
@@ -69,8 +69,8 @@ public:
 			sampler->request2DArray(m_shadingSamples);
 	}
 
-	bool preprocess(const Scene *scene, RenderQueue *queue, 
-		const RenderJob *job, int sceneResID, int sensorResID, 
+	bool preprocess(const Scene *scene, RenderQueue *queue,
+		const RenderJob *job, int sceneResID, int sensorResID,
 		int samplerResID) {
 		Integrator::preprocess(scene, queue, job, sceneResID,
 				sensorResID, samplerResID);
@@ -86,15 +86,15 @@ public:
 		Spectrum Li(0.0f);
 		Point2 sample;
 
-		/* Perform the first ray intersection (or ignore if the 
+		/* Perform the first ray intersection (or ignore if the
 		   intersection has already been provided). */
 		if (!rRec.rayIntersect(ray)) {
-			/* If no intersection could be found, possibly return 
+			/* If no intersection could be found, possibly return
 			   radiance from a background emitter */
 			return Spectrum(1.0f);
 		}
 
-		/* Figure out how many shading samples to take, and where the 
+		/* Figure out how many shading samples to take, and where the
 		   required random numbers should come from */
 		Point2 *sampleArray = &sample;
 		size_t numShadingSamples = m_shadingSamples;

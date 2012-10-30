@@ -99,7 +99,7 @@ size_t generateVPLs(const Scene *scene, Random *random,
 
 		PositionSamplingRecord pRec(time);
 		DirectionSamplingRecord dRec;
-		Spectrum weight = scene->sampleEmitterPosition(pRec, 
+		Spectrum weight = scene->sampleEmitterPosition(pRec,
 			sampler->next2D());
 
 		size_t start = vpls.size();
@@ -168,16 +168,16 @@ size_t generateVPLs(const Scene *scene, Random *random,
 
 			if (BSDF::getMeasure(bRec.sampledType) == ESolidAngle)
 				appendVPL(scene, random, vpl, prune, vpls);
-	
+
 			weight *= bsdfVal;
-		
+
 			Vector wi = -ray.d, wo = its.toWorld(bRec.wo);
 			ray = Ray(its.p, wo, 0.0f);
 
 			/* Prevent light leaks due to the use of shading normals -- [Veach, p. 158] */
 			Float wiDotGeoN = dot(its.geoFrame.n, wi),
 				woDotGeoN = dot(its.geoFrame.n, wo);
-			if (wiDotGeoN * Frame::cosTheta(bRec.wi) <= 0 || 
+			if (wiDotGeoN * Frame::cosTheta(bRec.wi) <= 0 ||
 				woDotGeoN * Frame::cosTheta(bRec.wo) <= 0)
 				break;
 

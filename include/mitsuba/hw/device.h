@@ -83,7 +83,7 @@ public:
 
 	/// Get the interpreted keypress data
 	inline const char* getKeyboardInterpreted() const { return m_keyboard.interpreted; }
-	
+
 	/// Get the interpreted keypress data
 	inline char* getKeyboardInterpreted() { return m_keyboard.interpreted; }
 
@@ -261,7 +261,7 @@ public:
 
 	/// Return the FSAA sample count
 	inline int getFSAA() const { return m_fsaa; }
-	
+
 	/// Only applies to devices, which are UI windows
 	virtual void setVisible(bool visible) = 0;
 
@@ -357,7 +357,7 @@ public:
 	inline Session *getSession() { return m_session; }
 
 	/**
-	 * Initialize the renderer. Optionally, an existing device instance 
+	 * Initialize the renderer. Optionally, an existing device instance
 	 * can be provided as a second argument -- this is primarily meant
 	 * to create a device that will be able to support a shared context
 	 * with another device.
@@ -387,7 +387,7 @@ protected:
 	/// Create a new device
 	Device(Session *session);
 
-	/** \brief Send a device event using 
+	/** \brief Send a device event using
 	 * the registered callbacks
 	 */
 	void fireDeviceEvent(const DeviceEvent &event);

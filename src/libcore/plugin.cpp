@@ -59,12 +59,12 @@ struct Plugin::PluginPrivate {
 	: shortName(sn), path(p) {}
 };
 
-Plugin::Plugin(const std::string &shortName, const fs::path &path) 
+Plugin::Plugin(const std::string &shortName, const fs::path &path)
  : d(new PluginPrivate(shortName, path)) {
 #if defined(_WIN32)
 	d->handle = LoadLibraryW(path.c_str());
 	if (!d->handle) {
-		SLog(EError, "Error while loading plugin \"%s\": %s", 
+		SLog(EError, "Error while loading plugin \"%s\": %s",
 				d->path.string().c_str(), lastErrorText().c_str());
 	}
 #else
@@ -146,7 +146,7 @@ std::string Plugin::getDescription() const {
 const fs::path& Plugin::getPath() const {
 	return d->path;
 }
-	
+
 const std::string& Plugin::getShortName() const {
 	return d->shortName;
 }

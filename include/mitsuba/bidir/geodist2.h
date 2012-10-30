@@ -27,7 +27,7 @@ MTS_NAMESPACE_BEGIN
 /**
  * \brief Clamped two-tailed geometric distribution
  *
- * This class implements a specialized clamped two-tailed geometric 
+ * This class implements a specialized clamped two-tailed geometric
  * distribution with support for sample generation and evaluation
  * of the probability mass and cumulative distribution functions.
  *
@@ -42,10 +42,10 @@ MTS_NAMESPACE_BEGIN
  *
  * where \f$b\in\mathbb{R}\f$ is the base parameter of the distribution,
  * \f$[l,r]\subseteq\mathbb{Z}\f$ denotes the domain of the probability
- * mass function, \f$o\in\mathbb{Z}\f$ is offset, and \f$c\f$ is a suitably 
- * chosen normalization constant. 
+ * mass function, \f$o\in\mathbb{Z}\f$ is offset, and \f$c\f$ is a suitably
+ * chosen normalization constant.
  *
- * This function is used to propose bidirectional mutations; see the 
+ * This function is used to propose bidirectional mutations; see the
  * MLT writeup for details.
  *
  * \author Wenzel Jakob
@@ -90,9 +90,9 @@ public:
 		return (R(i) - m_offset) / m_normalization;
 	}
 
-	/// Draw a position according to the probability mass function 
+	/// Draw a position according to the probability mass function
 	inline int sample(Float xi) const {
-		return std::max(m_start, 
+		return std::max(m_start,
 			Rinv(xi * m_normalization + m_offset)) + m_center;
 	}
 

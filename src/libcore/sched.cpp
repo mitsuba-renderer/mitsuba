@@ -25,20 +25,19 @@
 MTS_NAMESPACE_BEGIN
 
 SerializableObject *WorkProcessor::getResource(const std::string &name) {
-	if (m_resources.find(name) == m_resources.end()) 
+	if (m_resources.find(name) == m_resources.end())
 		Log(EError, "Could not find a resource named \"%s\"!", name.c_str());
 	return m_resources[name];
 }
-	
+
 void ParallelProcess::bindResource(const std::string &name, int id) {
 	m_bindings[name] = id;
 }
-	
 
 std::vector<std::string> ParallelProcess::getRequiredPlugins() {
 	return PluginManager::getInstance()->getLoadedPlugins();
 }
-	
+
 void ParallelProcess::handleCancellation() {
 }
 
@@ -73,7 +72,7 @@ void Scheduler::registerWorker(Worker *worker) {
 
 void Scheduler::unregisterWorker(Worker *worker) {
 	LockGuard lock(m_mutex);
-	m_workers.erase(std::remove(m_workers.begin(), m_workers.end(), worker), 
+	m_workers.erase(std::remove(m_workers.begin(), m_workers.end(), worker),
 		m_workers.end());
 	worker->decRef();
 }
@@ -159,10 +158,11 @@ void Scheduler::retainResource(int id) {
 	rec->refCount++;
 }
 
-void Scheduler::unregisterResource(int id) {
+bool Scheduler::unregisterResource(int id) {
 	LockGuard lock(m_mutex);
 	if (m_resources.find(id) == m_resources.end()) {
-		Log(EError, "unregisterResource(): could not find the resource with ID %i!", id);
+		Log(EWarn, "unregisterResource(): could not find the resource with ID %i!", id);
+		return false;
 	}
 	ResourceRecord *rec = m_resources[id];
 	if (--rec->refCount == 0) {
@@ -176,6 +176,7 @@ void Scheduler::unregisterResource(int id) {
 		for (size_t i=0; i<m_workers.size(); ++i)
 			m_workers[i]->signalResourceExpiration(id);
 	}
+	return true;
 }
 
 SerializableObject *Scheduler::getResource(int id, int coreIndex) {
@@ -270,7 +271,7 @@ bool Scheduler::schedule(ParallelProcess *process) {
 		return false;
 	}
 
-	/* First, check that all resources are available and increase 
+	/* First, check that all resources are available and increase
 	   their reference count */
 	const ParallelProcess::ResourceBindings &bindings = process->getResourceBindings();
 	for (ParallelProcess::ResourceBindings::const_iterator it = bindings.begin();
@@ -281,7 +282,7 @@ bool Scheduler::schedule(ParallelProcess *process) {
 		}
 		m_resources[(*it).second]->refCount++;
 	}
-	ProcessRecord *rec = new ProcessRecord(m_processCounter++, 
+	ProcessRecord *rec = new ProcessRecord(m_processCounter++,
 		process->getLogLevel(), m_mutex);
 	m_processes[process] = rec;
 #if defined(DEBUG_SCHED)
@@ -296,7 +297,7 @@ bool Scheduler::schedule(ParallelProcess *process) {
 	m_workAvailable->broadcast();
 	return true;
 }
-	
+
 bool Scheduler::hasRemoteWorkers() const {
 	bool hasRemoteWorkers = false;
 	LockGuard lock(m_mutex);
@@ -316,7 +317,7 @@ bool Scheduler::hasLocalWorkers() const {
 bool Scheduler::wait(const ParallelProcess *process) {
 	UniqueLock lock(m_mutex);
 
-	std::map<const ParallelProcess *, ProcessRecord *>::iterator it = 
+	std::map<const ParallelProcess *, ProcessRecord *>::iterator it =
 		m_processes.find(process);
 	if (it == m_processes.end()) {
 		/* The process is not known */
@@ -325,7 +326,7 @@ bool Scheduler::wait(const ParallelProcess *process) {
 
 	ProcessRecord *rec = (*it).second;
 	/* Increase the WaitFlag reference count as otherwise,
-	   it might be deleted before having a chance to verify 
+	   it might be deleted before having a chance to verify
 	   that the flag has really changed */
 
 #if defined(DEBUG_SCHED)
@@ -345,7 +346,7 @@ bool Scheduler::wait(const ParallelProcess *process) {
 
 bool Scheduler::cancel(ParallelProcess *process, bool reduceInflight) {
 	UniqueLock lock(m_mutex);
-	std::map<const ParallelProcess *, ProcessRecord *>::iterator it = 
+	std::map<const ParallelProcess *, ProcessRecord *>::iterator it =
 		m_processes.find(process);
 	if (it == m_processes.end()) {
 #if defined(DEBUG_SCHED)
@@ -378,9 +379,9 @@ bool Scheduler::cancel(ParallelProcess *process, bool reduceInflight) {
 		m_workers[i]->signalProcessCancellation(rec->id);
 
 	/* Ensure that this process won't be scheduled again */
-	m_localQueue.erase(std::remove(m_localQueue.begin(), m_localQueue.end(), rec->id), 
+	m_localQueue.erase(std::remove(m_localQueue.begin(), m_localQueue.end(), rec->id),
 		m_localQueue.end());
-	m_remoteQueue.erase(std::remove(m_remoteQueue.begin(), m_remoteQueue.end(), rec->id), 
+	m_remoteQueue.erase(std::remove(m_remoteQueue.begin(), m_remoteQueue.end(), rec->id),
 		m_remoteQueue.end());
 
 	/* Ensure that the process won't be considered 'done' when the
@@ -390,7 +391,7 @@ bool Scheduler::cancel(ParallelProcess *process, bool reduceInflight) {
 
 	/* Now wait until no more work from this process circulates and release
 	   the lock while waiting. */
-	while (rec->inflight != 0) 
+	while (rec->inflight != 0)
 		rec->cond->wait();
 
 	/* Decrease the reference count of all bound resources */
@@ -423,7 +424,7 @@ bool Scheduler::cancel(ParallelProcess *process, bool reduceInflight) {
 	return true;
 }
 
-Scheduler::EStatus Scheduler::acquireWork(Item &item, 
+Scheduler::EStatus Scheduler::acquireWork(Item &item,
 		bool local, bool onlyTry, bool keepLock) {
 	UniqueLock lock(m_mutex);
 	std::deque<int> &queue = local ? m_localQueue : m_remoteQueue;
@@ -432,9 +433,9 @@ Scheduler::EStatus Scheduler::acquireWork(Item &item,
 			return ENone;
 		}
 
-		/* Wait until work is available and return false 
+		/* Wait until work is available and return false
 		   if stop() is called */
-		while (queue.size() == 0 && m_running) 
+		while (queue.size() == 0 && m_running)
 			m_workAvailable->wait();
 
 		if (!m_running) {
@@ -448,7 +449,7 @@ Scheduler::EStatus Scheduler::acquireWork(Item &item,
 			int id = queue.front();
 			if (item.id != id) {
 				/* First work unit from this parallel process - establish
-				   connections to referenced resources and prepare the 
+				   connections to referenced resources and prepare the
 				   work processor */
 				setProcessByID(item, id);
 			}
@@ -493,7 +494,7 @@ Scheduler::EStatus Scheduler::acquireWork(Item &item,
 	boost::this_thread::yield();
 	return EOK;
 }
-		
+
 void Scheduler::signalProcessTermination(ParallelProcess *proc, ProcessRecord *rec) {
 #if defined(DEBUG_SCHED)
 	Log(rec->logLevel, "Process %i is complete.", rec->id);
@@ -509,9 +510,9 @@ void Scheduler::signalProcessTermination(ParallelProcess *proc, ProcessRecord *r
 	}
 	rec->done->set(true);
 	m_processes.erase(proc);
-	m_localQueue.erase(std::remove(m_localQueue.begin(), m_localQueue.end(), rec->id), 
+	m_localQueue.erase(std::remove(m_localQueue.begin(), m_localQueue.end(), rec->id),
 		m_localQueue.end());
-	m_remoteQueue.erase(std::remove(m_remoteQueue.begin(), m_remoteQueue.end(), rec->id), 
+	m_remoteQueue.erase(std::remove(m_remoteQueue.begin(), m_remoteQueue.end(), rec->id),
 		m_remoteQueue.end());
 	proc->m_returnStatus = ParallelProcess::ESuccess;
 	m_idToProcess.erase(rec->id);
@@ -573,7 +574,7 @@ void Scheduler::stop() {
 	for (std::map<int, ResourceRecord *>::iterator
 		it = m_resources.begin(); it != m_resources.end(); ++it) {
 		ResourceRecord *rec = (*it).second;
-		for (size_t i=0; i<rec->resources.size(); ++i) 
+		for (size_t i=0; i<rec->resources.size(); ++i)
 			rec->resources[i]->decRef();
 		delete rec;
 	}
@@ -616,7 +617,7 @@ void Scheduler::staticShutdown() {
 Worker::Worker(const std::string &name) : Thread(name), m_coreCount(0), m_isRemote(false) {
 }
 
-void Worker::clear() {		
+void Worker::clear() {
 	m_schedItem.wp = NULL;
 	m_schedItem.workUnit = NULL;
 	m_schedItem.workResult = NULL;
@@ -630,11 +631,11 @@ void Worker::start(Scheduler *scheduler, int workerIndex, int coreOffset) {
 	Thread::start();
 }
 
-LocalWorker::LocalWorker(const std::string &name, 
+LocalWorker::LocalWorker(const std::string &name,
 		Thread::EThreadPriority priority) : Worker(name) {
 	m_coreCount = 1;
 #if !defined(__LINUX__)
-	/* Don't set thead priority on Linux, since it uses 
+	/* Don't set thead priority on Linux, since it uses
 	   dynamic priorities */
 	setPriority(priority);
 #endif
@@ -670,7 +671,7 @@ void LocalWorker::signalProcessTermination(int id) {
 }
 
 void LocalWorker::signalProcessCancellation(int id) {
-	if (m_schedItem.id == id) 
+	if (m_schedItem.id == id)
 		m_schedItem.stop = true;
 }
 
