@@ -1593,7 +1593,7 @@ void MainWindow::on_actionStartServer_triggered() {
 
 void MainWindow::on_actionEnableCommandLine_triggered() {
 	if (QMessageBox::question(this, tr("Enable command line access"),
-		tr("<p>If you proceed, Mitsuba will create symbolic links in <tt>/usr/bin</tt> and <tt>/Library/Python/{2.6,2.7}/site-packages</tt>, "
+		tr("<p>If you proceed, Mitsuba will create symbolic links in <tt>/usr/bin</tt> and <tt>/Library/Python/{2.6,2.7}/site-packages</tt>, as well as an entry in .bashrc, "
 			"which enable command line and Python usage. Note that you will have to "
 			"repeat this process every time the Mitsuba application is moved.</p>"
 			"<p>Create links?</p>"),
