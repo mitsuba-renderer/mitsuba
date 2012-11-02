@@ -39,7 +39,6 @@ MTS_NAMESPACE_BEGIN
 Instance::Instance(const Properties &props) : Shape(props) {
 	m_objectToWorld = props.getTransform("toWorld", Transform());
 	m_worldToObject = m_objectToWorld.inverse();
-	m_invScale = 1.0f/m_objectToWorld(Vector(0, 0, 1)).length();
 }
 
 Instance::Instance(Stream *stream, InstanceManager *manager)
@@ -47,14 +46,12 @@ Instance::Instance(Stream *stream, InstanceManager *manager)
 	m_shapeGroup = static_cast<ShapeGroup *>(manager->getInstance(stream));
 	m_objectToWorld = Transform(stream);
 	m_worldToObject = m_objectToWorld.inverse();
-	m_invScale = stream->readFloat();
 }
 
 void Instance::serialize(Stream *stream, InstanceManager *manager) const {
 	Shape::serialize(stream, manager);
 	manager->serialize(stream, m_shapeGroup.get());
 	m_objectToWorld.serialize(stream);
-	stream->writeFloat(m_invScale);
 }
 
 void Instance::configure() {
@@ -130,17 +127,26 @@ void Instance::fillIntersectionRecord(const Ray &_ray,
 
 void Instance::getNormalDerivative(const Intersection &its,
 		Vector &dndu, Vector &dndv, bool shadingFrame) const {
-	/// TODO: this is horrible
+	/* The following is really super-inefficient, but it's
+	   needed to be able to deal with general transformations */
 	Intersection temp(its);
 	temp.p = m_worldToObject(its.p);
 	temp.dpdu = m_worldToObject(its.dpdu);
 	temp.dpdv = m_worldToObject(its.dpdv);
+
+	/* Determine the length of the transformed normal
+	   *before* it was re-normalized */
+	Normal tn = m_objectToWorld(normalize(m_worldToObject(its.shFrame.n)));
+	Float invLen = 1/tn.length();
+	tn *= invLen;
+
 	its.shape->getNormalDerivative(temp, dndu, dndv, shadingFrame);
 
-	/* The following will probably be incorrect for
-	   non-rigid transformations */
-	dndu = m_objectToWorld(Normal(dndu))*m_invScale;
-	dndv = m_objectToWorld(Normal(dndv))*m_invScale;
+	dndu = m_objectToWorld(Normal(dndu)) * invLen;
+	dndv = m_objectToWorld(Normal(dndv)) * invLen;
+
+	dndu -= tn * dot(tn, dndu);
+	dndv -= tn * dot(tn, dndv);
 }
 
 MTS_IMPLEMENT_CLASS_S(Instance, false, Shape)
