@@ -468,8 +468,8 @@ public:
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "Sphere[" << endl
-			<< "  radius = " << m_radius << ", " << endl
-			<< "  center = " << m_center.toString() << ", " << endl
+			<< "  radius = " << m_radius << "," << endl
+			<< "  center = " << m_center.toString() << "," << endl
 			<< "  bsdf = " << indent(m_bsdf.toString()) << "," << endl;
 		if (isMediumTransition())
 			oss << "  interiorMedium = " << indent(m_interiorMedium.toString()) << "," << endl

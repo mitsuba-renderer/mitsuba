@@ -510,8 +510,8 @@ public:
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "Cylinder[" << endl
-			<< "  radius = " << m_radius << ", " << endl
-			<< "  length = " << m_length << ", " << endl
+			<< "  radius = " << m_radius << "," << endl
+			<< "  length = " << m_length << "," << endl
 			<< "  objectToWorld = " << indent(m_objectToWorld.toString()) << "," << endl
 			<< "  bsdf = " << indent(m_bsdf.toString()) << "," << endl;
 		if (isMediumTransition())

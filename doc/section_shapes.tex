@@ -5,11 +5,11 @@ This section presents an overview of the shape plugins that are released along w
 
 In Mitsuba, shapes define surfaces that mark transitions between different types of materials. For instance,
 a shape could describe a boundary between air and a solid object, such as a piece of rock. Alternatively,
-a shape can mark the beginning of a region of space that isn't solid at all, but rather contains a participating 
+a shape can mark the beginning of a region of space that isn't solid at all, but rather contains a participating
 medium, such as smoke or steam. Finally, a shape can be used to create an object that emits light on its own.
 
-Shapes are usually declared along with a surface scattering model (named ``BSDF'', see \secref{bsdfs} for details). 
-This BSDF characterizes what happens \emph{at the surface}. In the XML scene description language, this might look like 
+Shapes are usually declared along with a surface scattering model (named ``BSDF'', see \secref{bsdfs} for details).
+This BSDF characterizes what happens \emph{at the surface}. In the XML scene description language, this might look like
 the following:
 \begin{xml}
 <scene version=$\MtsVer$>
@@ -20,7 +20,7 @@ the following:
 		    ... $\code{bsdf}$ parameters ..
 		</bsdf>
 
-		<!-- Alternatively: reference a named BSDF that 
+		<!-- Alternatively: reference a named BSDF that
 		     has been declared previously
 
              <ref id="myBSDF"/>
@@ -41,12 +41,12 @@ of the shape. This informs the renderer about what happens in the region of spac
 		<medium name="interior" type="... medium type ...">
 		    ... $\code{medium}$ parameters ...
 		</medium>
-		
+
 		<medium name="exterior" type="... medium type ...">
 		    ... $\code{medium}$ parameters ...
 		</medium>
 
-		<!-- Alternatively: reference named media that 
+		<!-- Alternatively: reference named media that
 		     have been declared previously
 
              <ref name="interior" id="myMedium1"/>
@@ -58,8 +58,8 @@ of the shape. This informs the renderer about what happens in the region of spac
 
 You may have noticed that the previous XML example dit not make any mention of surface
 scattering models (BSDFs). In Mitsuba, such a shape declaration creates an \emph{index-matched} boundary.
-This means that incident illumination will pass through the surface without undergoing any kind of 
-interaction. However, the renderer will still uses the information available in the shape to correctly 
+This means that incident illumination will pass through the surface without undergoing any kind of
+interaction. However, the renderer will still uses the information available in the shape to correctly
 account for the medium change.
 
 It is also possible to create \emph{index-mismatched} boundaries between media, where some of
@@ -76,7 +76,7 @@ the light is affected by the boundary transition:
 		<medium name="interior" type="... medium type ...">
 		    ... $\code{medium}$ parameters ...
 		</medium>
-		
+
 		<medium name="exterior" type="... medium type ...">
 		    ... $\code{medium}$ parameters ...
 		</medium>

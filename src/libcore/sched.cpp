@@ -158,10 +158,11 @@ void Scheduler::retainResource(int id) {
 	rec->refCount++;
 }
 
-void Scheduler::unregisterResource(int id) {
+bool Scheduler::unregisterResource(int id) {
 	LockGuard lock(m_mutex);
 	if (m_resources.find(id) == m_resources.end()) {
-		Log(EError, "unregisterResource(): could not find the resource with ID %i!", id);
+		Log(EWarn, "unregisterResource(): could not find the resource with ID %i!", id);
+		return false;
 	}
 	ResourceRecord *rec = m_resources[id];
 	if (--rec->refCount == 0) {
@@ -175,6 +176,7 @@ void Scheduler::unregisterResource(int id) {
 		for (size_t i=0; i<m_workers.size(); ++i)
 			m_workers[i]->signalResourceExpiration(id);
 	}
+	return true;
 }
 
 SerializableObject *Scheduler::getResource(int id, int coreIndex) {

@@ -3,7 +3,7 @@
 \label{sec:films}
 A film defines how conducted measurements are stored and converted into the final
 output file that is written to disk at the end of the rendering process. Mitsuba comes with a few
-films that can write to high and low dynamic range image formats (OpenEXR, JPEG or PNG), as well 
+films that can write to high and low dynamic range image formats (OpenEXR, JPEG or PNG), as well
 more scientifically oriented data formats (e.g. MATLAB or Mathematica).
 
 In the XML scene description language, a normal film configuration might look as follows
@@ -20,7 +20,7 @@ In the XML scene description language, a normal film configuration might look as
 			<integer name="width" value="1920"/>
 			<integer name="height" value="1080"/>
 
-			<!-- Use a Gaussian reconstruction filter. For 
+			<!-- Use a Gaussian reconstruction filter. For
 			     details on these, refer to the next subsection -->
 			<rfilter type="gaussian"/>
 		</film>
@@ -28,6 +28,6 @@ In the XML scene description language, a normal film configuration might look as
 </scene>
 \end{xml}
 The \code{film} plugin should be instantiated nested inside a \code{sensor} declaration.
-Note how the output filename is never specified---it is automatically inferred 
-from the scene filename and can be manually overridden by passing the configuration parameter 
+Note how the output filename is never specified---it is automatically inferred
+from the scene filename and can be manually overridden by passing the configuration parameter
 \code{-o} to the \code{mitsuba} executable when rendering from the command line.

@@ -229,7 +229,7 @@ public:
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "Rectangle[" << endl
-			<< "  objectToWorld = " << indent(m_objectToWorld.toString()) << ", " << endl;
+			<< "  objectToWorld = " << indent(m_objectToWorld.toString()) << "," << endl;
 		if (isMediumTransition())
 			oss << "  interiorMedium = " << indent(m_interiorMedium.toString()) << "," << endl
 				<< "  exteriorMedium = " << indent(m_exteriorMedium.toString()) << "," << endl;

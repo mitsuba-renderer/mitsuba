@@ -417,8 +417,10 @@ public:
 	 *
 	 * Note that the resource's won't be removed until all processes using
 	 * it have terminated)
+	 *
+	 * \return \c false if the resource could not be found
 	 */
-	void unregisterResource(int id);
+	bool unregisterResource(int id);
 
 	/**
 	 * \brief Return the ID of a registered resource

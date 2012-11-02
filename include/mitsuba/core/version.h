@@ -26,7 +26,7 @@ MTS_NAMESPACE_BEGIN
  * \brief Current release of Mitsuba
  * \ingroup libcore
  */
-#define MTS_VERSION "0.4.1"
+#define MTS_VERSION "0.4.2"
 
 /**
  * \brief Year of the current release

@@ -643,7 +643,11 @@ bool SpecularManifold::update(Path &path, int start, int end) {
 		step = -1; mode = ERadiance;
 	}
 
-	for (int j=0, i=start; j < (int) m_vertices.size()-2; ++j, i += step) {
+	int last = (int) m_vertices.size() - 2;
+	if (m_vertices[0].type == EPinnedDirection)
+		last = std::max(last, 1);
+
+	for (int j=0, i=start; j < last; ++j, i += step) {
 		const SimpleVertex
 			&v = m_vertices[j],
 			&vn = m_vertices[j+1];
@@ -664,7 +668,8 @@ bool SpecularManifold::update(Path &path, int start, int end) {
 			PathVertex::EMediumInteraction : PathVertex::ESurfaceInteraction;
 
 		if (v.type == EPinnedDirection) {
-			/* Create a fake vertex and use it to call sampleDirect() */
+			/* Create a fake vertex and use it to call sampleDirect(). This is
+			   kind of terrible -- a nicer API is needed to cleanly support this */
 			PathVertex temp;
 			temp.type = PathVertex::EMediumInteraction;
 			temp.degenerate = false;
@@ -681,7 +686,7 @@ bool SpecularManifold::update(Path &path, int start, int end) {
 				return false;
 			}
 
-			if (m_vertices.size() > 3) {
+			if (m_vertices.size() >= 3) {
 				PathVertex *succ2 = path.vertex(i+2*step);
 				PathEdge *succ2Edge = path.edge(predEdgeIdx + 2*step);
 				if (!succ->sampleNext(m_scene, NULL, vertex, succEdge, succ2Edge, succ2, mode)) {
@@ -863,37 +868,30 @@ Float SpecularManifold::det(const Path &path, int a, int b, int c) {
 }
 
 Float SpecularManifold::multiG(const Path &path, int a, int b) {
-	if (a == 0) {
+	if (a == 0)
 		++a;
-		if (!path.vertex(a)->isConnectable())
-			++a;
-	} else if (a == path.length()) {
+	else if (a == path.length())
 		--a;
-		if (!path.vertex(a)->isConnectable())
-			--a;
-	}
-	if (b == 0) {
+	if (b == 0)
 		++b;
-		if (!path.vertex(b)->isConnectable())
-			++b;
-	} else if (b == path.length()) {
+	else if (b == path.length())
 		--b;
-		if (!path.vertex(b)->isConnectable())
-			--b;
-	}
 
+	int step = b > a ? 1 : -1;
+	while (!path.vertex(b)->isConnectable())
+		b -= step;
+	while (!path.vertex(a)->isConnectable())
+		a += step;
 
-	int step = b > a ? 1 : -1, start = a;
 	Float result = 1;
 
 	BDAssert(path.vertex(a)->isConnectable() && path.vertex(b)->isConnectable());
-	for (int i = a + step; i != b + step; i += step) {
+	for (int i = a + step, start = a; i != b + step; i += step) {
 		if (path.vertex(i)->isConnectable()) {
 			result *= G(path, start, i);
 			start = i;
 		}
 	}
-	BDAssert(start == b);
 
 	return result;
 }

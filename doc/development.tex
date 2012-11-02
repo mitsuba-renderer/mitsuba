@@ -1,7 +1,7 @@
 \part{Development guide}
 This chapter and the subsequent ones will provide an overview
-of the the coding conventions and general architecture of Mitsuba. 
-You should only read them if if you wish to interface with the API 
+of the the coding conventions and general architecture of Mitsuba.
+You should only read them if if you wish to interface with the API
 in some way (e.g. by developing your own plugins). The coding style
 section is only relevant if you plan to submit patches that are meant
 to become part of the main codebase.
@@ -9,15 +9,15 @@ to become part of the main codebase.
 \section{Code structure}
 Mitsuba is split into four basic support libraries:
 \begin{itemize}
-\item The core library (\code{libcore}) implements basic functionality such as 
+\item The core library (\code{libcore}) implements basic functionality such as
 	cross-platform file and bitmap I/O, data structures, scheduling, as well as logging and plugin management.
-\item The rendering library (\code{librender}) contains abstractions 
+\item The rendering library (\code{librender}) contains abstractions
 	needed to load and represent scenes containing  light sources, shapes, materials, and participating media.
 \item The hardware acceleration library (\code{libhw})
 	implements a cross-platform display library, an object-oriented OpenGL
-	wrapper, as well as support for rendering interactive previews of scenes. 
+	wrapper, as well as support for rendering interactive previews of scenes.
 \item Finally, the bidirectional library (\code{libbidir})
-	contains a support layer that is used to implement bidirectional rendering algorithms such as 
+	contains a support layer that is used to implement bidirectional rendering algorithms such as
 	Bidirectional Path Tracing and Metropolis Light Transport.
 \end{itemize}
 A detailed reference of these APIs is available at
@@ -25,11 +25,11 @@ A detailed reference of these APIs is available at
 present a few basic examples to get familiar with them.
 
 \section{Coding style}
-\paragraph{Indentation:} The Mitsuba codebase uses tabs for indentation, 
+\paragraph{Indentation:} The Mitsuba codebase uses tabs for indentation,
 which expand to \emph{four} spaces. Please make sure that you configure your editor
 this way, otherwise the source code layout will look garbled.
 
-\paragraph{Placement of braces:} Opening braces should be placed on the 
+\paragraph{Placement of braces:} Opening braces should be placed on the
 same line to make the best use of vertical space, i.e.
 \begin{cpp}
 if (x > y) {
@@ -54,9 +54,9 @@ if ( x==y ){
 ..
 \end{cpp}
 
-\paragraph{Name format:} Names are always written in camel-case. 
+\paragraph{Name format:} Names are always written in camel-case.
 Classes and structures start with a capital letter, whereas member functions
-and attributes start with a lower-case letter. Attributes of classes 
+and attributes start with a lower-case letter. Attributes of classes
 have the prefix \code{m\_}. Here is an example:
 \begin{cpp}
 class MyClass {
@@ -86,14 +86,14 @@ and properly conveys the semantics.
 as getters and setters.
 \paragraph{Documentation:} Headers files should contain
 Doxygen-compatible documentation. It is also a good idea to add
-comments to a \code{.cpp} file to explain subtleties of an implemented algorithm. 
+comments to a \code{.cpp} file to explain subtleties of an implemented algorithm.
 However, anything pertaining to the API should go into the header file.
 
 \paragraph{Boost:} Use the boost libraries whenever this helps to save
 time or write more compact code.
 
 \paragraph{Classes vs structures:}In Mitsuba, classes usually go onto the heap,
-whereas structures may be allocated both on the stack and the heap. 
+whereas structures may be allocated both on the stack and the heap.
 
 Classes that derive from \code{Object} implement a protected virtual
 deconstructor, which explicitly prevents them from being allocated on the stack.
@@ -110,6 +110,6 @@ if (..) {
 \paragraph{Separation of plugins:}Mitsuba encourages that plugins are only
 used via the generic interface they implement. You will find that almost all plugins
 (e.g. emitters) don't actually provide a header file, hence they can only be accessed
-using the generic \code{Emitter} interface they implement. If any kind of special 
-interaction between plugins is needed, this is usually an indication that the 
+using the generic \code{Emitter} interface they implement. If any kind of special
+interaction between plugins is needed, this is usually an indication that the
 generic interface should be extended to accomodate this.

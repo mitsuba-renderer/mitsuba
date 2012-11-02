@@ -16,6 +16,12 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
+#if defined(__GXX_EXPERIMENTAL_CXX0X__)
+	/* Needed to prevent a segmentation fault in the Intel C++
+	   compiler on Linux (as of Nov 2012) */
+	#undef __GXX_EXPERIMENTAL_CXX0X__
+#endif
+
 #if MTS_SSE
 #include <mitsuba/mitsuba.h>
 #include <mitsuba/core/ssemath.h>

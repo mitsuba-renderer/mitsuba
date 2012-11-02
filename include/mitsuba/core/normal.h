@@ -70,6 +70,10 @@ struct Normal : public TVector3<Float> {
 	}
 };
 
+inline Normal normalize(const Normal &n) {
+	return n / n.length();
+}
+
 MTS_NAMESPACE_END
 
 #endif /* __MITSUBA_CORE_NORMAL_H_ */

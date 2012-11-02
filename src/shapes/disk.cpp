@@ -261,7 +261,7 @@ public:
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "Disk[" << endl
-			<< "  objectToWorld = " << indent(m_objectToWorld.toString()) << ", " << endl
+			<< "  objectToWorld = " << indent(m_objectToWorld.toString()) << "," << endl
 			<< "  bsdf = " << indent(m_bsdf.toString()) << "," << endl;
 		if (isMediumTransition()) {
 			oss << "  interiorMedium = " << indent(m_interiorMedium.toString()) << "," << endl

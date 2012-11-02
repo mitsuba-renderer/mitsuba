@@ -469,9 +469,9 @@ bool solveLinearSystem2x2(const Float a[2][2], const Float b[2], Float x[2]) {
 	return true;
 }
 
-Float interpCubic1D(Float x, const Float *data, Float min, Float max, size_t size) {
+Float interpCubic1D(Float x, const Float *data, Float min, Float max, size_t size, bool extrapolate) {
 	/* Give up when given an out-of-range or NaN argument */
-	if (!(x >= min && x <= max))
+	if (!(x >= min && x <= max) && !extrapolate)
 		return 0.0f;
 
 	/* Transform 'x' so that knots lie at integer positions */
@@ -508,9 +508,9 @@ Float interpCubic1D(Float x, const Float *data, Float min, Float max, size_t siz
 		(   t3 - t2)       * d1;
 }
 
-Float interpCubic1DIrregular(Float x, const Float *nodes, const Float *data, size_t size) {
+Float interpCubic1DIrregular(Float x, const Float *nodes, const Float *data, size_t size, bool extrapolate) {
 	/* Give up when given an out-of-range or NaN argument */
-	if (!(x >= nodes[0] && x <= nodes[size-1]))
+	if (!(x >= nodes[0] && x <= nodes[size-1]) && !extrapolate)
 		return 0.0f;
 
 	size_t k = (size_t) std::max((ptrdiff_t) 0, std::min((ptrdiff_t) size - 2,
@@ -545,7 +545,7 @@ Float interpCubic1DIrregular(Float x, const Float *nodes, const Float *data, siz
 
 
 Float interpCubic2D(const Point2 &p, const Float *data,
-		const Point2 &min, const Point2 &max, const Size2 &size) {
+		const Point2 &min, const Point2 &max, const Size2 &size, bool extrapolate) {
 	Float knotWeights[2][4];
 	Size2 knot;
 
@@ -553,7 +553,7 @@ Float interpCubic2D(const Point2 &p, const Float *data,
 	for (int dim=0; dim<2; ++dim) {
 		Float *weights = knotWeights[dim];
 		/* Give up when given an out-of-range or NaN argument */
-		if (!(p[dim] >= min[dim] && p[dim] <= max[dim]))
+		if (!(p[dim] >= min[dim] && p[dim] <= max[dim]) && !extrapolate)
 			return 0.0f;
 
 		/* Transform 'p' so that knots lie at integer positions */
@@ -615,7 +615,7 @@ Float interpCubic2D(const Point2 &p, const Float *data,
 }
 
 Float interpCubic2DIrregular(const Point2 &p, const Float **nodes_,
-			const Float *data, const Size2 &size) {
+			const Float *data, const Size2 &size, bool extrapolate) {
 	Float knotWeights[2][4];
 	Size2 knot;
 
@@ -625,7 +625,7 @@ Float interpCubic2DIrregular(const Point2 &p, const Float **nodes_,
 		Float *weights = knotWeights[dim];
 
 		/* Give up when given an out-of-range or NaN argument */
-		if (!(p[dim] >= nodes[0] && p[dim] <= nodes[size[dim]-1]))
+		if (!(p[dim] >= nodes[0] && p[dim] <= nodes[size[dim]-1]) && !extrapolate)
 			return 0.0f;
 
 		/* Find the index of the left knot in the queried subinterval, be
@@ -689,7 +689,7 @@ Float interpCubic2DIrregular(const Point2 &p, const Float **nodes_,
 }
 
 Float interpCubic3D(const Point3 &p, const Float *data,
-		const Point3 &min, const Point3 &max, const Size3 &size) {
+		const Point3 &min, const Point3 &max, const Size3 &size, bool extrapolate) {
 	Float knotWeights[3][4];
 	Size3 knot;
 
@@ -697,7 +697,7 @@ Float interpCubic3D(const Point3 &p, const Float *data,
 	for (int dim=0; dim<3; ++dim) {
 		Float *weights = knotWeights[dim];
 		/* Give up when given an out-of-range or NaN argument */
-		if (!(p[dim] >= min[dim] && p[dim] <= max[dim]))
+		if (!(p[dim] >= min[dim] && p[dim] <= max[dim]) && !extrapolate)
 			return 0.0f;
 
 		/* Transform 'p' so that knots lie at integer positions */
@@ -763,7 +763,7 @@ Float interpCubic3D(const Point3 &p, const Float *data,
 }
 
 Float interpCubic3DIrregular(const Point3 &p, const Float **nodes_,
-			const Float *data, const Size3 &size) {
+			const Float *data, const Size3 &size, bool extrapolate) {
 	Float knotWeights[3][4];
 	Size3 knot;
 
@@ -773,7 +773,7 @@ Float interpCubic3DIrregular(const Point3 &p, const Float **nodes_,
 		Float *weights = knotWeights[dim];
 
 		/* Give up when given an out-of-range or NaN argument */
-		if (!(p[dim] >= nodes[0] && p[dim] <= nodes[size[dim]-1]))
+		if (!(p[dim] >= nodes[0] && p[dim] <= nodes[size[dim]-1]) && !extrapolate)
 			return 0.0f;
 
 		/* Find the index of the left knot in the queried subinterval, be

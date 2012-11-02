@@ -1,69 +1,69 @@
 \part{Using Mitsuba}
 \textbf{Disclaimer:} This is manual documents the usage, file format, and
-internal design of the Mitsuba rendering system. It is currently a work 
+internal design of the Mitsuba rendering system. It is currently a work
 in progress, hence some parts may still be incomplete or missing.
 
 \section{About Mitsuba}
-Mitsuba is a research-oriented rendering system in the style of PBRT 
+Mitsuba is a research-oriented rendering system in the style of PBRT
 (\url{www.pbrt.org}), from which it derives much inspiration.
-It is written in portable C++, implements unbiased as well 
-as biased techniques, and contains heavy optimizations targeted 
-towards current CPU architectures. 
-Mitsuba is extremely modular: it consists of a small set of core libraries 
-and over 100 different plugins that implement functionality ranging 
+It is written in portable C++, implements unbiased as well
+as biased techniques, and contains heavy optimizations targeted
+towards current CPU architectures.
+Mitsuba is extremely modular: it consists of a small set of core libraries
+and over 100 different plugins that implement functionality ranging
 from materials and light sources to complete rendering algorithms.
 
-In comparison to other open source renderers, Mitsuba places a strong 
-emphasis on experimental rendering techniques, such as path-based 
+In comparison to other open source renderers, Mitsuba places a strong
+emphasis on experimental rendering techniques, such as path-based
 formulations of Metropolis Light Transport and volumetric
 modeling approaches. Thus, it may be of genuine interest to those who
-would like to experiment with such techniques that haven't yet found 
-their way into mainstream renderers, and it also provides a solid 
+would like to experiment with such techniques that haven't yet found
+their way into mainstream renderers, and it also provides a solid
 foundation for research in this domain.
 
 Other design considerations are:
 
 \parheader{Performance:}
-Mitsuba provides optimized implementations of the most commonly 
+Mitsuba provides optimized implementations of the most commonly
 used rendering algorithms. By virtue of running on a shared foundation, comparisons between them can
-better highlight the merits and limitations of different approaches. This is in contrast to, say, 
-comparing two completely different rendering products, where technical information on the underlying 
+better highlight the merits and limitations of different approaches. This is in contrast to, say,
+comparing two completely different rendering products, where technical information on the underlying
 implementation is often intentionally not provided.
 
 \parheader{Robustness:}
-In many cases, physically-based rendering packages force the user to model scenes with the underlying 
-algorithm (specifically: its convergence behavior) in mind. For instance, glass windows are routinely 
-replaced with light portals, photons must be manually guided to the relevant parts of a scene, and 
-interactions with complex materials are taboo, since they cannot be importance sampled exactly. 
-One focus of Mitsuba will be to develop path-space light transport algorithms, which handle such 
+In many cases, physically-based rendering packages force the user to model scenes with the underlying
+algorithm (specifically: its convergence behavior) in mind. For instance, glass windows are routinely
+replaced with light portals, photons must be manually guided to the relevant parts of a scene, and
+interactions with complex materials are taboo, since they cannot be importance sampled exactly.
+One focus of Mitsuba will be to develop path-space light transport algorithms, which handle such
 cases more gracefully.
 
-\parheader{Scalability:} Mitsuba instances can be merged into large clusters, which transparently distribute and 
+\parheader{Scalability:} Mitsuba instances can be merged into large clusters, which transparently distribute and
 jointly execute tasks assigned to them using only node-to-node communcation. It has successfully
 scaled to large-scale renderings that involved more than 1000 cores working on a single image.
-Most algorithms in Mitsuba  are written using a generic parallelization layer, which can tap 
+Most algorithms in Mitsuba  are written using a generic parallelization layer, which can tap
 into this cluster-wide parallelism. The principle is that if any component of the renderer produces
-work that takes longer than a second or so, it at least ought to use all of the processing power 
+work that takes longer than a second or so, it at least ought to use all of the processing power
 it can get.
 
-The renderer also tries to be very conservative in its use of memory, which allows it to handle 
+The renderer also tries to be very conservative in its use of memory, which allows it to handle
 large scenes (>30 million triangles) and multi-gigabyte heterogeneous volumes on consumer hardware.
 
 \parheader{Realism and accuracy:} Mitsuba comes with a large repository of physically-based
 reflectance models for surfaces and participating media. These implementations
 are designed so that they can be used to build complex shader networks, while
 providing enough flexibility to be compatible with a wide range of different
-rendering techniques, including path tracing, photon mapping, hardware-accelerated rendering 
+rendering techniques, including path tracing, photon mapping, hardware-accelerated rendering
 and bidirectional methods.
 
-The unbiased path tracers in Mitsuba are battle-proven and produce 
-reference-quality results that can be used for predictive rendering, and to verify 
-implementations of other rendering methods. 
+The unbiased path tracers in Mitsuba are battle-proven and produce
+reference-quality results that can be used for predictive rendering, and to verify
+implementations of other rendering methods.
 
 \parheader{Usability:}
-Mitsuba comes with a graphical user interface to interactively explore scenes. Once a suitable 
-viewpoint has been found, it is straightforward to perform renderings using any of the 
-implemented rendering techniques, while tweaking their parameters to find the most suitable 
+Mitsuba comes with a graphical user interface to interactively explore scenes. Once a suitable
+viewpoint has been found, it is straightforward to perform renderings using any of the
+implemented rendering techniques, while tweaking their parameters to find the most suitable
 settings. Experimental integration into Blender 2.5 is also available.
 
 \section{Limitations}
@@ -72,22 +72,22 @@ However, there are some inherent limitations of the system that users should be 
 \begin{enumerate}[(i)]
 \item \textbf{Wave Optics}: Mitsuba is fundamentally based on the geometric optics toolbox,
 which means that it generally does not simulate phenomena that arise due to
-the wave properties of light (diffraction, for instance). 
+the wave properties of light (diffraction, for instance).
 \item \textbf{Polarization}: Mitsuba does not account for polarization. In
 other words, light is always assumed to be randomly polarized. This can be a problem for
 some predictive rendering applications.
 \item \textbf{Numerical accuracy}: The accuracy of any result produced with this
-system is constrained by the underlying floating point computations. 
+system is constrained by the underlying floating point computations.
 
 For instance, an intricate scene that can be rendered without problems,
 may produce the wrong answer when all objects are translated away from the
 origin by a large distance, since floating point numbers are spaced less densely at the
-new position.  To avoid these sorts of pitfalls, it is good to have a basic 
-understanding of the IEEE-754 standard. 
+new position.  To avoid these sorts of pitfalls, it is good to have a basic
+understanding of the IEEE-754 standard.
 \end{enumerate}
 
 \section{License}
-Mitsuba is free software and can be redistributed and modified under the terms of the GNU General 
+Mitsuba is free software and can be redistributed and modified under the terms of the GNU General
 Public License (Version 3) as provided by the Free Software Foundation.
 
 \remarks{

@@ -134,7 +134,7 @@ void Statistics::logPlugin(const std::string &name, const std::string &descr) {
 }
 
 void Statistics::printStats() {
-	SLog(EInfo, "Statistics: \n%s", getStats().c_str());
+	SLog(EInfo, "Statistics:\n%s", getStats().c_str());
 }
 
 std::string Statistics::getStats() {

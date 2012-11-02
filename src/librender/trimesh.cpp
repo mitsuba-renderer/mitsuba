@@ -542,7 +542,7 @@ void TriMesh::rebuildTopology(Float maxAngle) {
 	configure();
 }
 
-void TriMesh::computeNormals() {
+void TriMesh::computeNormals(bool force) {
 	int invalidNormals = 0;
 	if (m_faceNormals) {
 		if (m_normals) {
@@ -558,7 +558,7 @@ void TriMesh::computeNormals() {
 			}
 		}
 	} else {
-		if (m_normals) {
+		if (m_normals && !force) {
 			if (m_flipNormals) {
 				for (size_t i=0; i<m_vertexCount; i++)
 					m_normals[i] *= -1;
@@ -566,7 +566,8 @@ void TriMesh::computeNormals() {
 				/* Do nothing */
 			}
 		} else {
-			m_normals = new Normal[m_vertexCount];
+			if (!m_normals)
+				m_normals = new Normal[m_vertexCount];
 			memset(m_normals, 0, sizeof(Normal)*m_vertexCount);
 
 			/* Well-behaved vertex normal computation based on
@@ -617,7 +618,7 @@ void TriMesh::computeNormals() {
 }
 
 void TriMesh::computeUVTangents() {
-	int degenerate = 0;
+	// int degenerate = 0;
 	if (!m_texcoords) {
 		bool anisotropic = hasBSDF() && m_bsdf->getType() & BSDF::EAnisotropic;
 		if (anisotropic)
@@ -654,7 +655,7 @@ void TriMesh::computeUVTangents() {
 		Normal n = Normal(cross(dP1, dP2));
 		Float length = n.length();
 		if (length == 0) {
-			++degenerate;
+			// ++degenerate;
 			continue;
 		}
 
@@ -670,9 +671,12 @@ void TriMesh::computeUVTangents() {
 		}
 	}
 
-	if (degenerate > 0)
-		Log(EWarn, "\"%s\": computeTangentSpace(): Mesh contains %i "
-			"degenerate triangles!", getName().c_str(), degenerate);
+	#if 0
+		/* Don't be so noisy -- this isn't usually a problem.. */
+		if (degenerate > 0)
+			Log(EWarn, "\"%s\": computeTangentSpace(): Mesh contains %i "
+				"degenerate triangles!", getName().c_str(), degenerate);
+	#endif
 }
 
 void TriMesh::getNormalDerivative(const Intersection &its,
