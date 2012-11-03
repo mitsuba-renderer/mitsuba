@@ -296,9 +296,9 @@ protected:
 	AABB m_spatialAABB;
 };
 
-class PointCache : public Shape {
+class Deformable : public Shape {
 public:
-	PointCache(const Properties &props) : Shape(props) {
+	Deformable(const Properties &props) : Shape(props) {
 		FileResolver *fResolver = Thread::getThread()->getFileResolver();
 		fs::path path = fResolver->resolve(props.getString("filename"));
 		if (path.extension() != ".mdd")
@@ -322,10 +322,9 @@ public:
 			m_positions.push_back(reinterpret_cast<float *>(mStream->getCurrentData()));
 			mStream->skip(m_vertexCount * 3 * sizeof(float));
 		}
-		Assert(mStream->getPos() == mStream->getSize());
 	}
 
-	PointCache(Stream *stream, InstanceManager *manager)
+	Deformable(Stream *stream, InstanceManager *manager)
 		: Shape(stream, manager) {
 		/// TBD
 	}
@@ -380,17 +379,13 @@ public:
 		its.shFrame = its.geoFrame;
 		its.wi = its.toLocal(-ray.d);
 		its.shape = this;
+		its.instance = this;
 		its.hasUVPartials = false;
 		its.time = ray.time;
 	}
 
 	AABB getAABB() const {
 		return m_kdtree->getSpatialAABB();
-	}
-
-	Float getSurfaceArea() const {
-		Log(EError, "PointCache::getSurfaceArea(): Not implemented.");
-		return -1;
 	}
 
 	size_t getPrimitiveCount() const {
@@ -406,6 +401,18 @@ public:
 		if (cClass->derivesFrom(TriMesh::m_theClass)) {
 			Assert(m_mesh == NULL);
 			m_mesh = static_cast<TriMesh *>(child);
+			if (m_mesh->getVertexCount() != m_vertexCount)
+				Log(EError, "Geometry mismatch! MDD file contains %u vertices. "
+					"The attached shape uses %u!", m_vertexCount, m_mesh->getVertexCount());
+		} else if (cClass->derivesFrom(Shape::m_theClass) && static_cast<Shape *>(child)->isCompound()) {
+			size_t index = 0;
+			Shape *shape = static_cast<Shape *>(child);
+			do {
+				ref<Shape> element = shape->getElement(index++);
+				if (element == NULL)
+					break;
+				addChild(name, element);
+			} while (true);
 		} else {
 			Shape::addChild(name, child);
 		}
@@ -413,7 +420,8 @@ public:
 
 	std::string toString() const {
 		std::ostringstream oss;
-		oss << "PointCache[" << endl
+		oss << "Deformable[" << endl
+			<< "  mesh = " << indent(m_mesh.toString()) << endl
 			<< "]";
 		return oss.str();
 	}
@@ -430,6 +438,6 @@ private:
 };
 
 MTS_IMPLEMENT_CLASS(SpaceTimeKDTree, false, KDTreeBase)
-MTS_IMPLEMENT_CLASS_S(PointCache, false, Shape)
-MTS_EXPORT_PLUGIN(PointCache, "Point cache");
+MTS_IMPLEMENT_CLASS_S(Deformable, false, Shape)
+MTS_EXPORT_PLUGIN(Deformable, "Deformable shape");
 MTS_NAMESPACE_END
