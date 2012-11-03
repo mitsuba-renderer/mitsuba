@@ -98,7 +98,7 @@ SceneHandler::SceneHandler(const SAXParser *parser,
 	m_tags["blackbody"]  = TagEntry(EBlackBody,  (Class *) NULL);
 	m_tags["spectrum"]   = TagEntry(ESpectrum,   (Class *) NULL);
 	m_tags["transform"]  = TagEntry(ETransform,  (Class *) NULL);
-	m_tags["animation"]  = TagEntry(EAnimation,  (Class *) NULL);
+	m_tags["atransform"] = TagEntry(EATransform, (Class *) NULL);
 	m_tags["include"]    = TagEntry(EInclude,    (Class *) NULL);
 	m_tags["alias"]      = TagEntry(EAlias,      (Class *) NULL);
 
@@ -243,7 +243,7 @@ void SceneHandler::startElement(const XMLCh* const xmlName,
 		case ETransform:
 			m_transform = Transform();
 			break;
-		case EAnimation: {
+		case EATransform: {
 				m_animatedTransform = new AnimatedTransform();
 				ref<VectorTrack> translation = new VectorTrack(VectorTrack::ETranslationXYZ);
 				ref<QuatTrack> rotation = new QuatTrack(VectorTrack::ERotationQuat);
@@ -591,10 +591,10 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 			}
 			break;
 
-		case EAnimation: {
+		case EATransform: {
 				m_animatedTransform->sortAndSimplify();
-//				context.parent->properties.setAnimatedTransform(
-//					context.attributes["name"], m_animatedTransform);//XXX
+				context.parent->properties.setAnimatedTransform(
+					context.attributes["name"], m_animatedTransform);
 				m_animatedTransform = NULL;
 			}
 			break;

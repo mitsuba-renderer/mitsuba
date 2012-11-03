@@ -25,7 +25,7 @@ MTS_NAMESPACE_BEGIN
  * \icon{emitter_directional}
  * \order{4}
  * \parameters{
- *     \parameter{toWorld}{\Transform\Or\Animation}{
+ *     \parameter{toWorld}{\Transform\Or\ATransform}{
  *	      Specifies an optional emitter-to-world transformation.
  *        \default{none (i.e. emitter space $=$ world space)}
  *     }

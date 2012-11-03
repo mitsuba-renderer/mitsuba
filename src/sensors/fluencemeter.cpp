@@ -26,7 +26,7 @@ MTS_NAMESPACE_BEGIN
 /*!\plugin{fluencemeter}{Fluence meter}
  * \order{7}
  * \parameters{
- *     \parameter{toWorld}{\Transform\Or\Animation}{
+ *     \parameter{toWorld}{\Transform\Or\ATransform}{
  *	      Specifies an optional sensor-to-world transformation.
  *        \default{none (i.e. sensor space $=$ world space)}
  *     }

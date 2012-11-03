@@ -120,8 +120,8 @@ Float ShapeGroup::getSurfaceArea() const {
 
 void ShapeGroup::addChild(const std::string &name, ConfigurableObject *child) {
 	const Class *cClass = child->getClass();
-	if (cClass->derivesFrom(MTS_CLASS(ShapeGroup)) || cClass->getName() == "ShapeInstance") {
-		Log(EError, "Nested instancing is not supported!");
+	if (cClass->derivesFrom(MTS_CLASS(ShapeGroup)) || cClass->getName() == "Instance") {
+		Log(EError, "Nested instancing is not permitted");
 	} else if (cClass->derivesFrom(MTS_CLASS(Shape))) {
 		Shape *shape = static_cast<Shape *>(child);
 		if (shape->isEmitter())

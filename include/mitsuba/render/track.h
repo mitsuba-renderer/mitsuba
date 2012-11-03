@@ -22,6 +22,7 @@
 
 #include <mitsuba/core/quat.h>
 #include <mitsuba/core/simplecache.h>
+#include <set>
 
 MTS_NAMESPACE_BEGIN
 
@@ -144,10 +145,10 @@ private:
 		}
 	};
 
-	struct MatchPredicate {
+	struct UniqueTimePredicate {
 		inline bool operator()(const std::pair<Float, ValueType> &p1,
 		                       const std::pair<Float, ValueType> &p2) const {
-			return p1.first == p2.first || p1.second == p2.second;
+			return p1.first == p2.first;
 		}
 	};
 
@@ -156,23 +157,42 @@ public:
 	 * \brief Sort all animation tracks and remove
 	 * unnecessary data (for user-provided input)
 	 *
-	 * \return \c false if this animation track was deemed to be unnecessary
+	 * \return \c false if this animation track was deemed to be "trivial"
 	 * after the cleanup (for instance, it only contains (0,0,0) translation operations)
 	 */
 	bool sortAndSimplify() {
 		SAssert(m_values.size() == m_times.size());
+		if (m_values.size() == 0)
+			return false;
+
 		std::vector< std::pair<Float, ValueType> > temp(m_values.size());
 		for (size_t i=0; i<m_values.size(); ++i)
 			temp[i] = std::make_pair(m_times[i], m_values[i]);
 		std::sort(temp.begin(), temp.end(), SortPredicate());
-		temp.erase(std::unique(temp.begin(), temp.end(), MatchPredicate()));
-		m_times.resize(temp.size()); m_values.resize(temp.size());
-		for (size_t i=0; i<temp.size(); ++i) {
-			m_times[i] = temp[i].first;
-			m_values[i] = temp[i].second;
+
+		m_times.clear(); m_values.clear();
+		m_times.push_back(temp[0].first);
+		m_values.push_back(temp[0].second);
+
+		for (size_t i=1; i<temp.size(); ++i) {
+			Float time = temp[i].first;
+			const ValueType &value = temp[i].second;
+
+			if (m_times.back() == time)
+				SLog(EError, "Duplicate time value in animated transformation!");
+
+			/* Ignore irrelevant keys */
+			if (i+1 < temp.size() && value == temp[i+1].second &&
+					value == m_values.back())
+				continue;
+			else if (i+1 == temp.size() && value == m_values.back())
+				continue;
+
+			m_times.push_back(time);
+			m_values.push_back(value);
 		}
 
-		return m_values.size() > 0 || !isNoOp(m_values[0]);
+		return !(m_values.size() == 0 || (m_values.size() == 1 && isNoOp(m_values[0])));
 	}
 protected:
 	/// Evaluate the animation track using linear interpolation
@@ -286,6 +306,9 @@ public:
 
 	/// Look up one of the tracks by index
 	inline const AbstractAnimationTrack *getTrack(size_t idx) const { return m_tracks[idx]; }
+
+	/// Return the used keyframes as a set
+	void collectKeyframes(std::set<Float> &result) const;
 
 	/// Append an animation track
 	void addTrack(AbstractAnimationTrack *track);

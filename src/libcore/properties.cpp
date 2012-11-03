@@ -18,6 +18,7 @@
 
 #include <mitsuba/core/properties.h>
 #include <mitsuba/core/netobject.h>
+#include <mitsuba/render/track.h>
 
 /* Keep the boost::variant includes outside of properties.h,
    since they noticeably add to the overall compile times */
@@ -26,7 +27,7 @@
 MTS_NAMESPACE_BEGIN
 
 typedef boost::variant<
-	bool, int64_t, Float, Point, Vector, Transform,
+	bool, int64_t, Float, Point, Vector, Transform, AnimatedTransform *,
 	Spectrum, std::string, Properties::Data> ElementData;
 
 struct PropertyElement {
@@ -78,17 +79,87 @@ DEFINE_PROPERTY_ACCESSOR(Spectrum, Spectrum, Spectrum, spectrum)
 DEFINE_PROPERTY_ACCESSOR(std::string, std::string, String, string)
 DEFINE_PROPERTY_ACCESSOR(Properties::Data, Properties::Data, Data, data)
 
+void Properties::setAnimatedTransform(const std::string &name, const AnimatedTransform *value, bool warnDuplicates) {
+	if (hasProperty(name)) {
+		AnimatedTransform **old = boost::get<AnimatedTransform *>(&((*m_elements)[name].data));
+		if (old)
+			(*old)->decRef();
+		if (warnDuplicates)
+			SLog(EWarn, "Property \"%s\" was specified multiple times!", name.c_str());
+	}
+	(*m_elements)[name].data = (AnimatedTransform *) value;
+	(*m_elements)[name].queried = false;
+	value->incRef();
+}
+
+ref<const AnimatedTransform> Properties::getAnimatedTransform(const std::string &name) const {
+	std::map<std::string, PropertyElement>::const_iterator it = m_elements->find(name);
+	if (it == m_elements->end())
+		SLog(EError, "Property \"%s\" missing", name.c_str());
+	const AnimatedTransform * const * result1 = boost::get<AnimatedTransform *>(&it->second.data);
+	const Transform *result2 = boost::get<Transform>(&it->second.data);
+
+	if (!result1 && !result2)
+		SLog(EError, "The property \"%s\" has the wrong type (expected <animation> or <transform>). The "
+				"complete property record is :\n%s", name.c_str(), toString().c_str());
+	it->second.queried = true;
+
+	if (result1)
+		return *result1;
+	else
+		return new AnimatedTransform(*result2);
+}
+
+ref<const AnimatedTransform> Properties::getAnimatedTransform(const std::string &name, const AnimatedTransform *defVal) const {
+	std::map<std::string, PropertyElement>::const_iterator it = m_elements->find(name);
+	if (it == m_elements->end())
+		return defVal;
+	AnimatedTransform * const * result1 = boost::get<AnimatedTransform *>(&it->second.data);
+	const Transform *result2 = boost::get<Transform>(&it->second.data);
+
+	if (!result1 && !result2)
+		SLog(EError, "The property \"%s\" has the wrong type (expected <animation> or <transform>). The "
+				"complete property record is :\n%s", name.c_str(), toString().c_str());
+
+	it->second.queried = true;
+
+	if (result1)
+		return *result1;
+	else
+		return new AnimatedTransform(*result2);
+}
+
+ref<const AnimatedTransform>  Properties::getAnimatedTransform(const std::string &name, const Transform &defVal) const {
+	std::map<std::string, PropertyElement>::const_iterator it = m_elements->find(name);
+	if (it == m_elements->end())
+		return new AnimatedTransform(defVal);
+
+	AnimatedTransform * const * result1 = boost::get<AnimatedTransform *>(&it->second.data);
+	const Transform *result2 = boost::get<Transform>(&it->second.data);
+
+	if (!result1 && !result2)
+		SLog(EError, "The property \"%s\" has the wrong type (expected <animation> or <transform>). The "
+				"complete property record is :\n%s", name.c_str(), toString().c_str());
+	it->second.queried = true;
+
+	if (result1)
+		return *result1;
+	else
+		return new AnimatedTransform(*result2);
+}
+
 class type_visitor : public boost::static_visitor<Properties::EPropertyType> {
 public:
-	Properties::EPropertyType operator()(const bool &) const             { return Properties::EBoolean; }
-	Properties::EPropertyType operator()(const int64_t &) const          { return Properties::EInteger; }
-	Properties::EPropertyType operator()(const Float &) const            { return Properties::EFloat; }
-	Properties::EPropertyType operator()(const Point &) const            { return Properties::EPoint; }
-	Properties::EPropertyType operator()(const Vector &) const           { return Properties::EVector; }
-	Properties::EPropertyType operator()(const Transform &) const        { return Properties::ETransform; }
-	Properties::EPropertyType operator()(const Spectrum &) const         { return Properties::ESpectrum; }
-	Properties::EPropertyType operator()(const std::string &) const      { return Properties::EString; }
-	Properties::EPropertyType operator()(const Properties::Data &) const { return Properties::EData; }
+	Properties::EPropertyType operator()(const bool &) const              { return Properties::EBoolean; }
+	Properties::EPropertyType operator()(const int64_t &) const           { return Properties::EInteger; }
+	Properties::EPropertyType operator()(const Float &) const             { return Properties::EFloat; }
+	Properties::EPropertyType operator()(const Point &) const             { return Properties::EPoint; }
+	Properties::EPropertyType operator()(const Vector &) const            { return Properties::EVector; }
+	Properties::EPropertyType operator()(const Transform &) const         { return Properties::ETransform; }
+	Properties::EPropertyType operator()(const AnimatedTransform *) const { return Properties::EAnimatedTransform; }
+	Properties::EPropertyType operator()(const Spectrum &) const          { return Properties::ESpectrum; }
+	Properties::EPropertyType operator()(const std::string &) const       { return Properties::EString; }
+	Properties::EPropertyType operator()(const Properties::Data &) const  { return Properties::EData; }
 };
 
 Properties::Properties()
@@ -104,16 +175,44 @@ Properties::Properties(const std::string &pluginName)
 Properties::Properties(const Properties &props)
 : m_pluginName(props.m_pluginName), m_id(props.m_id) {
 	m_elements = new std::map<std::string, PropertyElement>(*props.m_elements);
+
+	for (std::map<std::string, PropertyElement>::iterator it = m_elements->begin();
+			it != m_elements->end(); ++it) {
+		AnimatedTransform **trafo = boost::get<AnimatedTransform *>(&(*it).second.data);
+		if (trafo)
+			(*trafo)->incRef();
+	}
 }
 
 Properties::~Properties() {
+	for (std::map<std::string, PropertyElement>::iterator it = m_elements->begin();
+			it != m_elements->end(); ++it) {
+		AnimatedTransform **trafo = boost::get<AnimatedTransform *>(&(*it).second.data);
+		if (trafo)
+			(*trafo)->decRef();
+	}
+
 	delete m_elements;
 }
 
 void Properties::operator=(const Properties &props) {
+	for (std::map<std::string, PropertyElement>::iterator it = m_elements->begin();
+			it != m_elements->end(); ++it) {
+		AnimatedTransform *trafo = boost::get<AnimatedTransform *>((*it).second.data);
+		if (trafo)
+			trafo->decRef();
+	}
+
 	m_pluginName = props.m_pluginName;
 	m_id = props.m_id;
 	*m_elements = *props.m_elements;
+
+	for (std::map<std::string, PropertyElement>::iterator it = m_elements->begin();
+			it != m_elements->end(); ++it) {
+		AnimatedTransform *trafo = boost::get<AnimatedTransform *>((*it).second.data);
+		if (trafo)
+			trafo->incRef();
+	}
 }
 
 bool Properties::hasProperty(const std::string &name) const {
@@ -175,7 +274,10 @@ std::string Properties::toString() const {
 				oss << boost::get<Point>(data).toString();
 				break;
 			case ETransform:
-				oss << indent(boost::get<Transform>(data).toString());
+				oss << indent(boost::get<Transform>(data).toString(), 2);
+				break;
+			case EAnimatedTransform:
+				oss << indent(boost::get<AnimatedTransform *>(data)->toString(), 2);
 				break;
 			case ESpectrum:
 				oss << boost::get<Spectrum>(data).toString();

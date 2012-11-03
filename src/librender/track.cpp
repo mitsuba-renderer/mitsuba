@@ -50,7 +50,7 @@ AABB1 AnimatedTransform::getTimeBounds() const {
 	if (m_tracks.size() == 0)
 		return AABB1(0.0f, 0.0f);
 
-	Float min = std::numeric_limits<Float>::infinity();
+	Float min =  std::numeric_limits<Float>::infinity();
 	Float max = -std::numeric_limits<Float>::infinity();
 
 	for (size_t i=0; i<m_tracks.size(); ++i) {
@@ -140,7 +140,7 @@ void AnimatedTransform::sortAndSimplify() {
 
 	for (size_t i=0; i<m_tracks.size(); ++i) {
 		AbstractAnimationTrack *track = m_tracks[i];
-		bool success = false;
+		bool isNeeded = false;
 		switch (track->getType()) {
 			case AbstractAnimationTrack::ETranslationX:
 			case AbstractAnimationTrack::ETranslationY:
@@ -151,24 +151,25 @@ void AnimatedTransform::sortAndSimplify() {
 			case AbstractAnimationTrack::EScaleX:
 			case AbstractAnimationTrack::EScaleY:
 			case AbstractAnimationTrack::EScaleZ:
-				success = static_cast<FloatTrack *>(track)->sortAndSimplify();
+				isNeeded = static_cast<FloatTrack *>(track)->sortAndSimplify();
 				break;
 			case AbstractAnimationTrack::ETranslationXYZ:
 			case AbstractAnimationTrack::EScaleXYZ:
-				success = static_cast<VectorTrack *>(track)->sortAndSimplify();
+				isNeeded = static_cast<VectorTrack *>(track)->sortAndSimplify();
 				break;
 			case AbstractAnimationTrack::ERotationQuat:
-				success = static_cast<QuatTrack *>(track)->sortAndSimplify();
+				isNeeded = static_cast<QuatTrack *>(track)->sortAndSimplify();
 				break;
 			default:
 				Log(EError, "Encountered an unsupported "
 					"animation track type: %i!", track->getType());
 		}
-		if (success) {
+		if (isNeeded) {
 			isStatic &= track->getSize() == 1;
 		} else {
 			m_tracks.erase(m_tracks.begin() + i);
 			track->decRef();
+			--i;
 		}
 	}
 
@@ -180,6 +181,18 @@ void AnimatedTransform::sortAndSimplify() {
 			m_tracks[i]->decRef();
 		m_tracks.clear();
 	}
+}
+
+void AnimatedTransform::collectKeyframes(std::set<Float> &result) const {
+	for (size_t i=0; i<m_tracks.size(); ++i) {
+		const AbstractAnimationTrack *track = m_tracks[i];
+
+		for (size_t j=0; j<track->getSize(); ++j)
+			result.insert(track->getTime(j));
+	}
+
+	if (result.size() == 0)
+		result.insert(0);
 }
 
 void AnimatedTransform::serialize(Stream *stream) const {
@@ -233,9 +246,13 @@ void AnimatedTransform::TransformFunctor::operator()(const Float &t, Transform &
 		}
 	}
 
-	trafo = Transform::translate(translation) *
-		rotation.toTransform() *
-		Transform::scale(scale);
+	trafo = Transform::translate(translation);
+
+	if (!rotation.isIdentity())
+		trafo = trafo * rotation.toTransform();
+
+	if (scale != Vector(0.0f))
+		trafo = trafo * Transform::scale(scale);
 }
 
 std::string AnimatedTransform::toString() const {

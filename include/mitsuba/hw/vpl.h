@@ -326,11 +326,14 @@ protected:
 	 * number of GPU pipeline flushes. Draw transparent objects last.
 	 */
 	struct MaterialOrder {
-		inline bool operator()(
-				const Renderer::TransformedGPUGeometry &g1,
-				const Renderer::TransformedGPUGeometry &g2) const {
-			const Shader *shader1 = g1.first->getShader();
-			const Shader *shader2 = g2.first->getShader();
+		const std::vector<Renderer::TransformedGPUGeometry> &geo;
+
+		MaterialOrder(const std::vector<Renderer::TransformedGPUGeometry> &geo)
+			: geo(geo) { }
+
+		inline bool operator()(size_t idx1, size_t idx2) const {
+			const Shader *shader1 = geo[idx1].first->getShader();
+			const Shader *shader2 = geo[idx2].first->getShader();
 
 			if (shader1 && (shader1->getFlags() & Shader::ETransparent))
 				shader1 = NULL;
@@ -340,6 +343,19 @@ protected:
 			return shader1 < shader2;
 		}
 	};
+
+	/// Helper data structure to keep track of shapes that are undergoing keyframe animations
+	struct AnimatedGeometryRecord {
+		const AnimatedTransform *trafo;
+		ssize_t geometryIndex;
+		ssize_t opaqueGeometryIndex;
+
+		AnimatedGeometryRecord(const AnimatedTransform *trafo,
+			ssize_t geometryIndex, ssize_t opaqueGeometryIndex) :
+			trafo(trafo), geometryIndex(geometryIndex),
+			opaqueGeometryIndex(opaqueGeometryIndex) { }
+	};
+
 	MTS_DECLARE_CLASS()
 private:
 	ref<Renderer> m_renderer;
@@ -348,6 +364,7 @@ private:
 	/* On-GPU geometry references */
 	std::vector<Renderer::TransformedGPUGeometry> m_geometry;
 	std::vector<Renderer::TransformedGPUGeometry> m_opaqueGeometry;
+	std::vector<AnimatedGeometryRecord> m_animatedGeometry;
 
 	/* Shader & dependency management */
 	std::map<std::string, VPLConfiguration> m_configurations;

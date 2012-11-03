@@ -27,7 +27,7 @@ MTS_NAMESPACE_BEGIN
 /*!\plugin{orthographic}{Orthographic camera}
  * \order{3}
  * \parameters{
- *     \parameter{toWorld}{\Transform\Or\Animation}{
+ *     \parameter{toWorld}{\Transform\Or\ATransform}{
  *	      Specifies an optional camera-to-world transformation.
  *        \default{none (i.e. camera space $=$ world space)}
  *     }

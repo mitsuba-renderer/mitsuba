@@ -11,7 +11,6 @@ plugins += env.SharedLibrary('cylinder', ['cylinder.cpp'])
 plugins += env.SharedLibrary('hair', ['hair.cpp'])
 plugins += env.SharedLibrary('shapegroup', ['shapegroup.cpp'])
 plugins += env.SharedLibrary('instance', ['instance.cpp'])
-plugins += env.SharedLibrary('animatedinstance', ['animatedinstance.cpp'])
 plugins += env.SharedLibrary('pointcache', ['pointcache.cpp'])
 
 Export('plugins')

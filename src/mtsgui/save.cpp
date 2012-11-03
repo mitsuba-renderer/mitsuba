@@ -78,6 +78,31 @@ static void setProperties(QDomDocument &doc, QDomElement &element,
 				property = doc.createElement("string");
 				property.setAttribute("value", props.getString(*it).c_str());
 				break;
+			case Properties::EAnimatedTransform: {
+					const AnimatedTransform *trafo = props.getAnimatedTransform(*it);
+
+					std::set<Float> times;
+					trafo->collectKeyframes(times);
+
+					property = doc.createElement("animation");
+
+					for (std::set<Float>::iterator it2 = times.begin(); it2 != times.end(); ++it2) {
+						const Matrix4x4 &matrix = trafo->eval(*it2).getMatrix();
+						QDomElement trafoTag = doc.createElement("transform");
+						QDomElement matrixTag = doc.createElement("matrix");
+
+						QString value;
+						for (int i=0; i<4; ++i)
+							for (int j=0; j<4; ++j)
+								value += QString("%1 ").arg(matrix(i, j));
+
+						matrixTag.setAttribute("value", value);
+						trafoTag.setAttribute("time", *it2);
+						trafoTag.appendChild(matrixTag);
+						property.appendChild(trafoTag);
+					}
+				}
+				break;
 			case Properties::ETransform: {
 					/* Captures the subset of transformations that are used by
 					   Mitsuba's perspective and orthographic camera classes */

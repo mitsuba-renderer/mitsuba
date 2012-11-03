@@ -425,7 +425,7 @@ protected:
 	/// Virtual destructor
 	virtual ~AbstractEmitter();
 protected:
-	ref<AnimatedTransform> m_worldTransform;
+	ref<const AnimatedTransform> m_worldTransform;
 	ref<Medium> m_medium;
 	Shape *m_shape;
 	uint32_t m_type;
