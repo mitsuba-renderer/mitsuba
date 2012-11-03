@@ -37,7 +37,7 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{radius}{\Float}{
  *	     Radius of the sphere in object-space units \default{1}
  *	   }
- *     \parameter{toWorld}{\Transform}{
+ *     \parameter{toWorld}{\Transform\Or\ATransform}{
  *	      Specifies an optional linear object-to-world transformation.
  *        Note that non-uniform scales are not permitted!
  *        \default{none (i.e. object space $=$ world space)}

@@ -31,7 +31,7 @@ MTS_NAMESPACE_BEGIN
 /*!\plugin{disk}{Disk intersection primitive}
  * \order{4}
  * \parameters{
- *     \parameter{toWorld}{\Transform}{
+ *     \parameter{toWorld}{\Transform\Or\ATransform}{
  *	      Specifies a linear object-to-world transformation.
  *        Note that non-uniform scales are not permitted!
  *        \default{none (i.e. object space $=$ world space)}

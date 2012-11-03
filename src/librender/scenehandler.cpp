@@ -271,7 +271,7 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 	if (context.attributes.find("id") != context.attributes.end())
 		context.properties.setID(context.attributes["id"]);
 
-	ref<ConfigurableObject> object = NULL;
+	ref<ConfigurableObject> object;
 
 	TagMap::const_iterator it = m_tags.find(name);
 	if (it == m_tags.end())
@@ -686,11 +686,57 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 			}
 			break;
 
-		default:
-			if (tag.second == NULL)
-				XMLLog(EError, "Internal error: could not instantiate an object "
-					"corresponding to the tag '%s'", name.c_str());
-			object = m_pluginManager->createObject(tag.second, context.properties);
+		default: {
+				if (tag.second == NULL)
+					XMLLog(EError, "Internal error: could not instantiate an object "
+						"corresponding to the tag '%s'", name.c_str());
+
+				Properties &props = context.properties;
+
+				/* Convenience hack: allow passing animated transforms to arbitrary shapes
+				   and then internally rewrite this into a shape group + animated instance */
+				if (tag.second == MTS_CLASS(Shape) && props.getPluginName() != "instance" &&
+					props.hasProperty("toWorld") && props.getType("toWorld") == Properties::EAnimatedTransform) {
+
+					ref<const AnimatedTransform> trafo = props.getAnimatedTransform("toWorld");
+					props.removeProperty("toWorld");
+
+					if (trafo->isStatic())
+						props.setTransform("toWorld", trafo->eval(0));
+
+					object = m_pluginManager->createObject(tag.second, props);
+
+					if (!trafo->isStatic()) {
+						object = m_pluginManager->createObject(tag.second, props);
+						/* If the object has children, append them */
+						for (std::vector<std::pair<std::string, ConfigurableObject *> >
+								::iterator it = context.children.begin();
+								it != context.children.end(); ++it) {
+							if (it->second != NULL) {
+								object->addChild(it->first, it->second);
+								it->second->setParent(object);
+								it->second->decRef();
+							}
+						}
+						context.children.clear();
+
+						object->configure();
+
+						ref<Shape> shapeGroup = static_cast<Shape *> (
+							m_pluginManager->createObject(MTS_CLASS(Shape), Properties("shapegroup")));
+						shapeGroup->addChild(object);
+						shapeGroup->configure();
+
+						Properties instanceProps("instance");
+						instanceProps.setAnimatedTransform("toWorld", trafo);
+						object = m_pluginManager->createObject(instanceProps);
+						object->addChild(shapeGroup);
+
+					}
+				} else {
+					object = m_pluginManager->createObject(tag.second, props);
+				}
+			}
 			break;
 	}
 

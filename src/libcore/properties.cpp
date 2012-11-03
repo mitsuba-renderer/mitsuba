@@ -198,9 +198,9 @@ Properties::~Properties() {
 void Properties::operator=(const Properties &props) {
 	for (std::map<std::string, PropertyElement>::iterator it = m_elements->begin();
 			it != m_elements->end(); ++it) {
-		AnimatedTransform *trafo = boost::get<AnimatedTransform *>((*it).second.data);
+		AnimatedTransform **trafo = boost::get<AnimatedTransform *>(&(*it).second.data);
 		if (trafo)
-			trafo->decRef();
+			(*trafo)->decRef();
 	}
 
 	m_pluginName = props.m_pluginName;
@@ -209,9 +209,9 @@ void Properties::operator=(const Properties &props) {
 
 	for (std::map<std::string, PropertyElement>::iterator it = m_elements->begin();
 			it != m_elements->end(); ++it) {
-		AnimatedTransform *trafo = boost::get<AnimatedTransform *>((*it).second.data);
+		AnimatedTransform **trafo = boost::get<AnimatedTransform *>(&(*it).second.data);
 		if (trafo)
-			trafo->incRef();
+			(*trafo)->incRef();
 	}
 }
 
@@ -223,6 +223,9 @@ bool Properties::removeProperty(const std::string &name) {
 	std::map<std::string, PropertyElement>::iterator it = m_elements->find(name);
 	if (it == m_elements->end())
 		return false;
+	AnimatedTransform **trafo = boost::get<AnimatedTransform *>(&(*it).second.data);
+	if (trafo)
+		(*trafo)->decRef();
 	m_elements->erase(it);
 	return true;
 }

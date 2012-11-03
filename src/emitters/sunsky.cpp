@@ -223,7 +223,7 @@ public:
 		bitmapData.ptr = (uint8_t *) bitmap.get();
 		bitmapData.size = sizeof(Bitmap);
 		envProps.setData("bitmap", bitmapData);
-		envProps.setTransform("toWorld", trafo);
+		envProps.setAnimatedTransform("toWorld", m_worldTransform);
 		envProps.setFloat("samplingWeight", m_samplingWeight);
 		m_envEmitter = static_cast<Emitter *>(
 			PluginManager::getInstance()->createObject(
