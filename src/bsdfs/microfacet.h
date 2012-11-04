@@ -115,19 +115,21 @@ public:
 		switch (m_type) {
 			case EBeckmann: {
 					/* Beckmann distribution function for Gaussian random surfaces */
-					const Float ex = Frame::tanTheta(m) / alphaU;
-					result = math::fastexp(-(ex*ex)) / (M_PI * alphaU*alphaU *
-							std::pow(Frame::cosTheta(m), (Float) 4.0f));
+					const Float exponent  = Frame::tanTheta2(m) / (alphaU*alphaU);
+					const Float cosTheta2 = Frame::cosTheta2(m);
+
+					result = math::fastexp(-exponent) /
+						(M_PI * alphaU*alphaU*cosTheta2*cosTheta2);
 				}
 				break;
 
 			case EGGX: {
 					/* Empirical GGX distribution function for rough surfaces */
-					const Float tanTheta = Frame::tanTheta(m),
-						        cosTheta = Frame::cosTheta(m);
+					const Float tanTheta2 = Frame::tanTheta2(m),
+						        cosTheta2 = Frame::cosTheta2(m);
 
-					const Float root = alphaU / (cosTheta*cosTheta *
-								(alphaU*alphaU + tanTheta*tanTheta));
+					const Float root = alphaU / (cosTheta2 *
+								(alphaU*alphaU + tanTheta2));
 
 					result = INV_PI * (root * root);
 				}
