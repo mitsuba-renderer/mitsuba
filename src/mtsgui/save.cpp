@@ -84,7 +84,7 @@ static void setProperties(QDomDocument &doc, QDomElement &element,
 					std::set<Float> times;
 					trafo->collectKeyframes(times);
 
-					property = doc.createElement("animation");
+					property = doc.createElement("atransform");
 
 					for (std::set<Float>::iterator it2 = times.begin(); it2 != times.end(); ++it2) {
 						const Matrix4x4 &matrix = trafo->eval(*it2).getMatrix();

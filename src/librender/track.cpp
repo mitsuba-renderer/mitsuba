@@ -3,6 +3,16 @@
 
 MTS_NAMESPACE_BEGIN
 
+AnimatedTransform::AnimatedTransform(const AnimatedTransform *trafo)
+		: m_transform(trafo->m_transform) {
+	m_tracks.reserve(trafo->getTrackCount());
+	for (size_t i=0; i<trafo->getTrackCount(); ++i) {
+		AbstractAnimationTrack *track = trafo->getTrack(i)->clone();
+		m_tracks.push_back(track);
+		track->incRef();
+	}
+}
+
 AnimatedTransform::AnimatedTransform(Stream *stream) {
 	size_t nTracks = stream->readSize();
 	if (nTracks == 0) {
@@ -180,6 +190,62 @@ void AnimatedTransform::sortAndSimplify() {
 		for (size_t i=0; i<m_tracks.size(); ++i)
 			m_tracks[i]->decRef();
 		m_tracks.clear();
+	}
+}
+
+
+const AbstractAnimationTrack *AnimatedTransform::findTrack(AbstractAnimationTrack::EType type) const {
+	for (size_t i=0; i<m_tracks.size(); ++i) {
+		AbstractAnimationTrack *track = m_tracks[i];
+		if (track->getType() == type)
+			return track;
+	}
+	return NULL;
+}
+AbstractAnimationTrack *AnimatedTransform::findTrack(AbstractAnimationTrack::EType type) {
+	for (size_t i=0; i<m_tracks.size(); ++i) {
+		AbstractAnimationTrack *track = m_tracks[i];
+		if (track->getType() == type)
+			return track;
+	}
+	return NULL;
+}
+
+void AnimatedTransform::prependScale(const Vector &scale) {
+	FloatTrack *trackX = (FloatTrack *) findTrack(AbstractAnimationTrack::EScaleX);
+	FloatTrack *trackY = (FloatTrack *) findTrack(AbstractAnimationTrack::EScaleY);
+	FloatTrack *trackZ = (FloatTrack *) findTrack(AbstractAnimationTrack::EScaleZ);
+	VectorTrack *trackXYZ = (VectorTrack *) findTrack(AbstractAnimationTrack::EScaleXYZ);
+
+	if (m_tracks.empty()) {
+		m_transform = m_transform * Transform::scale(scale);
+	} else if (trackXYZ) {
+		trackXYZ->prependTransformation(scale);
+	} else if (trackX && trackY && trackZ) {
+		if (trackX) {
+			trackX->prependTransformation(scale.x);
+		} else {
+			trackX = new FloatTrack(AbstractAnimationTrack::EScaleX);
+			trackX->append(0.0f, scale.x); addTrack(trackX);
+		}
+
+		if (trackY) {
+			trackY->prependTransformation(scale.y);
+		} else {
+			trackY = new FloatTrack(AbstractAnimationTrack::EScaleY);
+			trackY->append(0.0f, scale.y); addTrack(trackY);
+		}
+
+		if (trackZ) {
+			trackZ->prependTransformation(scale.z);
+		} else {
+			trackZ = new FloatTrack(AbstractAnimationTrack::EScaleZ);
+			trackZ->append(0.0f, scale.z); addTrack(trackZ);
+		}
+	} else {
+		trackXYZ = new VectorTrack(AbstractAnimationTrack::EScaleXYZ);
+		trackXYZ->append(0.0f, scale);
+		addTrack(trackXYZ);
 	}
 }
 

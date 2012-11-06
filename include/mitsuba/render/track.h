@@ -66,6 +66,9 @@ public:
 	/// Serialize to a binary data stream
 	virtual void serialize(Stream *stream) const = 0;
 
+	/// Clone this track
+	virtual AbstractAnimationTrack *clone() const = 0;
+
 	MTS_DECLARE_CLASS()
 protected:
 	AbstractAnimationTrack(EType type, size_t nKeyframes)
@@ -96,6 +99,13 @@ public:
 			unserialize(stream, m_values[i]);
 	}
 
+	/// Copy constructor
+	AnimationTrack(const AnimationTrack *track)
+		 : AbstractAnimationTrack(track->getType(), track->getSize()) {
+		m_times = track->m_times;
+		m_values = track->m_values;
+	}
+
 	/// Set the value of a certain keyframe
 	inline void setValue(size_t idx, const ValueType &value) { m_values[idx] = value; }
 
@@ -109,6 +119,17 @@ public:
 	inline void append(Float time, const ValueType &value) {
 		m_times.push_back(time);
 		m_values.push_back(value);
+	}
+
+	/// Clone this instance
+	AbstractAnimationTrack *clone() const {
+		return new AnimationTrack(this);
+	}
+
+	/// Prepend a transformation to every entry of this track
+	void prependTransformation(const ValueType &value) {
+		for (size_t i=0; i<m_values.size(); ++i)
+			m_values[i] = concatenateTransformations(m_values[i], value);
 	}
 
 	/// Serialize to a binary data stream
@@ -201,6 +222,10 @@ protected:
 	/// Is this a "no-op" transformation?
 	inline bool isNoOp(const ValueType &value) const;
 
+	/// Concatenate two transformations
+	inline ValueType concatenateTransformations(
+			const ValueType &value1, const ValueType &value2) const;
+
 	inline void unserialize(Stream *stream, ValueType &value) {
 		value = stream->readElement<ValueType>();
 	}
@@ -219,6 +244,27 @@ template<typename T> inline T AnimationTrack<T>::lerp(size_t idx0, size_t idx1, 
 /// Partial specialization for quaternions (uses \ref slerp())
 template<> inline Quaternion AnimationTrack<Quaternion>::lerp(size_t idx0, size_t idx1, Float t) const {
 	return slerp(m_values[idx0], m_values[idx1], t);
+}
+
+template<typename T> inline T AnimationTrack<T>::concatenateTransformations(
+		const T &value1, const T &value2) const {
+	return value1 * value2;
+}
+
+template<> inline Vector AnimationTrack<Vector>::concatenateTransformations(
+		const Vector &value1, const Vector &value2) const {
+	if (m_type == ETranslationXYZ)
+		return value1 + value2;
+	else
+		return Vector(value1.x * value2.x, value1.y * value2.y, value1.z * value2.z);
+}
+
+template<> inline Float AnimationTrack<Float>::concatenateTransformations(
+		const Float &value1, const Float &value2) const {
+	if (m_type == ETranslationX || m_type == ETranslationY || m_type == ETranslationZ)
+		return value1 + value2;
+	else
+		return value1 * value2;
 }
 
 template<typename T> inline bool AnimationTrack<T>::isNoOp(const ValueType &value) const {
@@ -301,10 +347,22 @@ public:
 	/// Unserialized an animated transformation from a binary data stream
 	AnimatedTransform(Stream *stream);
 
+	/// Copy constructor
+	AnimatedTransform(const AnimatedTransform *trafo);
+
 	/// Return the number of associated animation tracks
 	inline size_t getTrackCount() const { return m_tracks.size(); }
 
+	/// Find a track of the given type
+	AbstractAnimationTrack *findTrack(AbstractAnimationTrack::EType type);
+
+	/// Find a track of the given type
+	const AbstractAnimationTrack *findTrack(AbstractAnimationTrack::EType type) const;
+
 	/// Look up one of the tracks by index
+	inline AbstractAnimationTrack *getTrack(size_t idx) { return m_tracks[idx]; }
+
+	/// Look up one of the tracks by index (const version)
 	inline const AbstractAnimationTrack *getTrack(size_t idx) const { return m_tracks[idx]; }
 
 	/// Return the used keyframes as a set
@@ -395,6 +453,9 @@ public:
 	inline void operator()(Float t, const Ray &r, Ray &dest) const {
 		eval(t).operator()(r, dest);
 	}
+
+	/// Prepend a scale transformation to the transform (this is often useful)
+	void prependScale(const Vector &scale);
 
 	/// Serialize to a binary data stream
 	void serialize(Stream *stream) const;

@@ -695,8 +695,12 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 
 				/* Convenience hack: allow passing animated transforms to arbitrary shapes
 				   and then internally rewrite this into a shape group + animated instance */
-				if (tag.second == MTS_CLASS(Shape) && props.getPluginName() != "instance" &&
-					props.hasProperty("toWorld") && props.getType("toWorld") == Properties::EAnimatedTransform) {
+				if (tag.second == MTS_CLASS(Shape)
+					&& props.hasProperty("toWorld")
+					&& props.getType("toWorld") == Properties::EAnimatedTransform
+					&& (props.getPluginName() != "instance" && props.getPluginName() != "disk")) {
+					/* (The 'disk' plugin also directly supports animated transformations, so
+					    the instancing trick isn't required for it) */
 
 					ref<const AnimatedTransform> trafo = props.getAnimatedTransform("toWorld");
 					props.removeProperty("toWorld");

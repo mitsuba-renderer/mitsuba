@@ -137,7 +137,7 @@ public:
 			m_apertureRadius = Epsilon;
 		}
 
-		if (props.getTransform("toWorld", Transform()).hasScale())
+		if (props.getAnimatedTransform("toWorld", Transform())->eval(0).hasScale())
 			Log(EError, "Scale factors in the camera-to-world "
 				"transformation are not allowed!");
 	}
@@ -520,14 +520,11 @@ public:
 	}
 
 	ref<Shape> createShape(const Scene *scene) {
-		if (!m_worldTransform->isStatic())
-			Log(EError, "Bidirectional renderings involving moving "
-			"perspective cameras with depth of field are currently not supported!");
-		Transform trafo = m_worldTransform->eval(0) *
-			Transform::scale(Vector(m_apertureRadius));
+		ref<AnimatedTransform> trafo = new AnimatedTransform(m_worldTransform);
+		trafo->prependScale(Vector(m_apertureRadius));
 
 		Properties props("disk");
-		props.setTransform("toWorld", trafo);
+		props.setAnimatedTransform("toWorld", trafo);
 		Shape *shape = static_cast<Shape *> (PluginManager::getInstance()->
 			createObject(MTS_CLASS(Shape), props));
 		shape->addChild(this);
