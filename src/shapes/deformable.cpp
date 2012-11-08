@@ -315,12 +315,36 @@ public:
 
 		Log(EInfo, "Point cache has %i frames and %i vertices", frameCount, m_vertexCount);
 
+		Float clipStart = props.getFloat("clipStart", 0),
+			  clipEnd   = props.getFloat("clipEnd", 0);
+
+		std::vector<Float> frameTimes;
+		std::vector<float *> positions;
+
 		for (uint32_t i=0; i<frameCount; ++i)
-			m_frameTimes.push_back((Float) mStream->readSingle());
+			frameTimes.push_back((Float) mStream->readSingle());
 
 		for (uint32_t i=0; i<frameCount; ++i) {
-			m_positions.push_back(reinterpret_cast<float *>(mStream->getCurrentData()));
+			positions.push_back(reinterpret_cast<float *>(mStream->getCurrentData()));
 			mStream->skip(m_vertexCount * 3 * sizeof(float));
+		}
+
+		if (clipStart != clipEnd) {
+			m_positions.reserve(positions.size());
+			m_frameTimes.reserve(frameTimes.size());
+			for (uint32_t i=0; i<frameCount; ++i) {
+				if (frameTimes[i] >= clipStart && frameTimes[i] <= clipEnd) {
+					m_frameTimes.push_back(frameTimes[i]);
+					m_positions.push_back(positions[i]);
+				}
+			}
+			if (m_frameTimes.empty())
+				Log(EError, "After clipping to the time range [%f, %f] no frames were left!",
+					clipStart, clipEnd);
+			Log(EInfo, "Clipped away %u/%u frames", frameCount - (uint32_t) m_frameTimes.size(), frameCount);
+		} else {
+			m_positions = positions;
+			m_frameTimes = frameTimes;
 		}
 	}
 
