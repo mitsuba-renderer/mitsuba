@@ -108,13 +108,14 @@ public:
 			Log(EError, "PLY file \"%s\" could not be found!", filePath.string().c_str());
 
 		m_triangleCount = m_vertexCount = 0;
-		m_vertexCtr = m_triangleCtr = m_triangleIdxCtr = 0;
+		m_vertexCtr = m_faceCount = m_faceCtr = m_indexCtr = 0;
 		m_normal = Normal(0.0f);
 		m_uv = Point2(0.0f);
 		m_hasNormals = false;
 		m_hasTexCoords = false;
-		memset(&m_triangle, 0, sizeof(Triangle));
+		memset(&m_face, 0, sizeof(uint32_t)*4);
 		loadPLY(filePath);
+
 		if (m_triangleCount == 0 || m_vertexCount == 0)
 			Log(EError, "Unable to load \"%s\" (no triangles or vertices found)!");
 
@@ -125,7 +126,15 @@ public:
 			rebuildTopology(props.getFloat("maxSmoothAngle"));
 		}
 
-		Assert(m_triangleCtr == m_triangleCount);
+		if (m_triangleCount < m_faceCount * 2) {
+			/* Needed less memory than the earlier conservative estimate -- free it! */
+			Triangle *temp = new Triangle[m_triangleCount];
+			memcpy(temp, m_triangles, sizeof(Triangle) * m_triangleCount);
+			delete[] m_triangles;
+			m_triangles = temp;
+		}
+
+		Assert(m_faceCtr   == m_faceCount);
 		Assert(m_vertexCtr == m_vertexCount);
 	}
 
@@ -171,8 +180,8 @@ public:
 					std::tr1::bind(&PLYLoader::vertex_end_callback, this)
 			);
 		} else if (element_name == "face") {
-			m_triangleCount = count;
-			m_triangles = new Triangle[m_triangleCount];
+			m_faceCount = count;
+			m_triangles = new Triangle[m_faceCount*2];
 			return std::tr1::tuple<std::tr1::function<void()>,
 				std::tr1::function<void()> >(
 				std::tr1::bind(&PLYLoader::face_begin_callback, this),
@@ -263,32 +272,42 @@ public:
 	void face_end_callback() { }
 
 	void face_vertex_indices_begin_uint8(ply::uint8 size) {
-		if (size != 3)
-			Log(EError, "Only triangle PLY meshes are supported for now.");
-		m_triangleIdxCtr = 0;
+		if (size != 3 && size != 4)
+			Log(EError, "Only triangle and quad-based PLY meshes are supported for now.");
+		m_indexCtr = 0;
 	}
 
 	void face_vertex_indices_begin_uint32(ply::uint32 size) {
-		if (size != 3)
-			Log(EError, "Only triangle PLY meshes are supported for now.");
-		m_triangleIdxCtr = 0;
+		if (size != 3 && size != 4)
+			Log(EError, "Only triangle and quad-based PLY meshes are supported for now.");
+		m_indexCtr = 0;
 	}
 
 	void face_vertex_indices_element_int32(ply::int32 element) {
-		Assert(m_triangleIdxCtr < 3);
+		Assert(m_indexCtr < 4);
 		Assert((size_t) element < m_vertexCount);
-		m_triangle.idx[m_triangleIdxCtr++] = element;
+		m_face[m_indexCtr++] = element;
 	}
 
 	void face_vertex_indices_element_uint32(ply::uint32 element) {
-		Assert(m_triangleIdxCtr < 3);
+		Assert(m_indexCtr < 4);
 		Assert((size_t) element < m_vertexCount);
-		m_triangle.idx[m_triangleIdxCtr++] = element;
+		m_face[m_indexCtr++] = element;
 	}
 
 	void face_vertex_indices_end() {
-		Assert(m_triangleIdxCtr == 3);
-		m_triangles[m_triangleCtr++] = m_triangle;
+		Assert(m_indexCtr == 3 || m_indexCtr == 4);
+
+		Triangle t;
+		t.idx[0] = m_face[0]; t.idx[1] = m_face[1]; t.idx[2] = m_face[2];
+		m_triangles[m_triangleCount++] = t;
+
+		if (m_indexCtr == 4) {
+			t.idx[0] = m_face[3]; t.idx[1] = m_face[0]; t.idx[2] = m_face[2];
+			m_triangles[m_triangleCount++] = t;
+		}
+
+		m_faceCtr++;
 	}
 
 	MTS_DECLARE_CLASS()
@@ -297,8 +316,9 @@ private:
 	Normal m_normal;
 	Float m_red, m_green, m_blue;
 	Transform m_objectToWorld;
-	size_t m_vertexCtr, m_triangleCtr, m_triangleIdxCtr;
-	Triangle m_triangle;
+	size_t m_faceCount, m_vertexCtr;
+	size_t m_faceCtr, m_indexCtr;
+	uint32_t m_face[4];
 	bool m_hasNormals, m_hasTexCoords;
 	Point2 m_uv;
 	bool m_sRGB;
@@ -380,7 +400,7 @@ template<> std::tr1::tuple<std::tr1::function<void (ply::uint8)>,
 	std::tr1::function<void (ply::int32)>, std::tr1::function<void ()> >
 	PLYLoader::list_property_definition_callback(const std::string& element_name,
 	const std::string& property_name) {
-	if ((element_name == "face") && (property_name == "vertex_indices")) {
+	if ((element_name == "face") && (property_name == "vertex_indices" || property_name == "vertex_index")) {
 		return std::tr1::tuple<std::tr1::function<void (ply::uint8)>,
 			std::tr1::function<void (ply::int32)>, std::tr1::function<void ()> >(
 			std::tr1::bind(&PLYLoader::face_vertex_indices_begin_uint8, this, _1),
@@ -404,7 +424,7 @@ template<> std::tr1::tuple<std::tr1::function<void (ply::uint32)>,
 	std::tr1::function<void (ply::int32)>, std::tr1::function<void ()> >
 	PLYLoader::list_property_definition_callback(const std::string& element_name,
 	const std::string& property_name) {
-	if ((element_name == "face") && (property_name == "vertex_indices")) {
+	if ((element_name == "face") && (property_name == "vertex_indices" || property_name == "vertex_index")) {
 		return std::tr1::tuple<std::tr1::function<void (ply::uint32)>,
 			std::tr1::function<void (ply::int32)>, std::tr1::function<void ()> >(
 			std::tr1::bind(&PLYLoader::face_vertex_indices_begin_uint32, this, _1),
@@ -428,7 +448,7 @@ template<> std::tr1::tuple<std::tr1::function<void (ply::uint8)>,
 	std::tr1::function<void (ply::uint32)>, std::tr1::function<void ()> >
 	PLYLoader::list_property_definition_callback(const std::string& element_name,
 	const std::string& property_name) {
-	if ((element_name == "face") && (property_name == "vertex_indices")) {
+	if ((element_name == "face") && (property_name == "vertex_indices" || property_name == "vertex_index")) {
 		return std::tr1::tuple<std::tr1::function<void (ply::uint8)>,
 			std::tr1::function<void (ply::uint32)>, std::tr1::function<void ()> >(
 			std::tr1::bind(&PLYLoader::face_vertex_indices_begin_uint8, this, _1),
@@ -452,7 +472,7 @@ template<> std::tr1::tuple<std::tr1::function<void (ply::uint32)>,
 	std::tr1::function<void (ply::uint32)>, std::tr1::function<void ()> >
 	PLYLoader::list_property_definition_callback(const std::string& element_name,
 	const std::string& property_name) {
-	if ((element_name == "face") && (property_name == "vertex_indices")) {
+	if ((element_name == "face") && (property_name == "vertex_indices" || property_name == "vertex_index")) {
 		return std::tr1::tuple<std::tr1::function<void (ply::uint32)>,
 			std::tr1::function<void (ply::uint32)>, std::tr1::function<void ()> >(
 			std::tr1::bind(&PLYLoader::face_vertex_indices_begin_uint32, this, _1),
