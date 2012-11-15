@@ -156,7 +156,7 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 			handleNewParticle();
 		}
 
-		int depth = 1;
+		int depth = 1, nullInteractions = 0;
 		bool delta = false;
 
 		Spectrum throughput(1.0f); // unitless path throughput (used for russian roulette)
@@ -174,7 +174,7 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 				throughput *= mRec.sigmaS * mRec.transmittance / mRec.pdfSuccess;
 
 				/* Forward the medium scattering event to the attached handler */
-				handleMediumInteraction(depth,
+				handleMediumInteraction(depth, nullInteractions,
 						delta, mRec, medium, -ray.d, throughput*power);
 
 				PhaseFunctionSamplingRecord pRec(mRec, -ray.d, EImportance);
@@ -198,7 +198,7 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 				const BSDF *bsdf = its.getBSDF();
 
 				/* Forward the surface scattering event to the attached handler */
-				handleSurfaceInteraction(depth, delta, its, medium, throughput*power);
+				handleSurfaceInteraction(depth, nullInteractions, delta, its, medium, throughput*power);
 
 				BSDFSamplingRecord bRec(its, m_sampler, EImportance);
 				Spectrum bsdfWeight = bsdf->sample(bRec, m_sampler->next2D());
@@ -218,6 +218,11 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 				throughput *= bsdfWeight;
 				if (its.isMediumTransition())
 					medium = its.getTargetMedium(woDotGeoN);
+
+				if (bRec.sampledType & BSDF::ENull)
+					++nullInteractions;
+				else
+					delta = bRec.sampledType & BSDF::EDelta;
 
 #if 0
 				/* This is somewhat unfortunate: for accuracy, we'd really want the
@@ -244,7 +249,6 @@ void ParticleTracer::process(const WorkUnit *workUnit, WorkResult *workResult,
 				ray.setOrigin(its.p);
 				ray.setDirection(wo);
 				ray.mint = Epsilon;
-				delta = (bRec.sampledType & (BSDF::EDelta & ~BSDF::ENull));
 			}
 
 			if (depth++ >= m_rrDepth) {
@@ -266,11 +270,12 @@ void ParticleTracer::handleEmission(const PositionSamplingRecord &pRec,
 
 void ParticleTracer::handleNewParticle() { }
 
-void ParticleTracer::handleSurfaceInteraction(int depth, bool delta,
-	const Intersection &its, const Medium *medium, const Spectrum &weight) { }
+void ParticleTracer::handleSurfaceInteraction(int depth, int nullInteractions,
+	bool delta, const Intersection &its, const Medium *medium,
+	const Spectrum &weight) { }
 
-void ParticleTracer::handleMediumInteraction(int depth, bool delta,
-	const MediumSamplingRecord &mRec, const Medium *medium,
+void ParticleTracer::handleMediumInteraction(int depth, int nullInteractions,
+	bool delta, const MediumSamplingRecord &mRec, const Medium *medium,
 	const Vector &wi, const Spectrum &weight) { }
 
 MTS_IMPLEMENT_CLASS(RangeWorkUnit, false, WorkUnit)

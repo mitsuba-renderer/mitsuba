@@ -136,10 +136,10 @@ public:
 		m_workResult->nextParticle();
 	}
 
-	void handleSurfaceInteraction(int depth, bool delta,
+	void handleSurfaceInteraction(int depth_, int nullInteractions, bool delta,
 			const Intersection &its, const Medium *medium,
 			const Spectrum &weight) {
-		int bsdfType = its.getBSDF()->getType();
+		int bsdfType = its.getBSDF()->getType(), depth = depth_ - nullInteractions;
 		if (!(bsdfType & BSDF::EDiffuseReflection) && !(bsdfType & BSDF::EGlossyReflection))
 			return;
 
@@ -149,11 +149,12 @@ public:
 			m_workResult->put(Photon(its.p, its.geoFrame.n, -its.toWorld(its.wi), weight, depth));
 	}
 
-	void handleMediumInteraction(int depth, bool delta,
+	void handleMediumInteraction(int depth, int nullInteractions, bool delta,
 			const MediumSamplingRecord &mRec, const Medium *medium,
 			const Vector &wi, const Spectrum &weight) {
 		if (m_type == GatherPhotonProcess::EVolumePhotons)
-			m_workResult->put(Photon(mRec.p, Normal(0.0f, 0.0f, 0.0f), -wi, weight, depth));
+			m_workResult->put(Photon(mRec.p, Normal(0.0f, 0.0f, 0.0f),
+				-wi, weight, depth-nullInteractions));
 	}
 
 	MTS_DECLARE_CLASS()

@@ -101,7 +101,7 @@ void CaptureParticleWorker::handleEmission(const PositionSamplingRecord &pRec,
 	m_workResult->put(dRec.uv, (Float *) &value[0]);
 }
 
-void CaptureParticleWorker::handleSurfaceInteraction(int depth,
+void CaptureParticleWorker::handleSurfaceInteraction(int depth, int nullInteractions,
 		bool caustic, const Intersection &its, const Medium *medium,
 		const Spectrum &weight) {
 
@@ -159,7 +159,7 @@ void CaptureParticleWorker::handleSurfaceInteraction(int depth,
 	m_workResult->put(dRec.uv, (Float *) &value[0]);
 }
 
-void CaptureParticleWorker::handleMediumInteraction(int depth, bool caustic,
+void CaptureParticleWorker::handleMediumInteraction(int depth, int nullInteractions, bool caustic,
 		const MediumSamplingRecord &mRec, const Medium *medium, const Vector &wi,
 		const Spectrum &weight) {
 
