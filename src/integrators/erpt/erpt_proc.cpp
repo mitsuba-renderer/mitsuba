@@ -234,15 +234,17 @@ public:
 						}
 					#endif
 
-					#if defined(MTS_BD_DEBUG)
-					if (Qxy <= 0 || Qyx < 0 || std::isnan(Qxy) || std::isnan(Qyx)) {
-						Log(EDebug, "Source path: %s", current->toString().c_str());
-						Log(EDebug, "Proposal path: %s", proposed->toString().c_str());
-						Log(EWarn, "Internal error while computing acceptance probabilities: "
-							"Qxy=%f, Qyx=%f, muRec=%s", Qxy, Qyx, muRec.toString().c_str());
+					if (Qxy == 0) { // be tolerant of this (can occasionally happen due to floating point inaccuracies)
+						a = 0;
+					} else if (Qxy < 0 || Qyx < 0 || std::isnan(Qxy) || std::isnan(Qyx)) {
+						#if defined(MTS_BD_DEBUG)
+							Log(EDebug, "Source path: %s", current->toString().c_str());
+							Log(EDebug, "Proposal path: %s", proposed->toString().c_str());
+							Log(EWarn, "Internal error while computing acceptance probabilities: "
+								"Qxy=%f, Qyx=%f, muRec=%s", Qxy, Qyx, muRec.toString().c_str());
+						#endif
 						a = 0;
 					}
-					#endif
 
 					accumulatedWeight += 1-a;
 
