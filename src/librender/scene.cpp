@@ -405,7 +405,7 @@ void Scene::initializeBidirectional() {
 		aabb.expandBy(emitter->getAABB());
 		if (!(emitter->getType() & Emitter::EDeltaPosition))
 			m_degenerateEmitters = false;
-	}
+}
 	m_aabb = aabb;
 }
 
@@ -419,12 +419,20 @@ bool Scene::preprocess(RenderQueue *queue, const RenderJob *job,
 		sceneResID, sensorResID, samplerResID))
 		return false;
 
-	/* Pre-process step for all sub-surface integrators */
+	/* Pre-process step for all sub-surface integrators (each one in independence) */
+	for (ref_vector<Subsurface>::iterator it = m_ssIntegrators.begin();
+			it != m_ssIntegrators.end(); ++it)
+		(*it)->setActive(false);
+
 	for (ref_vector<Subsurface>::iterator it = m_ssIntegrators.begin();
 		it != m_ssIntegrators.end(); ++it)
 		if (!(*it)->preprocess(this, queue, job,
 				sceneResID, sensorResID, samplerResID))
 			return false;
+
+	for (ref_vector<Subsurface>::iterator it = m_ssIntegrators.begin();
+			it != m_ssIntegrators.end(); ++it)
+		(*it)->setActive(true);
 
 	return true;
 }

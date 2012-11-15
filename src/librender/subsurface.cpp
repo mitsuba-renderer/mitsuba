@@ -23,7 +23,7 @@
 MTS_NAMESPACE_BEGIN
 
 Subsurface::Subsurface(const Properties &props)
- : NetworkedObject(props) { }
+ : NetworkedObject(props), m_active(false) { }
 
 Subsurface::Subsurface(Stream *stream, InstanceManager *manager) :
 	NetworkedObject(stream, manager) {
@@ -32,6 +32,7 @@ Subsurface::Subsurface(Stream *stream, InstanceManager *manager) :
 		Shape *shape = static_cast<Shape *>(manager->getInstance(stream));
 		m_shapes.push_back(shape);
 	}
+	m_active = false;
 }
 
 Subsurface::~Subsurface() { }
