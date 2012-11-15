@@ -277,7 +277,7 @@ public:
 			/* Generate the caustic photon map */
 			ref<GatherPhotonProcess> proc = new GatherPhotonProcess(
 				GatherPhotonProcess::ECausticPhotons, m_causticPhotons,
-				m_granularity, 3, m_rrDepth, m_gatherLocally,
+				m_granularity, m_maxDepth-1, m_rrDepth, m_gatherLocally,
 				m_autoCancelGathering, job);
 
 			proc->bindResource("scene", sceneResID);
