@@ -210,7 +210,7 @@ we can override the \code{preprocess} function:
 
 		const AABB &sceneAABB = scene->getAABB();
     /* Find the camera position at t=0 seconds */
-		Point cameraPosition = scene->getSensor()->getWorldTransform()(0.0f, Point(0.0f));
+		Point cameraPosition = scene->getSensor()->getWorldTransform()->eval(0).transformAffine(Point(0.0f));
 		m_maxDist = - std::numeric_limits<Float>::infinity();
 
 		for (int i=0; i<8; ++i)

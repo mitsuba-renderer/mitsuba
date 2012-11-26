@@ -235,7 +235,9 @@ public:
 					}
 				#endif
 
-				if (Qxy <= 0 || Qyx < 0 || std::isnan(Qxy) || std::isnan(Qyx)) {
+				if (Qxy == 0) { // be tolerant of this (can occasionally happen due to floating point inaccuracies)
+					a = 0;
+				} else if (Qxy < 0 || Qyx < 0 || std::isnan(Qxy) || std::isnan(Qyx)) {
 					#if defined(MTS_BD_DEBUG)
 						Log(EDebug, "Source path: %s", current->toString().c_str());
 						Log(EDebug, "Proposal path: %s", proposed->toString().c_str());

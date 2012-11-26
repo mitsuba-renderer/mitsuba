@@ -47,6 +47,12 @@ public:
 	virtual bool preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job,
 		int sceneResID, int cameraResID, int samplerResID) = 0;
 
+	/// Selectively activate/deactivate the subsurface integrator
+	inline void setActive(bool active) { m_active = active; }
+
+	/// Return whether or not the subsurface integrator is currently active
+	inline bool isActive() const { return m_active; }
+
 	/// Cancel any running pre-process tasks
 	virtual void cancel();
 
@@ -75,6 +81,7 @@ protected:
 	virtual ~Subsurface();
 protected:
 	std::vector<Shape *> m_shapes;
+	bool m_active;
 };
 
 MTS_NAMESPACE_END

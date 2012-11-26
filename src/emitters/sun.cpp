@@ -65,6 +65,10 @@ MTS_NAMESPACE_BEGIN
  *         This parameter can be used to scale the the amount of illumination
  *         emitted by the sun emitter. \default{1}
  *     }
+ *     \parameter{sunRadiusScale}{\Float}{
+ *         Scale factor to adjust the radius of the sun, while preserving its power.
+ *         Set to \code{0} to turn it into a directional light source.
+ *     }
  *     \parameter{samplingWeight}{\Float}{
  *         Specifies the relative amount of samples
  *         allocated to this emitter. \default{1}
@@ -74,7 +78,6 @@ MTS_NAMESPACE_BEGIN
  * Preetham et al. \cite{Preetham1999Practical}. Using the provided position
  * and time information (see \pluginref{sky} for details), it can determine the
  * position of the sun as seen from the position of the observer.
- *
  * The radiance arriving at the earth surface is then found based on the spectral
  * emission profile of the sun and the extinction cross-section of the
  * atmosphere (which depends on the \code{turbidity} and the zenith angle of the sun).
@@ -146,6 +149,23 @@ public:
 	Emitter *getElement(size_t i) {
 		if (i != 0)
 			return NULL;
+
+		if (m_sunRadiusScale == 0) {
+			Properties props("directional");
+			const Transform &trafo = m_worldTransform->eval(0);
+			props.setVector("direction", -trafo(m_sunDir));
+			props.setFloat("samplingWeight", m_samplingWeight);
+
+			props.setSpectrum("irradiance", m_radiance * m_solidAngle);
+
+			Emitter *emitter = static_cast<Emitter *>(
+				PluginManager::getInstance()->createObject(
+				MTS_CLASS(Emitter), props));
+
+			emitter->configure();
+			return emitter;
+		}
+
 		/* Rasterizing the sphere to an environment map and checking the
 		   individual pixels for coverage (which is what Mitsuba 0.3.0 did)
 		   was slow and not very effective; for instance the power varied

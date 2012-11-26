@@ -1,3 +1,18 @@
+mitsuba (0.4.2-1) unstable; urgency=low
+  * Volumetric path tracers: improved sampling when dealing with index-matched medium transitions. This is essentially a re-implementation of an optimization that Mitsuba 0.3.1 already had, but which got lost in the bidirectional rewrite.
+  * Batch tonemapper: due to an unfortunate bug, the batch tonemapper in the last release produced invalid results for images containing an alpha channel. This is now fixed.
+  * Shapes: corrected some differential geometry issues in the "cylinder" and "rectangle" shapes.
+  * MLT: fixed 2-stage MLT, which was producing incorrect results.
+  * MEPT: fixed the handling of directional light sources.
+  * Robustness: got rid of various corner-cases that could produce NaNs.
+  * Filenames: to facilitate loading scenes created on Windows/OSX, the Linux version now resolves files case-insensitively if they could not be found after a case-sensitive search.
+  * Python: added Python bindings for shapes and triangle meshes. The Python plugin should now be easier to load (previously, this was unfortunately rather difficult on several platforms). The documentation was also given an overhaul.
+  * Particle tracing: I've decided to disable the adjoint BSDF for shading normals in the particle tracer, since it causes an unacceptable amount of variance in scenes containing poorly tesselated geometry. This affects the plugins ptracer, ppm, sppm and photonmapper.
+  * Subsurface scattering: fixed parallel network renderings involving the dipole model.
+  * Homogeneous medium & dipole: added many more material presets by Narasimhan et al.
+  * OBJ loader: further robustness improvements to the OBJ loader and the associated MTL material translator.
+ -- Wenzel Jakob <wenzel@cs.cornell.edu>  Wed, 31 Oct 2012 00:00:00 -0400
+
 mitsuba (0.4.1-1) unstable; urgency=low
   * negative pixel values in textures and environment maps are handled more gracefully.
   * minor robustness improvements to the OBJ and COLLADA importers.

@@ -272,7 +272,6 @@ bool ManifoldPerturbation::sampleMutation(
 	for (int i=l+1; i<m; ++i) {
 		proposal.append(m_pool.allocVertex());
 		proposal.append(m_pool.allocEdge());
-		memset(proposal.vertex(proposal.vertexCount()-1), 0, sizeof(PathVertex)); /// XXX
 	}
 	proposal.append(source, m, k+1);
 
@@ -665,6 +664,10 @@ Float ManifoldPerturbation::Q(const Path &source, const Path &proposal,
 		if (prob == 0)
 			return 0.0f;
 		weight /= prob;
+
+		/* Catch very low probabilities which round to +inf in the above division operation */
+		if (!std::isfinite(weight.average()))
+			return 0.0f;
 	} else {
 		Frame frame(source.vertex(a+step)->getGeometricNormal());
 

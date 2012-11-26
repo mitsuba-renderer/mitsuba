@@ -289,7 +289,6 @@ public:
 		m_quality = props.getFloat("quality", 0.2f);
 
 		/* Asymmetry parameter of the phase function */
-		m_ready = false;
 		m_octreeResID = -1;
 
 		lookupMaterial(props, m_sigmaS, m_sigmaA, m_g, &m_eta);
@@ -306,7 +305,6 @@ public:
 		m_octreeIndex = stream->readInt();
 		m_irrSamples = stream->readInt();
 		m_irrIndirect = stream->readBool();
-		m_ready = false;
 		m_octreeResID = -1;
 		configure();
 	}
@@ -336,7 +334,7 @@ public:
 
 	Spectrum Lo(const Scene *scene, Sampler *sampler,
 			const Intersection &its, const Vector &d, int depth) const {
-		if (!m_ready || dot(its.shFrame.n, d) < 0)
+		if (!m_active || dot(its.shFrame.n, d) < 0)
 			return Spectrum(0.0f);
 		IsotropicDipoleQuery query(m_zr, m_zv, m_sigmaTr, its.p);
 
@@ -375,7 +373,7 @@ public:
 
 	bool preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job,
 		int sceneResID, int cameraResID, int _samplerResID) {
-		if (m_ready)
+		if (m_octree)
 			return true;
 
 		if (!scene->getIntegrator()->getClass()
@@ -445,7 +443,6 @@ public:
 		Log(EDebug, "Done clustering (took %i ms).", timer->getMilliseconds());
 		m_octreeResID = Scheduler::getInstance()->registerResource(m_octree);
 
-		m_ready = true;
 		return true;
 	}
 
@@ -454,7 +451,7 @@ public:
 		std::string octreeName = formatString("irrOctree%i", m_octreeIndex);
 		if (!m_octree.get() && params.find(octreeName) != params.end()) {
 			m_octree = static_cast<IrradianceOctree *>(params[octreeName]);
-			m_ready = true;
+			m_active = true;
 		}
 	}
 
@@ -474,7 +471,6 @@ private:
 	int m_octreeResID, m_octreeIndex;
 	int m_irrSamples;
 	bool m_irrIndirect;
-	bool m_ready;
 };
 
 MTS_IMPLEMENT_CLASS_S(IsotropicDipole, false, Subsurface)

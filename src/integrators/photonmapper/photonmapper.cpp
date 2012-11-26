@@ -201,9 +201,6 @@ public:
 		if (bsdfSamples > 1)
 			sampler->request2DArray(bsdfSamples);
 
-		if (scene->getMedia().size() == 0)
-			m_volumePhotons = 0;
-
 		bool hasDelta = false;
 		const ref_vector<Shape> &shapes = scene->getShapes();
 		for (size_t i=0; i<shapes.size(); ++i) {
@@ -280,7 +277,7 @@ public:
 			/* Generate the caustic photon map */
 			ref<GatherPhotonProcess> proc = new GatherPhotonProcess(
 				GatherPhotonProcess::ECausticPhotons, m_causticPhotons,
-				m_granularity, 3, m_rrDepth, m_gatherLocally,
+				m_granularity, m_maxDepth-1, m_rrDepth, m_gatherLocally,
 				m_autoCancelGathering, job);
 
 			proc->bindResource("scene", sceneResID);
@@ -307,10 +304,11 @@ public:
 			}
 		}
 
-		if (m_volumePhotonMap.get() == NULL && m_volumePhotons > 0) {
+		size_t volumePhotons = scene->getMedia().size() == 0 ? 0 : m_volumePhotons;
+		if (m_volumePhotonMap.get() == NULL && volumePhotons > 0) {
 			/* Generate the volume photon map */
 			ref<GatherPhotonProcess> proc = new GatherPhotonProcess(
-				GatherPhotonProcess::EVolumePhotons, m_volumePhotons,
+				GatherPhotonProcess::EVolumePhotons, volumePhotons,
 				m_granularity, m_maxDepth-1, m_rrDepth, m_gatherLocally,
 				m_autoCancelGathering, job);
 
@@ -442,11 +440,14 @@ public:
 					m_causticLookupSize) * bsdf->getDiffuseReflectance(its) * INV_PI;
 		}
 
-		if ((bsdfType & BSDF::EDelta) && (bsdfType & ~BSDF::EDelta) == 0 && rRec.depth < m_maxSpecularDepth && !cacheQuery) {
+		if ((bsdfType & BSDF::EDelta) && rRec.depth < m_maxSpecularDepth && !cacheQuery) {
 			if (rRec.type & RadianceQueryRecord::EIndirectSurfaceRadiance) {
 				int compCount = bsdf->getComponentCount();
 				RadianceQueryRecord rRec2;
 				for (int i=0; i<compCount; i++) {
+					unsigned int type = bsdf->getType(i);
+					if (!(type & BSDF::EDelta) && type == BSDF::ENull)
+						continue;
 					/* Sample the BSDF and recurse */
 					BSDFSamplingRecord bRec(its, rRec.sampler, ERadiance);
 					bRec.component = i;
@@ -598,8 +599,6 @@ public:
 					LiSurf += bsdfVal * m_parentIntegrator->Li(bsdfRay, rRec2) * weightBSDF;
 				}
 			}
-			if (true)
-				return LiSurf;
 		} else if (!isDiffuse && (rRec.type & RadianceQueryRecord::EIndirectSurfaceRadiance) && !cacheQuery) {
 			int numBSDFSamples = (rRec.depth > 1 || adaptiveQuery) ? 1 : m_glossySamples;
 			Float weightBSDF;

@@ -81,7 +81,6 @@ public:
 private:
 	ref<ShapeGroup> m_shapeGroup;
 	Transform m_objectToWorld, m_worldToObject;
-	Float m_invScale;
 };
 
 MTS_NAMESPACE_END

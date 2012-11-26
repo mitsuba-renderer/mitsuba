@@ -52,11 +52,8 @@ def process(path, target):
 				fileList += [fname]
 
 	fileList = []
-	# Wrap the walk function to make this work in python 2 and 3.
-	if pyVer >= 3:
-		os.walk(path, capture, fileList)
-	else:
-		os.path.walk(path, capture, fileList)
+	for (dirname, subdirs, files) in os.walk(path):
+	    capture(fileList, dirname, files)
 
 	ordering = [(findOrderID(fname), fname) for fname in fileList]
 	ordering = sorted(ordering, key = lambda entry: entry[0])

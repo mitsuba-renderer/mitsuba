@@ -74,16 +74,22 @@ MTS_NAMESPACE_BEGIN
  *         This parameter can be used to separately scale the the amount of illumination
  *         emitted by the sky.\default{1}
  *     }
+ *     \parameter{sunRadiusScale}{\Float}{
+ *         Scale factor to adjust the radius of the sun, while preserving its power.
+ *         Set to \code{0} to turn it into a directional light source.
+ *     }
  * }
+ * \vspace{-3mm}
  *
  * \renderings{
  *   \medrendering{\pluginref{sky} emitter}{emitter_sunsky_sky}
  *   \medrendering{\pluginref{sun} emitter}{emitter_sunsky_sun}
  *   \medrendering{\pluginref{sunsky} emitter}{emitter_sunsky_sunsky}
+ *   \vspace{-2mm}
  *   \caption{A coated rough copper test ball lit with the three
  *   provided daylight illumination models}
  * }
- * \vspace{5mm}
+ * \vspace{1mm}
  * This convenience plugin has the sole purpose of instantiating
  * \pluginref{sun} and \pluginref{sky} and merging them into a joint
  * environment map. Please refer to these plugins individually for more
@@ -95,7 +101,8 @@ public:
 		: Emitter(props) {
 		Float scale = props.getFloat("scale", 1.0f),
 		      sunScale = props.getFloat("sunScale", scale),
-		      skyScale = props.getFloat("skyScale", scale);
+		      skyScale = props.getFloat("skyScale", scale),
+			  sunRadiusScale = props.getFloat("sunRadiusScale", 1.0f);
 
 		const Transform &trafo = m_worldTransform->eval(0);
 
@@ -159,39 +166,53 @@ public:
 			props.getFloat("turbidity", 3.0f)) * sunScale;
 		sun.elevation *= props.getFloat("stretch", 1.0f);
 		Frame sunFrame = Frame(toSphere(sun));
+
 		Float theta = degToRad(SUN_APP_RADIUS * 0.5f);
 
-		size_t pixelCount = resolution*resolution/2;
-		Float cosTheta = std::cos(theta * props.getFloat("sunRadiusScale", 1.0f));
+		if (sunRadiusScale == 0) {
+			Float solidAngle = 2 * M_PI * (1 - std::cos(theta));
+			Properties props("directional");
+			props.setVector("direction", -trafo(sunFrame.n));
+			props.setFloat("samplingWeight", m_samplingWeight);
+			props.setSpectrum("irradiance", sunRadiance * solidAngle);
 
-		/* Ratio of the sphere that is covered by the sun */
-		Float coveredPortion = 0.5f * (1 - cosTheta);
+			m_dirEmitter = static_cast<Emitter *>(
+				PluginManager::getInstance()->createObject(
+				MTS_CLASS(Emitter), props));
+		} else {
+			size_t pixelCount = resolution*resolution/2;
+			Float cosTheta = std::cos(theta * sunRadiusScale);
 
-		/* Approx. number of samples that need to be generated,
-		   be very conservative */
-		size_t nSamples = (size_t) std::max((Float) 100,
-			(pixelCount * coveredPortion * 1000));
+			/* Ratio of the sphere that is covered by the sun */
+			Float coveredPortion = 0.5f * (1 - cosTheta);
 
-		factor = Point2(bitmap->getWidth() / (2*M_PI),
-			bitmap->getHeight() / M_PI);
+			/* Approx. number of samples that need to be generated,
+			   be very conservative */
+			size_t nSamples = (size_t) std::max((Float) 100,
+				(pixelCount * coveredPortion * 1000));
 
-		Spectrum value =
-			sunRadiance * (2 * M_PI * (1-std::cos(theta))) *
-			static_cast<Float>(bitmap->getWidth() * bitmap->getHeight())
-			/ (2 * M_PI * M_PI * nSamples);
+			factor = Point2(bitmap->getWidth() / (2*M_PI),
+				bitmap->getHeight() / M_PI);
 
-		for (size_t i=0; i<nSamples; ++i) {
-			Vector dir = sunFrame.toWorld(
-				Warp::squareToUniformCone(cosTheta, sample02(i)));
+			Spectrum value =
+				sunRadiance * (2 * M_PI * (1-std::cos(theta))) *
+				static_cast<Float>(bitmap->getWidth() * bitmap->getHeight())
+				/ (2 * M_PI * M_PI * nSamples);
 
-			Float sinTheta = math::safe_sqrt(1-dir.y*dir.y);
-			SphericalCoordinates sphCoords = fromSphere(dir);
+			for (size_t i=0; i<nSamples; ++i) {
+				Vector dir = sunFrame.toWorld(
+					Warp::squareToUniformCone(cosTheta, sample02(i)));
 
-			Point2i pos(
-				std::min(std::max(0, (int) (sphCoords.azimuth * factor.x)), bitmap->getWidth()-1),
-				std::min(std::max(0, (int) (sphCoords.elevation * factor.y)), bitmap->getHeight()-1));
+				Float sinTheta = math::safe_sqrt(1-dir.y*dir.y);
+				SphericalCoordinates sphCoords = fromSphere(dir);
 
-			data[pos.x + pos.y * bitmap->getWidth()] += value / std::max((Float) 1e-3f, sinTheta);
+				Point2i pos(
+					std::min(std::max(0, (int) (sphCoords.azimuth * factor.x)), bitmap->getWidth()-1),
+					std::min(std::max(0, (int) (sphCoords.elevation * factor.y)), bitmap->getHeight()-1));
+
+				data[pos.x + pos.y * bitmap->getWidth()] += value / std::max((Float) 1e-3f, sinTheta);
+			}
+
 		}
 
 		Log(EDebug, "Done (took %i ms)", timer->getMilliseconds());
@@ -204,7 +225,7 @@ public:
 		envProps.setData("bitmap", bitmapData);
 		envProps.setTransform("toWorld", trafo);
 		envProps.setFloat("samplingWeight", m_samplingWeight);
-		m_emitter = static_cast<Emitter *>(
+		m_envEmitter = static_cast<Emitter *>(
 			PluginManager::getInstance()->createObject(
 			MTS_CLASS(Emitter), envProps));
 
@@ -217,17 +238,24 @@ public:
 
 	SunSkyEmitter(Stream *stream, InstanceManager *manager)
 		: Emitter(stream, manager) {
-		m_emitter = static_cast<Emitter *>(manager->getInstance(stream));
+		m_envEmitter = static_cast<Emitter *>(manager->getInstance(stream));
+		if (stream->readBool())
+			m_dirEmitter = static_cast<Emitter *>(manager->getInstance(stream));
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		Emitter::serialize(stream, manager);
-		manager->serialize(stream, m_emitter.get());
+		manager->serialize(stream, m_envEmitter.get());
+		stream->writeBool(m_dirEmitter.get() != NULL);
+		if (m_dirEmitter.get())
+			manager->serialize(stream, m_dirEmitter.get());
 	}
 
 	void configure() {
 		Emitter::configure();
-		m_emitter->configure();
+		m_envEmitter->configure();
+		if (m_dirEmitter)
+			m_dirEmitter->configure();
 	}
 
 	bool isCompound() const {
@@ -240,14 +268,17 @@ public:
 
 	Emitter *getElement(size_t i) {
 		if (i == 0)
-			return m_emitter;
+			return m_envEmitter;
+		else if (i == 1)
+			return m_dirEmitter;
 		else
 			return NULL;
 	}
 
 	MTS_DECLARE_CLASS()
 private:
-	ref<Emitter> m_emitter;
+	ref<Emitter> m_dirEmitter;
+	ref<Emitter> m_envEmitter;
 };
 
 MTS_IMPLEMENT_CLASS_S(SunSkyEmitter, false, Emitter)

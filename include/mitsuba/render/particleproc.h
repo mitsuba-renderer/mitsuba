@@ -179,6 +179,9 @@ public:
 	 * \param depth
 	 *    Depth of the interaction in path space (with 1
 	 *    corresponding to the first bounce)
+	 * \param nullInteractions
+	 *    Specifies how many of these interactions were of type BSDF::ENull
+	 *    (i.e. index-matched medium transitions)
 	 * \param delta
 	 *    Denotes if the previous scattering event was a degenerate
 	 *    specular reflection or refraction.
@@ -192,8 +195,8 @@ public:
 	 *    all preceding interactions except for the current surface
 	 *    interaction.
      */
-	virtual void handleSurfaceInteraction(int depth, bool delta,
-		const Intersection &its, const Medium *medium,
+	virtual void handleSurfaceInteraction(int depth, int nullInteractions,
+		bool delta, const Intersection &its, const Medium *medium,
 		const Spectrum &weight);
 
     /**
@@ -205,6 +208,9 @@ public:
 	 * \param depth
 	 *    Depth of the interaction in path space (with 1
 	 *    corresponding to the first bounce)
+	 * \param nullInteractions
+	 *    Specifies how many of these interactions were of type BSDF::ENull
+	 *    (i.e. index-matched medium transitions)
 	 * \param delta
 	 *    Denotes if the previous scattering event was a degenerate
 	 *    specular reflection or refraction.
@@ -217,8 +223,8 @@ public:
 	 *    all preceding interactions except for the current medium
 	 *    interaction.
      */
-	virtual void handleMediumInteraction(int depth, bool delta,
-		const MediumSamplingRecord &mRec, const Medium *medium,
+	virtual void handleMediumInteraction(int depth, int nullInteractions,
+		bool delta, const MediumSamplingRecord &mRec, const Medium *medium,
 		const Vector &wi, const Spectrum &weight);
 
 	MTS_DECLARE_CLASS()
