@@ -538,6 +538,8 @@ void MainWindow::onProgressMessage(const RenderJob *job, const QString &name,
 	updateUI();
 }
 
+#if MTSGUI_STATIC_QFILEDIALOG
+
 void MainWindow::on_actionOpen_triggered() {
 	QSettings settings;
 	QStringList fileNames = QFileDialog::getOpenFileNames(this, QString(),
@@ -555,6 +557,42 @@ void MainWindow::on_actionOpen_triggered() {
 		loadFile(*it);
 	}
 }
+
+#else // MTSGUI_STATIC_QFILEDIALOG
+
+void MainWindow::on_actionOpen_triggered() {
+	QFileDialog *dialog = new QFileDialog(this, Qt::Sheet);
+	dialog->setNameFilter(tr("All supported formats (*.xml *.exr *.rgbe *.hdr *.pfm *.png *.jpg *.jpeg);;"
+			"Mitsuba scenes (*.xml);;High dynamic-range images (*.exr *.rgbe *.hdr *.pfm);;Low "
+			"dynamic-range images (*.png *.jpg *.jpeg)"));
+	dialog->setAttribute(Qt::WA_DeleteOnClose);
+	dialog->setAcceptMode(QFileDialog::AcceptOpen);
+	dialog->setViewMode(QFileDialog::Detail);
+	dialog->setWindowModality(Qt::WindowModal);
+	QSettings settings;
+	dialog->restoreState(settings.value("fileDialogState").toByteArray());
+	connect(dialog, SIGNAL(finished(int)), this, SLOT(onOpenDialogClose(int)));
+	m_currentChild = dialog;
+	// prevent a tab drawing artifact on Qt/OSX
+	m_activeWindowHack = true;
+	dialog->show();
+	qApp->processEvents();
+	m_activeWindowHack = false;
+}
+
+void MainWindow::onOpenDialogClose(int reason) {
+	QSettings settings;
+	QFileDialog *dialog = static_cast<QFileDialog *>(sender());
+	m_currentChild = NULL;
+	if (reason == QDialog::Accepted) {
+		QStringList fileNames = dialog->selectedFiles();
+		settings.setValue("fileDialogState", dialog->saveState());
+		for (int i=0; i<fileNames.size(); ++i)
+			loadFile(fileNames[i]);
+	}
+}
+
+#endif // MTSGUI_STATIC_QFILEDIALOG
 
 void MainWindow::on_actionExit_triggered() {
 	qApp->closeAllWindows();
@@ -1391,6 +1429,8 @@ inline float toSRGB(float value) {
 	return 1.055f * std::pow(value, 0.41666f) - 0.055f;
 }
 
+#if MTSGUI_STATIC_QFILEDIALOG
+
 void MainWindow::on_actionExportImage_triggered() {
 	QSettings settings;
 	const QString fileName = QFileDialog::getSaveFileName(this,
@@ -1400,11 +1440,63 @@ void MainWindow::on_actionExportImage_triggered() {
 	        "High dynamic range Radiance RGBE image (*.rgbe *.hdr);;"
 	        "High dynamic range Portable Float Map image (*.pfm);;"
 	        "Tonemapped low dynamic range image (*.png *.jpg *.jpeg)"));
-	
+	if (!fileName.isEmpty()) {
+		QSettings settings;
+		settings.setValue("exportFileDir", QFileInfo(fileName).absolutePath());
+		exportImage(fileName);
+	}
+}
+
+#else // MTSGUI_STATIC_QFILEDIALOG
+
+void MainWindow::on_actionExportImage_triggered() {
+	QFileDialog *dialog = new QFileDialog(this, tr("Export image .."),
+	    "", tr("All supported formats (*.exr *.hdr *.rgbe *.pfm *.png *.jpg *.jpeg);;"
+	           "High dynamic range OpenEXR image (*.exr);;"
+	           "High dynamic range Radiance RGBE image (*.rgbe *.hdr);;"
+	           "High dynamic range Portable Float Map image (*.pfm);;"
+	           "Tonemapped low dynamic range image (*.png *.jpg *.jpeg)"));
+
+	QSettings settings;
+	dialog->setViewMode(QFileDialog::Detail);
+	dialog->setAcceptMode(QFileDialog::AcceptSave);
+
+#if defined(__OSX__)
+	dialog->setOption(QFileDialog::DontUseNativeDialog, true);
+#endif
+
+	dialog->restoreState(settings.value("fileDialogState").toByteArray());
+	dialog->setAttribute(Qt::WA_DeleteOnClose);
+	dialog->setWindowModality(Qt::WindowModal);
+	connect(dialog, SIGNAL(finished(int)), this, SLOT(onExportDialogClose(int)));
+	m_currentChild = dialog;
+	// prevent a tab drawing artifact on Qt/OSX
+	m_activeWindowHack = true;
+	dialog->show();
+	qApp->processEvents();
+	m_activeWindowHack = false;
+}
+
+void MainWindow::onExportDialogClose(int reason) {
+	int currentIndex = ui->tabBar->currentIndex();
+	SceneContext *ctx = m_context[currentIndex];
+
+	QSettings settings;
+	QFileDialog *dialog = static_cast<QFileDialog *>(sender());
+	m_currentChild = NULL;
+
+    if (reason == QDialog::Accepted) {
+		QString fileName = dialog->selectedFiles().value(0);
+		settings.setValue("fileDialogState", dialog->saveState());
+		exportImage(fileName);
+	}
+}
+
+#endif // MTSGUI_STATIC_QFILEDIALOG
+
+void MainWindow::exportImage(const QString &fileName) {
 	if (!fileName.isEmpty()) {
 		Bitmap::EFileFormat format;
-		settings.setValue("exportFileDir", QFileInfo(fileName).absolutePath());
-
 		if (fileName.endsWith(".exr")) {
 			format = Bitmap::EOpenEXR;
 		} else if (fileName.endsWith(".png")) {

@@ -134,9 +134,9 @@ include_directories(. ${CMAKE_CURRENT_BINARY_DIR})
 QT4_ADD_RESOURCES(RC_SRCS ${RC_FILES})
 source_group("Qt Resources" FILES ${RC_FILES})
 
-# Add our own qtmain
+# Add our own qtmain and use the static file dialogs
 if (WIN32)
-  add_definitions(-D MTS_CUSTOM_QTMAIN)
+  add_definitions(-D MTS_CUSTOM_QTMAIN -DMTSGUI_STATIC_QFILEDIALOG=1)
   list(APPEND SRCS qtmain_win.cpp)
 endif()
 
