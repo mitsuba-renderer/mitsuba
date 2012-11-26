@@ -195,8 +195,8 @@ private slots:
 #if !MTSGUI_STATIC_QFILEDIALOG
 	void onOpenDialogClose(int reason);
 	void onExportDialogClose(int reason);
-#endif
 	void onSaveAsDialogClose(int reason);
+#endif
 	void onRenderSettingsClose(int reason);
 	void onImportDialogClose(int reason);
 	void onSceneInformationClose(int reason);
@@ -207,6 +207,7 @@ private slots:
 
 private:
 	void exportImage(const QString &fileName);
+	void saveSceneAs(const QString &fileName);
 
     Ui::MainWindow *ui;
 	QAction *m_actRecent[MAX_RECENT_FILES];
