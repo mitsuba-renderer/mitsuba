@@ -223,7 +223,7 @@ MainWindow::MainWindow(QWidget *parent) :
 	move(windowPos);
 #endif
 	show();
-	/* Move again just to be sure.. */
+	/* Move again just to be sure ... */
 	move(windowPos);
 
 	updateUI();
@@ -274,7 +274,7 @@ void MainWindow::initWorkers() {
 		QDialog *dialog = new NonClosableDialog(this);
 		dialog->setWindowModality(Qt::WindowModal);
 		QVBoxLayout *layout = new QVBoxLayout(dialog);
-		QLabel *label = new QLabel(tr("Establishing network connections .."), dialog);
+		QLabel *label = new QLabel(tr("Establishing network connections ..."), dialog);
 		label->setAlignment(Qt::AlignCenter);
 		layout->addWidget(label);
 		QProgressBar *progressBar = new QProgressBar(dialog);
@@ -538,6 +538,28 @@ void MainWindow::onProgressMessage(const RenderJob *job, const QString &name,
 	updateUI();
 }
 
+#if MTSGUI_STATIC_QFILEDIALOG
+
+void MainWindow::on_actionOpen_triggered() {
+	QSettings settings;
+	QStringList fileNames = QFileDialog::getOpenFileNames(this, QString(),
+		settings.value("fileDir").toString(),
+		tr("All supported formats (*.xml *.exr *.rgbe *.hdr *.pfm *.png *.jpg *.jpeg);;"
+		   "Mitsuba scenes (*.xml);;High dynamic-range images (*.exr *.rgbe *.hdr *.pfm);;"
+		   "Low dynamic-range images (*.png *.jpg *.jpeg)"));
+
+	QStringList::ConstIterator it = fileNames.constBegin();
+	if (it != fileNames.constEnd()) {
+		QFileInfo info(*it);
+		settings.setValue("fileDir", info.absolutePath());
+	}
+	for ( ; it != fileNames.constEnd(); ++it) {
+		loadFile(*it);
+	}
+}
+
+#else // MTSGUI_STATIC_QFILEDIALOG
+
 void MainWindow::on_actionOpen_triggered() {
 	QFileDialog *dialog = new QFileDialog(this, Qt::Sheet);
 	dialog->setNameFilter(tr("All supported formats (*.xml *.exr *.rgbe *.hdr *.pfm *.png *.jpg *.jpeg);;"
@@ -570,6 +592,8 @@ void MainWindow::onOpenDialogClose(int reason) {
 	}
 }
 
+#endif // MTSGUI_STATIC_QFILEDIALOG
+
 void MainWindow::on_actionExit_triggered() {
 	qApp->closeAllWindows();
 }
@@ -600,7 +624,7 @@ SceneContext *MainWindow::loadScene(const QString &qFileName) {
 	ref<SceneLoader> loadingThread;
 	loaddlg->setAttribute(Qt::WA_DeleteOnClose);
 	loaddlg->setWindowModality(Qt::ApplicationModal);
-	loaddlg->setWindowTitle("Loading ..");
+	loaddlg->setWindowTitle("Loading ...");
 	loaddlg->show();
 
 retry:
@@ -1405,8 +1429,28 @@ inline float toSRGB(float value) {
 	return 1.055f * std::pow(value, 0.41666f) - 0.055f;
 }
 
+#if MTSGUI_STATIC_QFILEDIALOG
+
 void MainWindow::on_actionExportImage_triggered() {
-	QFileDialog *dialog = new QFileDialog(this, tr("Export image .."),
+	QSettings settings;
+	const QString fileName = QFileDialog::getSaveFileName(this,
+		tr("Export image ..."), settings.value("exportFileDir").toString(),
+		tr("All supported formats (*.exr *.hdr *.rgbe *.pfm *.png *.jpg *.jpeg);;"
+	        "High dynamic range OpenEXR image (*.exr);;"
+	        "High dynamic range Radiance RGBE image (*.rgbe *.hdr);;"
+	        "High dynamic range Portable Float Map image (*.pfm);;"
+	        "Tonemapped low dynamic range image (*.png *.jpg *.jpeg)"));
+	if (!fileName.isEmpty()) {
+		QSettings settings;
+		settings.setValue("exportFileDir", QFileInfo(fileName).absolutePath());
+		exportImage(fileName);
+	}
+}
+
+#else // MTSGUI_STATIC_QFILEDIALOG
+
+void MainWindow::on_actionExportImage_triggered() {
+	QFileDialog *dialog = new QFileDialog(this, tr("Export image ..."),
 	    "", tr("All supported formats (*.exr *.hdr *.rgbe *.pfm *.png *.jpg *.jpeg);;"
 	           "High dynamic range OpenEXR image (*.exr);;"
 	           "High dynamic range Radiance RGBE image (*.rgbe *.hdr);;"
@@ -1442,33 +1486,47 @@ void MainWindow::onExportDialogClose(int reason) {
 	m_currentChild = NULL;
 
     if (reason == QDialog::Accepted) {
-        QString fileName = dialog->selectedFiles().value(0);
-		Bitmap::EFileFormat format;
+		QString fileName = dialog->selectedFiles().value(0);
 		settings.setValue("fileDialogState", dialog->saveState());
+		exportImage(fileName);
+	}
+}
 
+#endif // MTSGUI_STATIC_QFILEDIALOG
+
+void MainWindow::exportImage(const QString &fileName) {
+	if (!fileName.isEmpty()) {
+		Bitmap::EFileFormat format;
+		bool isHDR = true;
 		if (fileName.endsWith(".exr")) {
 			format = Bitmap::EOpenEXR;
 		} else if (fileName.endsWith(".png")) {
 			format = Bitmap::EPNG;
+			isHDR = false;
 		} else if (fileName.endsWith(".hdr") || fileName.endsWith(".rgbe")) {
 			format = Bitmap::ERGBE;
 		} else if (fileName.endsWith(".jpg") || fileName.endsWith(".jpeg")) {
 			format = Bitmap::EJPEG;
+			isHDR = false;
 		} else if (fileName.endsWith(".pfm")) {
 			format = Bitmap::EPFM;
 		} else {
-			SLog(EError, "Unknown file type -- the filename must end in either .exr, .rgbe, .hdr, .pfm, .png, .jpg, or .jpeg");
+			SLog(EError, "Unknown file type -- the filename must end in either"
+				" .exr, .rgbe, .hdr, .pfm, .png, .jpg, or .jpeg");
 			return;
 		}
 
 		ref<FileStream> fs = new FileStream(toFsPath(fileName),
 			FileStream::ETruncReadWrite);
 
+		const int currentIndex = ui->tabBar->currentIndex();
+		const SceneContext *ctx = m_context[currentIndex];
+
 		if (ctx->mode == EPreview)
 			ui->glView->downloadFramebuffer();
 
 		ref<Bitmap> bitmap = ctx->framebuffer;
-		if (format != Bitmap::EOpenEXR && format != Bitmap::ERGBE && format != Bitmap::EPFM) {
+		if (!isHDR) {
 			/* Tonemap the image */
 			if (ctx->toneMappingMethod == EReinhard) {
 				Float logAvgLuminance = 0, maxLuminance = 0; /* Unused */
@@ -1482,7 +1540,7 @@ void MainWindow::onExportDialogClose(int reason) {
 			bitmap = bitmap->convert(Bitmap::ERGB, Bitmap::EUInt8,
 				ctx->srgb ? (Float) -1 : ctx->gamma,
 				ctx->toneMappingMethod == EReinhard
-				? (Float) 1.0f : std::pow((Float) 2.0f, ctx->exposure));
+				? (Float) 1.0f : std::pow((Float) 2, ctx->exposure));
 		}
 
 		bitmap->write(format, fs);
@@ -1494,8 +1552,24 @@ void MainWindow::on_actionSave_triggered() {
 	saveScene(this, context, context->fileName);
 }
 
+#if MTSGUI_STATIC_QFILEDIALOG
+
 void MainWindow::on_actionSaveAs_triggered() {
-	QFileDialog *dialog = new QFileDialog(this, tr("Save as .."),
+	SceneContext *context = m_context[ui->tabBar->currentIndex()];
+	QString fileDir = QFileInfo(context->fileName).absolutePath();
+	QString fileName = QFileDialog::getSaveFileName(this,
+		tr("Save scene as ..."), fileDir, tr("Mitsuba scenes (*.xml)"));
+	if (!fileName.isEmpty()) {
+		QSettings settings;
+		settings.setValue("fileDir", QFileInfo(fileName).absolutePath());
+		saveSceneAs(fileName);
+	}
+}
+
+#else // MTSGUI_STATIC_QFILEDIALOG
+
+void MainWindow::on_actionSaveAs_triggered() {
+	QFileDialog *dialog = new QFileDialog(this, tr("Save scene as ..."),
 		"", tr("Mitsuba scenes (*.xml)"));
 
 	m_currentChild = dialog;
@@ -1515,19 +1589,27 @@ void MainWindow::on_actionSaveAs_triggered() {
 }
 
 void MainWindow::onSaveAsDialogClose(int reason) {
-	int currentIndex = ui->tabBar->currentIndex();
-	SceneContext *context = m_context[currentIndex];
-
 	QSettings settings;
 	QFileDialog *dialog = static_cast<QFileDialog *>(sender());
 	m_currentChild = NULL;
 	if (reason == QDialog::Accepted) {
         QString fileName = dialog->selectedFiles().value(0);
 		settings.setValue("fileDialogState", dialog->saveState());
+		saveSceneAs(fileName);
+	}
+}
+
+#endif // MTSGUI_STATIC_QFILEDIALOG
+
+void MainWindow::saveSceneAs(const QString &fileName) {
+	if (!fileName.isEmpty()) {
+		int currentIndex = ui->tabBar->currentIndex();
+		SceneContext *context = m_context[currentIndex];
+
 		saveScene(this, context, fileName);
 		fs::path pathName = toFsPath(fileName),
-			     complete = fs::absolute(pathName),
-			     baseName = pathName.stem();
+		         complete = fs::absolute(pathName),
+		         baseName = pathName.stem();
 		context->fileName = fileName;
 		context->shortName = QFileInfo(fileName).fileName();
 		context->scene->setSourceFile(pathName);

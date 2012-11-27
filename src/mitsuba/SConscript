@@ -1,4 +1,4 @@
-Import('sys', 'env', 'hasCollada', 'stubs')
+Import('sys', 'env', 'hasCollada', 'stubs', 'winstubs')
 
 # Create an environment with Xerces and OpenGL
 mainEnv = env.Clone()
@@ -24,10 +24,10 @@ if sys.platform == 'darwin':
 	stubs += [mainEnv_osx.StaticObject('darwin_stub.mm')]
 	mainEnv.Append(LINKFLAGS=['-Xlinker', '-rpath', '-Xlinker', '@executable_path/../Frameworks'])
 
-mainEnv.Program('mtsutil', stubs + ['mtsutil.cpp'])
+mainEnv.Program('mtsutil', stubs + winstubs + ['mtsutil.cpp'])
 
 # Build the command-line+GUI interface
-mainEnv.Program('mtssrv', ['mtssrv.cpp'])
-mainEnv.Program('mitsuba', ['mitsuba.cpp'])
+mainEnv.Program('mtssrv',  winstubs + ['mtssrv.cpp'])
+mainEnv.Program('mitsuba', winstubs + ['mitsuba.cpp'])
 
 Return('mainEnv')

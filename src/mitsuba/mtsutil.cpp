@@ -23,7 +23,6 @@
 #if defined(Assert)
 # undef Assert
 #endif
-#include <xercesc/parsers/SAXParser.hpp>
 #include <mitsuba/core/sched_remote.h>
 #include <mitsuba/core/sstream.h>
 #include <mitsuba/core/sshstream.h>
@@ -436,10 +435,8 @@ int mts_main(int argc, char **argv) {
 	return retval;
 }
 
-#if !defined(__OSX__)
+#if !defined(__OSX__) && !defined(__WINDOWS__)
 int main(int argc, char **argv) {
 	return mts_main(argc, argv);
 }
 #endif
-
-

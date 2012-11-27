@@ -45,7 +45,6 @@
 #include <winsock2.h>
 #endif
 
-XERCES_CPP_NAMESPACE_USE
 using namespace mitsuba;
 MainWindow *mainWindow = NULL;
 

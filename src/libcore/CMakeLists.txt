@@ -58,6 +58,7 @@ set(HDRS
   ${INCLUDE_DIR}/sfcurve.h
   ${INCLUDE_DIR}/shvector.h
   ${INCLUDE_DIR}/spectrum.h
+  ${INCLUDE_DIR}/spline.h
   ${INCLUDE_DIR}/sse.h
   ${INCLUDE_DIR}/ssemath.h
   ${INCLUDE_DIR}/ssevector.h
@@ -108,6 +109,7 @@ set(SRCS
   serialization.cpp
   shvector.cpp
   spectrum.cpp
+  spline.cpp
   ssemath.cpp
   sshstream.cpp
   sstream.cpp

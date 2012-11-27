@@ -28,13 +28,21 @@ LocateResourceDialog::LocateResourceDialog(QWidget *parent, const QString &resNa
 }
 
 void LocateResourceDialog::on_pathBrowse_clicked() {
+	QString fname;
+#if MTSGUI_STATIC_QFILEDIALOG
+	QSettings settings;
+	fname = QFileDialog::getOpenFileName(this, QString(),
+		settings.value("importDir").toString());
+#else
 	QFileDialog dialog(this);
 	dialog.setAcceptMode(QFileDialog::AcceptOpen);
 	dialog.setViewMode(QFileDialog::Detail);
 	dialog.setWindowModality(Qt::ApplicationModal);
-
 	if (dialog.exec()) {
-		QString fname = dialog.selectedFiles()[0];
+		fname = dialog.selectedFiles()[0];
+	}
+#endif
+	if (!fname.isEmpty()) {
 		ui->pathEdit->setText(fname);
 		m_filename = fname;
 		ui->buttonBox->button(QDialogButtonBox::Ok)->setEnabled(true);

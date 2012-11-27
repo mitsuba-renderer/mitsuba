@@ -141,14 +141,16 @@ function(mts_win_resource target_filename name ext description)
   endif()
   
   set(RC_DESCRIPTION "${description}")
-  #TODO Add the hg revision number to the version, e.g. 0.0.0-hg000000000000
-  set(RC_VERSION "${MTS_VERSION}")
-  set(RC_VERSION_COMMA "${MTS_VERSION}.0")
-  string(REPLACE "." "," RC_VERSION_COMMA ${RC_VERSION_COMMA})
+  if (MTS_HAS_VALID_REV)
+    set(RC_VERSION "${MTS_VERSION}-${MTS_VERSION_BUILD}hg${MTS_REV_ID}")
+  else()
+    set(RC_VERSION "${MTS_VERSION}")
+  endif()
+  set(RC_VERSION_COMMA "${MTS_VERSION_MAJOR},${MTS_VERSION_MINOR},${MTS_VERSION_PATCH},0")
   set(RC_FILENAME "${name}${ext}")
   set(RC_NAME "${name}")
-  #TODO Set the year programmatically
-  set(RC_YEAR "2012")
+  # MTS_DATE has the format YYYY.MM.DD
+  string(SUBSTRING "${MTS_DATE}" 0 4 RC_YEAR)
   
   configure_file("${RC_FILE}" "${target_filename}" ESCAPE_QUOTES @ONLY)
 endfunction()

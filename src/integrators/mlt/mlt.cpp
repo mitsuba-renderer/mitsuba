@@ -259,15 +259,21 @@ public:
 
 		bool nested = m_config.twoStage && m_config.firstStage;
 
-		Vector2i cropSize = film->getCropSize();;
+		Vector2i cropSize = film->getCropSize();
+		Assert(cropSize.x > 0 && cropSize.y > 0);
 		Log(EInfo, "Starting %srender job (%ix%i, " SIZE_T_FMT
 			" %s, " SSE_STR ", approx. " SIZE_T_FMT " mutations/pixel) ..",
 			nested ? "nested " : "", cropSize.x, cropSize.y,
 			nCores, nCores == 1 ? "core" : "cores", sampleCount);
 
-		if (m_config.workUnits <= 0)
-			m_config.workUnits = std::max((int) std::ceil((cropSize.x
-				* cropSize.y * sampleCount) / 200000.0f), 1);
+		if (m_config.workUnits <= 0) {
+			const size_t desiredMutationsPerWorkUnit = 200000;
+			const size_t cropArea  = (size_t) cropSize.x * cropSize.y;
+			const size_t workUnits = ((desiredMutationsPerWorkUnit - 1) + 
+				(cropArea * sampleCount)) / desiredMutationsPerWorkUnit;
+			Assert(workUnits <= (size_t) std::numeric_limits<int>::max());
+			m_config.workUnits = (int) std::max(workUnits, (size_t) 1);
+		}
 
 		m_config.nMutations = (cropSize.x * cropSize.y *
 			sampleCount) / m_config.workUnits;

@@ -198,8 +198,8 @@ public:
 		Spectrum *target = (Spectrum *) bitmap->getFloatData();
 		Spectrum value =
 			m_radiance * (2 * M_PI * (1-std::cos(m_theta))) *
-			(bitmap->getWidth() * bitmap->getHeight())
-			/ (2.0f * M_PI * M_PI * (Float) nSamples);
+			static_cast<Float>(bitmap->getWidth() * bitmap->getHeight())
+			/ (2 * M_PI * M_PI * nSamples);
 
 		for (size_t i=0; i<nSamples; ++i) {
 			Vector dir = frame.toWorld(
