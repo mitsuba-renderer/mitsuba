@@ -20,6 +20,7 @@
 #define __ROUGH_TRANSMITTANCE_H
 
 #include <mitsuba/core/fstream.h>
+#include <mitsuba/core/spline.h>
 #include <mitsuba/core/fresolver.h>
 #include "microfacet.h"
 
@@ -186,17 +187,17 @@ public:
 		if (m_alphaFixed && m_etaFixed) {
 			SAssert(cosTheta >= 0);
 
-			result = interpCubic1D(warpedCosTheta,
-				m_trans, 0.0f, 1.0f, m_thetaSamples);
+			result = evalCubicInterp1D(warpedCosTheta,
+				m_trans, m_thetaSamples, 0.0f, 1.0f);
 		} else if (m_etaFixed) {
 			SAssert(cosTheta >= 0);
 
 			Float warpedAlpha = std::pow((alpha - m_alphaMin)
 					/ (m_alphaMax-m_alphaMin), (Float) 0.25f);
 
-			result = interpCubic2D(Point2(warpedCosTheta, warpedAlpha),
-				m_trans, Point2(0.0f), Point2(1.0f),
-				Size2(m_thetaSamples, m_alphaSamples));
+			result = evalCubicInterp2D(Point2(warpedCosTheta, warpedAlpha),
+				m_trans, Size2(m_thetaSamples, m_alphaSamples),
+				Point2(0.0f), Point2(1.0f));
 		} else {
 			if (cosTheta < 0) {
 				cosTheta = -cosTheta;
@@ -220,9 +221,9 @@ public:
 			Float warpedEta = std::pow((eta - m_etaMin)
 					/ (m_etaMax-m_etaMin), (Float) 0.25f);
 
-			result = interpCubic3D(Point3(warpedCosTheta, warpedAlpha, warpedEta),
-				data, Point3(0.0f), Point3(1.0f),
-				Size3(m_thetaSamples, m_alphaSamples, m_etaSamples));
+			result = evalCubicInterp3D(Point3(warpedCosTheta, warpedAlpha, warpedEta),
+				data, Size3(m_thetaSamples, m_alphaSamples, m_etaSamples),
+				Point3(0.0f), Point3(1.0f));
 		}
 
 		return std::min((Float) 1.0f, std::max((Float) 0.0f, result));
@@ -250,8 +251,8 @@ public:
 			Float warpedAlpha = std::pow((alpha - m_alphaMin)
 					/ (m_alphaMax-m_alphaMin), (Float) 0.25f);
 
-			result = interpCubic1D(warpedAlpha, m_diffTrans,
-				0.0f, 1.0f, m_alphaSamples);
+			result = evalCubicInterp1D(warpedAlpha,
+				m_diffTrans, m_alphaSamples, 0.0f, 1.0f);
 		} else {
 			Float *data = m_diffTrans;
 			if (eta < 1) {
@@ -270,8 +271,9 @@ public:
 			Float warpedEta = std::pow((eta - m_etaMin)
 					/ (m_etaMax-m_etaMin), (Float) 0.25f);
 
-			result = interpCubic2D(Point2(warpedAlpha, warpedEta), data,
-				Point2(0.0f), Point2(1.0f), Size2(m_alphaSamples, m_etaSamples));
+			result = evalCubicInterp2D(Point2(warpedAlpha, warpedEta), data,
+				Size2(m_alphaSamples, m_etaSamples), Point2(0.0f), Point2(1.0f));
+
 		}
 
 		return std::min((Float) 1.0f, std::max((Float) 0.0f,  result));
@@ -317,16 +319,17 @@ public:
 			  dTheta = 1.0f / (m_thetaSamples - 1);
 
 		for (size_t i=0; i<m_alphaSamples; ++i) {
-			for (size_t j=0; j<m_thetaSamples; ++j)
-				newTrans[i*m_thetaSamples + j] = interpCubic3D(
+			for (size_t j=0; j<m_thetaSamples; ++j) {
+				newTrans[i*m_thetaSamples + j] = evalCubicInterp3D(
 					Point3(j*dTheta, i*dAlpha, warpedEta),
-					trans, Point3(0.0f), Point3(1.0f),
-					Size3(m_thetaSamples, m_alphaSamples, m_etaSamples));
+					trans, Size3(m_thetaSamples, m_alphaSamples, m_etaSamples),
+					Point3(0.0f), Point3(1.0f));
+			}
 
-			newDiffTrans[i] = interpCubic2D(
+			newDiffTrans[i] = evalCubicInterp2D(
 					Point2(i*dAlpha, warpedEta),
-					diffTrans, Point2(0.0f), Point2(1.0f),
-					Size2(m_alphaSamples, m_etaSamples));
+					diffTrans, Size2(m_alphaSamples, m_etaSamples),
+					Point2(0.0f), Point2(1.0f));
 		}
 
 		delete[] m_trans;
@@ -364,13 +367,13 @@ public:
 		Float dTheta = 1.0f / (m_thetaSamples - 1);
 
 		for (size_t i=0; i<m_thetaSamples; ++i)
-			newTrans[i] = interpCubic2D(
+			newTrans[i] = evalCubicInterp2D(
 				Point2(i*dTheta, warpedAlpha),
-				m_trans, Point2(0.0f), Point2(1.0f),
-				Size2(m_thetaSamples, m_alphaSamples));
+				m_trans, Size2(m_thetaSamples, m_alphaSamples),
+				Point2(0.0f), Point2(1.0f));
 
-		newDiffTrans[0] = interpCubic1D(warpedAlpha,
-				m_diffTrans, 0.0f, 1.0f, m_alphaSamples);
+		newDiffTrans[0] = evalCubicInterp1D(warpedAlpha,
+				m_diffTrans, m_alphaSamples, 0.0f, 1.0f);
 
 		delete[] m_trans;
 		delete[] m_diffTrans;
