@@ -114,6 +114,12 @@ public:
 	/// Warp a uniformly distributed square sample to a 2D tent distribution
 	static Point2 squareToTent(const Point2 &sample);
 
+	/**
+	 * \brief Warp a uniformly distributed sample on [0, 1] to a nonuniform
+	 * tent distribution with nodes <tt>{a, b, c}</tt>
+	 */
+	static Float intervalToNonuniformTent(Float a, Float b, Float c, Float sample);
+
 	//! @}
 	// =============================================================
 };

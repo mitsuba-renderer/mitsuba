@@ -161,6 +161,18 @@ Point2 Warp::squareToTent(const Point2 &sample) {
 	);
 }
 
+Float Warp::intervalToNonuniformTent(Float a, Float b, Float c, Float sample) {
+	Float factor;
 
+	if (sample * (c-a) < b-a) {
+		factor = a-b;
+		sample *= (a-c)/(a-b);
+	} else {
+		factor = c-b;
+		sample = (a-c)/(b-c) * (sample - (a-b)/(a-c));
+	}
+
+	return b + factor * (1-math::safe_sqrt(sample));
+}
 
 MTS_NAMESPACE_END
