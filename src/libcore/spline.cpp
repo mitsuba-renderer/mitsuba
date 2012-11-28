@@ -323,10 +323,10 @@ Float evalCubicInterp2DN(const Point2 &p, const Float **nodes_,
 			std::lower_bound(nodes, nodes + size[dim], p[dim]) - nodes - 1));
 		knot[dim] = k;
 
-		Float width = nodes[k+1] - nodes[k], invWidth = 1 / width;
+		Float width = nodes[k+1] - nodes[k];
 
 		/* Compute the relative position within the interval */
-		Float t = (p[dim] - nodes[k]) * invWidth,
+		Float t = (p[dim] - nodes[k]) / width,
 			  t2 = t*t, t3 = t2*t;
 
 		/* Compute node weights */
@@ -470,10 +470,10 @@ Float evalCubicInterp3DN(const Point3 &p, const Float **nodes_,
 			std::lower_bound(nodes, nodes + size[dim], p[dim]) - nodes - 1));
 		knot[dim] = k;
 
-		Float width = nodes[k+1] - nodes[k], invWidth = 1 / width;
+		Float width = nodes[k+1] - nodes[k];
 
 		/* Compute the relative position within the interval */
-		Float t = (p[dim] - nodes[k]) * invWidth,
+		Float t = (p[dim] - nodes[k]) / width,
 			  t2 = t*t, t3 = t2*t;
 
 		/* Compute node weights */
