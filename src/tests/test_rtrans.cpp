@@ -37,7 +37,7 @@ void transmittanceIntegrand(const BSDF *bsdf, const Vector &wi, size_t nPts, con
 
 void diffTransmittanceIntegrand(Float *data, size_t resolution, size_t nPts, const Float *in, Float *out) {
 	for (size_t i=0; i<nPts; ++i)
-		out[i] = 2 * in[i] * interpCubic1D(in[i], data, 0, 1, resolution);
+		out[i] = 2 * in[i] * evalCubicInterp1D(in[i], data, resolution, 0, 1);
 }
 
 class TestRoughTransmittance : public TestCase {
