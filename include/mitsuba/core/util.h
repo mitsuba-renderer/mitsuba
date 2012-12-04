@@ -507,22 +507,99 @@ inline Float fresnelDielectricExt(Float cosThetaI, Float eta) { Float cosThetaT;
 	return fresnelDielectricExt(cosThetaI, cosThetaT, eta); }
 
 /**
- * \brief Calculates the unpolarized fresnel reflection coefficient
- * at a planar interface between vacuum and a conductor.
+ * \brief Calculates the unpolarized Fresnel reflection coefficient
+ * at a planar interface having a complex-valued relative index of
+ * refraction (approximate scalar version)
+ *
+ * The implementation of this function relies on a simplified expression
+ * that becomes increasingly accurate as k grows.
+ *
+ * The name of this function is a slight misnomer, since it supports
+ * the general case of a complex-valued relative index of refraction
+ * (rather than being restricted to conductors)
  *
  * \param cosThetaI
  * 		Cosine of the angle between the normal and the incident ray
  * \param eta
- * 		Real refractive index (wavelength-dependent)
+ * 		Relative refractive index (real component)
  * \param k
- * 		Imaginary refractive index (wavelength-dependent)
+ * 		Relative refractive index (imaginary component)
  * \ingroup libpython
  */
-extern MTS_EXPORT_CORE Spectrum fresnelConductor(Float cosThetaI,
+extern MTS_EXPORT_CORE Float fresnelConductorApprox(Float cosThetaI,
+		Float eta, Float k);
+
+/**
+ * \brief Calculates the unpolarized Fresnel reflection coefficient
+ * at a planar interface having a complex-valued relative index of
+ * refraction (approximate vectorized version)
+ *
+ * The implementation of this function relies on a simplified expression
+ * that becomes increasingly accurate as k grows.
+ *
+ * The name of this function is a slight misnomer, since it supports
+ * the general case of a complex-valued relative index of refraction
+ * (rather than being restricted to conductors)
+ *
+ * \param cosThetaI
+ * 		Cosine of the angle between the normal and the incident ray
+ * \param eta
+ * 		Relative refractive index (real component)
+ * \param k
+ * 		Relative refractive index (imaginary component)
+ * \ingroup libpython
+ */
+extern MTS_EXPORT_CORE Spectrum fresnelConductorApprox(Float cosThetaI,
 		const Spectrum &eta, const Spectrum &k);
 
 /**
- * \brief Calculates the diffuse unpolarized fresnel reflectance of
+ * \brief Calculates the unpolarized Fresnel reflection coefficient
+ * at a planar interface having a complex-valued relative index of
+ * refraction (accurate scalar version)
+ *
+ * The implementation of this function computes the exact unpolarized
+ * Fresnel reflectance for a complex index of refraction change.
+ *
+ * The name of this function is a slight misnomer, since it supports
+ * the general case of a complex-valued relative index of refraction
+ * (rather than being restricted to conductors)
+ *
+ * \param cosThetaI
+ * 		Cosine of the angle between the normal and the incident ray
+ * \param eta
+ * 		Relative refractive index (real component)
+ * \param k
+ * 		Relative refractive index (imaginary component)
+ * \ingroup libpython
+ */
+extern MTS_EXPORT_CORE Float fresnelConductorExact(Float cosThetaI,
+		Float eta, Float k);
+
+/**
+ * \brief Calculates the unpolarized Fresnel reflection coefficient
+ * at a planar interface having a complex-valued relative index of
+ * refraction (accurate vectorized version)
+ *
+ * The implementation of this function computes the exact unpolarized
+ * Fresnel reflectance for a complex index of refraction change.
+ *
+ * The name of this function is a slight misnomer, since it supports
+ * the general case of a complex-valued relative index of refraction
+ * (rather than being restricted to conductors)
+ *
+ * \param cosThetaI
+ * 		Cosine of the angle between the normal and the incident ray
+ * \param eta
+ * 		Relative refractive index (real component)
+ * \param k
+ * 		Relative refractive index (imaginary component)
+ * \ingroup libpython
+ */
+extern MTS_EXPORT_CORE Spectrum fresnelConductorExact(Float cosThetaI,
+		const Spectrum &eta, const Spectrum &k);
+
+/**
+ * \brief Calculates the diffuse unpolarized Fresnel reflectance of
  * a dielectric material (sometimes referred to as "Fdr").
  *
  * This value quantifies what fraction of diffuse incident illumination

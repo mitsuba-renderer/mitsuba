@@ -1478,9 +1478,6 @@ void MainWindow::on_actionExportImage_triggered() {
 }
 
 void MainWindow::onExportDialogClose(int reason) {
-	int currentIndex = ui->tabBar->currentIndex();
-	SceneContext *ctx = m_context[currentIndex];
-
 	QSettings settings;
 	QFileDialog *dialog = static_cast<QFileDialog *>(sender());
 	m_currentChild = NULL;

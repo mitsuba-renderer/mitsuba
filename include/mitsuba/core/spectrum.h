@@ -493,6 +493,14 @@ public:
 		return value;
 	}
 
+	/// Component-wise square root
+	inline TSpectrum safe_sqrt() const {
+		TSpectrum value;
+		for (int i=0; i<N; i++)
+			value.s[i] = math::safe_sqrt(s[i]);
+		return value;
+	}
+
 	/// Component-wise exponentation
 	inline TSpectrum exp() const {
 		TSpectrum value;

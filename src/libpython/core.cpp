@@ -79,10 +79,10 @@ void initializeFramework() {
 		if (GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
 			GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCSTR) &initializeFramework, &hm)) {
 			std::vector<WCHAR> lpFilename(MAX_PATH);
-		
+
 			// Try to get the path with the default MAX_PATH length (260 chars)
 			DWORD nSize = GetModuleFileNameW(hm, &lpFilename[0], MAX_PATH);
-		
+
 			// Adjust the buffer size in case if was too short
 			while (nSize == lpFilename.size()) {
 				lpFilename.resize(nSize * 2);
@@ -1261,11 +1261,19 @@ void export_core() {
 		.staticmethod("glOrthographic")
 		.staticmethod("fromFrame");
 
+	Float (*fresnelConductorApprox1)(Float, Float, Float) = &fresnelConductorApprox;
+	Float (*fresnelConductorExact1)(Float, Float, Float) = &fresnelConductorExact;
+	Spectrum (*fresnelConductorApprox2)(Float, const Spectrum &, const Spectrum &) = &fresnelConductorApprox;
+	Spectrum (*fresnelConductorExact2)(Float, const Spectrum &, const Spectrum &) = &fresnelConductorExact;
+
 	/* Functions from utility.h */
 	bp::def("fresnelDielectric", &fresnelDielectric);
 	bp::def("fresnelDielectricExt", &fresnelDielectricExt1);
 	bp::def("fresnelDielectricExt", &fresnelDielectricExt2);
-	bp::def("fresnelConductor", &fresnelConductor, BP_RETURN_VALUE);
+	bp::def("fresnelConductorApprox", fresnelConductorApprox1, BP_RETURN_VALUE);
+	bp::def("fresnelConductorApprox", fresnelConductorApprox2, BP_RETURN_VALUE);
+	bp::def("fresnelConductorExact", fresnelConductorExact1, BP_RETURN_VALUE);
+	bp::def("fresnelConductorExact", fresnelConductorExact2, BP_RETURN_VALUE);
 	bp::def("fresnelDiffuseReflectance", &fresnelDiffuseReflectance);
 	bp::def("reflect", &reflect);
 	bp::def("refract", &refract1);
