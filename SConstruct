@@ -20,7 +20,7 @@ if sys.platform == 'win32':
 	# Set an application icon on Windows
 	resources += [ env.RES('data/windows/mitsuba_res.rc') ]
 	# Convert the command line args from UTF-8 to UTF-16
-	winstubs += [os.path.abspath('data/windows/wmain_stub.cpp')]
+	winstubs += [ env.SharedObject('#data/windows/wmain_stub.cpp') ]
 	Export('winstubs')
 
 def build(scriptFile, exports = [], duplicate = 0):
