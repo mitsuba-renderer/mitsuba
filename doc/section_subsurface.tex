@@ -2,11 +2,18 @@
 \subsection{Subsurface scattering models}
 \label{sec:subsurface}
 There are two ways of simulating subsurface scattering within Mitsuba:
-participating media and subsurface scattering models. The latter are described
-in this section and can be thought of as a first-order approximation of the
-former. For this reason, subsurface scattering models should be preferred when
-visually appealing output should be generated quickly and the demands on
-physical realism are secondary.
+participating media and subsurface scattering models.
 
-At the moment, there is only one subsurface scattering model (the
-\pluginref{dipole}), which is described on the next page.
+\begin{description}
+  \item[Subsurface scattering models:] Described in this section. These can be thought
+    of as a first-order approximation of what happens inside a participating medium.
+    They are preferable when visually appealing output should be generated
+    \emph{quickly} and the demands on accuracy are secondary.
+    At the moment, there is only one subsurface scattering model (the
+    \pluginref{dipole}), which is described on the next page.
+  \item[Participating media:] Described in Section~\ref{sec:media}. When modeling
+    subsurface scattering using a participating medium, Mitsuba performs a \emph{full}
+    radiative transport simulation, which correctly accounts for all scattering events.
+    This is more accurate but generally significantly slower.
+\end{description}
+

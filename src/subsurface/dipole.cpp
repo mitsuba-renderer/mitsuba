@@ -208,9 +208,9 @@ static int irrOctreeIndex = 0;
  *     rendered using diffusion theory and radiative transport, respectively.
  *     The former produces an incorrect result, since the assumption of
  *     many scattering events breaks down.
- *     \textbf{(c)}: When the number of irradiance samples is too low, the
- *     resulting noise becomes visible as ``blotchy'' artifacts in the
- *     rendering.}
+ *     \textbf{(c)}: When the number of irradiance samples is too low when rendering
+ *     with the dipole model, the resulting noise becomes visible as ``blotchy'' artifacts
+ *     in the rendering.}
  * }
  *
  * \subsubsection*{Typical material setup}
