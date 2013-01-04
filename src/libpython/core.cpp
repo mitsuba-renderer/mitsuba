@@ -708,6 +708,9 @@ void export_core() {
 		.def("clear", &InterpolatedSpectrum::clear)
 		.def("zeroExtend", &InterpolatedSpectrum::zeroExtend);
 
+	void (Bitmap::*accumulate_1)(const Bitmap *bitmap, Point2i sourceOffset, Point2i targetOffset, Vector2i size) = &Bitmap::accumulate;
+	void (Bitmap::*accumulate_2)(const Bitmap *bitmap, Point2i targetOffset) = &Bitmap::accumulate;
+
 	BP_CLASS(Bitmap, Object, (bp::init<Bitmap::EPixelFormat, Bitmap::EComponentFormat, const Vector2i &>()))
 		.def(bp::init<Bitmap::EPixelFormat, Bitmap::EComponentFormat, const Vector2i &, int>())
 		.def(bp::init<Bitmap::EFileFormat, Stream *>())
@@ -716,7 +719,8 @@ void export_core() {
 		.def("expand", &Bitmap::expand, BP_RETURN_VALUE)
 		.def("flipVertically", &Bitmap::flipVertically)
 		.def("crop", &Bitmap::crop)
-		.def("accumulate", &Bitmap::accumulate)
+		.def("accumulate", accumulate_1)
+		.def("accumulate", accumulate_2)
 		.def("clear", &Bitmap::clear)
 		.def("write", &Bitmap::write)
 		.def("setString", &Bitmap::setString)

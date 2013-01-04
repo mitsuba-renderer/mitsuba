@@ -403,7 +403,7 @@ public:
 	void colorBalance(Float r, Float g, Float b);
 
 	/// Draw a filled rectangle with the specified position and size
-	void fill(const Point2i &offset, const Vector2i &size, const Spectrum &value);
+	void fillRect(Point2i offset, Vector2i size, const Spectrum &value);
 
 	/// Bitmap equality operator (useful for unit-tests etc.)
 	bool operator==(const Bitmap &bitmap) const;
@@ -699,7 +699,25 @@ public:
 	 * use different component formats or channels, or when the
 	 * component format is \ref EBitmask.
 	 */
-	void accumulate(const Bitmap *bitmap, const Point2i &offset);
+	void accumulate(const Bitmap *bitmap, Point2i sourceOffset,
+			Point2i targetOffset, Vector2i size);
+
+	/**
+	 * \brief Accumulate the contents of another bitmap into the
+	 * region of the specified offset
+	 *
+	 * This convenience function calls the main <tt>accumulate()</tt>
+	 * implementation with <tt>size</tt> set to <tt>bitmap->getSize()</tt>
+	 * and <tt>sourceOffset</tt> set to zero. Out-of-bounds regions are
+	 * ignored. It is assumed that <tt>bitmap != this</tt>.
+	 *
+	 * \remark This function throws an exception when the bitmaps
+	 * use different component formats or channels, or when the
+	 * component format is \ref EBitmask.
+	 */
+	inline void accumulate(const Bitmap *bitmap, Point2i targetOffset) {
+		accumulate(bitmap, Point2i(0), targetOffset, bitmap->getSize());
+	}
 
 	/**
 	 * \brief Up- or down-sample this image to a different resolution
