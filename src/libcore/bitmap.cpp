@@ -448,7 +448,7 @@ void Bitmap::accumulate(const Bitmap *bitmap, Point2i sourceOffset,
 
 	Vector2i sizeDecrease(
 		std::max(0, std::max(sourceOffset.x + size.x - bitmap->getWidth(), targetOffset.x + size.x - getWidth())),
-		std::max(0, std::max(sourceOffset.y + size.y - bitmap->getWidth(), targetOffset.y + size.y - getWidth())));
+		std::max(0, std::max(sourceOffset.y + size.y - bitmap->getHeight(), targetOffset.y + size.y - getHeight())));
 
 	size -= sizeDecrease;
 
