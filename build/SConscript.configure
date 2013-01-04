@@ -285,7 +285,7 @@ if needsBuildDependencies:
 			print '\nThe dependency directory and your Mitsuba codebase have different version'
 			print 'numbers! Your copy of Mitsuba has version %s, whereas the dependencies ' % MTS_VERSION
 			print 'have version %s. Please bring them into sync, either by running\n' % depVersion
-			print '$ hg update -r v%s\n' % depVersion 
+			print '$ hg update -r v%s\n' % depVersion
 			print 'in the Mitsuba directory, or by running\n'
 			print '$ cd dependencies'
 			print '$ hg pull'
@@ -353,7 +353,7 @@ def configure_for_objective_cpp(env):
 	env.RemoveFlags(['-fstrict-aliasing', '-ftree-vectorize',
 		'-std=c\+\+0x'])
 	# Remove Intel compiler-specific optimization flags
-	env.RemoveFlags(['-x.*', '-ax.*', '-ipo', '-no-prec-div', 
+	env.RemoveFlags(['-x.*', '-ax.*', '-ipo', '-no-prec-div',
 		'-fp-model', 'fast=.*', '-wd.*', '-openmp'])
 	env['CCFLAGS'] += ['-fno-strict-aliasing']
 	# Enforce GCC usage (Intel compiler doesn't handle Objective C/C++)
@@ -374,7 +374,7 @@ env.__class__.ConfigureForObjectiveCPP = configure_for_objective_cpp
 env.__class__.RelaxCompilerSettings = relax_compiler_settings
 
 if hasCollada:
-	env.Append(CPPDEFINES = [['MTS_HAS_COLLADA', 1]] )
+	env.Append(CPPDEFINES = [['MTS_HAS_COLLADA', 1], ['COLLADA_DOM_SUPPORT141', 1]])
 
 env.SConsignFile()
 
