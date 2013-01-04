@@ -400,6 +400,10 @@ public:
 		return result;
 	}
 
+	ref<Bitmap> getBitmap() const {
+		return m_mipmap1.get() ? m_mipmap1->toBitmap() : m_mipmap3->toBitmap();
+	}
+
 	Spectrum eval(const Point2 &uv, const Vector2 &d0, const Vector2 &d1) const {
 		stats::filteredLookups.incrementBase();
 		++stats::filteredLookups;
