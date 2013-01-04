@@ -374,7 +374,7 @@ env.__class__.ConfigureForObjectiveCPP = configure_for_objective_cpp
 env.__class__.RelaxCompilerSettings = relax_compiler_settings
 
 if hasCollada:
-	env.Append(CPPDEFINES = [['MTS_HAS_COLLADA', 1], ['COLLADA_DOM_SUPPORT141', 1]])
+	env.Append(CPPDEFINES = [['MTS_HAS_COLLADA', 1]])
 
 env.SConsignFile()
 
