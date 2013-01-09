@@ -472,6 +472,9 @@ Vector refract3(const Vector &wi, const Normal &n, Float eta) {
 	return refract(wi, n, eta);
 }
 
+void bitmap_write(Bitmap *bitmap, Bitmap::EFileFormat fmt, Stream *stream) {
+	bitmap->write(fmt, stream);
+}
 
 Transform transform_glOrthographic1(Float clipNear, Float clipFar) {
 	return Transform::glOrthographic(clipNear, clipFar);
@@ -718,7 +721,7 @@ void export_core() {
 		.def("crop", &Bitmap::crop)
 		.def("accumulate", &Bitmap::accumulate)
 		.def("clear", &Bitmap::clear)
-		.def("write", &Bitmap::write)
+		.def("write", &bitmap_write)
 		.def("setString", &Bitmap::setString)
 		.def("getString", &Bitmap::getString, BP_RETURN_VALUE)
 		.def("setGamma", &Bitmap::setGamma)
