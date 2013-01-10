@@ -130,8 +130,7 @@ public:
 						if (phaseVal != 0) {
 							/* Calculate prob. of having sampled that direction using
 							   phase function sampling */
-							Float phasePdf = (emitter->isOnSurface() && dRec.measure == ESolidAngle
-									&& interactions == 0)
+							Float phasePdf = (emitter->isOnSurface() && dRec.measure == ESolidAngle)
 									? phase->pdf(pRec) : (Float) 0.0f;
 
 							/* Weight using the power heuristic */
