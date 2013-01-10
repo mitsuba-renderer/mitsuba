@@ -76,11 +76,21 @@ public:
 	/// Allocate memory for a certain font
 	Font(EFont font);
 
+	/// Draw text to the specified bitmap
+	void drawText(Bitmap *dest, Point2i pos, const std::string &text) const;
+
+	/// Compute the size covered by the given string when rendered using this font
+	Vector2i getSize(const std::string &text) const;
+
 	/// Upload the font to the GPU
 	void init(Renderer *renderer);
 
 	/// Free the GPU memory
 	void cleanup();
+
+	/// Convert the underlying bitmap to a different pixel format
+	void convert(Bitmap::EPixelFormat pixelFormat,
+		Bitmap::EComponentFormat componentFormat, Float gamma);
 
 	/// Return the name of this font
 	inline const std::string &getName() const { return m_name; }

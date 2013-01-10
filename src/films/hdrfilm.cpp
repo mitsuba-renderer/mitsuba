@@ -20,6 +20,7 @@
 #include <mitsuba/core/fstream.h>
 #include <mitsuba/core/bitmap.h>
 #include <mitsuba/core/statistics.h>
+#include <mitsuba/hw/font.h>
 #include <boost/algorithm/string.hpp>
 #include "banner.h"
 
@@ -114,7 +115,33 @@ MTS_NAMESPACE_BEGIN
  *     <boolean name="banner" value="false"/>
  * </film>
  * \end{xml}
-
+ *
+ * \subsubsection*{Annotations:}
+ * \label{sec:film-annotations}
+ * The \pluginref{ldrfilm} and \pluginref{hdrfilm} plugins support an additional
+ * feature referred to as \emph{annotations}, which can be quite useful under
+ * certain circumstances.
+ *
+ * Annotations are used to embed useful information inside a rendered image so
+ * that this information is later available to anyone viewing the image.
+ * Exemplary uses of this feature might be to store the frame or take number,
+ * camera parameters, or other relevant scene information.
+ *
+ * Annotations can either be created by means of a \emph{tag}, which is an entry
+ * in the metadata table of the image file (does not modify the actual image data),
+ * or a \emph{text} label which is ``burned'' into the image.
+ *
+ * The syntax of this looks as follows:
+ *
+ * \begin{xml}
+ * <film type="ldrfilm">
+ * 	<!-- Create a new metadata entry 'my_tag_name' and set it to the value 'my_tag_value' -->
+ * 	<string name="tag('my_tag_name')" value="my_tag_value"/>
+ *
+ * 	<!-- Add the label 'Hello' at the image position X=50, Y=80 -->
+ * 	<string name="text(50,80)" value="Hello!"/>
+ * </film>
+ * \end{xml}
  */
 class HDRFilm : public Film {
 public:
@@ -202,6 +229,25 @@ public:
 				m_componentFormat = Bitmap::EFloat32;
 			}
 
+		}
+
+		std::vector<std::string> keys = props.getPropertyNames();
+		for (size_t i=0; i<keys.size(); ++i) {
+			std::string key = boost::to_lower_copy(keys[i]);
+
+			if (boost::starts_with(key, "tag('") && boost::ends_with(key, "')")) {
+				m_tags[keys[i].substr(5, key.length()-7)] = props.getString(keys[i]);
+			} else if (boost::starts_with(key, "text(") && boost::ends_with(key, ")")) {
+				std::vector<std::string> args = tokenize(key.substr(5, key.length()-6), " ,");
+
+				if (args.size() != 2)
+					Log(EError, "Text command '%s' has an invalid number of arguments!", key.c_str());
+
+				Annotation annotation;
+				annotation.offset = Point2i(atoi(args[0].c_str()), atoi(args[1].c_str()));
+				annotation.text = props.getString(keys[i]);
+				m_annotations.push_back(annotation);
+			}
 		}
 
 		m_storage = new ImageBlock(Bitmap::ESpectrumAlphaWeight, m_cropSize);
@@ -321,6 +367,23 @@ public:
 			}
 		}
 
+		if (!m_annotations.empty()) {
+			ref<Font> font = new Font(Font::EBitstreamVeraMono14);
+			font->convert(bitmap->getPixelFormat(), bitmap->getComponentFormat(), 1.0f);
+
+			for (size_t i=0; i<m_annotations.size(); ++i) {
+				const Point2i &offset = m_annotations[i].offset;
+				const std::string &text = m_annotations[i].text;
+				Vector2i size = font->getSize(text);
+				bitmap->fillRect(offset-Vector2i(4, 4), size + Vector2i(8, 8), Spectrum(0.0f));
+				font->drawText(bitmap, offset, text);
+			}
+		}
+
+		for (std::map<std::string, std::string>::const_iterator it = m_tags.begin();
+				it != m_tags.end(); ++it)
+			bitmap->getMetadata()[it->first] = it->second;
+
 		fs::path filename = m_destFile;
 		std::string extension = boost::to_lower_copy(filename.extension().string());
 		std::string properExtension = (m_fileFormat == Bitmap::EOpenEXR) ? ".exr" : ".rgbe";
@@ -367,6 +430,11 @@ public:
 
 	MTS_DECLARE_CLASS()
 protected:
+	struct Annotation {
+		Point2i offset;
+		std::string text;
+	};
+
 	Bitmap::EFileFormat m_fileFormat;
 	Bitmap::EPixelFormat m_pixelFormat;
 	Bitmap::EComponentFormat m_componentFormat;
@@ -374,6 +442,9 @@ protected:
 	bool m_attachLog;
 	fs::path m_destFile;
 	ref<ImageBlock> m_storage;
+
+	std::vector<Annotation> m_annotations;
+	std::map<std::string, std::string> m_tags;
 };
 
 MTS_IMPLEMENT_CLASS_S(HDRFilm, false, Film)

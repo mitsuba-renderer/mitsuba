@@ -74,6 +74,70 @@ Font::Font(EFont font) {
 	dscStream->read(m_kerningMatrix, 256*256);
 }
 
+void Font::convert(Bitmap::EPixelFormat pixelFormat, Bitmap::EComponentFormat componentFormat, Float gamma) {
+	m_bitmap = m_bitmap->convert(pixelFormat, componentFormat, gamma);
+}
+
+void Font::drawText(Bitmap *dest, Point2i pos, const std::string &text) const {
+	int initial = pos.x;
+
+	for (size_t i=0; i<text.length(); i++) {
+		char character = text[i];
+		if (character == '\r')
+			continue;
+		if (character == '\n') {
+			pos.x = initial;
+			pos.y += (int) (getMaxVerticalBearing()*4.0/3.0);
+			continue;
+		}
+
+		const Font::Glyph &glyph = getGlyph(character);
+
+		Point2i targetOffset = pos + Vector2i(
+			glyph.horizontalBearing,
+			getMaxVerticalBearing() - glyph.verticalBearing - 1
+		);
+
+		Point2i sourceOffset(
+			glyph.tx.x * m_bitmap->getWidth(),
+			glyph.tx.y * m_bitmap->getHeight());
+
+		dest->accumulate(m_bitmap.get(), sourceOffset, targetOffset, glyph.size);
+
+		pos.x += glyph.horizontalAdvance;
+
+		if (i+1 < text.length())
+			pos.x += getKerning(character, text[i+1]);
+	}
+}
+
+Vector2i Font::getSize(const std::string &text) const {
+	Vector2i size(0, getMaxVerticalBearing());
+	int pos = 0;
+
+	for (size_t i=0; i<text.length(); i++) {
+		char character = text[i];
+		if (character == '\r')
+			continue;
+		if (character == '\n') {
+			size.y += getMaxVerticalBearing()*(4.0 / 3.0);
+			size.x = std::max(size.x, pos);
+			pos = 0;
+			continue;
+		}
+
+		const Font::Glyph &glyph = getGlyph(character);
+
+		pos += glyph.horizontalAdvance;
+
+		if (i+1 < text.length())
+			pos += getKerning(character, text[i+1]);
+	}
+	size.x = std::max(size.x, pos);
+
+	return size;
+}
+
 void Font::init(Renderer *renderer) {
 	m_texture = renderer->createGPUTexture(m_name, m_bitmap);
 	m_texture->setFilterType(GPUTexture::ENearest);

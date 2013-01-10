@@ -430,47 +430,59 @@ void Bitmap::flipVertically() {
 	}
 }
 
-void Bitmap::accumulate(const Bitmap *bitmap, const Point2i &offset) {
+
+void Bitmap::accumulate(const Bitmap *bitmap, Point2i sourceOffset,
+		Point2i targetOffset, Vector2i size) {
 	Assert(getPixelFormat() == bitmap->getPixelFormat() &&
 	       getComponentFormat() == bitmap->getComponentFormat() &&
 	       getChannelCount() == bitmap->getChannelCount());
 
-	const int
-		offsetX = std::max(offset.x, 0),
-		offsetY = std::max(offset.y, 0),
-		endX    = std::min(offset.x + bitmap->getSize().x, m_size.x),
-		endY    = std::min(offset.y + bitmap->getSize().y, m_size.y);
+	Vector2i offsetIncrease(
+		std::max(0, std::max(-sourceOffset.x, -targetOffset.x)),
+		std::max(0, std::max(-sourceOffset.y, -targetOffset.y))
+	);
 
-	if (offsetX >= endX || offsetY >= endY)
+	sourceOffset += offsetIncrease;
+	targetOffset += offsetIncrease;
+	size -= offsetIncrease;
+
+	Vector2i sizeDecrease(
+		std::max(0, std::max(sourceOffset.x + size.x - bitmap->getWidth(), targetOffset.x + size.x - getWidth())),
+		std::max(0, std::max(sourceOffset.y + size.y - bitmap->getHeight(), targetOffset.y + size.y - getHeight())));
+
+	size -= sizeDecrease;
+
+	if (size.x <= 0 || size.y <= 0)
 		return;
 
 	const size_t
-		columns      = (endX - offsetX) * m_channelCount,
+		columns      = size.x * m_channelCount,
 		pixelStride  = getBytesPerPixel(),
-		sourceStride = bitmap->getSize().x * pixelStride,
-		targetStride = m_size.x * pixelStride;
+		sourceStride = bitmap->getWidth() * pixelStride,
+		targetStride = getWidth() * pixelStride;
 
 	const uint8_t *source = bitmap->getUInt8Data() +
-		(offsetX - offset.x + (offsetY - offset.y) * bitmap->getSize().x) * pixelStride;
+		(sourceOffset.x + sourceOffset.y * (size_t) bitmap->getWidth()) * pixelStride;
 
 	uint8_t *target = m_data +
-		(offsetX + offsetY * m_size.x) * pixelStride;
+		(targetOffset.x + targetOffset.y * (size_t) m_size.x) * pixelStride;
 
-	for (int y = offsetY; y < endY; ++y) {
+	for (int y = 0; y < size.y; ++y) {
 		switch (m_componentFormat) {
 			case EUInt8:
 				for (size_t i = 0; i < columns; ++i)
-					((uint8_t *) target)[i] += ((uint8_t *) source)[i];
+					((uint8_t *) target)[i] = (uint8_t) std::min(0xFF, ((uint8_t *) source)[i] + ((uint8_t *) target)[i]);
+
 				break;
 
 			case EUInt16:
 				for (size_t i = 0; i < columns; ++i)
-					((uint16_t *) target)[i] += ((uint16_t *) source)[i];
+					((uint16_t *) target)[i] = (uint16_t) std::min(0xFFFF, ((uint16_t *) source)[i] + ((uint16_t *) target)[i]);
 				break;
 
 			case EUInt32:
 				for (size_t i = 0; i < columns; ++i)
-					((uint32_t *) target)[i] += ((uint32_t *) source)[i];
+					((uint32_t *) target)[i] = std::min((uint32_t) 0xFFFFFFFFUL, ((uint32_t *) source)[i] + ((uint32_t *) target)[i]);
 				break;
 
 			case EFloat16:
@@ -554,8 +566,9 @@ void Bitmap::setPixel(const Point2i &pos, const Spectrum &value) {
 }
 
 void Bitmap::drawHLine(int y, int x1, int x2, const Spectrum &value) {
-	AssertEx( y >= 0 &&  y < m_size.y &&
-	         x1 >= 0 && x2 < m_size.x, "Bitmap::drawVLine(): out of bounds!");
+	if (y < 0 || y >= m_size.y)
+		return;
+	x1 = std::max(x1, 0); x2 = std::min(x2, m_size.x-1);
 
 	const FormatConverter *cvt = FormatConverter::getInstance(
 		std::make_pair(EFloat, m_componentFormat)
@@ -574,8 +587,9 @@ void Bitmap::drawHLine(int y, int x1, int x2, const Spectrum &value) {
 }
 
 void Bitmap::drawVLine(int x, int y1, int y2, const Spectrum &value) {
-	AssertEx( x >= 0 &&  x < m_size.x &&
-	         y1 >= 0 && y2 < m_size.y, "Bitmap::drawVLine(): out of bounds!");
+	if (x < 0 || x >= m_size.x)
+		return;
+	y1 = std::max(y1, 0); y2 = std::min(y2, m_size.y-1);
 
 	const FormatConverter *cvt = FormatConverter::getInstance(
 		std::make_pair(EFloat, m_componentFormat)
@@ -601,9 +615,12 @@ void Bitmap::drawRect(const Point2i &offset, const Vector2i &size, const Spectru
 	drawVLine(offset.x + size.x - 1, offset.y, offset.y + size.y - 1, value);
 }
 
-void Bitmap::fill(const Point2i &offset, const Vector2i &size, const Spectrum &value) {
-	AssertEx(offset.x >= 0 && offset.x + size.x <= m_size.x &&
-	         offset.y >= 0 && offset.y + size.y <= m_size.y, "Bitmap::fill(): out of bounds!");
+void Bitmap::fillRect(Point2i offset, Vector2i size, const Spectrum &value) {
+	int sx = std::max(0, -offset.x), sy = std::max(0, -offset.y);
+	size.x -= sx; size.y -= sy; offset.x += sx; offset.y += sy;
+
+	size.x -= std::max(0, offset.x + size.x - m_size.x);
+	size.y -= std::max(0, offset.y + size.y - m_size.y);
 
 	const FormatConverter *cvt = FormatConverter::getInstance(
 		std::make_pair(EFloat, m_componentFormat)

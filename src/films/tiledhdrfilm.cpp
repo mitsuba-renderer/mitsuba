@@ -432,7 +432,7 @@ public:
 
 	bool develop(const Point2i &sourceOffset, const Vector2i &size,
 			const Point2i &targetOffset, Bitmap *target) const {
-		target->fill(targetOffset, size, Spectrum(0.0f));
+		target->fillRect(targetOffset, size, Spectrum(0.0f));
 		return false; /* Not supported by the tiled EXR film! */
 	}
 
