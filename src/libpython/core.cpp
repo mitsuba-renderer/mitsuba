@@ -175,7 +175,7 @@ public:
 		bp::extract<Transform> extractTransform(value);
 		bp::extract<Spectrum> extractSpectrum(value);
 
-		if (extractString.check()) {
+		if (extractString.check()){
 			props.setString(name, extractString());
 		} else if (extractBoolean.check() && PyObject_IsInstance(value.ptr(), (PyObject *) &PyBool_Type)) {
 			props.setBoolean(name, extractBoolean());
@@ -204,6 +204,12 @@ struct path_to_python_str {
 	}
 };
 
+
+struct TSpectrum_to_Spectrum {
+	static PyObject* convert(const TSpectrum<Float, 3> &spectrum) {
+		return bp::incref(bp::object(Spectrum(spectrum)).ptr());
+	}
+};
 
 static void Matrix4x4_setItem(Matrix4x4 *matrix, bp::tuple tuple, Float value) {
 	if (bp::len(tuple) != 2)
@@ -492,6 +498,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(fromXYZ_overloads, fromXYZ, 3, 4)
 
 void export_core() {
 	bp::to_python_converter<fs::path, path_to_python_str>();
+	bp::to_python_converter<TSpectrum<Float, 3>, TSpectrum_to_Spectrum>();
 	bp::implicitly_convertible<std::string, fs::path>();
 
 	bp::object coreModule(
