@@ -1012,6 +1012,79 @@ ref<Bitmap> Bitmap::crop(const Point2i &offset, const Vector2i &size) const {
 	return result;
 }
 
+void Bitmap::applyMatrix(Float matrix_[3][3]) {
+	int stride = 0;
+
+	if (m_pixelFormat == ERGB || m_pixelFormat == EXYZ)
+		stride = 3;
+	else if (m_pixelFormat == ERGBA || m_pixelFormat == EXYZA)
+		stride = 4;
+	else
+		Log(EError, "Bitmap::applyMatrix(): unsupported pixel format!");
+
+	size_t pixels = (size_t) m_size.x * (size_t) m_size.y;
+
+	switch (m_componentFormat) {
+		case EFloat16: {
+			float matrix[3][3];
+			half *data = getFloat16Data();
+			for (int i=0; i<3; ++i)
+				for (int j=0; j<3; ++j)
+					matrix[i][j] = (float) matrix_[i][j];
+
+			for (size_t i=0; i<pixels; ++i) {
+				float result[3] = { 0.0f, 0.0f, 0.0f };
+				for (int i=0; i<3; ++i)
+					for (int j=0; j<3; ++j)
+						result[i] += matrix[i][j] * (float) data[j];
+				for (int i=0; i<3; ++i)
+					data[i] = (half) result[i];
+				data += stride;
+			}
+		}
+		break;
+
+		case EFloat32: {
+			float matrix[3][3], *data = getFloat32Data();
+			for (int i=0; i<3; ++i)
+				for (int j=0; j<3; ++j)
+					matrix[i][j] = (float) matrix_[i][j];
+
+			for (size_t i=0; i<pixels; ++i) {
+				float result[3] = { 0.0f, 0.0f, 0.0f };
+				for (int i=0; i<3; ++i)
+					for (int j=0; j<3; ++j)
+						result[i] += matrix[i][j] * data[j];
+				for (int i=0; i<3; ++i)
+					data[i] = result[i];
+				data += stride;
+			}
+		}
+		break;
+
+		case EFloat64: {
+			double matrix[3][3], *data = getFloat64Data();
+			for (int i=0; i<3; ++i)
+				for (int j=0; j<3; ++j)
+					matrix[i][j] = (double) matrix_[i][j];
+
+			for (size_t i=0; i<pixels; ++i) {
+				double result[3] = { 0.0, 0.0, 0.0 };
+				for (int i=0; i<3; ++i)
+					for (int j=0; j<3; ++j)
+						result[i] += matrix[i][j] * data[j];
+				for (int i=0; i<3; ++i)
+					data[i] = result[i];
+				data += stride;
+			}
+		}
+		break;
+		default:
+			Log(EError, "Bitmap::applyMatrix(): unsupported component format!");
+	}
+}
+
+
 /// Bitmap resampling utility function
 template <typename Scalar> static void resample(const ReconstructionFilter *rfilter,
 	ReconstructionFilter::EBoundaryCondition bch,

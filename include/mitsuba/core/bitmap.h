@@ -703,6 +703,15 @@ public:
 			Point2i targetOffset, Vector2i size);
 
 	/**
+	 * Apply a color transformation matrix to the contents of the bitmap
+	 *
+	 * The implementation assumes that the contents have the
+	 * RGB, RGBA, XYZ, or XYZA pixel format and a floating point
+	 * component format.
+	 */
+	void applyMatrix(Float matrix[3][3]);
+
+	/**
 	 * \brief Accumulate the contents of another bitmap into the
 	 * region of the specified offset
 	 *
