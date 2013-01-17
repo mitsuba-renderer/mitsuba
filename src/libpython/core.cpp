@@ -478,6 +478,21 @@ Vector refract3(const Vector &wi, const Normal &n, Float eta) {
 	return refract(wi, n, eta);
 }
 
+void bitmap_applyMatrix(Bitmap *bitmap, bp::list list) {
+	int length = bp::len(list);
+	if (length != 9)
+		SLog(EError, "Require a color matrix specified as a list with 9 entries!");
+
+	Float matrix[3][3];
+
+	int idx = 0;
+	for (int i=0; i<3; ++i)
+		for (int j=0; j<3; ++j)
+			matrix[i][j] = bp::extract<Float>(list[idx++]);
+
+	bitmap->applyMatrix(matrix);
+}
+
 void bitmap_write(Bitmap *bitmap, Bitmap::EFileFormat fmt, Stream *stream) {
 	bitmap->write(fmt, stream);
 }
@@ -729,6 +744,7 @@ void export_core() {
 		.def("expand", &Bitmap::expand, BP_RETURN_VALUE)
 		.def("flipVertically", &Bitmap::flipVertically)
 		.def("crop", &Bitmap::crop)
+		.def("applyMatrix", &bitmap_applyMatrix)
 		.def("accumulate", accumulate_1)
 		.def("accumulate", accumulate_2)
 		.def("clear", &Bitmap::clear)
