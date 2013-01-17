@@ -804,7 +804,8 @@ void export_core() {
 		.value("ESpectrum", Bitmap::ESpectrum)
 		.value("ESpectrumAlpha", Bitmap::ESpectrumAlpha)
 		.value("ESpectrumAlphaWeight", Bitmap::ESpectrumAlphaWeight)
-		.value("EMultiChannel", Bitmap::EMultiChannel);
+		.value("EMultiChannel", Bitmap::EMultiChannel)
+		.export_values();
 
 	bp::enum_<Bitmap::EComponentFormat>("EComponentFormat")
 		.value("EBitmask", Bitmap::EBitmask)
@@ -828,6 +829,7 @@ void export_core() {
 		.value("EJPEG", Bitmap::EJPEG)
 		.value("EAuto", Bitmap::EAuto)
 		.export_values();
+
 	BP_SETSCOPE(coreModule);
 
 	BP_CLASS(FileResolver, Object, bp::init<>())
