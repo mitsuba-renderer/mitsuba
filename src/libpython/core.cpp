@@ -497,22 +497,22 @@ void bitmap_write(Bitmap *bitmap, Bitmap::EFileFormat fmt, Stream *stream) {
 	bitmap->write(fmt, stream);
 }
 
-ref<Bitmap> bitmap_convert_1(Bitmap *bitmap, EPixelFormat pixelFormat, EComponentFormat componentFormat,
+ref<Bitmap> bitmap_convert_1(Bitmap *bitmap, Bitmap::EPixelFormat pixelFormat, Bitmap::EComponentFormat componentFormat,
 		Float gamma, Float multiplier, Spectrum::EConversionIntent intent) {
 	return bitmap->convert(pixelFormat, componentFormat, gamma, multiplier, intent);
 }
 
-ref<Bitmap> bitmap_convert_2(Bitmap *bitmap, EPixelFormat pixelFormat, EComponentFormat componentFormat,
+ref<Bitmap> bitmap_convert_2(Bitmap *bitmap, Bitmap::EPixelFormat pixelFormat, Bitmap::EComponentFormat componentFormat,
 		Float gamma, Float multiplier) {
 	return bitmap->convert(pixelFormat, componentFormat, gamma, multiplier);
 }
 
-ref<Bitmap> bitmap_convert_3(Bitmap *bitmap, EPixelFormat pixelFormat, EComponentFormat componentFormat,
+ref<Bitmap> bitmap_convert_3(Bitmap *bitmap, Bitmap::EPixelFormat pixelFormat, Bitmap::EComponentFormat componentFormat,
 		Float gamma) {
 	return bitmap->convert(pixelFormat, componentFormat, gamma);
 }
 
-ref<Bitmap> bitmap_convert_4(Bitmap *bitmap, EPixelFormat pixelFormat, EComponentFormat componentFormat) {
+ref<Bitmap> bitmap_convert_4(Bitmap *bitmap, Bitmap::EPixelFormat pixelFormat, Bitmap::EComponentFormat componentFormat) {
 	return bitmap->convert(pixelFormat, componentFormat);
 }
 
