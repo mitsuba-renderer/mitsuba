@@ -497,6 +497,25 @@ void bitmap_write(Bitmap *bitmap, Bitmap::EFileFormat fmt, Stream *stream) {
 	bitmap->write(fmt, stream);
 }
 
+ref<Bitmap> bitmap_convert_1(Bitmap *bitmap, EPixelFormat pixelFormat, EComponentFormat componentFormat,
+		Float gamma, Float multiplier, Spectrum::EConversionIntent intent) {
+	return bitmap->convert(pixelFormat, componentFormat, gamma, multiplier, intent);
+}
+
+ref<Bitmap> bitmap_convert_2(Bitmap *bitmap, EPixelFormat pixelFormat, EComponentFormat componentFormat,
+		Float gamma, Float multiplier) {
+	return bitmap->convert(pixelFormat, componentFormat, gamma, multiplier);
+}
+
+ref<Bitmap> bitmap_convert_3(Bitmap *bitmap, EPixelFormat pixelFormat, EComponentFormat componentFormat,
+		Float gamma) {
+	return bitmap->convert(pixelFormat, componentFormat, gamma);
+}
+
+ref<Bitmap> bitmap_convert_4(Bitmap *bitmap, EPixelFormat pixelFormat, EComponentFormat componentFormat) {
+	return bitmap->convert(pixelFormat, componentFormat);
+}
+
 Transform transform_glOrthographic1(Float clipNear, Float clipFar) {
 	return Transform::glOrthographic(clipNear, clipFar);
 }
@@ -740,14 +759,15 @@ void export_core() {
 		.def(bp::init<Bitmap::EPixelFormat, Bitmap::EComponentFormat, const Vector2i &, int>())
 		.def(bp::init<Bitmap::EFileFormat, Stream *>())
 		.def("clone", &Bitmap::clone, BP_RETURN_VALUE)
+		.def("clear", &Bitmap::clear)
 		.def("separateChannel", &Bitmap::separateChannel, BP_RETURN_VALUE)
 		.def("expand", &Bitmap::expand, BP_RETURN_VALUE)
 		.def("flipVertically", &Bitmap::flipVertically)
 		.def("crop", &Bitmap::crop)
 		.def("applyMatrix", &bitmap_applyMatrix)
+		.def("colorBalance", &Bitmap::colorBalance)
 		.def("accumulate", accumulate_1)
 		.def("accumulate", accumulate_2)
-		.def("clear", &Bitmap::clear)
 		.def("write", &bitmap_write)
 		.def("setString", &Bitmap::setString)
 		.def("getString", &Bitmap::getString, BP_RETURN_VALUE)
@@ -762,9 +782,18 @@ void export_core() {
 		.def("getBitsPerComponent", &Bitmap::getBitsPerComponent)
 		.def("getBytesPerComponent", &Bitmap::getBytesPerComponent)
 		.def("getBytesPerPixel", &Bitmap::getBytesPerPixel)
+		.def("getBufferSize", &Bitmap::getBufferSize)
 		.def("getPixel", &Bitmap::getPixel, BP_RETURN_VALUE)
 		.def("setPixel", &Bitmap::setPixel)
-		.def("getSize", &Bitmap::getSize, BP_RETURN_VALUE);
+		.def("drawHLine", &Bitmap::drawHLine)
+		.def("drawVLine", &Bitmap::drawVLine)
+		.def("drawRect", &Bitmap::drawRect)
+		.def("fillRect", &Bitmap::fillRect)
+		.def("getSize", &Bitmap::getSize, BP_RETURN_VALUE)
+		.def("convert", &bitmap_convert_1, BP_RETURN_VALUE)
+		.def("convert", &bitmap_convert_2, BP_RETURN_VALUE)
+		.def("convert", &bitmap_convert_3, BP_RETURN_VALUE)
+		.def("convert", &bitmap_convert_4, BP_RETURN_VALUE);
 
 	BP_SETSCOPE(Bitmap_class);
 	bp::enum_<Bitmap::EPixelFormat>("EPixelFormat")
@@ -793,6 +822,8 @@ void export_core() {
 		.value("EPNG", Bitmap::EPNG)
 		.value("EOpenEXR", Bitmap::EOpenEXR)
 		.value("ETGA", Bitmap::ETGA)
+		.value("EPFM", Bitmap::EPFM)
+		.value("ERGBE", Bitmap::ERGBE)
 		.value("EBMP", Bitmap::EBMP)
 		.value("EJPEG", Bitmap::EJPEG)
 		.value("EAuto", Bitmap::EAuto)

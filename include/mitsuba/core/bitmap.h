@@ -393,15 +393,6 @@ public:
 	/// Draw a rectangle with the specified position and size
 	void drawRect(const Point2i &offset, const Vector2i &size, const Spectrum &value);
 
-	/**
-	 * \brief Color balancing: apply the given scale factors to the
-	 * red, green, and blue channels of the image
-	 *
-	 * When the image is not an \c EFloat16, \c EFloat32, or
-	 * \c EFloat64-based RGB/RGBA image, the function throws an exception
-	 */
-	void colorBalance(Float r, Float g, Float b);
-
 	/// Draw a filled rectangle with the specified position and size
 	void fillRect(Point2i offset, Vector2i size, const Spectrum &value);
 
@@ -701,6 +692,15 @@ public:
 	 */
 	void accumulate(const Bitmap *bitmap, Point2i sourceOffset,
 			Point2i targetOffset, Vector2i size);
+
+	/**
+	 * \brief Color balancing: apply the given scale factors to the
+	 * red, green, and blue channels of the image
+	 *
+	 * When the image is not an \c EFloat16, \c EFloat32, or
+	 * \c EFloat64-based RGB/RGBA image, the function throws an exception
+	 */
+	void colorBalance(Float r, Float g, Float b);
 
 	/**
 	 * Apply a color transformation matrix to the contents of the bitmap
