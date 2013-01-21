@@ -192,11 +192,9 @@ private slots:
 	void updateUI();
 	void updateStatus();
 	void onPreviewSettingsClose();
-#if !MTSGUI_STATIC_QFILEDIALOG
 	void onOpenDialogClose(int reason);
 	void onExportDialogClose(int reason);
 	void onSaveAsDialogClose(int reason);
-#endif
 	void onRenderSettingsClose(int reason);
 	void onImportDialogClose(int reason);
 	void onSceneInformationClose(int reason);

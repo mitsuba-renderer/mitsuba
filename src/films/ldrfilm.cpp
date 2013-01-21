@@ -20,6 +20,7 @@
 #include <mitsuba/core/fstream.h>
 #include <mitsuba/core/bitmap.h>
 #include <mitsuba/core/statistics.h>
+#include <mitsuba/hw/font.h>
 #include <boost/algorithm/string.hpp>
 #include "banner.h"
 
@@ -113,6 +114,9 @@ MTS_NAMESPACE_BEGIN
  * The RGB values exported by this plugin correspond to the ITU-R Rec. BT. 709-3
  * primaries with a D65 white point. When $\texttt{gamma}$ is set to $\code{-1}$ (the default),
  * the output is in the sRGB color space and will display as intended on compatible devices.
+ *
+ * Note that this plugin supports render-time \emph{annotations}, which
+ * are described on page~\pageref{sec:film-annotations}.
  */
 class LDRFilm : public Film {
 public:
@@ -175,6 +179,25 @@ public:
 		m_exposure = props.getFloat("exposure", 0.0f);
 		m_reinhardKey = props.getFloat("key", 0.18f);
 		m_reinhardBurn = props.getFloat("burn", 0.0);
+
+		std::vector<std::string> keys = props.getPropertyNames();
+		for (size_t i=0; i<keys.size(); ++i) {
+			std::string key = boost::to_lower_copy(keys[i]);
+
+			if (boost::starts_with(key, "tag('") && boost::ends_with(key, "')")) {
+				m_tags[keys[i].substr(5, key.length()-7)] = props.getString(keys[i]);
+			} else if (boost::starts_with(key, "text(") && boost::ends_with(key, ")")) {
+				std::vector<std::string> args = tokenize(key.substr(5, key.length()-6), " ,");
+
+				if (args.size() != 2)
+					Log(EError, "Text command '%s' has an invalid number of arguments!", key.c_str());
+
+				Annotation annotation;
+				annotation.offset = Point2i(atoi(args[0].c_str()), atoi(args[1].c_str()));
+				annotation.text = props.getString(keys[i]);
+				m_annotations.push_back(annotation);
+			}
+		}
 
 		m_storage = new ImageBlock(Bitmap::ESpectrumAlphaWeight, m_cropSize);
 	}
@@ -313,6 +336,23 @@ public:
 			}
 		}
 
+		if (!m_annotations.empty()) {
+			ref<Font> font = new Font(Font::EBitstreamVeraMono14);
+			font->convert(bitmap->getPixelFormat(), bitmap->getComponentFormat(), m_gamma);
+
+			for (size_t i=0; i<m_annotations.size(); ++i) {
+				const Point2i &offset = m_annotations[i].offset;
+				const std::string &text = m_annotations[i].text;
+				Vector2i size = font->getSize(text);
+				bitmap->fillRect(offset-Vector2i(4, 4), size + Vector2i(8, 8), Spectrum(0.0f));
+				font->drawText(bitmap, offset, text);
+			}
+		}
+
+		for (std::map<std::string, std::string>::const_iterator it = m_tags.begin();
+				it != m_tags.end(); ++it)
+			bitmap->getMetadata()[it->first] = it->second;
+
 		fs::path filename = m_destFile;
 		std::string extension = boost::to_lower_copy(filename.extension().string());
 		std::string expectedExtension;
@@ -367,6 +407,11 @@ public:
 
 	MTS_DECLARE_CLASS()
 protected:
+	struct Annotation {
+		Point2i offset;
+		std::string text;
+	};
+
 	Bitmap::EFileFormat m_fileFormat;
 	Bitmap::EPixelFormat m_pixelFormat;
 	bool m_hasBanner;
@@ -375,6 +420,9 @@ protected:
 	ref<ImageBlock> m_storage;
 	ETonemapMethod m_tonemapMethod;
 	Float m_exposure, m_reinhardKey, m_reinhardBurn;
+
+	std::vector<Annotation> m_annotations;
+	std::map<std::string, std::string> m_tags;
 };
 
 MTS_IMPLEMENT_CLASS_S(LDRFilm, false, Film)

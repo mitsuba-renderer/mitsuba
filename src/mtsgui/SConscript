@@ -33,9 +33,8 @@ if hasQt:
 		del qtEnv['CXXFLAGS'][index-1]
 		index = qtEnv['LINKFLAGS'].index('/SUBSYSTEM:CONSOLE')
 		del qtEnv['LINKFLAGS'][index]
-		qtEnv.Append(CXXFLAGS=['/D', '_WINDOWS'])
+		qtEnv.Append(CXXFLAGS=['/D', '_WINDOWS', '/D', 'MTS_CUSTOM_QTMAIN', '/D', 'MTSGUI_STATIC_QFILEDIALOG=1'])
 		qtEnv.Append(LINKFLAGS=['/SUBSYSTEM:WINDOWS'])
-		qtEnv.Append(LIBS=['qtmain'])
 		if hasBreakpad:
 			qtEnv.Append(CPPPATH=['#dependencies/include/breakpad'])
 			qtEnv.Append(LIBS=['breakpad_common', 'breakpad_exception_handler', 'breakpad_crash_generation_client',
@@ -72,6 +71,10 @@ if hasQt:
 			qtSources += qtEnv_osx.StaticObject('breakpad.mm')
 	else:
 		qtSources = [x for x in qtSources if (not isinstance(x, str) or 'cocoa' not in x)]
+
+	if sys.platform == 'win32':
+		qtSources += qtEnv.StaticObject('qtmain_win.cpp')
+
 	mtsgui = qtEnv.Program('mtsgui', qtSources)
 	if sys.platform == 'darwin':
 		qtEnv.AddPostAction(mtsgui, 'install_name_tool -change QtGui.framework/Versions/4/QtGui @rpath/QtGui $TARGET')

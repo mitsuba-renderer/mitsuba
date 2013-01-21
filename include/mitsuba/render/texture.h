@@ -74,6 +74,9 @@ public:
 	/// Serialize to a binary data stream
 	virtual void serialize(Stream *stream, InstanceManager *manager) const;
 
+	/// Return the underlying bitmap representation (if any)
+	virtual ref<Bitmap> getBitmap() const;
+
 	MTS_DECLARE_CLASS()
 protected:
 	Texture(const Properties &props);

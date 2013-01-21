@@ -93,7 +93,7 @@ MTS_NAMESPACE_BEGIN
  *
  * When using this data source to represent floating point density volumes,
  * please ensure that the values are all normalized to lie in the
- * range $[0, 1]$---otherwise, the Woocock-Tracking integration method in
+ * range $[0, 1]$---otherwise, the Woodcock-Tracking integration method in
  * \pluginref{heterogeneous} will produce incorrect results.
  */
 class GridDataSource : public VolumeDataSource {

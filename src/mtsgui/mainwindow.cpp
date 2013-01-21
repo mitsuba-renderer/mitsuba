@@ -558,6 +558,8 @@ void MainWindow::on_actionOpen_triggered() {
 	}
 }
 
+void MainWindow::onOpenDialogClose(int reason) { /* unused */ }
+
 #else // MTSGUI_STATIC_QFILEDIALOG
 
 void MainWindow::on_actionOpen_triggered() {
@@ -1447,6 +1449,8 @@ void MainWindow::on_actionExportImage_triggered() {
 	}
 }
 
+void MainWindow::onExportDialogClose(int reason) { /* unused */ }
+
 #else // MTSGUI_STATIC_QFILEDIALOG
 
 void MainWindow::on_actionExportImage_triggered() {
@@ -1562,6 +1566,8 @@ void MainWindow::on_actionSaveAs_triggered() {
 		saveSceneAs(fileName);
 	}
 }
+
+void MainWindow::onSaveAsDialogClose(int reason) { /* unused */ }
 
 #else // MTSGUI_STATIC_QFILEDIALOG
 

@@ -79,10 +79,10 @@ void initializeFramework() {
 		if (GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
 			GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCSTR) &initializeFramework, &hm)) {
 			std::vector<WCHAR> lpFilename(MAX_PATH);
-		
+
 			// Try to get the path with the default MAX_PATH length (260 chars)
 			DWORD nSize = GetModuleFileNameW(hm, &lpFilename[0], MAX_PATH);
-		
+
 			// Adjust the buffer size in case if was too short
 			while (nSize == lpFilename.size()) {
 				lpFilename.resize(nSize * 2);
@@ -175,7 +175,7 @@ public:
 		bp::extract<Transform> extractTransform(value);
 		bp::extract<Spectrum> extractSpectrum(value);
 
-		if (extractString.check()) {
+		if (extractString.check()){
 			props.setString(name, extractString());
 		} else if (extractBoolean.check() && PyObject_IsInstance(value.ptr(), (PyObject *) &PyBool_Type)) {
 			props.setBoolean(name, extractBoolean());
@@ -204,6 +204,12 @@ struct path_to_python_str {
 	}
 };
 
+
+struct TSpectrum_to_Spectrum {
+	static PyObject* convert(const TSpectrum<Float, 3> &spectrum) {
+		return bp::incref(bp::object(Spectrum(spectrum)).ptr());
+	}
+};
 
 static void Matrix4x4_setItem(Matrix4x4 *matrix, bp::tuple tuple, Float value) {
 	if (bp::len(tuple) != 2)
@@ -472,6 +478,43 @@ Vector refract3(const Vector &wi, const Normal &n, Float eta) {
 	return refract(wi, n, eta);
 }
 
+void bitmap_applyMatrix(Bitmap *bitmap, bp::list list) {
+	int length = bp::len(list);
+	if (length != 9)
+		SLog(EError, "Require a color matrix specified as a list with 9 entries!");
+
+	Float matrix[3][3];
+
+	int idx = 0;
+	for (int i=0; i<3; ++i)
+		for (int j=0; j<3; ++j)
+			matrix[i][j] = bp::extract<Float>(list[idx++]);
+
+	bitmap->applyMatrix(matrix);
+}
+
+void bitmap_write(Bitmap *bitmap, Bitmap::EFileFormat fmt, Stream *stream) {
+	bitmap->write(fmt, stream);
+}
+
+ref<Bitmap> bitmap_convert_1(Bitmap *bitmap, Bitmap::EPixelFormat pixelFormat, Bitmap::EComponentFormat componentFormat,
+		Float gamma, Float multiplier, Spectrum::EConversionIntent intent) {
+	return bitmap->convert(pixelFormat, componentFormat, gamma, multiplier, intent);
+}
+
+ref<Bitmap> bitmap_convert_2(Bitmap *bitmap, Bitmap::EPixelFormat pixelFormat, Bitmap::EComponentFormat componentFormat,
+		Float gamma, Float multiplier) {
+	return bitmap->convert(pixelFormat, componentFormat, gamma, multiplier);
+}
+
+ref<Bitmap> bitmap_convert_3(Bitmap *bitmap, Bitmap::EPixelFormat pixelFormat, Bitmap::EComponentFormat componentFormat,
+		Float gamma) {
+	return bitmap->convert(pixelFormat, componentFormat, gamma);
+}
+
+ref<Bitmap> bitmap_convert_4(Bitmap *bitmap, Bitmap::EPixelFormat pixelFormat, Bitmap::EComponentFormat componentFormat) {
+	return bitmap->convert(pixelFormat, componentFormat);
+}
 
 Transform transform_glOrthographic1(Float clipNear, Float clipFar) {
 	return Transform::glOrthographic(clipNear, clipFar);
@@ -489,6 +532,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(fromXYZ_overloads, fromXYZ, 3, 4)
 
 void export_core() {
 	bp::to_python_converter<fs::path, path_to_python_str>();
+	bp::to_python_converter<TSpectrum<Float, 3>, TSpectrum_to_Spectrum>();
 	bp::implicitly_convertible<std::string, fs::path>();
 
 	bp::object coreModule(
@@ -708,17 +752,23 @@ void export_core() {
 		.def("clear", &InterpolatedSpectrum::clear)
 		.def("zeroExtend", &InterpolatedSpectrum::zeroExtend);
 
+	void (Bitmap::*accumulate_1)(const Bitmap *bitmap, Point2i sourceOffset, Point2i targetOffset, Vector2i size) = &Bitmap::accumulate;
+	void (Bitmap::*accumulate_2)(const Bitmap *bitmap, Point2i targetOffset) = &Bitmap::accumulate;
+
 	BP_CLASS(Bitmap, Object, (bp::init<Bitmap::EPixelFormat, Bitmap::EComponentFormat, const Vector2i &>()))
 		.def(bp::init<Bitmap::EPixelFormat, Bitmap::EComponentFormat, const Vector2i &, int>())
 		.def(bp::init<Bitmap::EFileFormat, Stream *>())
 		.def("clone", &Bitmap::clone, BP_RETURN_VALUE)
+		.def("clear", &Bitmap::clear)
 		.def("separateChannel", &Bitmap::separateChannel, BP_RETURN_VALUE)
 		.def("expand", &Bitmap::expand, BP_RETURN_VALUE)
 		.def("flipVertically", &Bitmap::flipVertically)
 		.def("crop", &Bitmap::crop)
-		.def("accumulate", &Bitmap::accumulate)
-		.def("clear", &Bitmap::clear)
-		.def("write", &Bitmap::write)
+		.def("applyMatrix", &bitmap_applyMatrix)
+		.def("colorBalance", &Bitmap::colorBalance)
+		.def("accumulate", accumulate_1)
+		.def("accumulate", accumulate_2)
+		.def("write", &bitmap_write)
 		.def("setString", &Bitmap::setString)
 		.def("getString", &Bitmap::getString, BP_RETURN_VALUE)
 		.def("setGamma", &Bitmap::setGamma)
@@ -732,9 +782,18 @@ void export_core() {
 		.def("getBitsPerComponent", &Bitmap::getBitsPerComponent)
 		.def("getBytesPerComponent", &Bitmap::getBytesPerComponent)
 		.def("getBytesPerPixel", &Bitmap::getBytesPerPixel)
+		.def("getBufferSize", &Bitmap::getBufferSize)
 		.def("getPixel", &Bitmap::getPixel, BP_RETURN_VALUE)
 		.def("setPixel", &Bitmap::setPixel)
-		.def("getSize", &Bitmap::getSize, BP_RETURN_VALUE);
+		.def("drawHLine", &Bitmap::drawHLine)
+		.def("drawVLine", &Bitmap::drawVLine)
+		.def("drawRect", &Bitmap::drawRect)
+		.def("fillRect", &Bitmap::fillRect)
+		.def("getSize", &Bitmap::getSize, BP_RETURN_VALUE)
+		.def("convert", &bitmap_convert_1, BP_RETURN_VALUE)
+		.def("convert", &bitmap_convert_2, BP_RETURN_VALUE)
+		.def("convert", &bitmap_convert_3, BP_RETURN_VALUE)
+		.def("convert", &bitmap_convert_4, BP_RETURN_VALUE);
 
 	BP_SETSCOPE(Bitmap_class);
 	bp::enum_<Bitmap::EPixelFormat>("EPixelFormat")
@@ -745,7 +804,8 @@ void export_core() {
 		.value("ESpectrum", Bitmap::ESpectrum)
 		.value("ESpectrumAlpha", Bitmap::ESpectrumAlpha)
 		.value("ESpectrumAlphaWeight", Bitmap::ESpectrumAlphaWeight)
-		.value("EMultiChannel", Bitmap::EMultiChannel);
+		.value("EMultiChannel", Bitmap::EMultiChannel)
+		.export_values();
 
 	bp::enum_<Bitmap::EComponentFormat>("EComponentFormat")
 		.value("EBitmask", Bitmap::EBitmask)
@@ -763,10 +823,13 @@ void export_core() {
 		.value("EPNG", Bitmap::EPNG)
 		.value("EOpenEXR", Bitmap::EOpenEXR)
 		.value("ETGA", Bitmap::ETGA)
+		.value("EPFM", Bitmap::EPFM)
+		.value("ERGBE", Bitmap::ERGBE)
 		.value("EBMP", Bitmap::EBMP)
 		.value("EJPEG", Bitmap::EJPEG)
 		.value("EAuto", Bitmap::EAuto)
 		.export_values();
+
 	BP_SETSCOPE(coreModule);
 
 	BP_CLASS(FileResolver, Object, bp::init<>())
@@ -1261,11 +1324,19 @@ void export_core() {
 		.staticmethod("glOrthographic")
 		.staticmethod("fromFrame");
 
+	Float (*fresnelConductorApprox1)(Float, Float, Float) = &fresnelConductorApprox;
+	Float (*fresnelConductorExact1)(Float, Float, Float) = &fresnelConductorExact;
+	Spectrum (*fresnelConductorApprox2)(Float, const Spectrum &, const Spectrum &) = &fresnelConductorApprox;
+	Spectrum (*fresnelConductorExact2)(Float, const Spectrum &, const Spectrum &) = &fresnelConductorExact;
+
 	/* Functions from utility.h */
 	bp::def("fresnelDielectric", &fresnelDielectric);
 	bp::def("fresnelDielectricExt", &fresnelDielectricExt1);
 	bp::def("fresnelDielectricExt", &fresnelDielectricExt2);
-	bp::def("fresnelConductor", &fresnelConductor, BP_RETURN_VALUE);
+	bp::def("fresnelConductorApprox", fresnelConductorApprox1, BP_RETURN_VALUE);
+	bp::def("fresnelConductorApprox", fresnelConductorApprox2, BP_RETURN_VALUE);
+	bp::def("fresnelConductorExact", fresnelConductorExact1, BP_RETURN_VALUE);
+	bp::def("fresnelConductorExact", fresnelConductorExact2, BP_RETURN_VALUE);
 	bp::def("fresnelDiffuseReflectance", &fresnelDiffuseReflectance);
 	bp::def("reflect", &reflect);
 	bp::def("refract", &refract1);

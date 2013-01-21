@@ -78,9 +78,9 @@ void Class::initializeOnce(Class *theClass) {
 }
 
 void Class::staticInitialization() {
-	std::for_each(__classes->begin(), __classes->end(),
-		compose1(std::ptr_fun(initializeOnce),
-		select2nd<ClassMap::value_type>()));
+	for (ClassMap::iterator it = __classes->begin();
+			it != __classes->end(); ++it)
+		initializeOnce(it->second);
 	m_isInitialized = true;
 }
 

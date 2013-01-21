@@ -586,18 +586,84 @@ Float fresnelDielectricExt(Float cosThetaI_, Float &cosThetaT_, Float eta) {
 	return 0.5f * (Rs * Rs + Rp * Rp);
 }
 
-Spectrum fresnelConductor(Float cosThetaI, const Spectrum &eta, const Spectrum &k) {
-	Spectrum tmp = (eta*eta + k*k) * (cosThetaI * cosThetaI);
+Float fresnelConductorApprox(Float cosThetaI, Float eta, Float k) {
+	Float cosThetaI2 = cosThetaI*cosThetaI;
 
-	Spectrum rParl2 = (tmp - (eta * (2.0f * cosThetaI)) + Spectrum(1.0f))
-					/ (tmp + (eta * (2.0f * cosThetaI)) + Spectrum(1.0f));
+	Float tmp = (eta*eta + k*k) * cosThetaI2;
+
+	Float Rp2 = (tmp - (eta * (2 * cosThetaI)) + 1)
+	          / (tmp + (eta * (2 * cosThetaI)) + 1);
+
+	Float tmpF = eta*eta + k*k;
+
+	Float Rs2 = (tmpF - (eta * (2 * cosThetaI)) + cosThetaI2) /
+	            (tmpF + (eta * (2 * cosThetaI)) + cosThetaI2);
+
+	return 0.5f * (Rp2 + Rs2);
+}
+
+Spectrum fresnelConductorApprox(Float cosThetaI, const Spectrum &eta, const Spectrum &k) {
+	Float cosThetaI2 = cosThetaI*cosThetaI;
+
+	Spectrum tmp = (eta*eta + k*k) * cosThetaI2;
+
+	Spectrum Rp2 = (tmp - (eta * (2 * cosThetaI)) + Spectrum(1.0f))
+	             / (tmp + (eta * (2 * cosThetaI)) + Spectrum(1.0f));
 
 	Spectrum tmpF = eta*eta + k*k;
 
-	Spectrum rPerp2 = (tmpF - (eta * (2.0f * cosThetaI)) + Spectrum(cosThetaI*cosThetaI)) /
-					  (tmpF + (eta * (2.0f * cosThetaI)) + Spectrum(cosThetaI*cosThetaI));
+	Spectrum Rs2 = (tmpF - (eta * (2 * cosThetaI)) + Spectrum(cosThetaI2)) /
+	               (tmpF + (eta * (2 * cosThetaI)) + Spectrum(cosThetaI2));
 
-	return (rParl2 + rPerp2) / 2.0f;
+	return 0.5f * (Rp2 + Rs2);
+}
+
+Float fresnelConductorExact(Float cosThetaI, Float eta, Float k) {
+	/* Modified from "Optics" by K.D. Moeller, University Science Books, 1988 */
+
+	Float cosThetaI2 = cosThetaI*cosThetaI,
+	      sinThetaI2 = 1-cosThetaI2,
+		  sinThetaI4 = sinThetaI2*sinThetaI2;
+
+	Float temp1 = eta*eta - k*k - sinThetaI2,
+	      a2pb2 = math::safe_sqrt(temp1*temp1 + 4*k*k*eta*eta),
+	      a     = math::safe_sqrt(0.5f * (a2pb2 + temp1));
+
+	Float term1 = a2pb2 + cosThetaI2,
+	      term2 = 2*a*cosThetaI;
+
+	Float Rs2 = (term1 - term2) / (term1 + term2);
+
+	Float term3 = a2pb2*cosThetaI2 + sinThetaI4,
+	      term4 = term2*sinThetaI2;
+
+	Float Rp2 = Rs2 * (term3 - term4) / (term3 + term4);
+
+	return 0.5f * (Rp2 + Rs2);
+}
+
+Spectrum fresnelConductorExact(Float cosThetaI, const Spectrum &eta, const Spectrum &k) {
+	/* Modified from "Optics" by K.D. Moeller, University Science Books, 1988 */
+
+	Float cosThetaI2 = cosThetaI*cosThetaI,
+	      sinThetaI2 = 1-cosThetaI2,
+		  sinThetaI4 = sinThetaI2*sinThetaI2;
+
+	Spectrum temp1 = eta*eta - k*k - Spectrum(sinThetaI2),
+	         a2pb2 = (temp1*temp1 + k*k*eta*eta*4).safe_sqrt(),
+	         a     = ((a2pb2 + temp1) * 0.5f).safe_sqrt();
+
+	Spectrum term1 = a2pb2 + Spectrum(cosThetaI2),
+	         term2 = a*(2*cosThetaI);
+
+	Spectrum Rs2 = (term1 - term2) / (term1 + term2);
+
+	Spectrum term3 = a2pb2*cosThetaI2 + Spectrum(sinThetaI4),
+	         term4 = term2*sinThetaI2;
+
+	Spectrum Rp2 = Rs2 * (term3 - term4) / (term3 + term4);
+
+	return 0.5f * (Rp2 + Rs2);
 }
 
 Vector reflect(const Vector &wi, const Normal &n) {
