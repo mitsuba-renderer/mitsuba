@@ -8,8 +8,8 @@ macro(add_film)
 endmacro()
 
 add_film(mfilm   mfilm.cpp)
-add_film(ldrfilm ldrfilm.cpp banner.h)
-add_film(hdrfilm hdrfilm.cpp banner.h)
+add_film(ldrfilm ldrfilm.cpp banner.h MTS_HW)
+add_film(hdrfilm hdrfilm.cpp banner.h MTS_HW)
 
 if (OPENEXR_FOUND)
   include_directories(${ILMBASE_INCLUDE_DIRS} ${OPENEXR_INCLUDE_DIRS})
