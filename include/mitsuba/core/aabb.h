@@ -289,19 +289,17 @@ template <typename T> struct TAABB {
 				Float t1 = (minVal - origin) * ray.dRcp[i];
 				Float t2 = (maxVal - origin) * ray.dRcp[i];
 
-				if (t1 > t2) {
-					Float tmp = t1;
-					t1 = t2;
-					t2 = tmp;
-				}
+				if (t1 > t2)
+					std::swap(t1, t2);
 
-				nearT = std::max(nearT, t1);
-				farT = std::min(farT, t2);
+				nearT = std::max(t1, nearT);
+				farT = std::min(t2, farT);
 
-				if (nearT > farT)
+				if (!(nearT <= farT))
 					return false;
 			}
 		}
+
 		return true;
 	}
 
