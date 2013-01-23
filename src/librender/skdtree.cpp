@@ -114,6 +114,12 @@ bool ShapeKDTree::rayIntersect(const Ray &ray, Intersection &its) const {
 	its.t = std::numeric_limits<Float>::infinity();
 	Float mint, maxt;
 
+	#if defined(MTS_FP_DEBUG_STRICT)
+		Assert(
+			std::isfinite(ray.o.x) && std::isfinite(ray.o.y) && std::isfinite(ray.o.z) &&
+			std::isfinite(ray.d.x) && std::isfinite(ray.d.y) && std::isfinite(ray.d.z));
+	#endif
+
 	++raysTraced;
 	if (m_aabb.rayIntersect(ray, mint, maxt)) {
 		/* Use an adaptive ray epsilon */

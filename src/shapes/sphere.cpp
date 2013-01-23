@@ -172,8 +172,9 @@ public:
 		if (!solveQuadraticDouble(A, B, C, nearT, farT))
 			return false;
 
-		if (nearT > maxt || farT < mint)
+		if (!(nearT <= maxt && farT >= mint)) /* NaN-aware conditionals */
 			return false;
+
 		if (nearT < mint) {
 			if (farT > maxt)
 				return false;

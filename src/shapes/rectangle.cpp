@@ -127,7 +127,7 @@ public:
 		m_worldToObject.transformAffine(_ray, ray);
 		Float hit = -ray.o.z / ray.d.z;
 
-		if (hit < mint || hit > maxt)
+		if (!(hit >= mint && hit <= maxt))
 			return false;
 
 		Point local = ray(hit);
