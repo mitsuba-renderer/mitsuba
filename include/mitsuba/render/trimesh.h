@@ -311,11 +311,19 @@ protected:
 	void loadCompressed(Stream *stream, int idx = 0);
 
 	/**
+	 * \brief Reads the header information of a compressed file, returning
+	 * the version ID. This function assumes the stream is at the beginning
+	 * of the compressed file and leaves the stream located right after the
+	 * header.
+	 */
+	static short readHeader(Stream *stream);
+
+	/**
 	 * \brief Read the idx-th entry from the offset diccionary at the end of
 	 * the stream, which has to be open already, given the file version tag.
 	 * This function modifies the position of the stream.
 	 */
-	size_t readOffset(ref<Stream>& stream, short version, int idx) const;
+	static size_t readOffset(Stream *stream, short version, int idx);
 
 	/**
 	 * \brief Read the entirety of the end-of-file offset dictionary from the
@@ -324,8 +332,8 @@ protected:
 	 * and does not modify the vector.
 	 * This function modifies the position of the stream.
 	 */
-	 int readOffsetDictionary(ref<Stream>& stream, short version,
-		 std::vector<size_t>& outOffsets) const;
+	 static int readOffsetDictionary(Stream *stream, short version,
+		 std::vector<size_t>& outOffsets);
 
 	/// Prepare internal tables for sampling uniformly wrt. area
 	void prepareSamplingTable();
