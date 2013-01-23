@@ -140,7 +140,7 @@ public:
 			perm[i] = i;
 
 		/* Build the kd-tree and compute a suitable permutation of the elements */
-		m_root = build(m_aabb, 0, &perm[0], &temp[0], &perm[0], &perm[m_items.size()]);
+		m_root = build(m_aabb, 0, &perm[0], &temp[0], &perm[0], &perm[m_items.size()-1]);
 
 		/* Apply the permutation */
 		permute_inplace(&m_items[0], perm);

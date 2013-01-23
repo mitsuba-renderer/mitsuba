@@ -218,7 +218,7 @@ void blueNoisePointSet(const Scene *scene, const std::vector<Shape *> &shapes,
 				Cell &cell = cells[cellID];
 				int arrayIndex = cell.firstIndex + trial;
 
-				if (arrayIndex > (int) samples.size() ||
+				if (arrayIndex >= (int) samples.size() ||
 					samples[arrayIndex].cellID != cellID ||
 					cell.sample != -1)
 					continue;
