@@ -31,7 +31,7 @@ MTS_NAMESPACE_BEGIN
  * \brief Generic LRU cache implementation
  *
  * Based on the bimap implementation by Tim Day
- * (http://www.bottlenose.demon.co.uk/article/lru.pdf).
+ * (http://timday.bitbucket.org/lru.html).
  *
  * This cache does not support multithreading out of the box -- it
  * will need to be protected using some form of locking mechanism.
