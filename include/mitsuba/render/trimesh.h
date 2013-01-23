@@ -310,6 +310,23 @@ protected:
 	/// Load a Mitsuba compressed triangle mesh substream
 	void loadCompressed(Stream *stream, int idx = 0);
 
+	/**
+	 * \brief Read the idx-th entry from the offset diccionary at the end of
+	 * the stream, which has to be open already, given the file version tag.
+	 * This function modifies the position of the stream.
+	 */
+	size_t readOffset(ref<Stream>& stream, short version, int idx) const;
+
+	/**
+	 * \brief Read the entirety of the end-of-file offset dictionary from the
+	 * already open stream, replacing the contents of the input vector.
+	 * If the file is not large enough the function returns -1
+	 * and does not modify the vector.
+	 * This function modifies the position of the stream.
+	 */
+	 int readOffsetDictionary(ref<Stream>& stream, short version,
+		 std::vector<size_t>& outOffsets) const;
+
 	/// Prepare internal tables for sampling uniformly wrt. area
 	void prepareSamplingTable();
 protected:
