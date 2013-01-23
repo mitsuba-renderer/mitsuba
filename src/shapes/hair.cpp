@@ -504,7 +504,7 @@ public:
 		if (!solveQuadraticDouble(A, B, C, nearT, farT))
 			return false;
 
-		if (nearT > maxt || farT < mint)
+		if (!(nearT <= maxt && farT >= mint)) /* NaN-aware conditionals */
 			return false;
 
 		/* Next check the intersection points against the miter planes */
@@ -523,7 +523,7 @@ public:
 			p = Point(rayO + rayD * nearT);
 			t = (Float) nearT;
 		} else if (dot(pointFar - v1, n1) >= 0 &&
-				dot(pointFar - v2, n2) <= 0) {
+		           dot(pointFar - v2, n2) <= 0) {
 			if (farT > maxt)
 				return false;
 			p = Point(rayO + rayD * nearT);

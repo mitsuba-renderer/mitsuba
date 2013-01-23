@@ -145,11 +145,12 @@ public:
 		if (!solveQuadratic(A, B, C, nearT, farT))
 			return false;
 
-		if (nearT > maxt || farT < mint)
+		if (!(nearT <= maxt && farT >= mint)) /* NaN-aware conditionals */
 			return false;
 
 		const Float zPosNear = ray.o.z + ray.d.z * nearT;
 		const Float zPosFar = ray.o.z + ray.d.z * farT;
+
 		if (zPosNear >= 0 && zPosNear <= m_length && nearT >= mint) {
 			t = nearT;
 		} else if (zPosFar >= 0 && zPosFar <= m_length) {

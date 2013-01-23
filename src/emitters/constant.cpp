@@ -196,7 +196,7 @@ public:
 		if (!m_sceneBSphere.rayIntersect(ray, nearT, farT))
 			return Spectrum(0.0f);
 
-		if (nearT >= 0 || farT <= 0)
+		if (!(nearT < 0 && farT > 0))
 			return Spectrum(0.0f);
 
 		dRec.p = ray(farT);
