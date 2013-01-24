@@ -25,6 +25,9 @@
 
 #include <boost/make_shared.hpp>
 
+/// How many files to keep open in the cache, per thread
+#define MTS_SERIALIZED_CACHE_SIZE 4
+
 MTS_NAMESPACE_BEGIN
 
 /*!\plugin{serialized}{Serialized mesh loader}
@@ -156,8 +159,7 @@ public:
 		/* Load the geometry */
 		Log(EInfo, "Loading shape %i from \"%s\" ..", shapeIndex, filePath.filename().string().c_str());
 		ref<Timer> timer = new Timer();
-		boost::shared_ptr<MeshLoader> meshLoader = Cache::getInstance()->get(filePath);
-		loadCompressed(meshLoader->seekStream(shapeIndex));
+		loadCompressed(filePath, shapeIndex);
 		Log(EDebug, "Done (" SIZE_T_FMT " triangles, " SIZE_T_FMT " vertices, %i ms)",
 			m_triangleCount, m_vertexCount, timer->getMilliseconds());
 
@@ -234,8 +236,8 @@ private:
 		 * Positions the stream at the location for the given shape index.
 		 * Returns the modified stream.
 		 */
-		inline FileStream* seekStream(int shapeIndex) {
-			if (shapeIndex < 0 || shapeIndex > (int) m_offsets.size()) {
+		inline FileStream* seekStream(size_t shapeIndex) {
+			if (shapeIndex > m_offsets.size()) {
 				SLog(EError, "Unable to unserialize mesh, "
 					"shape index is out of range! (requested %i out of 0..%i)",
 					shapeIndex, (int) (m_offsets.size()-1));
@@ -250,27 +252,41 @@ private:
 		ref<FileStream> m_fstream;
 	};
 
-	struct Cache : LRUCache<fs::path, std::less<fs::path>,
-		boost::shared_ptr<MeshLoader> > {
+	struct FileStreamCache : LRUCache<fs::path, std::less<fs::path>,
+		                              boost::shared_ptr<MeshLoader> > {
 
-		boost::shared_ptr<MeshLoader> get(const fs::path& path) {
+		inline boost::shared_ptr<MeshLoader> get(const fs::path& path) {
 			bool dummy;
 			return LRUCache::get(path, dummy);
 		}
 
-		static Cache* getInstance() {
-			return m_instance;
+		FileStreamCache() : LRUCache(MTS_SERIALIZED_CACHE_SIZE,
+			&boost::make_shared<MeshLoader, const fs::path&>) {}
+	};
+
+	/// Loads the mesh from the thread-local file stream cache
+	void loadCompressed(const fs::path& filePath, const int idx) {
+		if (EXPECT_NOT_TAKEN(idx < 0)) {
+			Log(EError, "Unable to unserialize mesh, "
+				"shape index is negative! (requested %i out of 0..%i)", idx);
 		}
 
-	private:
-		Cache(size_t capacity) : LRUCache(capacity,
-			&boost::make_shared<MeshLoader, const fs::path&>) {}
+		// Get the thread local cache; create it if this is the first time
+		FileStreamCache* cache = m_cache.get();
+		if (EXPECT_NOT_TAKEN(cache == NULL)) {
+			cache = new FileStreamCache();
+			m_cache.set(cache);
+		}
 
-		static ref<Cache> m_instance;
-	};
+		boost::shared_ptr<MeshLoader> meshLoader = cache->get(filePath);
+		Assert(meshLoader != NULL);
+		TriMesh::loadCompressed(meshLoader->seekStream((size_t) idx));
+	}
+
+	static ThreadLocal<FileStreamCache> m_cache;
 };
 
-ref<SerializedMesh::Cache> SerializedMesh::Cache::m_instance(new SerializedMesh::Cache(8));
+ThreadLocal<SerializedMesh::FileStreamCache> SerializedMesh::m_cache;
 
 
 MTS_IMPLEMENT_CLASS_S(SerializedMesh, false, TriMesh)
