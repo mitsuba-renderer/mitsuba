@@ -25,6 +25,9 @@
 # include <pthread.h>
 #endif
 
+// Always use SSE fence instructions
+#include <emmintrin.h>
+
 MTS_NAMESPACE_BEGIN
 
 /* The native TLS classes on Linux/MacOS/Windows only support a limited number
@@ -53,7 +56,7 @@ struct PerThreadData {
 	boost::mutex mutex;
 };
 
-/// List of all PerThreadData data structures (one for each thred)
+/// List of all PerThreadData data structures (one for each thread)
 std::set<PerThreadData *> ptdGlobal;
 /// Lock to protect ptdGlobal
 boost::mutex ptdGlobalLock;
@@ -108,18 +111,34 @@ struct ThreadLocalBase::ThreadLocalPrivate {
 #else
 		PerThreadData *ptd = ptdLocal;
 #endif
-
-		/* This is an uncontended thread-local lock (i.e. not to worry) */
-		boost::lock_guard<boost::mutex> guard(ptd->mutex);
-		TLSEntry &entry = ptd->map[this];
-
-		if (EXPECT_NOT_TAKEN(!entry.data)) {
-			/* This is the first access from this thread */
-			entry.data = constructFunctor();
-			entry.destructFunctor = destructFunctor;
-			existed = false;
+		if(EXPECT_NOT_TAKEN(!ptd)) {
+			throw std::runtime_error("null per-thread data");
 		}
 
+		/* Double-checked lock to initialize the data on the first access:
+		 * Most of the times, the data is already there and thus we don't need
+		 * a lock. When we need to create the data on the first acess, we
+		 * acquire the lock and check again, as someone else might have created
+		 * the data already. Some systems (e.g. Windows Vista) provide special
+		 * APIs to guarantee single initialization. See:
+		 *  http://en.wikipedia.org/wiki/Double-checked_locking
+		 *  http://blogs.msdn.com/b/oldnewthing/archive/2011/04/08/10151258.aspx
+		 *  http://msdn.microsoft.com/en-us/library/aa363808
+		 * [Links as of January 2013]
+		 */
+		TLSEntry &entry = ptd->map[this];
+		if (EXPECT_NOT_TAKEN(!entry.data)) {
+			boost::lock_guard<boost::mutex> guard(ptd->mutex);
+			if (!entry.data) {
+				entry.data = constructFunctor();
+				entry.destructFunctor = destructFunctor;
+				// Fence for write-release semantics
+				_mm_sfence();
+				existed = false;
+			}
+		}
+		// Fence for read-acquire semantics
+		_mm_lfence();
 		return std::make_pair(entry.data, existed);
 	}
 };

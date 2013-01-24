@@ -373,9 +373,9 @@ void Thread::yield() {
 void Thread::exit() {
 	Log(EDebug, "Thread \"%s\" has finished", d->name.c_str());
 	d->running = false;
-	decRef();
-	ThreadPrivate::self->set(NULL);
+	Assert(ThreadPrivate::self->get() == this);
 	detail::destroyLocalTLS();
+	decRef();
 }
 
 std::string Thread::toString() const {
