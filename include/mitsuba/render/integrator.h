@@ -220,6 +220,7 @@ public:
 		medium = _medium;
 		depth = 1;
 		extra = 0;
+		alpha = 1;
 	}
 
 	/// Initialize the query record for a recursive query

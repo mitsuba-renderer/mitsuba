@@ -117,7 +117,6 @@ inline bool RadianceQueryRecord::rayIntersect(const RayDifferential &ray) {
 			} else {
 				alpha = 0.0f;
 			}
-
 		}
 		if (type & EDistance)
 			dist = its.t;

@@ -154,6 +154,11 @@ void SamplingIntegrator::renderBlock(const Scene *scene,
 
 	block->clear();
 
+	uint32_t queryType = RadianceQueryRecord::ESensorRay;
+
+	if (!sensor->getFilm()->hasAlpha()) /* Don't compute an alpha channel if we don't have to */
+		queryType &= ~RadianceQueryRecord::EOpacity;
+
 	for (size_t i = 0; i<points.size(); ++i) {
 		Point2i offset = Point2i(points[i]) + Vector2i(block->getOffset());
 		if (stop)
@@ -162,7 +167,7 @@ void SamplingIntegrator::renderBlock(const Scene *scene,
 		sampler->generate(offset);
 
 		for (size_t j = 0; j<sampler->getSampleCount(); j++) {
-			rRec.newQuery(RadianceQueryRecord::ESensorRay, sensor->getMedium());
+			rRec.newQuery(queryType, sensor->getMedium());
 			Point2 samplePos(Point2(offset) + Vector2(rRec.nextSample2D()));
 
 			if (needsApertureSample)

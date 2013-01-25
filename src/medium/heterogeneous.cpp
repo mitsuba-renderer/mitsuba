@@ -647,6 +647,8 @@ public:
 					mRec.sigmaS = albedo * densityAtT;
 					mRec.sigmaA = Spectrum(densityAtT) - mRec.sigmaS;
 					mRec.transmittance = Spectrum(densityAtT != 0.0f ? 1.0f / densityAtT : 0);
+					if (!std::isfinite(mRec.transmittance[0])) // prevent rare overflow warnings
+						mRec.transmittance = Spectrum(0.0f);
 					mRec.orientation = m_orientation != NULL
 						? m_orientation->lookupVector(p) : Vector(0.0f);
 					mRec.medium = this;
