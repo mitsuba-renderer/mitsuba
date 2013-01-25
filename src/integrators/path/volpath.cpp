@@ -186,8 +186,13 @@ public:
 				if (!its.isValid()) {
 					/* If no intersection could be found, possibly return
 					   attenuated radiance from a background luminaire */
-					if (rRec.type & RadianceQueryRecord::EEmittedRadiance)
-						Li += throughput * scene->evalEnvironment(ray);
+					if (rRec.type & RadianceQueryRecord::EEmittedRadiance) {
+						Spectrum value = throughput * scene->evalEnvironment(ray);
+						if (rRec.medium)
+							value *= rRec.medium->evalTransmittance(ray);
+						Li += value;
+					}
+
 					break;
 				}
 
