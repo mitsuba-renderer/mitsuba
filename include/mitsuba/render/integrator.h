@@ -458,6 +458,7 @@ protected:
     int m_maxDepth;
     int m_rrDepth;
 	bool m_strictNormals;
+	bool m_hideEmitters;
 };
 
 MTS_NAMESPACE_END

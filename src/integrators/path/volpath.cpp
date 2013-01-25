@@ -37,8 +37,14 @@ static StatsCounter avgPathLength("Volumetric path tracer", "Average path length
  *	      path termination criterion. \default{\code{5}}
  *	   }
  *     \parameter{strictNormals}{\Boolean}{Be strict about potential
- *        inconsistencies involving shading normals? See \pluginref{path}
- *        for details.\default{no, i.e. \code{false}}}
+ *        inconsistencies involving shading normals? See
+ *        page~\pageref{sec:strictnormals} for details.
+ *        \default{no, i.e. \code{false}}
+ *     }
+ *     \parameter{hideEmitters}{\Boolean}{Hide directly visible emitters?
+ *        See page~\pageref{sec:hideemitters} for details.
+ *        \default{no, i.e. \code{false}}
+ *     }
  * }
  *
  * This plugin provides a volumetric path tracer that can be used to
@@ -151,7 +157,6 @@ public:
 					break;
 				throughput *= phaseVal;
 
-
 				/* Trace a ray in this direction */
 				ray = Ray(mRec.p, pRec.wo, ray.time);
 				ray.mint = 0;
@@ -186,7 +191,8 @@ public:
 				if (!its.isValid()) {
 					/* If no intersection could be found, possibly return
 					   attenuated radiance from a background luminaire */
-					if (rRec.type & RadianceQueryRecord::EEmittedRadiance) {
+					if ((rRec.type & RadianceQueryRecord::EEmittedRadiance)
+						&& (!m_hideEmitters || scattered)) {
 						Spectrum value = throughput * scene->evalEnvironment(ray);
 						if (rRec.medium)
 							value *= rRec.medium->evalTransmittance(ray);
@@ -197,7 +203,8 @@ public:
 				}
 
 				/* Possibly include emitted radiance if requested */
-				if (its.isEmitter() && (rRec.type & RadianceQueryRecord::EEmittedRadiance))
+				if (its.isEmitter() && (rRec.type & RadianceQueryRecord::EEmittedRadiance)
+					&& (!m_hideEmitters || scattered))
 					Li += throughput * its.Le(-ray.d);
 
 				/* Include radiance from a subsurface integrator if requested */
