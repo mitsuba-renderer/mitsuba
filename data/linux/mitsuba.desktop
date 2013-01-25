@@ -11,4 +11,4 @@ TryExec=mtsgui
 Terminal=false
 StartupNotify=true
 MimeType=application/xml;image/x-exr;image/x-hdr;
-Icon=mitsuba48.png
+Icon=mitsuba48
