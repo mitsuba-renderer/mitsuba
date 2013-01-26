@@ -754,6 +754,7 @@ void export_core() {
 
 	void (Bitmap::*accumulate_1)(const Bitmap *bitmap, Point2i sourceOffset, Point2i targetOffset, Vector2i size) = &Bitmap::accumulate;
 	void (Bitmap::*accumulate_2)(const Bitmap *bitmap, Point2i targetOffset) = &Bitmap::accumulate;
+	const Properties &(Bitmap::*get_metadata)() const = &Bitmap::getMetadata;
 
 	BP_CLASS(Bitmap, Object, (bp::init<Bitmap::EPixelFormat, Bitmap::EComponentFormat, const Vector2i &>()))
 		.def(bp::init<Bitmap::EPixelFormat, Bitmap::EComponentFormat, const Vector2i &, int>())
@@ -769,8 +770,10 @@ void export_core() {
 		.def("accumulate", accumulate_1)
 		.def("accumulate", accumulate_2)
 		.def("write", &bitmap_write)
-		.def("setString", &Bitmap::setString)
-		.def("getString", &Bitmap::getString, BP_RETURN_VALUE)
+		.def("setMetadataString", &Bitmap::setMetadataString)
+		.def("getMetadataString", &Bitmap::getMetadataString, BP_RETURN_VALUE)
+		.def("setMetadata", &Bitmap::setMetadata)
+		.def("getMetadata", get_metadata, BP_RETURN_VALUE)
 		.def("setGamma", &Bitmap::setGamma)
 		.def("getGamma", &Bitmap::getGamma)
 		.def("getWidth", &Bitmap::getWidth)

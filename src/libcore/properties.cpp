@@ -45,7 +45,7 @@ struct PropertyElement {
 	Type Properties::get##TypeName(const std::string &name) const { \
 		std::map<std::string, PropertyElement>::const_iterator it = m_elements->find(name); \
 		if (it == m_elements->end()) \
-			SLog(EError, "Property \"%s\" missing", name.c_str()); \
+			SLog(EError, "Property \"%s\" has not been specified!", name.c_str()); \
 		const BaseType *result = boost::get<BaseType>(&it->second.data); \
 		if (!result) \
 			SLog(EError, "The property \"%s\" has the wrong type (expected <" #ReadableName ">). The " \
@@ -78,18 +78,55 @@ DEFINE_PROPERTY_ACCESSOR(Spectrum, Spectrum, Spectrum, spectrum)
 DEFINE_PROPERTY_ACCESSOR(std::string, std::string, String, string)
 DEFINE_PROPERTY_ACCESSOR(Properties::Data, Properties::Data, Data, data)
 
-class type_visitor : public boost::static_visitor<Properties::EPropertyType> {
-public:
-	Properties::EPropertyType operator()(const bool &) const             { return Properties::EBoolean; }
-	Properties::EPropertyType operator()(const int64_t &) const          { return Properties::EInteger; }
-	Properties::EPropertyType operator()(const Float &) const            { return Properties::EFloat; }
-	Properties::EPropertyType operator()(const Point &) const            { return Properties::EPoint; }
-	Properties::EPropertyType operator()(const Vector &) const           { return Properties::EVector; }
-	Properties::EPropertyType operator()(const Transform &) const        { return Properties::ETransform; }
-	Properties::EPropertyType operator()(const Spectrum &) const         { return Properties::ESpectrum; }
-	Properties::EPropertyType operator()(const std::string &) const      { return Properties::EString; }
-	Properties::EPropertyType operator()(const Properties::Data &) const { return Properties::EData; }
-};
+namespace {
+	class TypeVisitor : public boost::static_visitor<Properties::EPropertyType> {
+	public:
+		Properties::EPropertyType operator()(const bool &) const             { return Properties::EBoolean; }
+		Properties::EPropertyType operator()(const int64_t &) const          { return Properties::EInteger; }
+		Properties::EPropertyType operator()(const Float &) const            { return Properties::EFloat; }
+		Properties::EPropertyType operator()(const Point &) const            { return Properties::EPoint; }
+		Properties::EPropertyType operator()(const Vector &) const           { return Properties::EVector; }
+		Properties::EPropertyType operator()(const Transform &) const        { return Properties::ETransform; }
+		Properties::EPropertyType operator()(const Spectrum &) const         { return Properties::ESpectrum; }
+		Properties::EPropertyType operator()(const std::string &) const      { return Properties::EString; }
+		Properties::EPropertyType operator()(const Properties::Data &) const { return Properties::EData; }
+	};
+
+	class EqualityVisitor : public boost::static_visitor<bool> {
+	public:
+		EqualityVisitor(const ElementData *ref) : ref(ref) { }
+
+		bool operator()(const bool &v) const             { const bool *v2 = boost::get<bool>(ref); return v2 ? (v == *v2) : false; }
+		bool operator()(const int64_t &v) const          { const int64_t *v2 = boost::get<int64_t>(ref); return v2 ? (v == *v2) : false; }
+		bool operator()(const Float &v) const            { const Float *v2 = boost::get<Float>(ref); return v2 ? (v == *v2) : false; }
+		bool operator()(const Point &v) const            { const Point *v2 = boost::get<Point>(ref); return v2 ? (v == *v2) : false; }
+		bool operator()(const Vector &v) const           { const Vector *v2 = boost::get<Vector>(ref); return v2 ? (v == *v2) : false; }
+		bool operator()(const Transform &v) const        { const Transform *v2 = boost::get<Transform>(ref); return v2 ? (v == *v2) : false; }
+		bool operator()(const Spectrum &v) const         { const Spectrum *v2 = boost::get<Spectrum>(ref); return v2 ? (v == *v2) : false; }
+		bool operator()(const std::string &v) const      { const std::string *v2 = boost::get<std::string>(ref); return v2 ? (v == *v2) : false; }
+		bool operator()(const Properties::Data &v) const { const Properties::Data *v2 = boost::get<Properties::Data>(ref); return v2 ? (v == *v2) : false; }
+	private:
+		const ElementData *ref;
+	};
+
+	class StringVisitor : public boost::static_visitor<void> {
+	public:
+		StringVisitor(std::ostringstream &oss, bool quote) : oss(oss), quote(quote) { }
+
+		void operator()(const bool &v) const             { oss << (v ? "true" : "false"); }
+		void operator()(const int64_t &v) const          { oss << v; }
+		void operator()(const Float &v) const            { oss << v; }
+		void operator()(const Point &v) const            { oss << v.toString(); }
+		void operator()(const Vector &v) const           { oss << v.toString(); }
+		void operator()(const Transform &v) const        { oss << v.toString(); }
+		void operator()(const Spectrum &v) const         { oss << v.toString(); }
+		void operator()(const std::string &v) const      { oss << (quote ? "\"" : "") << v << (quote ? "\"" : ""); }
+		void operator()(const Properties::Data &v) const { oss << v.ptr << " (size=" << v.size << ")"; }
+	private:
+		std::ostringstream &oss;
+		bool quote;
+	};
+}
 
 Properties::Properties()
 : m_id("unnamed") {
@@ -145,13 +182,32 @@ Properties::EPropertyType Properties::getType(const std::string &name) const {
 	if (it == m_elements->end())
 		SLog(EError, "Property \"%s\" has not been specified!", name.c_str());
 
-	type_visitor myVisitor;
-	return boost::apply_visitor(myVisitor, it->second.data);
+	return boost::apply_visitor(TypeVisitor(), it->second.data);
+}
+
+std::string Properties::getAsString(const std::string &name, const std::string &defVal) const {
+	if (m_elements->find(name) == m_elements->end())
+		return defVal;
+	return getAsString(name);
+}
+
+std::string Properties::getAsString(const std::string &name) const {
+	std::map<std::string, PropertyElement>::const_iterator it = m_elements->find(name);
+	if (it == m_elements->end())
+		SLog(EError, "Property \"%s\" has not been specified!", name.c_str());
+
+	std::ostringstream oss;
+	StringVisitor strVisitor(oss, false);
+	boost::apply_visitor(strVisitor, it->second.data);
+	it->second.queried = true;
+
+	return oss.str();
 }
 
 std::string Properties::toString() const {
 	std::map<std::string, PropertyElement>::const_iterator it = m_elements->begin();
 	std::ostringstream oss;
+	StringVisitor strVisitor(oss, true);
 
 	oss << "Properties[" << endl
 		<< "  pluginName = \"" << m_pluginName << "\"," << endl
@@ -160,36 +216,7 @@ std::string Properties::toString() const {
 	while (it != m_elements->end()) {
 		oss << "    \"" << (*it).first << "\" -> ";
 		const ElementData &data = (*it).second.data;
-		EPropertyType type = boost::apply_visitor(type_visitor(), data);
-		switch (type) {
-			case EBoolean:
-				oss << (boost::get<bool>(data) ? "true" : "false");
-				break;
-			case EInteger:
-				oss << boost::get<int64_t>(data);
-				break;
-			case EFloat:
-				oss << boost::get<Float>(data);
-				break;
-			case EPoint:
-				oss << boost::get<Point>(data).toString();
-				break;
-			case ETransform:
-				oss << indent(boost::get<Transform>(data).toString());
-				break;
-			case ESpectrum:
-				oss << boost::get<Spectrum>(data).toString();
-				break;
-			case EString:
-				oss << "\"" << boost::get<std::string>(data) << "\"";
-				break;
-			case EData:
-				oss << boost::get<Data>(data).ptr << " (size="
-					<< boost::get<Data>(data).size << ")";
-				break;
-			default:
-				oss << "<unknown>";
-		}
+		boost::apply_visitor(strVisitor, data);
 		if (++it != m_elements->end())
 			oss << ",";
 		oss << endl;
@@ -219,6 +246,21 @@ void Properties::putPropertyNames(std::vector<std::string> &results) const {
 		results.push_back((*it).first);
 }
 
+bool Properties::operator==(const Properties &p) const {
+	if (m_pluginName != p.m_pluginName || m_id != p.m_id || m_elements->size() != p.m_elements->size())
+		return false;
+
+	std::map<std::string, PropertyElement>::const_iterator it = m_elements->begin();
+	for (; it != m_elements->end(); ++it) {
+		const PropertyElement &first = it->second;
+		const PropertyElement &second = (*p.m_elements)[it->first];
+
+		if (!boost::apply_visitor(EqualityVisitor(&first.data), second.data))
+			return false;
+	}
+
+	return true;
+}
 
 ConfigurableObject::ConfigurableObject(Stream *stream, InstanceManager *manager)
  : SerializableObject(stream, manager) {

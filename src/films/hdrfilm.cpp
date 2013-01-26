@@ -383,7 +383,7 @@ public:
 
 		for (std::map<std::string, std::string>::const_iterator it = m_tags.begin();
 				it != m_tags.end(); ++it)
-			bitmap->getMetadata()[it->first] = it->second;
+			bitmap->setMetadataString(it->first, it->second);
 
 		fs::path filename = m_destFile;
 		std::string extension = boost::to_lower_copy(filename.extension().string());
@@ -400,7 +400,7 @@ public:
 		if (m_attachLog && logger->readLog(log)) {
 			log += "\n\n";
 			log += Statistics::getInstance()->getStats();
-			bitmap->setString("log", log);
+			bitmap->setMetadataString("log", log);
 		}
 
 		bitmap->write(m_fileFormat, stream);

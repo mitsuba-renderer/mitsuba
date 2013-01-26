@@ -353,7 +353,7 @@ public:
 
 		for (std::map<std::string, std::string>::const_iterator it = m_tags.begin();
 				it != m_tags.end(); ++it)
-			bitmap->getMetadata()[it->first] = it->second;
+			bitmap->setMetadataString(it->first, it->second);
 
 		fs::path filename = m_destFile;
 		std::string extension = boost::to_lower_copy(filename.extension().string());

@@ -71,6 +71,14 @@ public:
 	struct Data {
 		uint8_t *ptr;
 		size_t size;
+
+		inline bool operator==(const Data &d) const {
+			return ptr == d.ptr && size == d.size;
+		}
+
+		inline bool operator!=(const Data &d) const {
+			return !operator==(d);
+		}
 	};
 
 	/// Construct an empty property container
@@ -172,6 +180,11 @@ public:
 	/// Get a string (with default)
 	std::string getString(const std::string &name, const std::string &defVal) const;
 
+	/// Return one of the parameters (converting it to a string if necessary)
+	std::string getAsString(const std::string &name) const;
+	/// Return one of the parameters (converting it to a string if necessary, with default value)
+	std::string getAsString(const std::string &name, const std::string &defVal) const;
+
 	/// Store an array containing the names of all stored properties
 	void putPropertyNames(std::vector<std::string> &results) const;
 
@@ -205,6 +218,14 @@ public:
 
 	/// Assignment operator
 	void operator=(const Properties &props);
+
+	/// Equality comparison operator
+	bool operator==(const Properties &props) const;
+
+	/// Inequality comparision operator
+	inline bool operator!=(const Properties &props) const {
+		return !operator==(props);
+	}
 
 	/// Return a string representation
 	std::string toString() const;
