@@ -33,7 +33,10 @@ MTS_NAMESPACE_BEGIN
 
 /// Write a Log message to the console (to be used within subclasses of <tt>Object</tt>)
 #define Log(level, fmt, ...) do { \
-		mitsuba::Logger *logger = mitsuba::Thread::getThread()->getLogger(); \
+		mitsuba::Thread *thread = mitsuba::Thread::getThread(); \
+		if (EXPECT_NOT_TAKEN(thread == NULL)) \
+			throw std::runtime_error("Null thread pointer"); \
+		mitsuba::Logger *logger = thread->getLogger(); \
 		if (level >= logger->getLogLevel()) \
 			logger->log(level, m_theClass, \
 				__FILE__, __LINE__, fmt, ## __VA_ARGS__); \
@@ -44,7 +47,10 @@ MTS_NAMESPACE_BEGIN
  * outside of classes that derive from Object)
  */
 #define SLog(level, fmt, ...) do { \
-		mitsuba::Logger *logger = mitsuba::Thread::getThread()->getLogger(); \
+		mitsuba::Thread *thread = mitsuba::Thread::getThread(); \
+		if (EXPECT_NOT_TAKEN(thread == NULL)) \
+			throw std::runtime_error("Null thread pointer"); \
+		mitsuba::Logger *logger = thread->getLogger(); \
 		if (level >= logger->getLogLevel()) \
 			logger->log(level, NULL, \
 				__FILE__, __LINE__, fmt, ## __VA_ARGS__); \
