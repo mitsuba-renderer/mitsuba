@@ -238,7 +238,7 @@ extern "C" {
 		p->mgr.free_in_buffer = 0;
 	}
 
-	METHODDEF(void) jpeg_error_exit (j_common_ptr cinfo) {
+	METHODDEF(void) jpeg_error_exit (j_common_ptr cinfo) throw(std::runtime_error) {
 		char msg[JMSG_LENGTH_MAX];
 		(*cinfo->err->format_message) (cinfo, msg);
 		SLog(EError, "Critcal libjpeg error: %s", msg);
@@ -1370,7 +1370,7 @@ void Bitmap::writePNG(Stream *stream, int compression) const {
 		text[i].compression = PNG_TEXT_COMPRESSION_NONE;
 	}
 
-	png_set_text(png_ptr, info_ptr, text, keys.size());
+	png_set_text(png_ptr, info_ptr, text, (int) keys.size());
 
 	if (m_gamma == -1)
 		png_set_sRGB_gAMA_and_cHRM(png_ptr, info_ptr, PNG_sRGB_INTENT_ABSOLUTE);

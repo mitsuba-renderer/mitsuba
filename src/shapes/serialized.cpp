@@ -21,6 +21,12 @@
 #include <mitsuba/core/fstream.h>
 #include <mitsuba/core/fresolver.h>
 #include <mitsuba/core/timer.h>
+#include <mitsuba/core/lrucache.h>
+
+#include <boost/make_shared.hpp>
+
+/// How many files to keep open in the cache, per thread
+#define MTS_SERIALIZED_CACHE_SIZE 4
 
 MTS_NAMESPACE_BEGIN
 
@@ -152,9 +158,8 @@ public:
 
 		/* Load the geometry */
 		Log(EInfo, "Loading shape %i from \"%s\" ..", shapeIndex, filePath.filename().string().c_str());
-		ref<FileStream> stream = new FileStream(filePath, FileStream::EReadOnly);
 		ref<Timer> timer = new Timer();
-		loadCompressed(stream, shapeIndex);
+		loadCompressed(filePath, shapeIndex);
 		Log(EDebug, "Done (" SIZE_T_FMT " triangles, " SIZE_T_FMT " vertices, %i ms)",
 			m_triangleCount, m_vertexCount, timer->getMilliseconds());
 
@@ -202,7 +207,87 @@ public:
 		: TriMesh(stream, manager) { }
 
 	MTS_DECLARE_CLASS()
+
+private:
+
+	/**
+	 * Helper class for loading serialized meshes from the same file 
+	 * repeatedly: it is common for scene to load multiple meshes from the same
+	 * file, most times even in ascending order. This class loads the mesh 
+	 * offsets dictionary only once and keeps the stream open.
+	 *
+	 * Instances of this class are not thread safe.
+	 */
+	class MeshLoader {
+	public:
+
+		MeshLoader(const fs::path& filePath) {
+			m_fstream = new FileStream(filePath, FileStream::EReadOnly);
+			m_fstream->setByteOrder(Stream::ELittleEndian);
+			const short version = SerializedMesh::readHeader(m_fstream);
+			if (SerializedMesh::readOffsetDictionary(m_fstream,
+				version, m_offsets) < 0) {
+				// Assume there is a single mesh in the file at offset 0
+				m_offsets.resize(1, 0);
+			}
+		}
+
+		/**
+		 * Positions the stream at the location for the given shape index.
+		 * Returns the modified stream.
+		 */
+		inline FileStream* seekStream(size_t shapeIndex) {
+			if (shapeIndex > m_offsets.size()) {
+				SLog(EError, "Unable to unserialize mesh, "
+					"shape index is out of range! (requested %i out of 0..%i)",
+					shapeIndex, (int) (m_offsets.size()-1));
+			}
+			const size_t pos = m_offsets[shapeIndex];
+			m_fstream->seek(pos);
+			return m_fstream;
+		}
+
+	private:
+		std::vector<size_t> m_offsets;
+		ref<FileStream> m_fstream;
+	};
+
+	struct FileStreamCache : LRUCache<fs::path, std::less<fs::path>,
+		                              boost::shared_ptr<MeshLoader> > {
+
+		inline boost::shared_ptr<MeshLoader> get(const fs::path& path) {
+			bool dummy;
+			return LRUCache::get(path, dummy);
+		}
+
+		FileStreamCache() : LRUCache(MTS_SERIALIZED_CACHE_SIZE,
+			&boost::make_shared<MeshLoader, const fs::path&>) {}
+	};
+
+	/// Loads the mesh from the thread-local file stream cache
+	void loadCompressed(const fs::path& filePath, const int idx) {
+		if (EXPECT_NOT_TAKEN(idx < 0)) {
+			Log(EError, "Unable to unserialize mesh, "
+				"shape index is negative! (requested %i out of 0..%i)", idx);
+		}
+
+		// Get the thread local cache; create it if this is the first time
+		FileStreamCache* cache = m_cache.get();
+		if (EXPECT_NOT_TAKEN(cache == NULL)) {
+			cache = new FileStreamCache();
+			m_cache.set(cache);
+		}
+
+		boost::shared_ptr<MeshLoader> meshLoader = cache->get(filePath);
+		Assert(meshLoader != NULL);
+		TriMesh::loadCompressed(meshLoader->seekStream((size_t) idx));
+	}
+
+	static ThreadLocal<FileStreamCache> m_cache;
 };
+
+ThreadLocal<SerializedMesh::FileStreamCache> SerializedMesh::m_cache;
+
 
 MTS_IMPLEMENT_CLASS_S(SerializedMesh, false, TriMesh)
 MTS_EXPORT_PLUGIN(SerializedMesh, "Serialized mesh loader");
