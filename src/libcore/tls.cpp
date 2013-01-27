@@ -17,18 +17,25 @@
 */
 
 #include <mitsuba/core/tls.h>
+
 #include <boost/thread/mutex.hpp>
+#include <boost/thread/recursive_mutex.hpp>
 #include <boost/thread/locks.hpp>
-#include <boost/unordered_map.hpp>
-#include <set>
+#include <boost/unordered_set.hpp>
+
+#include <boost/scoped_ptr.hpp>
+#include <boost/multi_index_container.hpp>
+#include <boost/multi_index/member.hpp>
+#include <boost/multi_index/hashed_index.hpp>
+#include <boost/multi_index/sequenced_index.hpp>
+
 #if defined(__OSX__)
 # include <pthread.h>
 #endif
 
-// Always use SSE fence instructions
-#include <emmintrin.h>
-
 MTS_NAMESPACE_BEGIN
+
+namespace mi = boost::multi_index;
 
 /* The native TLS classes on Linux/MacOS/Windows only support a limited number
    of dynamically allocated entries (usually 1024 or 1088). Furthermore, they
@@ -48,16 +55,37 @@ struct TLSEntry {
 	inline TLSEntry() : data(NULL), destructFunctor(NULL) { }
 };
 
+/// boost multi-index element to act as replacement of map<Key,T>
+template<typename T1, typename T2>
+struct mutable_pair {
+	mutable_pair(const T1 &f, const T2 &s) : first(f), second(s) { }
+
+	T1 first;
+	mutable T2 second;
+};
+
 /// Per-thread TLS entry map
 struct PerThreadData {
-	typedef boost::unordered_map<void *, TLSEntry> Map;
+	typedef mutable_pair<void *, TLSEntry> MapData;
+	typedef mi::member<MapData, void *, &MapData::first> key_member;
+	struct seq_tag {};
+	struct key_tag {};
+
+	typedef mi::multi_index_container<MapData,
+		mi::indexed_by<
+			mi::hashed_unique<mi::tag<key_tag>, key_member>,
+			mi::sequenced<mi::tag<seq_tag> >
+		>
+	> Map;
+	typedef mi::index<Map, key_tag>::type::iterator         key_iterator;
+	typedef mi::index<Map, seq_tag>::type::reverse_iterator reverse_iterator;
 
 	Map map;
-	boost::mutex mutex;
+	boost::recursive_mutex mutex;
 };
 
 /// List of all PerThreadData data structures (one for each thread)
-std::set<PerThreadData *> ptdGlobal;
+boost::unordered_set<PerThreadData *> ptdGlobal;
 /// Lock to protect ptdGlobal
 boost::mutex ptdGlobalLock;
 
@@ -82,10 +110,10 @@ struct ThreadLocalBase::ThreadLocalPrivate {
 		   and clean up where necessary */
 		boost::lock_guard<boost::mutex> guard(ptdGlobalLock);
 
-		for (std::set<PerThreadData *>::iterator it = ptdGlobal.begin();
+		for (boost::unordered_set<PerThreadData *>::iterator it = ptdGlobal.begin();
 				it != ptdGlobal.end(); ++it) {
 			PerThreadData *ptd = *it;
-			boost::unique_lock<boost::mutex> lock(ptd->mutex);
+			boost::unique_lock<boost::recursive_mutex> lock(ptd->mutex);
 
 			PerThreadData::Map::iterator it2 = ptd->map.find(this);
 			TLSEntry entry;
@@ -115,31 +143,20 @@ struct ThreadLocalBase::ThreadLocalPrivate {
 			throw std::runtime_error("null per-thread data");
 		}
 
-		/* Double-checked lock to initialize the data on the first access:
-		 * Most of the times, the data is already there and thus we don't need
-		 * a lock. When we need to create the data on the first acess, we
-		 * acquire the lock and check again, as someone else might have created
-		 * the data already. Some systems (e.g. Windows Vista) provide special
-		 * APIs to guarantee single initialization. See:
-		 *  http://en.wikipedia.org/wiki/Double-checked_locking
-		 *  http://blogs.msdn.com/b/oldnewthing/archive/2011/04/08/10151258.aspx
-		 *  http://msdn.microsoft.com/en-us/library/aa363808
-		 * [Links as of January 2013]
-		 */
-		TLSEntry &entry = ptd->map[this];
-		if (EXPECT_NOT_TAKEN(!entry.data)) {
-			boost::lock_guard<boost::mutex> guard(ptd->mutex);
-			if (!entry.data) {
-				entry.data = constructFunctor();
-				entry.destructFunctor = destructFunctor;
-				// Fence for write-release semantics
-				_mm_sfence();
-				existed = false;
-			}
+		void *data;
+		boost::lock_guard<boost::recursive_mutex> guard(ptd->mutex);
+		PerThreadData::key_iterator it = ptd->map.find(this);
+		if (EXPECT_TAKEN(it != ptd->map.end())) {
+			data = it->second.data;
+		} else {
+			TLSEntry entry;
+			entry.data = data = constructFunctor();
+			entry.destructFunctor = destructFunctor;
+			ptd->map.insert(PerThreadData::MapData(this, entry));
+			existed = false;
 		}
-		// Fence for read-acquire semantics
-		_mm_lfence();
-		return std::make_pair(entry.data, existed);
+
+		return std::make_pair(data, existed);
 	}
 };
 
@@ -210,10 +227,11 @@ void destroyLocalTLS() {
 	PerThreadData *ptd = ptdLocal;
 #endif
 
-	boost::unique_lock<boost::mutex> lock(ptd->mutex);
+	boost::unique_lock<boost::recursive_mutex> lock(ptd->mutex);
 
-	for (PerThreadData::Map::iterator it = ptd->map.begin();
-			it != ptd->map.end(); ++it) {
+	// Destroy the data in reverse order of creation
+	for (PerThreadData::reverse_iterator it = mi::get<PerThreadData::seq_tag>(ptd->map).rbegin();
+		it != mi::get<PerThreadData::seq_tag>(ptd->map).rend(); ++it) {
 		TLSEntry &entry = it->second;
 		entry.destructFunctor(entry.data);
 	}
