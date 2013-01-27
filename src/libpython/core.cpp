@@ -206,7 +206,7 @@ struct path_to_python_str {
 
 
 struct TSpectrum_to_Spectrum {
-	static PyObject* convert(const TSpectrum<Float, 3> &spectrum) {
+	static PyObject* convert(const TSpectrum<Float, SPECTRUM_SAMPLES> &spectrum) {
 		return bp::incref(bp::object(Spectrum(spectrum)).ptr());
 	}
 };
@@ -532,7 +532,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(fromXYZ_overloads, fromXYZ, 3, 4)
 
 void export_core() {
 	bp::to_python_converter<fs::path, path_to_python_str>();
-	bp::to_python_converter<TSpectrum<Float, 3>, TSpectrum_to_Spectrum>();
+	bp::to_python_converter<TSpectrum<Float, SPECTRUM_SAMPLES>, TSpectrum_to_Spectrum>();
 	bp::implicitly_convertible<std::string, fs::path>();
 
 	bp::object coreModule(
