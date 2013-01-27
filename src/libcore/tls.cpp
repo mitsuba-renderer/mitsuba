@@ -133,22 +133,24 @@ struct ThreadLocalBase::ThreadLocalPrivate {
 	/// Look up a TLS entry. The goal is to make this operation very fast!
 	std::pair<void *, bool> get() {
 		bool existed = true;
+		void *data;
 
 #if defined(__OSX__)
 		PerThreadData *ptd = (PerThreadData *) pthread_getspecific(ptdLocal);
 #else
 		PerThreadData *ptd = ptdLocal;
 #endif
-		if(EXPECT_NOT_TAKEN(!ptd)) {
-			throw std::runtime_error("null per-thread data");
-		}
+		if (EXPECT_NOT_TAKEN(!ptd))
+			throw std::runtime_error("Internal error: call to ThreadLocalPrivate::get() "
+				" precedes the construction of thread-specific data structures!");
 
-		void *data;
+		/* This is an uncontended thread-local lock (i.e. not to worry) */
 		boost::lock_guard<boost::recursive_mutex> guard(ptd->mutex);
 		PerThreadData::key_iterator it = ptd->map.find(this);
 		if (EXPECT_TAKEN(it != ptd->map.end())) {
 			data = it->second.data;
 		} else {
+			/* This is the first access from this thread */
 			TLSEntry entry;
 			entry.data = data = constructFunctor();
 			entry.destructFunctor = destructFunctor;
