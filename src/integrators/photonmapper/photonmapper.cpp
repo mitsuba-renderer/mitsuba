@@ -46,6 +46,10 @@ MTS_NAMESPACE_BEGIN
  *		Granularity of photon tracing work units for the purpose
  *		of parallelization (in \# of shot particles) \default{0, i.e. decide automatically}
  *     }
+ *     \parameter{hideEmitters}{\Boolean}{Hide directly visible emitters?
+ *        See page~\pageref{sec:hideemitters} for details.
+ *        \default{no, i.e. \code{false}}
+ *     }
  *	   \parameter{rrDepth}{\Integer}{Specifies the minimum path depth, after
  *	      which the implementation will start to use the ``russian roulette''
  *	      path termination criterion. \default{\code{5}}
@@ -126,6 +130,9 @@ public:
 		m_gatherLocally = props.getBoolean("gatherLocally", true);
 		/* Indicates if the gathering steps should be canceled if not enough photons are generated. */
 		m_autoCancelGathering = props.getBoolean("autoCancelGathering", true);
+		/* When this flag is set to true, contributions from directly
+		 * visible emitters will not be included in the rendered image */
+		m_hideEmitters = props.getBoolean("hideEmitters", false);
 
 		if (m_maxDepth == 0) {
 			Log(EError, "maxDepth must be greater than zero!");
@@ -159,6 +166,7 @@ public:
 		m_volumeLookupSize = stream->readInt();
 		m_gatherLocally = stream->readBool();
 		m_autoCancelGathering = stream->readBool();
+		m_hideEmitters = stream->readBool();
 		m_causticPhotonMapID = m_globalPhotonMapID = m_breID = 0;
 		configure();
 	}
@@ -190,6 +198,7 @@ public:
 		stream->writeInt(m_volumeLookupSize);
 		stream->writeBool(m_gatherLocally);
 		stream->writeBool(m_autoCancelGathering);
+		stream->writeBool(m_hideEmitters);
 	}
 
 	/// Configure the sampler for a specified amount of direct illumination samples
@@ -261,11 +270,11 @@ public:
 			if (proc->getReturnStatus() != ParallelProcess::ESuccess)
 				return false;
 
-			Log(EDebug, "Global photon map full. Shot " SIZE_T_FMT " particles, excess photons due to parallelism: "
-				SIZE_T_FMT, proc->getShotParticles(), proc->getExcessPhotons());
-
 			ref<PhotonMap> globalPhotonMap = proc->getPhotonMap();
 			if (globalPhotonMap->isFull()) {
+				Log(EDebug, "Global photon map full. Shot " SIZE_T_FMT " particles, excess photons due to parallelism: "
+					SIZE_T_FMT, proc->getShotParticles(), proc->getExcessPhotons());
+
 				m_globalPhotonMap = globalPhotonMap;
 				m_globalPhotonMap->setScaleFactor(1 / (Float) proc->getShotParticles());
 				m_globalPhotonMap->build();
@@ -292,11 +301,11 @@ public:
 			if (proc->getReturnStatus() != ParallelProcess::ESuccess)
 				return false;
 
-			Log(EDebug, "Caustic photon map full. Shot " SIZE_T_FMT " particles, excess photons due to parallelism: "
-				SIZE_T_FMT, proc->getShotParticles(), proc->getExcessPhotons());
-
 			ref<PhotonMap> causticPhotonMap = proc->getPhotonMap();
 			if (causticPhotonMap->isFull()) {
+				Log(EDebug, "Caustic photon map full. Shot " SIZE_T_FMT " particles, excess photons due to parallelism: "
+					SIZE_T_FMT, proc->getShotParticles(), proc->getExcessPhotons());
+
 				m_causticPhotonMap = causticPhotonMap;
 				m_causticPhotonMap->setScaleFactor(1 / (Float) proc->getShotParticles());
 				m_causticPhotonMap->build();
@@ -324,11 +333,11 @@ public:
 			if (proc->getReturnStatus() != ParallelProcess::ESuccess)
 				return false;
 
-			Log(EDebug, "Volume photon map full. Shot " SIZE_T_FMT " particles, excess photons due to parallelism: "
-				SIZE_T_FMT, proc->getShotParticles(), proc->getExcessPhotons());
-
 			ref<PhotonMap> volumePhotonMap = proc->getPhotonMap();
 			if (volumePhotonMap->isFull()) {
+				Log(EDebug, "Volume photon map full. Shot " SIZE_T_FMT " particles, excess photons due to parallelism: "
+					SIZE_T_FMT, proc->getShotParticles(), proc->getExcessPhotons());
+
 				volumePhotonMap->setScaleFactor(1 / (Float) proc->getShotParticles());
 				volumePhotonMap->build();
 				m_bre = new BeamRadianceEstimator(volumePhotonMap, m_volumeLookupSize);
@@ -407,13 +416,13 @@ public:
 		if (!its.isValid()) {
 			/* If no intersection could be found, possibly return
 			   attenuated radiance from a background luminaire */
-			if (rRec.type & RadianceQueryRecord::EEmittedRadiance)
+			if ((rRec.type & RadianceQueryRecord::EEmittedRadiance) && !m_hideEmitters)
 				LiSurf = scene->evalEnvironment(ray);
 			return LiSurf * transmittance + LiMedium;
 		}
 
 		/* Possibly include emitted radiance if requested */
-		if (its.isEmitter() && (rRec.type & RadianceQueryRecord::EEmittedRadiance))
+		if (its.isEmitter() && (rRec.type & RadianceQueryRecord::EEmittedRadiance) && !m_hideEmitters)
 			LiSurf += its.Le(-ray.d);
 
 		/* Include radiance from a subsurface scattering model if requested */
@@ -446,7 +455,7 @@ public:
 				RadianceQueryRecord rRec2;
 				for (int i=0; i<compCount; i++) {
 					unsigned int type = bsdf->getType(i);
-					if (!(type & BSDF::EDelta) && type == BSDF::ENull)
+					if (!(type & BSDF::EDelta))
 						continue;
 					/* Sample the BSDF and recurse */
 					BSDFSamplingRecord bRec(its, rRec.sampler, ERadiance);
@@ -676,6 +685,7 @@ private:
 	int m_granularity, m_directSamples, m_glossySamples;
 	int m_rrDepth, m_maxDepth, m_maxSpecularDepth;
 	bool m_gatherLocally, m_autoCancelGathering;
+	bool m_hideEmitters;
 };
 
 MTS_IMPLEMENT_CLASS_S(PhotonMapIntegrator, false, SamplingIntegrator)

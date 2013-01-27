@@ -47,7 +47,7 @@ MTS_NAMESPACE_BEGIN
  *         the number of written channels depends on the value assigned to
  *         \code{SPECTRUM\_SAMPLES} during compilation (see Section~\ref{sec:compiling}
  *         section for details)
- *         \default{\code{rgba}}
+ *         \default{\code{rgb}}
  *     }
  *     \parameter{componentFormat}{\String}{Specifies the desired floating
  *         point component format used for OpenEXR output. The options are
@@ -88,7 +88,7 @@ MTS_NAMESPACE_BEGIN
  * RGB(A), XYZ(A) tristimulus, or spectrum/spectrum-alpha-based bitmap having a
  * \code{float16}, \code{float32}, or \code{uint32}-based internal representation
  * based on the chosen parameters.
- * The default configuration is RGBA with a \code{float16} component format,
+ * The default configuration is RGB with a \code{float16} component format,
  * which is appropriate for most purposes. Note that the spectral output options
  * only make sense when using a custom build of Mitsuba that has spectral
  * rendering enabled. This is not the case for the downloadable release builds.
@@ -104,12 +104,13 @@ MTS_NAMESPACE_BEGIN
  * Due to the superior accuracy and adoption of OpenEXR, the use of these
  * two alternative formats is discouraged however.
  *
- * When RGB output is selected, the measured spectral power distributions are
+ * When RGB(A) output is selected, the measured spectral power distributions are
  * converted to linear RGB based on the CIE 1931 XYZ color matching curves and
  * the ITU-R Rec. BT.709-3 primaries with a D65 white point.
  *
  * \begin{xml}[caption=Instantiation of a film that writes a full-HD RGBA OpenEXR file without the Mitsuba banner]
  * <film type="hdrfilm">
+ *     <string name="pixelFormat" value="rgba"/>
  *     <integer name="width" value="1920"/>
  *     <integer name="height" value="1080"/>
  *     <boolean name="banner" value="false"/>
@@ -154,7 +155,7 @@ public:
 		std::string fileFormat = boost::to_lower_copy(
 			props.getString("fileFormat", "openexr"));
 		std::string pixelFormat = boost::to_lower_copy(
-			props.getString("pixelFormat", "rgba"));
+			props.getString("pixelFormat", "rgb"));
 		std::string componentFormat = boost::to_lower_copy(
 			props.getString("componentFormat", "float16"));
 
@@ -382,7 +383,7 @@ public:
 
 		for (std::map<std::string, std::string>::const_iterator it = m_tags.begin();
 				it != m_tags.end(); ++it)
-			bitmap->getMetadata()[it->first] = it->second;
+			bitmap->setMetadataString(it->first, it->second);
 
 		fs::path filename = m_destFile;
 		std::string extension = boost::to_lower_copy(filename.extension().string());
@@ -399,10 +400,18 @@ public:
 		if (m_attachLog && logger->readLog(log)) {
 			log += "\n\n";
 			log += Statistics::getInstance()->getStats();
-			bitmap->setString("log", log);
+			bitmap->setMetadataString("log", log);
 		}
 
 		bitmap->write(m_fileFormat, stream);
+	}
+
+	bool hasAlpha() const {
+		return
+			m_pixelFormat == Bitmap::ELuminanceAlpha ||
+			m_pixelFormat == Bitmap::ERGBA ||
+			m_pixelFormat == Bitmap::EXYZA ||
+			m_pixelFormat == Bitmap::ESpectrumAlpha;
 	}
 
 	bool destinationExists(const fs::path &baseName) const {

@@ -323,6 +323,14 @@ public:
 		return fs::exists(filename);
 	}
 
+	bool hasAlpha() const {
+		return
+			m_pixelFormat == Bitmap::ELuminanceAlpha ||
+			m_pixelFormat == Bitmap::ERGBA ||
+			m_pixelFormat == Bitmap::EXYZA ||
+			m_pixelFormat == Bitmap::ESpectrumAlpha;
+	}
+
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "MFilm[" << endl

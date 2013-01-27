@@ -113,3 +113,24 @@ What this means is that they display a rough preview, which improves over time.
 Leaving them running indefinitely will continually reduce noise (in unbiased algorithms
 such as Metropolis Light Transport) or noise and bias (in biased
 rendering techniques such as Progressive Photon Mapping).
+\newpage
+\subsubsection*{Hiding directly visible emitters}
+\label{sec:hideemitters}
+Several rendering algorithms in Mitsuba have a feature to hide directly
+visible light sources (e.g. environment maps or area lights). While not
+particularly realistic, this feature is often convenient to remove a background
+from a rendering so that it can be pasted into a differently-colored document.
+
+Note that only directly visible emitters can be hidden using this feature---a
+reflection on a shiny surface will be unaffected. To perform the kind of
+compositing shown in Figure~\ref{fig:hideemitters}, it is also necessary to
+enable the alpha channel in the scene's film instance (Section~\ref{sec:films}).
+
+\renderings{
+  \unframedrendering{Daylit smoke rendered with \code{hideEmitters} set to \code{false}
+     (the default setting)}{integrator_volpath_normal}
+     \unframedrendering{Rendered with \code{hideEmitters} set to \code{true} and alpha-composited
+      onto a white background.}{integrator_volpath_hideemitters}
+      \caption{\label{fig:hideemitters}An example application of the \code{hideEmitters} parameter
+    together with alpha blending}
+}

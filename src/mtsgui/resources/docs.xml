@@ -41,6 +41,10 @@
 			implicitly have <tt>strictNormals</tt> activated. Hence, another use of this parameter
 			is to match renderings created by these methods.</p>
 		</param>
+		<param name="hideEmitters" readableName="Hide directly visible emitters" type="boolean" default="false" importance="1">
+			Hide light sources (e.g. area or environment light sources) that are directly visible to the camera?
+			Reflections of light sources remain unaffected.
+		</param>
 	</plugin>
 
 	<plugin type="integrator" name="irrcache" readableName="Irradiance cache"
@@ -190,6 +194,10 @@
 			The bidirectional integrators in Mitsuba (BDPT, PSSMLT, MLT, ..)
 			implicitly have <tt>strictNormals</tt> activated. Hence, another use of this parameter
 			is to match renderings created by these methods.</p>
+		</param>
+		<param name="hideEmitters" readableName="Hide directly visible emitters" type="boolean" default="false" importance="1">
+			Hide light sources (e.g. area or environment light sources) that are directly visible to the camera?
+			Reflections of light sources remain unaffected.
 		</param>
 	</plugin>
 
@@ -349,6 +357,10 @@
 		<param name="rrDepth" readableName="Russian Roulette starting depth" type="integer" default="5" importance="1">
 			Specifies the minimum path depth, after which the implementation will start to use the
 			"russian roulette" path termination criterion when tracing photons (set to <tt>-1</tt> to disable).
+		</param>
+		<param name="hideEmitters" readableName="Hide directly visible emitters" type="boolean" default="false" importance="1">
+			Hide light sources (e.g. area or environment light sources) that are directly visible to the camera?
+			Reflections of light sources remain unaffected.
 		</param>
 	</plugin>
 

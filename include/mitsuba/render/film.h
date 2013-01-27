@@ -88,6 +88,9 @@ public:
 	 */
 	inline bool hasHighQualityEdges() const { return m_highQualityEdges; }
 
+	/// Return whether or not this film records the alpha channel
+	virtual bool hasAlpha() const = 0;
+
 	/// Return the image reconstruction filter
 	inline ReconstructionFilter *getReconstructionFilter() { return m_filter.get(); }
 

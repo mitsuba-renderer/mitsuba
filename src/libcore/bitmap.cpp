@@ -38,6 +38,11 @@
 #include <ImfOutputFile.h>
 #include <ImfChannelList.h>
 #include <ImfStringAttribute.h>
+#include <ImfIntAttribute.h>
+#include <ImfFloatAttribute.h>
+#include <ImfDoubleAttribute.h>
+#include <ImfVecAttribute.h>
+#include <ImfMatrixAttribute.h>
 #include <ImfVersion.h>
 #include <ImfIO.h>
 #include <ImathBox.h>
@@ -384,19 +389,6 @@ int Bitmap::getBytesPerComponent() const {
 			Log(EError, "Unknown component format!");
 			return -1;
 	}
-}
-
-
-void Bitmap::setString(const std::string &key, const std::string &value) {
-	m_metadata[key] = value;
-}
-
-std::string Bitmap::getString(const std::string &key) const {
-	std::map<std::string, std::string>::const_iterator it = m_metadata.find(key);
-	if (it != m_metadata.end())
-		return it->second;
-	else
-		return "";
 }
 
 Bitmap::~Bitmap() {
@@ -1189,12 +1181,17 @@ std::string Bitmap::toString() const {
 		<< "  type = " << m_pixelFormat << endl
 		<< "  componentFormat = " << m_componentFormat << endl
 		<< "  size = " << m_size.toString() << endl;
-	if (!m_metadata.empty()) {
+
+	std::vector<std::string> keys = m_metadata.getPropertyNames();
+	if (!keys.empty()) {
 		oss << "  metadata = {" << endl;
-		for (std::map<std::string, std::string>::const_iterator it = m_metadata.begin();
-				it != m_metadata.end();) {
-			oss << "    \"" << it->first << "\" => \"" << it->second << "\"";
-			if (++it != m_metadata.end())
+		for (std::vector<std::string>::const_iterator it = keys.begin(); it != keys.end(); ) {
+			std::string value = m_metadata.getAsString(*it);
+			if (value.size() > 50)
+				value = value.substr(0, 50) + ".. [truncated]";
+
+			oss << "    \"" << *it << "\" => \"" << value << "\"";
+			if (++it != keys.end())
 				oss << ",";
 			oss << endl;
 		}
@@ -1281,7 +1278,7 @@ void Bitmap::readPNG(Stream *stream) {
     png_get_text(png_ptr, info_ptr, &text_ptr, &textIdx);
 
 	for (int i=0; i<textIdx; ++i, text_ptr++)
-		m_metadata[text_ptr->key] = text_ptr->text;
+		setMetadataString(text_ptr->key, text_ptr->text);
 
 	int intent; double gamma;
 	if (png_get_sRGB(png_ptr, info_ptr, &intent)) {
@@ -1357,20 +1354,23 @@ void Bitmap::writePNG(Stream *stream, int compression) const {
 
 	png_text *text = NULL;
 
-	std::map<std::string, std::string> metadata = m_metadata;
-	metadata["generated-by"] = "Mitsuba version " MTS_VERSION;
+	Properties metadata(m_metadata);
+	metadata.setString("generated-by", "Mitsuba version " MTS_VERSION);
 
-	text = new png_text[metadata.size()];
-	memset(text, 0, sizeof(png_text) * metadata.size());
-	int textIndex = 0;
-	for (std::map<std::string, std::string>::iterator it = metadata.begin();
-		it != metadata.end(); ++it) {
-		text[textIndex].key = const_cast<char *>(it->first.c_str());
-		text[textIndex].text = const_cast<char *>(it->second.c_str());
-		text[textIndex++].compression = PNG_TEXT_COMPRESSION_NONE;
+	std::vector<std::string> keys = metadata.getPropertyNames();
+	std::vector<std::string> values(keys.size());
+
+	text = new png_text[keys.size()];
+	memset(text, 0, sizeof(png_text) * keys.size());
+
+	for (size_t i = 0; i<keys.size(); ++i) {
+		values[i] = metadata.getAsString(keys[i]);
+		text[i].key = const_cast<char *>(keys[i].c_str());
+		text[i].text = const_cast<char *>(values[i].c_str());
+		text[i].compression = PNG_TEXT_COMPRESSION_NONE;
 	}
 
-	png_set_text(png_ptr, info_ptr, text, textIndex);
+	png_set_text(png_ptr, info_ptr, text, keys.size());
 
 	if (m_gamma == -1)
 		png_set_sRGB_gAMA_and_cHRM(png_ptr, info_ptr, PNG_sRGB_INTENT_ABSOLUTE);
@@ -1665,11 +1665,37 @@ void Bitmap::readOpenEXR(Stream *stream, const std::string &_prefix) {
 	/* Load metadata if present */
 	for (Imf::Header::ConstIterator it = header.begin(); it != header.end(); ++it) {
 		std::string name = it.name(), typeName = it.attribute().typeName();
-		const Imf::StringAttribute *sattr = NULL;
+		const Imf::StringAttribute *sattr;
+		const Imf::IntAttribute *iattr;
+		const Imf::FloatAttribute *fattr;
+		const Imf::DoubleAttribute *dattr;
+		const Imf::V3fAttribute *vattr;
+		const Imf::M44fAttribute *mattr;
 
 		if (typeName == "string" &&
 			(sattr = header.findTypedAttribute<Imf::StringAttribute>(name.c_str())))
-			m_metadata[name] = sattr->value();
+			m_metadata.setString(name, sattr->value());
+		else if (typeName == "int" &&
+			(iattr = header.findTypedAttribute<Imf::IntAttribute>(name.c_str())))
+			m_metadata.setInteger(name, iattr->value());
+		else if (typeName == "float" &&
+			(fattr = header.findTypedAttribute<Imf::FloatAttribute>(name.c_str())))
+			m_metadata.setFloat(name, (Float) fattr->value());
+		else if (typeName == "double" &&
+			(dattr = header.findTypedAttribute<Imf::DoubleAttribute>(name.c_str())))
+			m_metadata.setFloat(name, (Float) dattr->value());
+		else if (typeName == "v3f" &&
+			(vattr = header.findTypedAttribute<Imf::V3fAttribute>(name.c_str()))) {
+			Imath::V3f vec = vattr->value();
+			m_metadata.setVector(name, Vector(vec.x, vec.y, vec.z));
+		} else if (typeName == "m44f" &&
+			(mattr = header.findTypedAttribute<Imf::M44fAttribute>(name.c_str()))) {
+			Matrix4x4 M;
+			for (int i=0; i<4; ++i)
+				for (int j=0; j<4; ++j)
+					M(i, j) = mattr->value().x[i][j];
+			m_metadata.setTransform(name, Transform(M));
+		}
 	}
 
 	updateChannelCount();
@@ -1896,13 +1922,45 @@ void Bitmap::writeOpenEXR(Stream *stream,
 			pixelFormat = ERGBA;
 	#endif
 
-	std::map<std::string, std::string> metadata = m_metadata;
-	metadata["generated-by"] = "Mitsuba version " MTS_VERSION;
+	Properties metadata(m_metadata);
+	metadata.setString("generated-by", "Mitsuba version " MTS_VERSION);
+
+	std::vector<std::string> keys = metadata.getPropertyNames();
 
 	Imf::Header header(m_size.x, m_size.y);
-	for (std::map<std::string, std::string>::const_iterator it = metadata.begin();
-			it != metadata.end(); ++it)
-		header.insert(it->first.c_str(), Imf::StringAttribute(it->second.c_str()));
+	for (std::vector<std::string>::const_iterator it = keys.begin(); it != keys.end(); ++it) {
+		Properties::EPropertyType type = metadata.getType(*it);
+
+		switch (type) {
+			case Properties::EString:
+				header.insert(it->c_str(), Imf::StringAttribute(metadata.getString(*it)));
+				break;
+			case Properties::EInteger:
+				header.insert(it->c_str(), Imf::IntAttribute(metadata.getInteger(*it)));
+				break;
+			case Properties::EFloat:
+				header.insert(it->c_str(), Imf::FloatAttribute((float) metadata.getFloat(*it)));
+				break;
+			case Properties::EPoint: {
+					Point val = metadata.getPoint(*it);
+					header.insert(it->c_str(), Imf::V3fAttribute(
+						Imath::V3f((float) val.x, (float) val.y, (float) val.z)));
+				}
+				break;
+			case Properties::ETransform: {
+					Matrix4x4 val = metadata.getTransform(*it).getMatrix();
+					header.insert(it->c_str(), Imf::M44fAttribute(Imath::M44f(
+						(float) val(0, 0), (float) val(0, 1), (float) val(0, 2), (float) val(0, 3),
+						(float) val(1, 0), (float) val(1, 1), (float) val(1, 2), (float) val(1, 3),
+						(float) val(2, 0), (float) val(2, 1), (float) val(2, 2), (float) val(2, 3),
+						(float) val(3, 0), (float) val(3, 1), (float) val(3, 2), (float) val(3, 3))));
+				}
+				break;
+			default:
+				header.insert(it->c_str(), Imf::StringAttribute(metadata.getAsString(*it)));
+				break;
+		}
+	}
 
 	if (pixelFormat == EXYZ || pixelFormat == EXYZA) {
 		Imf::addChromaticities(header, Imf::Chromaticities(
@@ -2363,14 +2421,16 @@ void Bitmap::writeRGBE(Stream *stream) const {
 		Log(EError, "writeRGBE(): pixel format must be ERGB or ERGBA!");
 
 	stream->writeLine("#?RGBE");
-	for (std::map<std::string, std::string>::const_iterator it = m_metadata.begin();
-			it != m_metadata.end(); ++it) {
-		stream->writeLine(formatString("# Metadata [%s]:", it->first.c_str()));
-		std::istringstream iss(it->second);
+
+	std::vector<std::string> keys = m_metadata.getPropertyNames();
+	for (std::vector<std::string>::const_iterator it = keys.begin(); it != keys.end(); ) {
+		stream->writeLine(formatString("# Metadata [%s]:", it->c_str()));
+		std::istringstream iss(m_metadata.getAsString(*it));
 		std::string buf;
 		while (std::getline(iss, buf))
 			stream->writeLine(formatString("#   %s", buf.c_str()));
 	}
+
 	stream->writeLine("FORMAT=32-bit_rle_rgbe\n");
 	stream->writeLine(formatString("-Y %i +X %i", m_size.y, m_size.x));
 

@@ -91,8 +91,10 @@ MTS_NAMESPACE_BEGIN
  *     be used by the film. \default{\code{gaussian}, a windowed Gaussian filter}}
  * }
  * This plugin implements a low dynamic range film that can write out 8-bit PNG
- * and JPEG images. It also provides basic tonemapping techniques to map recorded
- * radiance values into a reasonable displayable range.
+ * and JPEG images in various configurations. It provides basic tonemapping techniques
+ * to map recorded radiance values into a reasonable displayable range. An alpha (opacity)
+ * channel can be written if desired. By default, the plugin writes gamma-corrected
+ * PNG files using the sRGB color space and no alpha channel.
  *
  * This film is a good choice when low dynamic range output is desired
  * and the rendering setup can be configured to capture the relevant portion
@@ -132,7 +134,7 @@ public:
 		std::string fileFormat = boost::to_lower_copy(
 			props.getString("fileFormat", "png"));
 		std::string pixelFormat = boost::to_lower_copy(
-			props.getString("pixelFormat", "rgba"));
+			props.getString("pixelFormat", "rgb"));
 		std::string tonemapMethod = boost::to_lower_copy(
 			props.getString("tonemapMethod", "gamma"));
 
@@ -351,7 +353,7 @@ public:
 
 		for (std::map<std::string, std::string>::const_iterator it = m_tags.begin();
 				it != m_tags.end(); ++it)
-			bitmap->getMetadata()[it->first] = it->second;
+			bitmap->setMetadataString(it->first, it->second);
 
 		fs::path filename = m_destFile;
 		std::string extension = boost::to_lower_copy(filename.extension().string());
@@ -369,6 +371,12 @@ public:
 		ref<FileStream> stream = new FileStream(filename, FileStream::ETruncWrite);
 
 		bitmap->write(m_fileFormat, stream);
+	}
+
+	bool hasAlpha() const {
+		return
+			m_pixelFormat == Bitmap::ELuminanceAlpha ||
+			m_pixelFormat == Bitmap::ERGBA;
 	}
 
 	bool destinationExists(const fs::path &baseName) const {

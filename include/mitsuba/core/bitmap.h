@@ -774,25 +774,23 @@ public:
 	inline void setGamma(Float gamma) { m_gamma = gamma; }
 
 	/// Set a string-valued metadata field
-	void setString(const std::string &key, const std::string &value);
+	inline void setMetadataString(const std::string &key, const std::string &value) {
+		m_metadata.setString(key, value);
+	}
 
 	/// Return a string-valued metadata field
-	std::string getString(const std::string &key) const;
-
-	/// Return a map of all present metadata
-	inline std::map<std::string, std::string> &getMetadata() {
-		return m_metadata;
+	inline std::string getMetadataString(const std::string &key) const {
+		return m_metadata.getAsString(key);
 	}
 
-	/// Return a map of all present metadata (const version)
-	inline const std::map<std::string, std::string> &getMetadata() const {
-		return m_metadata;
-	}
+	/// Return a \ref Properties object containing the image metadata
+	inline Properties &getMetadata() { return m_metadata; }
 
-	/// Set the metadata associated with the bitmap
-	inline void setMetadata(const std::map<std::string, std::string> &metadata) {
-		m_metadata = metadata;
-	}
+	/// Return a \ref Properties object containing the image metadata (const version)
+	inline const Properties &getMetadata() const { return m_metadata; }
+
+	/// Set the a \ref Properties object containing the image metadata
+	inline void setMetadata(const Properties &metadata) { m_metadata = metadata; }
 
 	//! @}
 	// ======================================================================
@@ -910,9 +908,9 @@ protected:
 	EComponentFormat m_componentFormat;
 	Vector2i m_size;
 	uint8_t *m_data;
-	std::map<std::string, std::string> m_metadata;
 	Float m_gamma;
 	int m_channelCount;
+	Properties m_metadata;
 };
 
 /** \brief Bitmap format conversion helper class
