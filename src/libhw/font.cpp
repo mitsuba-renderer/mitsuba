@@ -99,8 +99,8 @@ void Font::drawText(Bitmap *dest, Point2i pos, const std::string &text) const {
 		);
 
 		Point2i sourceOffset(
-			glyph.tx.x * m_bitmap->getWidth(),
-			glyph.tx.y * m_bitmap->getHeight());
+			(int) (glyph.tx.x * m_bitmap->getWidth()),
+			(int) (glyph.tx.y * m_bitmap->getHeight()));
 
 		dest->accumulate(m_bitmap.get(), sourceOffset, targetOffset, glyph.size);
 
@@ -120,7 +120,7 @@ Vector2i Font::getSize(const std::string &text) const {
 		if (character == '\r')
 			continue;
 		if (character == '\n') {
-			size.y += getMaxVerticalBearing()*(4.0 / 3.0);
+			size.y += (int) (getMaxVerticalBearing()*(4.0 / 3.0));
 			size.x = std::max(size.x, pos);
 			pos = 0;
 			continue;

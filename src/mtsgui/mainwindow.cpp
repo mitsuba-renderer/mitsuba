@@ -1486,7 +1486,7 @@ void MainWindow::onExportDialogClose(int reason) {
 	QFileDialog *dialog = static_cast<QFileDialog *>(sender());
 	m_currentChild = NULL;
 
-    if (reason == QDialog::Accepted) {
+	if (reason == QDialog::Accepted) {
 		QString fileName = dialog->selectedFiles().value(0);
 		settings.setValue("fileDialogState", dialog->saveState());
 		exportImage(fileName);

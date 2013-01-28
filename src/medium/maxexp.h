@@ -19,6 +19,10 @@
 #if !defined(__MAXEXP_H)
 #define __MAXEXP_H
 
+#if defined(_MSC_VER)
+# include <functional>
+#endif
+
 MTS_NAMESPACE_BEGIN
 
 class MaxExpDist {

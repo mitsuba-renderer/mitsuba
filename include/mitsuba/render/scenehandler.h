@@ -101,6 +101,9 @@ public:
 	/// Free the memory taken up by staticInitialization()
 	static void staticShutdown();
 
+	/// Push a cleanup handler to be executed after loading the scene is done
+	static void pushCleanupHandler(void (*cleanup)());
+
 	// -----------------------------------------------------------------------
 	//  Implementation of the SAX DocumentHandler interface
 	// -----------------------------------------------------------------------
