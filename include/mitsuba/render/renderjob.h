@@ -75,7 +75,7 @@ public:
 		bool interactive = false);
 
 	/// Write out the current (partially rendered) image
-	inline void flush() { m_scene->flush(); }
+	inline void flush() { m_scene->flush(m_queue, this); }
 
 	/// Cancel a running render job
 	inline void cancel() { m_scene->cancel(); }

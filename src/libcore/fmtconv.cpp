@@ -156,7 +156,6 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 				precomp[i] = convertScalar<DestFormat>(detail::safe_cast<SourceFormat>(i), sourceGamma, NULL, multiplier, invDestGamma);
 		}
 
-		const DestFormat zero = convertScalar<DestFormat>(0.0f);
 		const DestFormat one = convertScalar<DestFormat>(1.0f);
 
 		Spectrum spec;
@@ -193,14 +192,14 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 						case Bitmap::EXYZ:
 							for (size_t i=0; i<count; ++i) {
 								DestFormat value = convertScalar<DestFormat>(*source++, sourceGamma, precomp, multiplier, invDestGamma);
-								*dest++ = zero; *dest++ = value; *dest++ = zero;
+								*dest++ = 0.950456f*value; *dest++ = value; *dest++ = 1.08875f*value;
 							}
 							break;
 
 						case Bitmap::EXYZA:
 							for (size_t i=0; i<count; ++i) {
 								DestFormat value = convertScalar<DestFormat>(*source++, sourceGamma, precomp, multiplier, invDestGamma);
-								*dest++ = zero; *dest++ = value; *dest++ = zero; *dest++ = one;
+								*dest++ = 0.950456f*value; *dest++ = value; *dest++ = 1.08875f*value; *dest++ = one;
 							}
 							break;
 
@@ -271,7 +270,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 						case Bitmap::EXYZ:
 							for (size_t i=0; i<count; ++i) {
 								DestFormat value = convertScalar<DestFormat>(*source++, sourceGamma, precomp, multiplier, invDestGamma);
-								*dest++ = zero; *dest++ = value; *dest++ = zero;
+								*dest++ = 0.950456f*value; *dest++ = value; *dest++ = 1.08875f*value;
 								source++;
 							}
 							break;
@@ -279,7 +278,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 						case Bitmap::EXYZA:
 							for (size_t i=0; i<count; ++i) {
 								DestFormat value = convertScalar<DestFormat>(*source++, sourceGamma, precomp, multiplier, invDestGamma);
-								*dest++ = zero; *dest++ = value; *dest++ = zero;
+								*dest++ = 0.950456f*value; *dest++ = value; *dest++ = 1.08875f*value;
 								*dest++ = convertScalar<DestFormat>(*source++);
 							}
 							break;

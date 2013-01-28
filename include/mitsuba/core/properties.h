@@ -185,6 +185,10 @@ public:
 	/// Return one of the parameters (converting it to a string if necessary, with default value)
 	std::string getAsString(const std::string &name, const std::string &defVal) const;
 
+	/// Copy an attribute from another Properties object and potentially rename it
+	void copyAttribute(const Properties &properties,
+		const std::string &sourceName, const std::string &targetName);
+
 	/// Store an array containing the names of all stored properties
 	void putPropertyNames(std::vector<std::string> &results) const;
 

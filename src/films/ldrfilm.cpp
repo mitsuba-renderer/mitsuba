@@ -306,7 +306,7 @@ public:
 		m_destFile = destFile;
 	}
 
-	void develop() {
+	void develop(const Scene *scene, Float renderTime) {
 		Log(EDebug, "Developing film ..");
 
 		ref<Bitmap> bitmap = m_storage->getBitmap();

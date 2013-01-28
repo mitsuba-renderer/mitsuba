@@ -1355,7 +1355,7 @@ void Bitmap::writePNG(Stream *stream, int compression) const {
 	png_text *text = NULL;
 
 	Properties metadata(m_metadata);
-	metadata.setString("generated-by", "Mitsuba version " MTS_VERSION);
+	metadata.setString("generatedBy", "Mitsuba version " MTS_VERSION);
 
 	std::vector<std::string> keys = metadata.getPropertyNames();
 	std::vector<std::string> values(keys.size());
@@ -1923,7 +1923,7 @@ void Bitmap::writeOpenEXR(Stream *stream,
 	#endif
 
 	Properties metadata(m_metadata);
-	metadata.setString("generated-by", "Mitsuba version " MTS_VERSION);
+	metadata.setString("generatedBy", "Mitsuba version " MTS_VERSION);
 
 	std::vector<std::string> keys = metadata.getPropertyNames();
 

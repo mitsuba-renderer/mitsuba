@@ -451,8 +451,8 @@ void Scene::cancel() {
 	m_integrator->cancel();
 }
 
-void Scene::flush() {
-	m_sensor->getFilm()->develop();
+void Scene::flush(RenderQueue *queue, const RenderJob *job) {
+	m_sensor->getFilm()->develop(this, queue->getRenderTime(job));
 }
 
 void Scene::setDestinationFile(const fs::path &name) {
@@ -467,7 +467,7 @@ void Scene::postprocess(RenderQueue *queue, const RenderJob *job,
 		int sceneResID, int sensorResID, int samplerResID) {
 	m_integrator->postprocess(this, queue, job, sceneResID,
 		sensorResID, samplerResID);
-	m_sensor->getFilm()->develop();
+	m_sensor->getFilm()->develop(this, queue->getRenderTime(job));
 }
 
 void Scene::addChild(const std::string &name, ConfigurableObject *child) {

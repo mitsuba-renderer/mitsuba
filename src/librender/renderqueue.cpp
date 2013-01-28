@@ -54,20 +54,28 @@ void RenderQueue::unregisterListener(RenderListener *listener) {
 	listener->decRef();
 }
 
+Float RenderQueue::getRenderTime(const RenderJob *job) const {
+	LockGuard lock(m_mutex);
+	std::map<RenderJob *, JobRecord>::const_iterator it = m_jobs.find(const_cast<RenderJob*>(job));
+	if (it == m_jobs.end())
+		Log(EError, "RenderQueue::getRenderJob() - job not found!");
+
+	unsigned int ms = m_timer->getMilliseconds() - it->second.startTime;
+	return ms / 1000.0f;
+}
+
 void RenderQueue::flush() {
 	LockGuard lock(m_mutex);
 	std::map<RenderJob *, JobRecord>::iterator it = m_jobs.begin();
-	for (; it != m_jobs.end(); ++it) {
+	for (; it != m_jobs.end(); ++it)
 		(*it).first->flush();
-	}
 }
 
 void RenderQueue::removeJob(RenderJob *job, bool cancelled) {
 	LockGuard lock(m_mutex);
 	std::map<RenderJob *, JobRecord>::iterator it = m_jobs.find(job);
-	if (it == m_jobs.end()) {
+	if (it == m_jobs.end())
 		Log(EError, "RenderQueue::removeRenderJob() - job not found!");
-	}
 	JobRecord &rec = (*it).second;
 	unsigned int ms = m_timer->getMilliseconds() - rec.startTime;
 	Log(EInfo, "Render time: %s", timeString(ms/1000.0f, true).c_str());

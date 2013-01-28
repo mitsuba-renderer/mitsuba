@@ -156,7 +156,7 @@ public:
 	}
 
 	virtual ~TiledHDRFilm() {
-		develop();
+		develop(NULL, 0);
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
@@ -167,7 +167,7 @@ public:
 
 	void setDestinationFile(const fs::path &destFile, uint32_t blockSize) {
 		if (m_output)
-			develop();
+			develop(NULL, 0);
 
 		Bitmap::EPixelFormat pixelFormat = m_pixelFormat;
 		#if SPECTRUM_SAMPLES == 3
@@ -436,7 +436,7 @@ public:
 		return false; /* Not supported by the tiled EXR film! */
 	}
 
-	void develop() {
+	void develop(const Scene *scene, Float renderTime) {
 		if (m_output) {
 			Log(EInfo, "Closing EXR file (%u tiles in total, peak memory usage: %u tiles)..",
 				m_blocksH * m_blocksV, m_peakUsage);

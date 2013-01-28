@@ -246,6 +246,14 @@ void Properties::putPropertyNames(std::vector<std::string> &results) const {
 		results.push_back((*it).first);
 }
 
+void Properties::copyAttribute(const Properties &properties,
+	const std::string &sourceName, const std::string &targetName) {
+	std::map<std::string, PropertyElement>::const_iterator it = properties.m_elements->find(sourceName);
+	if (it == properties.m_elements->end())
+		SLog(EError, "copyAttribute(): Could not find parameter \"%s\"!", sourceName.c_str());
+	m_elements->operator[](targetName) = it->second;
+}
+
 bool Properties::operator==(const Properties &p) const {
 	if (m_pluginName != p.m_pluginName || m_id != p.m_id || m_elements->size() != p.m_elements->size())
 		return false;
