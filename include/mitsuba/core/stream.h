@@ -472,7 +472,7 @@ public:
 	template <typename T> void readArray(T *array, size_t count);
 
 	/**
-	 * \brief Read a known-size array from the stream (uses partial template 
+	 * \brief Read a known-size array from the stream (uses partial template
 	 * specialization to select a method appropriate to the data type)
 	 */
 	template <typename T, size_t N> inline void readArray(T (&arr)[N]) {
@@ -484,9 +484,9 @@ public:
 	 * specialization to select a method appropriate to the data type)
 	 */
 	template <typename T> void writeArray(const T *array, size_t count);
-	
+
 	/**
-	 * \brief Write a known-size array to the stream (uses partial template 
+	 * \brief Write a known-size array to the stream (uses partial template
 	 * specialization to select a method appropriate to the data type)
 	 */
 	template <typename T, size_t N> inline void writeArray(const T (&arr)[N]) {
