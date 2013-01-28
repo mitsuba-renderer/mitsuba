@@ -189,6 +189,13 @@ template <typename T> inline TVector1<T> normalize(const TVector1<T> &v) {
 	return v / v.length();
 }
 
+template <typename T> inline TVector1<T> normalizeStrict(const TVector1<T> &v, const char *errMsg) {
+	Float length = v.length();
+	if (length == 0)
+		SLog(EError, "normalizeStrict(): %s", errMsg);
+	return v / length;
+}
+
 template <> inline TVector1<int> TVector1<int>::operator/(int s) const {
 #ifdef MTS_DEBUG
 	if (s == 0)
@@ -378,6 +385,13 @@ template <typename T> inline T absDot(const TVector2<T> &v1, const TVector2<T> &
 
 template <typename T> inline TVector2<T> normalize(const TVector2<T> &v) {
 	return v / v.length();
+}
+
+template <typename T> inline TVector2<T> normalizeStrict(const TVector2<T> &v, const char *errMsg) {
+	Float length = v.length();
+	if (length == 0)
+		SLog(EError, "normalizeStrict(): %s", errMsg);
+	return v / length;
 }
 
 template <> inline TVector2<int> TVector2<int>::operator/(int s) const {
@@ -582,6 +596,13 @@ template <typename T> inline TVector3<T> normalize(const TVector3<T> &v) {
 	return v / v.length();
 }
 
+template <typename T> inline TVector3<T> normalizeStrict(const TVector3<T> &v, const char *errMsg) {
+	Float length = v.length();
+	if (length == 0)
+		SLog(EError, "normalizeStrict(): %s", errMsg);
+	return v / length;
+}
+
 template <> inline TVector3<int> TVector3<int>::operator/(int s) const {
 #ifdef MTS_DEBUG
 	if (s == 0)
@@ -779,6 +800,13 @@ template <typename T> inline T absDot(const TVector4<T> &v1, const TVector4<T> &
 
 template <typename T> inline TVector4<T> normalize(const TVector4<T> &v) {
 	return v / v.length();
+}
+
+template <typename T> inline TVector4<T> normalizeStrict(const TVector4<T> &v, const char *errMsg) {
+	Float length = v.length();
+	if (length == 0)
+		SLog(EError, "normalizeStrict(): %s", errMsg);
+	return v / length;
 }
 
 template <> inline TVector4<int> TVector4<int>::operator/(int s) const {

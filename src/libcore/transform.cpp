@@ -189,8 +189,8 @@ Transform Transform::glOrthographic(Float clipLeft, Float clipRight,
 }
 
 Transform Transform::lookAt(const Point &p, const Point &t, const Vector &up) {
-	Vector dir = normalize(t-p);
-	Vector left = normalize(cross(up, dir));
+	Vector dir = normalizeStrict(t-p, "lookAt(): 'origin' and 'target' coincide!");
+	Vector left = normalizeStrict(cross(up, dir), "lookAt(): the forward and upward direction must be linearly independent!");
 	Vector newUp = cross(dir, left);
 
 	Matrix4x4 result, inverse;
