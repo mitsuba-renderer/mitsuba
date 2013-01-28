@@ -260,6 +260,7 @@ void PerspectiveCamera::configure() {
 			SLog(EError, "Could not parse the focal length (must be of the form "
 				"<x>mm, where <x> is a positive integer)!");
 
+		m_properties.removeProperty("focalLength");
 		setDiagonalFov(2 * 180/M_PI* std::atan(std::sqrt((Float) (36*36+24*24)) / (2*value)));
 	}
 }
