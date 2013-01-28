@@ -174,17 +174,17 @@ int getCoreCount() {
 size_t getPrivateMemoryUsage() {
 #if defined(__WINDOWS__)
 	PROCESS_MEMORY_COUNTERS_EX pmc;
-    GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
-	return (size_t) pmc.PrivateUsage;
+	GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
+	return (size_t) pmc.PrivateUsage; /* Process-private memory usage (RAM + swap) */
 #elif defined(__OSX__)
-	struct task_basic_info t_info;
-	mach_msg_type_number_t t_info_count = TASK_BASIC_INFO_COUNT;
+	struct task_basic_info_64 t_info;
+	mach_msg_type_number_t t_info_count = TASK_BASIC_INFO_64_COUNT;
 
-	if (task_info(mach_task_self(), TASK_BASIC_INFO,
+	if (task_info(mach_task_self(), TASK_BASIC_INFO_64,
 			(task_info_t)&t_info, &t_info_count) != KERN_SUCCESS)
 		return 0;
 
-	/// XXX todo
+	return (size_t) ti.resident_size; /* Not exactly what we want -- oh well.. */
 #else
 	FILE* file = fopen("/proc/self/status", "r");
 	if (!file)
@@ -193,8 +193,8 @@ size_t getPrivateMemoryUsage() {
 	char buffer[128];
 	size_t result = 0;
 	while (fgets(buffer, sizeof(buffer), file) != NULL) {
-		if (strncmp(buffer, "VmRSS:", 6) != 0 &&
-		    strncmp(buffer, "VmSwap:", 7) != 0)
+		if (strncmp(buffer, "VmRSS:", 6) != 0 && /* Non-swapped physical memory specific to this process */
+		    strncmp(buffer, "VmSwap:", 7) != 0)  /* Swapped memory specific to this process */
 			continue;
 
 		char *line = buffer;
