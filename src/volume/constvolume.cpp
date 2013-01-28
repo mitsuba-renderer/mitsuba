@@ -58,7 +58,7 @@ public:
 
 		if (m_type == Properties::EFloat)
 			m_float = props.getFloat("value");
-		else if (m_type == Properties::EPoint)
+		else if (m_type == Properties::EVector)
 			m_vector = props.getVector("value");
 		else if (m_type == Properties::ESpectrum)
 			m_spectrum = props.getSpectrum("value");
@@ -72,7 +72,7 @@ public:
 		m_type = stream->readInt();
 		if (m_type == Properties::EFloat)
 			m_float = stream->readFloat();
-		else if (m_type == Properties::EPoint)
+		else if (m_type == Properties::EVector)
 			m_vector = Vector(stream);
 		else if (m_type == Properties::ESpectrum)
 			m_spectrum = Spectrum(stream);

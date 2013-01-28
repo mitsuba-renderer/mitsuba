@@ -254,7 +254,7 @@ public:
 		if (child->getClass()->derivesFrom(MTS_CLASS(Texture))) {
 			if (name == "reflectance" || name == "diffuseReflectance")
 				m_reflectance = static_cast<Texture *>(child);
-			if (name == "alpha")
+			else if (name == "alpha")
 				m_alpha = static_cast<Texture *>(child);
 			else
 				BSDF::addChild(name, child);

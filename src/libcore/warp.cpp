@@ -137,7 +137,7 @@ Point2 Warp::squareToStdNormal(const Point2 &sample) {
 }
 
 Float Warp::squareToStdNormalPdf(const Point2 &pos) {
-	return INV_TWOPI * std::exp(-(pos.x*pos.x + pos.y*pos.y)/2.0f);
+	return INV_TWOPI * math::fastexp(-(pos.x*pos.x + pos.y*pos.y)/2.0f);
 }
 
 static Float intervalToTent(Float sample) {

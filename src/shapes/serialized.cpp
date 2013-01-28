@@ -17,6 +17,7 @@
 */
 
 #include <mitsuba/render/trimesh.h>
+#include <mitsuba/render/scenehandler.h>
 #include <mitsuba/core/properties.h>
 #include <mitsuba/core/fstream.h>
 #include <mitsuba/core/fresolver.h>
@@ -211,16 +212,15 @@ public:
 private:
 
 	/**
-	 * Helper class for loading serialized meshes from the same file 
+	 * Helper class for loading serialized meshes from the same file
 	 * repeatedly: it is common for scene to load multiple meshes from the same
-	 * file, most times even in ascending order. This class loads the mesh 
+	 * file, most times even in ascending order. This class loads the mesh
 	 * offsets dictionary only once and keeps the stream open.
 	 *
 	 * Instances of this class are not thread safe.
 	 */
 	class MeshLoader {
 	public:
-
 		MeshLoader(const fs::path& filePath) {
 			m_fstream = new FileStream(filePath, FileStream::EReadOnly);
 			m_fstream->setByteOrder(Stream::ELittleEndian);
@@ -264,6 +264,11 @@ private:
 			&boost::make_shared<MeshLoader, const fs::path&>) {}
 	};
 
+	/// Release all currently held offset caches / file streams
+	static void flushCache() {
+		m_cache.set(NULL);
+	}
+
 	/// Loads the mesh from the thread-local file stream cache
 	void loadCompressed(const fs::path& filePath, const int idx) {
 		if (EXPECT_NOT_TAKEN(idx < 0)) {
@@ -276,6 +281,7 @@ private:
 		if (EXPECT_NOT_TAKEN(cache == NULL)) {
 			cache = new FileStreamCache();
 			m_cache.set(cache);
+			SceneHandler::pushCleanupHandler(&SerializedMesh::flushCache);
 		}
 
 		boost::shared_ptr<MeshLoader> meshLoader = cache->get(filePath);
@@ -287,7 +293,6 @@ private:
 };
 
 ThreadLocal<SerializedMesh::FileStreamCache> SerializedMesh::m_cache;
-
 
 MTS_IMPLEMENT_CLASS_S(SerializedMesh, false, TriMesh)
 MTS_EXPORT_PLUGIN(SerializedMesh, "Serialized mesh loader");

@@ -321,7 +321,7 @@ public:
 				(1-Fi) * (1-m_specularSamplingWeight));
 
 			/* Importance sample wrt. the Fresnel reflectance */
-			if (sample.x <= probSpecular) {
+			if (sample.x < probSpecular) {
 				bRec.sampledComponent = 0;
 				bRec.sampledType = EDeltaReflection;
 				bRec.wo = reflect(bRec.wi);
@@ -384,7 +384,7 @@ public:
 				(1-Fi) * (1-m_specularSamplingWeight));
 
 			/* Importance sample wrt. the Fresnel reflectance */
-			if (sample.x <= probSpecular) {
+			if (sample.x < probSpecular) {
 				bRec.sampledComponent = 0;
 				bRec.sampledType = EDeltaReflection;
 				bRec.wo = reflect(bRec.wi);
