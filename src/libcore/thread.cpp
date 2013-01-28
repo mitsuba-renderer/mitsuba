@@ -446,10 +446,9 @@ void Thread::staticShutdown() {
 		__unmanagedThreads[i]->decRef();
 	__unmanagedThreads.clear();
 	getThread()->d->running = false;
-	ThreadPrivate::self->set(NULL);
+	detail::destroyLocalTLS();
 	delete ThreadPrivate::self;
 	ThreadPrivate::self = NULL;
-	detail::destroyLocalTLS();
 	detail::destroyGlobalTLS();
 #if defined(__OSX__)
 	__mts_autorelease_shutdown();
