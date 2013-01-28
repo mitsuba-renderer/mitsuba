@@ -312,9 +312,10 @@ protected:
 
 	/**
 	 * \brief Reads the header information of a compressed file, returning
-	 * the version ID. This function assumes the stream is at the beginning
-	 * of the compressed file and leaves the stream located right after the
-	 * header.
+	 * the version ID.
+	 *
+	 * This function assumes the stream is at the beginning of the compressed
+	 * file and leaves the stream located right after the header.
 	 */
 	static short readHeader(Stream *stream);
 

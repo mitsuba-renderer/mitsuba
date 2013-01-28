@@ -31,6 +31,7 @@
 #include <mitsuba/core/fresolver.h>
 #include <mitsuba/render/scene.h>
 #include <boost/algorithm/string.hpp>
+#include <boost/unordered_set.hpp>
 
 MTS_NAMESPACE_BEGIN
 XERCES_CPP_NAMESPACE_USE
@@ -45,6 +46,10 @@ XERCES_CPP_NAMESPACE_USE
 	#define XMLLog(level, fmt, ...) Thread::getThread()->getLogger()->log(\
 		level, NULL, __FILE__, __LINE__, fmt, ## __VA_ARGS__)
 #endif
+
+typedef void (*CleanupFun) ();
+typedef boost::unordered_set<CleanupFun> CleanupSet;
+static PrimitiveThreadLocal<CleanupSet> __cleanup_tls;
 
 SceneHandler::SceneHandler(const SAXParser *parser,
 	const ParameterMap &params, NamedObjectMap *namedObjects,
@@ -155,6 +160,13 @@ void SceneHandler::startDocument() {
 
 void SceneHandler::endDocument() {
 	SAssert(m_scene != NULL);
+
+	/* Call cleanup handlers */
+	CleanupSet &cleanup = __cleanup_tls.get();
+	for (CleanupSet::iterator it = cleanup.begin();
+			it != cleanup.end(); ++it)
+		(*it)();
+	cleanup.clear();
 }
 
 void SceneHandler::characters(const XMLCh* const name,
@@ -245,6 +257,10 @@ void SceneHandler::startElement(const XMLCh* const xmlName,
 	}
 
 	m_context.push(context);
+}
+
+void SceneHandler::pushCleanupHandler(void (*cleanup)()) {
+	__cleanup_tls.get().insert(cleanup);
 }
 
 void SceneHandler::endElement(const XMLCh* const xmlName) {

@@ -176,7 +176,7 @@ void TriMesh::loadCompressed(Stream *_stream, int index) {
 
 	if (stream->getByteOrder() != Stream::ELittleEndian)
 		Log(EError, "Tried to unserialize a shape from a stream, "
-		"which was not previously set to little endian byte order!");
+			"which was not previously set to little endian byte order!");
 
 	const short version = readHeader(stream);
 
@@ -305,7 +305,7 @@ int TriMesh::readOffsetDictionary(Stream *stream, short version,
 		+   sizeof(char)       // Name
 		+ 2*sizeof(uint64_t)   // Number of vertices and triangles
 		+ 3*sizeof(float)      // One vertex
-		+ 3*sizeof(uint32_t)); // One triange
+		+ 3*sizeof(uint32_t)); // One triangle
 
 	if (streamSize >= minSize) {
 		outOffsets.resize(count);
@@ -314,9 +314,8 @@ int TriMesh::readOffsetDictionary(Stream *stream, short version,
 			if (typeid(size_t) == typeid(uint64_t)) {
 				stream->readArray(&outOffsets[0], count);
 			} else {
-				for (size_t i = 0; i < count; ++i) {
-					outOffsets[i] = static_cast<size_t>(stream->readSize());
-				}
+				for (size_t i = 0; i < count; ++i)
+					outOffsets[i] = stream->readSize();
 			}
 		} else {
 			stream->seek(stream->getSize() - sizeof(uint32_t) * (count + 1));
@@ -325,7 +324,7 @@ int TriMesh::readOffsetDictionary(Stream *stream, short version,
 				stream->readArray(&outOffsets[0], count);
 			} else {
 				for (size_t i = 0; i < count; ++i) {
-					outOffsets[i] = stream->readUInt();
+					outOffsets[i] = (size_t) stream->readUInt();
 				}
 			}
 		}
