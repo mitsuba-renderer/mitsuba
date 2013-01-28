@@ -318,11 +318,11 @@ public:
 
 		Point2 sample(_sample);
 		if (sampleSpecular && sampleNested) {
-			if (sample.x > probSpecular) {
+			if (sample.x < probSpecular) {
+				sample.x /= probSpecular;
+			} else {
 				sample.x = (sample.x - probSpecular) / (1 - probSpecular);
 				choseSpecular = false;
-			} else {
-				sample.x /= probSpecular;
 			}
 		}
 
