@@ -184,7 +184,7 @@ size_t getPrivateMemoryUsage() {
 			(task_info_t)&t_info, &t_info_count) != KERN_SUCCESS)
 		return 0;
 
-	return (size_t) ti.resident_size; /* Not exactly what we want -- oh well.. */
+	return (size_t) t_info.resident_size; /* Not exactly what we want -- oh well.. */
 #else
 	FILE* file = fopen("/proc/self/status", "r");
 	if (!file)
