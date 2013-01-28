@@ -31,7 +31,7 @@ MTS_NAMESPACE_BEGIN
 /*!\plugin{disk}{Disk intersection primitive}
  * \order{4}
  * \parameters{
- *     \parameter{toWorld}{\Transform}{
+ *     \parameter{toWorld}{\Transform\Or\ATransform}{
  *	      Specifies a linear object-to-world transformation.
  *        Note that non-uniform scales are not permitted!
  *        \default{none (i.e. object space $=$ world space)}
@@ -81,31 +81,29 @@ MTS_NAMESPACE_BEGIN
 class Disk : public Shape {
 public:
 	Disk(const Properties &props) : Shape(props) {
-		m_objectToWorld = props.getTransform("toWorld", Transform());
+		m_objectToWorld = new AnimatedTransform(props.getAnimatedTransform("toWorld", Transform()));
+
 		if (props.getBoolean("flipNormals", false))
-			m_objectToWorld = m_objectToWorld * Transform::scale(Vector(1, 1, -1));
-		m_worldToObject = m_objectToWorld.inverse();
+			m_objectToWorld->prependScale(Vector(1, 1, -1));
 	}
 
 	Disk(Stream *stream, InstanceManager *manager)
 			: Shape(stream, manager) {
-		m_objectToWorld = Transform(stream);
-		m_worldToObject = m_objectToWorld.inverse();
+		m_objectToWorld = new AnimatedTransform(stream);
 		configure();
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		Shape::serialize(stream, manager);
-		m_objectToWorld.serialize(stream);
+		m_objectToWorld->serialize(stream);
 	}
 
 	void configure() {
 		Shape::configure();
 
-		m_normal = normalize(m_objectToWorld(Normal(0, 0, 1)));
-
-		Vector dpdu = m_objectToWorld(Vector(1, 0, 0));
-		Vector dpdv = m_objectToWorld(Vector(0, 1, 0));
+		const Transform &trafo = m_objectToWorld->eval(0);
+		Vector dpdu = trafo(Vector(1, 0, 0));
+		Vector dpdv = trafo(Vector(0, 1, 0));
 
 		if (std::abs(dot(dpdu, dpdv)) > 1e-3f)
 			Log(EError, "Error: 'toWorld' transformation contains shear!");
@@ -117,23 +115,30 @@ public:
 	}
 
 	AABB getAABB() const {
+		std::set<Float> times;
+		m_objectToWorld->collectKeyframes(times);
+
 		AABB aabb;
-		aabb.expandBy(m_objectToWorld(Point( 1,  0, 0)));
-		aabb.expandBy(m_objectToWorld(Point(-1,  0, 0)));
-		aabb.expandBy(m_objectToWorld(Point( 0,  1, 0)));
-		aabb.expandBy(m_objectToWorld(Point( 0, -1, 0)));
+		for (std::set<Float>::iterator it = times.begin(); it != times.end(); ++it) {
+			const Transform &trafo = m_objectToWorld->eval(*it);
+			aabb.expandBy(trafo(Point( 1,  0, 0)));
+			aabb.expandBy(trafo(Point(-1,  0, 0)));
+			aabb.expandBy(trafo(Point( 0,  1, 0)));
+			aabb.expandBy(trafo(Point( 0, -1, 0)));
+		}
 		return aabb;
 	}
 
 	Float getSurfaceArea() const {
-		Vector dpdu = m_objectToWorld(Vector(1, 0, 0));
-		Vector dpdv = m_objectToWorld(Vector(0, 1, 0));
+		const Transform &trafo = m_objectToWorld->eval(0);
+		Vector dpdu = trafo(Vector(1, 0, 0));
+		Vector dpdv = trafo(Vector(0, 1, 0));
 		return M_PI * dpdu.length() * dpdv.length();
 	}
 
 	inline bool rayIntersect(const Ray &_ray, Float mint, Float maxt, Float &t, void *temp) const {
 		Ray ray;
-		m_worldToObject.transformAffine(_ray, ray);
+		m_objectToWorld->eval(ray.time).inverse().transformAffine(_ray, ray);
 		Float hit = -ray.o.z / ray.d.z;
 
 		if (!(hit >= mint && hit <= maxt))
@@ -173,18 +178,20 @@ public:
 			phi += 2*M_PI;
 
 		Float cosPhi = data[0] * invR, sinPhi = data[1] * invR;
+		const Transform &trafo = m_objectToWorld->eval(ray.time);
 
 		its.shape = this;
 		if (r != 0) {
-			its.dpdu = m_objectToWorld(Vector(cosPhi, sinPhi, 0));
-			its.dpdv = m_objectToWorld(Vector(-sinPhi, cosPhi, 0));
+			its.dpdu = trafo(Vector(cosPhi, sinPhi, 0));
+			its.dpdv = trafo(Vector(-sinPhi, cosPhi, 0));
 		} else {
-			its.dpdu = m_objectToWorld(Vector(1, 0, 0));
-			its.dpdv = m_objectToWorld(Vector(0, 1, 0));
+			its.dpdu = trafo(Vector(1, 0, 0));
+			its.dpdv = trafo(Vector(0, 1, 0));
 		}
 
 		its.shFrame = its.geoFrame = Frame(
-			normalize(its.dpdu), normalize(its.dpdv), m_normal);
+			normalize(its.dpdu), normalize(its.dpdv),
+			normalize(trafo(Normal(0, 0, 1))));
 		its.uv = Point2(r, phi * INV_TWOPI);
 		its.p = ray(its.t);
 		its.wi = its.toLocal(-ray.d);
@@ -206,16 +213,19 @@ public:
 
 		Float dphi = (2 * M_PI) / (Float) (phiSteps-1);
 
-		Point center = m_objectToWorld(Point(0.0f));
+		const Transform &trafo = m_objectToWorld->eval(0.0f);
+		Point center = trafo(Point(0.0f));
+		Normal normal = normalize(trafo(Normal(0, 0, 1)));
+
 		for (uint32_t i=0; i<phiSteps; ++i) {
 			Float phi = i*dphi;
 			vertices[i] = center;
-			vertices[phiSteps+i] = m_objectToWorld(
+			vertices[phiSteps+i] = trafo(
 				Point(std::cos(phi), std::sin(phi), 0)
 			);
 
-			normals[i] = m_normal;
-			normals[phiSteps+i] = m_normal;
+			normals[i] = normal;
+			normals[phiSteps+i] = normal;
 			texcoords[i] = Point2(0.0f, phi * INV_TWOPI);
 			texcoords[phiSteps+i] = Point2(1.0f, phi * INV_TWOPI);
 		}
@@ -238,10 +248,11 @@ public:
 	}
 
 	void samplePosition(PositionSamplingRecord &pRec, const Point2 &sample) const {
+		const Transform &trafo = m_objectToWorld->eval(pRec.time);
 		Point2 p = Warp::squareToUniformDiskConcentric(sample);
 
-		pRec.p = m_objectToWorld(Point3(p.x, p.y, 0));
-		pRec.n = m_normal;
+		pRec.p = trafo(Point3(p.x, p.y, 0));
+		pRec.n = trafo(normalize(Normal(0,0,1)));
 		pRec.pdf = m_invSurfaceArea;
 		pRec.measure = EArea;
 	}
@@ -261,7 +272,7 @@ public:
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "Disk[" << endl
-			<< "  objectToWorld = " << indent(m_objectToWorld.toString()) << "," << endl
+			<< "  objectToWorld = " << indent(m_objectToWorld->toString()) << "," << endl
 			<< "  bsdf = " << indent(m_bsdf.toString()) << "," << endl;
 		if (isMediumTransition()) {
 			oss << "  interiorMedium = " << indent(m_interiorMedium.toString()) << "," << endl
@@ -276,10 +287,7 @@ public:
 
 	MTS_DECLARE_CLASS()
 private:
-	Transform m_objectToWorld;
-	Transform m_worldToObject;
-	Normal m_normal;
-	Float m_surfaceArea;
+	ref<AnimatedTransform> m_objectToWorld;
 	Float m_invSurfaceArea;
 };
 

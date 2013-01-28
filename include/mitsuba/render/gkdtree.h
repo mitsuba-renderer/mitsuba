@@ -1321,7 +1321,9 @@ protected:
 				return a.axis < b.axis;
 			if (a.pos != b.pos)
 				return a.pos < b.pos;
-			return a.type < b.type;
+			if (a.type != b.type)
+				return a.type < b.type;
+			return a.index < b.index;
 		}
 	};
 

@@ -59,6 +59,8 @@ public:
 		EVector,
 		/// 4x4 transform for homogeneous coordinates
 		ETransform,
+		/// An animated 4x4 transformation
+		EAnimatedTransform,
 		/// Discretized color spectrum
 		ESpectrum,
 		/// Arbitrary-length string
@@ -151,6 +153,15 @@ public:
 	Transform getTransform(const std::string &name) const;
 	/// Get a linear transformation (with default)
 	Transform getTransform(const std::string &name, const Transform &defVal) const;
+
+	/// Set an animated linear transformation
+	void setAnimatedTransform(const std::string &name, const AnimatedTransform *value, bool warnDuplicates = true);
+	/// Get an animated linear transformation
+	ref<const AnimatedTransform> getAnimatedTransform(const std::string &name) const;
+	/// Get an animated linear transformation (with default)
+	ref<const AnimatedTransform> getAnimatedTransform(const std::string &name, const AnimatedTransform *defVal) const;
+	/// Get an animated linear transformation (with default)
+	ref<const AnimatedTransform> getAnimatedTransform(const std::string &name, const Transform &defVal) const;
 
 	/// Set a spectral power distribution
 	void setSpectrum(const std::string &name, const Spectrum &value, bool warnDuplicates = true);

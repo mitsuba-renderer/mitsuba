@@ -6,7 +6,7 @@ CCFLAGS        = ['-arch', 'x86_64', '-mmacosx-version-min=10.7', '-march=nocona
 LINKFLAGS      = ['-framework', 'OpenGL', '-framework', 'Cocoa', '-arch', 'x86_64', '-mmacosx-version-min=10.7', '-Wl,-syslibroot,/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.7.sdk', '-Wl,-headerpad,128']
 BASEINCLUDE    = ['#include', '#dependencies/include']
 BASELIBDIR     = ['#dependencies/lib']
-BASELIB        = ['m', 'pthread', 'gomp', 'Half']
+BASELIB        = ['m', 'pthread', 'Half']
 OEXRINCLUDE    = ['#dependencies/include/OpenEXR']
 OEXRLIB        = ['IlmImf', 'Imath', 'Iex', 'z']
 PNGLIB         = ['png']

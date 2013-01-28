@@ -158,7 +158,8 @@ private:
 		EBoolean, EString, ETranslate, ERotate,
 		ELookAt, EScale, EMatrix, EPoint,
 		EVector, ERGB, ESRGB, EBlackBody,
-		ESpectrum, ETransform, EInclude, EAlias
+		ESpectrum, ETransform, EATransform,
+		EInclude, EAlias
 	};
 
 	typedef std::pair<ETag, const Class *> TagEntry;
@@ -173,6 +174,7 @@ private:
 	std::stack<ParseContext> m_context;
 	TagMap m_tags;
 	Transform m_transform;
+	ref<AnimatedTransform> m_animatedTransform;
 	bool m_isIncludedFile;
 };
 

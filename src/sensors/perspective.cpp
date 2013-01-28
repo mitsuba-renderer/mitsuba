@@ -26,7 +26,7 @@ MTS_NAMESPACE_BEGIN
 /*!\plugin{perspective}{Perspective pinhole camera}
  * \order{1}
  * \parameters{
- *     \parameter{toWorld}{\Transform\Or\Animation}{
+ *     \parameter{toWorld}{\Transform\Or\ATransform}{
  *	      Specifies an optional camera-to-world transformation.
  *        \default{none (i.e. camera space $=$ world space)}
  *     }
@@ -113,7 +113,7 @@ public:
 		   foreshortening terms caused by the aperture, hence the flag "EOnSurface" */
 		m_type |= EDeltaPosition | EPerspectiveCamera | EOnSurface | EDirectionSampleMapsToPixels;
 
-		if (props.getTransform("toWorld", Transform()).hasScale())
+		if (props.getAnimatedTransform("toWorld", Transform())->eval(0).hasScale())
 			Log(EError, "Scale factors in the camera-to-world "
 				"transformation are not allowed!");
 	}

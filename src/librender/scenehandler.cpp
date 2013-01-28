@@ -31,6 +31,7 @@
 #include <mitsuba/core/fresolver.h>
 #include <mitsuba/render/scene.h>
 #include <boost/algorithm/string.hpp>
+#include <Eigen/SVD>
 #include <boost/unordered_set.hpp>
 
 MTS_NAMESPACE_BEGIN
@@ -102,6 +103,7 @@ SceneHandler::SceneHandler(const SAXParser *parser,
 	m_tags["blackbody"]  = TagEntry(EBlackBody,  (Class *) NULL);
 	m_tags["spectrum"]   = TagEntry(ESpectrum,   (Class *) NULL);
 	m_tags["transform"]  = TagEntry(ETransform,  (Class *) NULL);
+	m_tags["atransform"] = TagEntry(EATransform, (Class *) NULL);
 	m_tags["include"]    = TagEntry(EInclude,    (Class *) NULL);
 	m_tags["alias"]      = TagEntry(EAlias,      (Class *) NULL);
 
@@ -179,11 +181,12 @@ void SceneHandler::characters(const XMLCh* const name,
 Float SceneHandler::parseFloat(const std::string &name,
 		const std::string &str, Float defVal) const {
 	char *end_ptr = NULL;
-	if (str == "") {
+	if (str.empty()) {
 		if (defVal == -1)
 			XMLLog(EError, "Missing floating point value (in <%s>)", name.c_str());
 		return defVal;
 	}
+
 	Float result = (Float) std::strtod(str.c_str(), &end_ptr);
 	if (*end_ptr != '\0')
 		XMLLog(EError, "Invalid floating point value specified (in <%s>)", name.c_str());
@@ -251,6 +254,19 @@ void SceneHandler::startElement(const XMLCh* const xmlName,
 		case ETransform:
 			m_transform = Transform();
 			break;
+		case EATransform: {
+				m_animatedTransform = new AnimatedTransform();
+				ref<VectorTrack> translation = new VectorTrack(VectorTrack::ETranslationXYZ);
+				ref<QuatTrack> rotation = new QuatTrack(VectorTrack::ERotationQuat);
+				ref<VectorTrack> scaling = new VectorTrack(VectorTrack::EScaleXYZ);
+				translation->reserve(2);
+				rotation->reserve(2);
+				scaling->reserve(2);
+				m_animatedTransform->addTrack(translation);
+				m_animatedTransform->addTrack(rotation);
+				m_animatedTransform->addTrack(scaling);
+			}
+			break;
 		default:
 			break;
 	}
@@ -270,7 +286,7 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 	if (context.attributes.find("id") != context.attributes.end())
 		context.properties.setID(context.attributes["id"]);
 
-	ref<ConfigurableObject> object = NULL;
+	ref<ConfigurableObject> object;
 
 	TagMap::const_iterator it = m_tags.find(name);
 	if (it == m_tags.end())
@@ -590,9 +606,56 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 			}
 			break;
 
+		case EATransform: {
+				m_animatedTransform->sortAndSimplify();
+				context.parent->properties.setAnimatedTransform(
+					context.attributes["name"], m_animatedTransform);
+				m_animatedTransform = NULL;
+			}
+			break;
+
 		case ETransform: {
-				context.parent->properties.setTransform(
-					context.attributes["name"], m_transform);
+				if (!m_animatedTransform.get()) {
+					context.parent->properties.setTransform(
+						context.attributes["name"], m_transform);
+				} else {
+					/* Compute the polar decomposition and insert into the animated transform
+					   uh oh.. we have to get rid of 2 matrix libraries at some point :) */
+					typedef Eigen::Matrix<Float, 3, 3> EMatrix;
+					const Matrix4x4 m = m_transform.getMatrix();
+
+					EMatrix A;
+					A << m(0, 0), m(0, 1), m(0, 2),
+						 m(1, 0), m(1, 1), m(1, 2),
+						 m(2, 0), m(2, 1), m(2, 2);
+
+					Eigen::JacobiSVD<EMatrix> svd(A, Eigen::ComputeFullU | Eigen::ComputeFullV);
+					EMatrix U = svd.matrixU(), V = svd.matrixV(), S = svd.singularValues().asDiagonal();
+
+					if (svd.singularValues().prod() < 0) {
+						S = -S; U = -U;
+					}
+
+					EMatrix Q = U*V.transpose();
+					EMatrix P = V*S*V.transpose();
+
+					VectorTrack *translation = (VectorTrack *) m_animatedTransform->getTrack(0);
+					QuatTrack *rotation = (QuatTrack *) m_animatedTransform->getTrack(1);
+					VectorTrack *scaling = (VectorTrack *) m_animatedTransform->getTrack(2);
+
+					Float time = parseFloat("time", context.attributes["time"]);
+					rotation->append(time, Quaternion::fromMatrix(
+						Matrix4x4(
+							Q(0, 0), Q(0, 1), Q(0, 2), 0.0f,
+							Q(1, 0), Q(1, 1), Q(1, 2), 0.0f,
+							Q(2, 0), Q(2, 1), Q(2, 2), 0.0f,
+							0.0f,    0.0f,    0.0f,    1.0f
+						)
+					));
+
+					scaling->append(time, Vector(P(0, 0), P(1, 1), P(2, 2)));
+					translation->append(time, Vector(m(0, 3), m(1, 3), m(2, 3)));
+				}
 			}
 			break;
 
@@ -638,11 +701,61 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 			}
 			break;
 
-		default:
-			if (tag.second == NULL)
-				XMLLog(EError, "Internal error: could not instantiate an object "
-					"corresponding to the tag '%s'", name.c_str());
-			object = m_pluginManager->createObject(tag.second, context.properties);
+		default: {
+				if (tag.second == NULL)
+					XMLLog(EError, "Internal error: could not instantiate an object "
+						"corresponding to the tag '%s'", name.c_str());
+
+				Properties &props = context.properties;
+
+				/* Convenience hack: allow passing animated transforms to arbitrary shapes
+				   and then internally rewrite this into a shape group + animated instance */
+				if (tag.second == MTS_CLASS(Shape)
+					&& props.hasProperty("toWorld")
+					&& props.getType("toWorld") == Properties::EAnimatedTransform
+					&& (props.getPluginName() != "instance" && props.getPluginName() != "disk")) {
+					/* (The 'disk' plugin also directly supports animated transformations, so
+					    the instancing trick isn't required for it) */
+
+					ref<const AnimatedTransform> trafo = props.getAnimatedTransform("toWorld");
+					props.removeProperty("toWorld");
+
+					if (trafo->isStatic())
+						props.setTransform("toWorld", trafo->eval(0));
+
+					object = m_pluginManager->createObject(tag.second, props);
+
+					if (!trafo->isStatic()) {
+						object = m_pluginManager->createObject(tag.second, props);
+						/* If the object has children, append them */
+						for (std::vector<std::pair<std::string, ConfigurableObject *> >
+								::iterator it = context.children.begin();
+								it != context.children.end(); ++it) {
+							if (it->second != NULL) {
+								object->addChild(it->first, it->second);
+								it->second->setParent(object);
+								it->second->decRef();
+							}
+						}
+						context.children.clear();
+
+						object->configure();
+
+						ref<Shape> shapeGroup = static_cast<Shape *> (
+							m_pluginManager->createObject(MTS_CLASS(Shape), Properties("shapegroup")));
+						shapeGroup->addChild(object);
+						shapeGroup->configure();
+
+						Properties instanceProps("instance");
+						instanceProps.setAnimatedTransform("toWorld", trafo);
+						object = m_pluginManager->createObject(instanceProps);
+						object->addChild(shapeGroup);
+
+					}
+				} else {
+					object = m_pluginManager->createObject(tag.second, props);
+				}
+			}
 			break;
 	}
 

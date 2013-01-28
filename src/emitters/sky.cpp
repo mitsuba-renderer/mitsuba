@@ -71,6 +71,10 @@ MTS_NAMESPACE_BEGIN
  *         Specifies the relative amount of samples
  *         allocated to this emitter. \default{1}
  *     }
+ *     \parameter{toWorld}{\Transform\Or\ATransform}{
+ *	      Specifies an optional sensor-to-world transformation.
+ *        \default{none (i.e. sensor space $=$ world space)}
+ *     }
  * }
  *
  * \renderings{
@@ -376,8 +380,7 @@ public:
 		bitmapData.ptr = (uint8_t *) bitmap.get();
 		bitmapData.size = sizeof(Bitmap);
 		props.setData("bitmap", bitmapData);
-		const Transform &trafo = m_worldTransform->eval(0);
-		props.setTransform("toWorld", trafo);
+		props.setAnimatedTransform("toWorld", m_worldTransform);
 		props.setFloat("samplingWeight", m_samplingWeight);
 		Emitter *emitter = static_cast<Emitter *>(
 			PluginManager::getInstance()->createObject(

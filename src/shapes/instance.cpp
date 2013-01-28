@@ -25,7 +25,7 @@ MTS_NAMESPACE_BEGIN
  * \parameters{
  *     \parameter{\Unnamed}{\ShapeGroup}{A reference to a
  *     shape group that should be instantiated}
- *     \parameter{toWorld}{\Transform}{
+ *     \parameter{toWorld}{\Transform\Or\ATransform}{
  *	      Specifies an optional linear instance-to-world transformation.
  *        \default{none (i.e. instance space $=$ world space)}
  *     }
@@ -37,21 +37,19 @@ MTS_NAMESPACE_BEGIN
  */
 
 Instance::Instance(const Properties &props) : Shape(props) {
-	m_objectToWorld = props.getTransform("toWorld", Transform());
-	m_worldToObject = m_objectToWorld.inverse();
+	m_transform = props.getAnimatedTransform("toWorld", Transform());
 }
 
 Instance::Instance(Stream *stream, InstanceManager *manager)
 	: Shape(stream, manager) {
 	m_shapeGroup = static_cast<ShapeGroup *>(manager->getInstance(stream));
-	m_objectToWorld = Transform(stream);
-	m_worldToObject = m_objectToWorld.inverse();
+	m_transform = new AnimatedTransform(stream);
 }
 
 void Instance::serialize(Stream *stream, InstanceManager *manager) const {
 	Shape::serialize(stream, manager);
 	manager->serialize(stream, m_shapeGroup.get());
-	m_objectToWorld.serialize(stream);
+	m_transform->serialize(stream);
 }
 
 void Instance::configure() {
@@ -64,15 +62,19 @@ AABB Instance::getAABB() const {
 	const AABB &aabb = kdtree->getAABB();
 	if (!aabb.isValid()) // the geometry group is empty
 		return aabb;
-	AABB result;
-	for (int i=0; i<8; ++i)
-		result.expandBy(m_objectToWorld(aabb.getCorner(i)));
-	return result;
-}
 
-Float Instance::getSurfaceArea() const {
-	Log(EError, "Instance::getSurfaceArea(): not supported!");
-	return 0.0f;
+	std::set<Float> times;
+	m_transform->collectKeyframes(times);
+
+	AABB result;
+	for (std::set<Float>::iterator it = times.begin(); it != times.end(); ++it) {
+		const Transform &trafo = m_transform->eval(*it);
+
+		for (int i=0; i<8; ++i)
+			result.expandBy(trafo(aabb.getCorner(i)));
+	}
+
+	return result;
 }
 
 void Instance::addChild(const std::string &name, ConfigurableObject *child) {
@@ -95,55 +97,61 @@ size_t Instance::getEffectivePrimitiveCount() const {
 bool Instance::rayIntersect(const Ray &_ray, Float mint,
 		Float maxt, Float &t, void *temp) const {
 	const ShapeKDTree *kdtree = m_shapeGroup->getKDTree();
+	const Transform &trafo = m_transform->eval(_ray.time);
 	Ray ray;
-	m_worldToObject(_ray, ray);
+	trafo.inverse()(_ray, ray);
 	return kdtree->rayIntersect(ray, mint, maxt, t, temp);
 }
 
 bool Instance::rayIntersect(const Ray &_ray, Float mint, Float maxt) const {
 	const ShapeKDTree *kdtree = m_shapeGroup->getKDTree();
 	Ray ray;
-	m_worldToObject(_ray, ray);
+	const Transform &trafo = m_transform->eval(_ray.time);
+	trafo.inverse()(_ray, ray);
 	return kdtree->rayIntersect(ray, mint, maxt);
 }
 
 void Instance::fillIntersectionRecord(const Ray &_ray,
 	const void *temp, Intersection &its) const {
 	const ShapeKDTree *kdtree = m_shapeGroup->getKDTree();
+	const Transform &trafo = m_transform->eval(_ray.time);
 	Ray ray;
-	m_worldToObject(_ray, ray);
+	trafo.inverse()(_ray, ray);
 	kdtree->fillIntersectionRecord<false>(ray, temp, its);
 
-	its.shFrame.n = normalize(m_objectToWorld(its.shFrame.n));
-	its.shFrame.s = normalize(m_objectToWorld(its.shFrame.s));
-	its.shFrame.t = normalize(m_objectToWorld(its.shFrame.t));
-	its.geoFrame = Frame(normalize(m_objectToWorld(its.geoFrame.n)));
-	its.dpdu = m_objectToWorld(its.dpdu);
-	its.dpdv = m_objectToWorld(its.dpdv);
-	its.p = m_objectToWorld(its.p);
+	its.shFrame.n = normalize(trafo(its.shFrame.n));
+	its.shFrame.s = normalize(trafo(its.shFrame.s));
+	its.shFrame.t = normalize(trafo(its.shFrame.t));
+	its.geoFrame = Frame(normalize(trafo(its.geoFrame.n)));
+	its.dpdu = trafo(its.dpdu);
+	its.dpdv = trafo(its.dpdv);
+	its.p = trafo(its.p);
 	its.wi = normalize(its.shFrame.toLocal(-_ray.d));
 	its.instance = this;
 }
 
 void Instance::getNormalDerivative(const Intersection &its,
 		Vector &dndu, Vector &dndv, bool shadingFrame) const {
+	const Transform &trafo = m_transform->eval(its.time);
+	const Transform invTrafo = trafo.inverse();
+
 	/* The following is really super-inefficient, but it's
 	   needed to be able to deal with general transformations */
 	Intersection temp(its);
-	temp.p = m_worldToObject(its.p);
-	temp.dpdu = m_worldToObject(its.dpdu);
-	temp.dpdv = m_worldToObject(its.dpdv);
+	temp.p = invTrafo(its.p);
+	temp.dpdu = invTrafo(its.dpdu);
+	temp.dpdv = invTrafo(its.dpdv);
 
 	/* Determine the length of the transformed normal
 	   *before* it was re-normalized */
-	Normal tn = m_objectToWorld(normalize(m_worldToObject(its.shFrame.n)));
-	Float invLen = 1/tn.length();
+	Normal tn = trafo(normalize(invTrafo(its.shFrame.n)));
+	Float invLen = 1 / tn.length();
 	tn *= invLen;
 
 	its.shape->getNormalDerivative(temp, dndu, dndv, shadingFrame);
 
-	dndu = m_objectToWorld(Normal(dndu)) * invLen;
-	dndv = m_objectToWorld(Normal(dndv)) * invLen;
+	dndu = trafo(Normal(dndu)) * invLen;
+	dndv = trafo(Normal(dndv)) * invLen;
 
 	dndu -= tn * dot(tn, dndu);
 	dndv -= tn * dot(tn, dndv);
