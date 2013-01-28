@@ -20,10 +20,9 @@
 #include <mitsuba/core/fstream.h>
 #include <mitsuba/core/bitmap.h>
 #include <mitsuba/core/statistics.h>
-#include <mitsuba/hw/font.h>
 #include <boost/algorithm/string.hpp>
-#include <mitsuba/render/scene.h>
 #include "banner.h"
+#include "annotations.h"
 
 MTS_NAMESPACE_BEGIN
 
@@ -369,107 +368,7 @@ public:
 		Log(EInfo, "Writing image to \"%s\" ..", filename.string().c_str());
 		ref<FileStream> stream = new FileStream(filename, FileStream::ETruncWrite);
 
-		/* Attach the custom annotations */
-		Properties &metadata = bitmap->getMetadata();
-		std::vector<std::string> keys = m_properties.getPropertyNames();
-		ref<Font> font;
-		Float gamma = 1.0f; /// XXX
-
-		for (size_t i=0; i<keys.size(); ++i) {
-			std::string key = keys[i];
-			key.erase(std::remove_if(key.begin(), key.end(), ::isspace), key.end());
-			std::string lkey = boost::to_lower_copy(key);
-			Point2i offset(0, 0);
-			bool labelAnnotation = false;
-
-			if (boost::starts_with(lkey, "metadata['") && boost::ends_with(lkey, "']")) {
-				key = key.substr(10, key.length()-12);
-			} else if (boost::starts_with(lkey, "label[") && boost::ends_with(lkey, "]")) {
-				std::vector<std::string> args = tokenize(key.substr(6, key.length()-7), " ,");
-				if (args.size() != 2)
-					Log(EError, "Label command '%s' has an invalid number of arguments!", key.c_str());
-				char *end_ptr = NULL;
-				offset.x = strtol(args[0].c_str(), &end_ptr, 10);
-				if (*end_ptr != '\0')
-					Log(EError, "Label command '%s' has an invalid position argument!", key.c_str());
-				offset.y = strtol(args[1].c_str(), &end_ptr, 10);
-				if (*end_ptr != '\0')
-					Log(EError, "Label command '%s' has an invalid position argument!", key.c_str());
-				labelAnnotation = true;
-
-				if (font == NULL) {
-					font = new Font(Font::EBitstreamVeraMono14);
-					font->convert(bitmap->getPixelFormat(), bitmap->getComponentFormat(), gamma);
-				}
-			} else {
-				continue;
-			}
-
-			Properties::EPropertyType type = m_properties.getType(keys[i]);
-			if (type == Properties::EString) {
-				std::string value = m_properties.getString(keys[i]);
-
-				while (true) {
-					char *strt;
-					if (!(strt = strchr((char *) value.c_str(), '$')))
-						break;
-
-					if (strncasecmp(strt, "$rendertime", 11) == 0) {
-						value.replace(strt-value.c_str(), 11, timeString(renderTime));
-					} else if (strncasecmp(strt, "$memusage", 11) == 0) {
-						value.replace(strt-value.c_str(), 11, memString(getPrivateMemoryUsage()));
-					} else {
-						char *par1, *par2;
-						if (!(par1 = strchr(strt, '[')))
-							break;
-						if (!(par2 = strchr(par1, ']')))
-							break;
-
-						std::string propSource   = value.substr(strt-value.c_str()+1, par1-strt-1);
-						std::string propKey = value.substr(par1-value.c_str()+1, par2-par1-1);
-						propSource.erase(std::remove_if(propSource.begin(), propSource.end(), ::isspace), propSource.end());
-						propKey.erase(std::remove_if(propKey.begin(), propKey.end(), ::isspace), propKey.end());
-
-						if (!boost::starts_with(propKey, "'") || !boost::ends_with(propKey, "'"))
-							Log(EError, "Encountered invalid key '%s'", propKey.c_str());
-
-						propKey = propKey.substr(1, propKey.length()-2);
-
-						const ConfigurableObject *source = NULL;
-						if (propSource == "film")
-							source = scene->getFilm();
-						else if (propSource == "sampler")
-							source = scene->getSampler();
-						else if (propSource == "sensor")
-							source = scene->getSensor();
-						else if (propSource == "integrator")
-							source = scene->getIntegrator();
-						else
-							Log(EError, "Unknown data source '%s' (must be film/sampler/sensor/integrator)", propSource.c_str());
-
-						std::string replacement;
-						if (propKey == "type")
-							replacement = source->getProperties().getPluginName();
-						else
-							replacement = source->getProperties().getAsString(propKey);
-
-						value.replace(strt-value.c_str(), par2-strt+1, replacement);
-					}
-					cout << value << endl;
-				}
-				if (labelAnnotation) {
-					Vector2i size = font->getSize(value);
-					bitmap->fillRect(offset-Vector2i(4, 4), size + Vector2i(8, 8), Spectrum(0.0f));
-					font->drawText(bitmap, offset, value);
-				} else {
-					metadata.setString(key, value);
-				}
-			} else {
-				if (labelAnnotation)
-					Log(EError, "Only string-valued label annotations are supported!");
-				metadata.copyAttribute(m_properties, keys[i], key);
-			}
-		}
+		annotate(scene, m_properties, bitmap, renderTime, 1.0f);
 
 		/* Attach the log file to the image if this is requested */
 		Logger *logger = Thread::getThread()->getLogger();
@@ -477,7 +376,7 @@ public:
 		if (m_attachLog && logger->readLog(log)) {
 			log += "\n\n";
 			log += Statistics::getInstance()->getStats();
-			metadata.setString("log", log);
+			bitmap->setMetadataString("log", log);
 		}
 
 		bitmap->write(m_fileFormat, stream);
@@ -516,11 +415,6 @@ public:
 
 	MTS_DECLARE_CLASS()
 protected:
-	struct Annotation {
-		Point2i offset;
-		std::string text;
-	};
-
 	Bitmap::EFileFormat m_fileFormat;
 	Bitmap::EPixelFormat m_pixelFormat;
 	Bitmap::EComponentFormat m_componentFormat;
