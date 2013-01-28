@@ -37,7 +37,7 @@ MTS_NAMESPACE_BEGIN
 		if (EXPECT_NOT_TAKEN(thread == NULL)) \
 			throw std::runtime_error("Null thread pointer"); \
 		mitsuba::Logger *logger = thread->getLogger(); \
-		if (level >= logger->getLogLevel()) \
+		if (logger != NULL && level >= logger->getLogLevel()) \
 			logger->log(level, m_theClass, \
 				__FILE__, __LINE__, fmt, ## __VA_ARGS__); \
 	} while (0)
@@ -51,7 +51,7 @@ MTS_NAMESPACE_BEGIN
 		if (EXPECT_NOT_TAKEN(thread == NULL)) \
 			throw std::runtime_error("Null thread pointer"); \
 		mitsuba::Logger *logger = thread->getLogger(); \
-		if (level >= logger->getLogLevel()) \
+		if (logger != NULL && level >= logger->getLogLevel()) \
 			logger->log(level, NULL, \
 				__FILE__, __LINE__, fmt, ## __VA_ARGS__); \
 	} while (0)
