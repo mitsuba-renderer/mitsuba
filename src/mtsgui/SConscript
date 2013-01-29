@@ -72,9 +72,6 @@ if hasQt:
 	else:
 		qtSources = [x for x in qtSources if (not isinstance(x, str) or 'cocoa' not in x)]
 
-	if sys.platform == 'win32':
-		qtSources += qtEnv.StaticObject('qtmain_win.cpp')
-
 	mtsgui = qtEnv.Program('mtsgui', qtSources)
 	if sys.platform == 'darwin':
 		qtEnv.AddPostAction(mtsgui, 'install_name_tool -change QtGui.framework/Versions/4/QtGui @rpath/QtGui $TARGET')
