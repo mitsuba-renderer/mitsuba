@@ -64,7 +64,6 @@ MTS_NAMESPACE_BEGIN
  *	   }
  *     \parameter{toWorld}{\Transform\Or\Animation}{
  *	      Specifies an optional linear object-to-world transformation.
- *        Note that non-uniform scales are not permitted!
  *        \default{none (i.e. object space $=$ world space)}
  *     }
  *     \parameter{srgb}{\Boolean}{
@@ -230,7 +229,7 @@ public:
 		m_aabb.expandBy(p);
 		m_positions[m_vertexCtr] = p;
 		if (m_normals)
-			m_normals[m_vertexCtr] = m_objectToWorld(m_normal);
+			m_normals[m_vertexCtr] = normalize(m_objectToWorld(m_normal));
 		if (m_texcoords)
 			m_texcoords[m_vertexCtr] = m_uv;
 		if (m_colors) {

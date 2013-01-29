@@ -57,7 +57,6 @@ MTS_NAMESPACE_BEGIN
  *	   }
  *     \parameter{toWorld}{\Transform\Or\Animation}{
  *	      Specifies an optional linear object-to-world transformation.
- *        Note that non-uniform scales are not permitted!
  *        \default{none (i.e. object space $=$ world space)}
  *     }
  * }
