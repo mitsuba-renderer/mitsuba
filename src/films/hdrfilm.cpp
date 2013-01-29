@@ -147,13 +147,35 @@ MTS_NAMESPACE_BEGIN
  * </film>
  * \end{xml}
  *
- * The \code{value="..."} argument may also include certain identifiers that will be
- * evaluated and substituted when the rendered image is written to disk. These include
- * \begin{center}
+ * The \code{value="..."} argument may also include certain keywords that will be
+ * evaluated and substituted when the rendered image is written to disk. A list all available
+ * keywords is provided in Table~\ref{tbl:film-keywords}.
+ *
+ * Apart from querying the render time,
+ * memory usage, and other scene-related information, it is also possible
+ * to `paste' an existing parameter that was provided to another plugin---for instance,the
+ * the camera transform matrix would be obtained as \code{\$sensor['toWorld']}. The name of
+ * the active integrator plugin is given by \code{\$integrator['type']}, and so on.
+ * All of these can be mixed to build larger fragments, as following example demonstrates.
+ * The result of this annotation is shown in Figure~\ref{fig:annotation-example}.
+ * \begin{xml}[mathescape=false]
+ * <string name="label[10, 10]" value="Integrator: $integrator['type'],
+ *   $film['width']x$film['height'], $sampler['sampleCount'] spp,
+ *   render time: $scene['renderTime'], memory: $scene['memUsage']"/>
+ * \end{xml}
+ * \vspace{1cm}
+ * \renderings{
+ * \fbox{\includegraphics[width=.8\textwidth]{images/annotation_example}}\hfill\,
+ * \caption{\label{fig:annotation-example}A demonstration of the label annotation feature
+ *  given the example string shown above.}
+ * }
+ * \vspace{2cm}
+ * \begin{table}[htb]
+ * \centering
  * \begin{savenotes}
  * \begin{tabular}{ll}
  * \toprule
- * \code{\$scene['renderTime']}& Render time of the image, \code{renderTimePrecise} for more digits.\\
+ * \code{\$scene['renderTime']}& Image render time, use \code{renderTimePrecise} for more digits.\\
  * \code{\$scene['memUsage']}& Mitsuba memory usage\footnote{The definition of this quantity unfortunately
  * varies a bit from platform to platform. On Linux and Windows, it denotes the total
  * amount of allocated RAM and disk-based memory that is private to the process (i.e. not
@@ -172,7 +194,10 @@ MTS_NAMESPACE_BEGIN
  * \bottomrule
  * \end{tabular}
  * \end{savenotes}
- * \end{center}
+ * \caption{\label{tbl:film-keywords}A list of all special
+ * keywords supported by the annotation feature}
+ * \end{table}
+ *
  */
 
 class HDRFilm : public Film {
