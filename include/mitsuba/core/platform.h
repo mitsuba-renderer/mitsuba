@@ -203,6 +203,7 @@ MTS_NAMESPACE_END
 
 #define snprintf _snprintf
 #define vsnprintf _vsnprintf
+#define strncasecmp _strnicmp
 
 #if defined(__64BIT__)
 typedef long long ssize_t;
