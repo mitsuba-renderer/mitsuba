@@ -17,11 +17,12 @@
 */
 
 #pragma once
-#if !defined(__MITSUBA_RENDER_TRACK_H_)
-#define __MITSUBA_RENDER_TRACK_H_
+#if !defined(__MITSUBA_CORE_TRACK_H_)
+#define __MITSUBA_CORE_TRACK_H_
 
 #include <mitsuba/core/quat.h>
 #include <mitsuba/core/simplecache.h>
+#include <set>
 
 MTS_NAMESPACE_BEGIN
 
@@ -31,7 +32,7 @@ template <typename T> class AnimationTrack;
  * \brief Base class of animation tracks
  * \ingroup librender
  */
-class MTS_EXPORT_RENDER AbstractAnimationTrack : public Object {
+class MTS_EXPORT_CORE AbstractAnimationTrack : public Object {
 	template<typename T> friend class AnimationTrack;
 public:
 	enum EType {
@@ -65,6 +66,9 @@ public:
 	/// Serialize to a binary data stream
 	virtual void serialize(Stream *stream) const = 0;
 
+	/// Clone this track
+	virtual AbstractAnimationTrack *clone() const = 0;
+
 	MTS_DECLARE_CLASS()
 protected:
 	AbstractAnimationTrack(EType type, size_t nKeyframes)
@@ -82,9 +86,9 @@ protected:
  */
 template <typename T> class AnimationTrack : public AbstractAnimationTrack {
 public:
-	typedef T value_type;
+	typedef T ValueType;
 
-	AnimationTrack(EType type, size_t nKeyframes)
+	AnimationTrack(EType type, size_t nKeyframes = 0)
 		: AbstractAnimationTrack(type, nKeyframes), m_values(nKeyframes) { }
 
 	AnimationTrack(EType type, Stream *stream)
@@ -95,11 +99,38 @@ public:
 			unserialize(stream, m_values[i]);
 	}
 
+	/// Copy constructor
+	AnimationTrack(const AnimationTrack *track)
+		 : AbstractAnimationTrack(track->getType(), track->getSize()) {
+		m_times = track->m_times;
+		m_values = track->m_values;
+	}
+
 	/// Set the value of a certain keyframe
-	inline void setValue(size_t idx, const value_type &value) { m_values[idx] = value; }
+	inline void setValue(size_t idx, const ValueType &value) { m_values[idx] = value; }
 
 	/// Return the value of a certain keyframe
-	inline const value_type &getValue(size_t idx) const { return m_values[idx]; }
+	inline const ValueType &getValue(size_t idx) const { return m_values[idx]; }
+
+	/// Reserve space for a certain number of entries
+	inline void reserve(size_t count) { m_times.reserve(count); m_values.reserve(count); }
+
+	/// Append a value
+	inline void append(Float time, const ValueType &value) {
+		m_times.push_back(time);
+		m_values.push_back(value);
+	}
+
+	/// Clone this instance
+	AbstractAnimationTrack *clone() const {
+		return new AnimationTrack(this);
+	}
+
+	/// Prepend a transformation to every entry of this track
+	void prependTransformation(const ValueType &value) {
+		for (size_t i=0; i<m_values.size(); ++i)
+			m_values[i] = concatenateTransformations(m_values[i], value);
+	}
 
 	/// Serialize to a binary data stream
 	inline void serialize(Stream *stream) const {
@@ -111,7 +142,7 @@ public:
 	}
 
 	/// Evaluate the animation track at an arbitrary time value
-	inline value_type eval(Float time) const {
+	inline ValueType eval(Float time) const {
 		SAssert(m_times.size() > 0);
 		std::vector<Float>::const_iterator entry =
 				std::lower_bound(m_times.begin(), m_times.end(), time);
@@ -126,19 +157,84 @@ public:
 		}
 		return lerp(idx0, idx1, t);
 	}
+
+private:
+	struct SortPredicate {
+		inline bool operator()(const std::pair<Float, ValueType> &p1,
+		                       const std::pair<Float, ValueType> &p2) const {
+			return p1.first < p2.first;
+		}
+	};
+
+	struct UniqueTimePredicate {
+		inline bool operator()(const std::pair<Float, ValueType> &p1,
+		                       const std::pair<Float, ValueType> &p2) const {
+			return p1.first == p2.first;
+		}
+	};
+
+public:
+	/**
+	 * \brief Sort all animation tracks and remove
+	 * unnecessary data (for user-provided input)
+	 *
+	 * \return \c false if this animation track was deemed to be "trivial"
+	 * after the cleanup (for instance, it only contains (0,0,0) translation operations)
+	 */
+	bool sortAndSimplify() {
+		SAssert(m_values.size() == m_times.size());
+		if (m_values.size() == 0)
+			return false;
+
+		std::vector< std::pair<Float, ValueType> > temp(m_values.size());
+		for (size_t i=0; i<m_values.size(); ++i)
+			temp[i] = std::make_pair(m_times[i], m_values[i]);
+		std::sort(temp.begin(), temp.end(), SortPredicate());
+
+		m_times.clear(); m_values.clear();
+		m_times.push_back(temp[0].first);
+		m_values.push_back(temp[0].second);
+
+		for (size_t i=1; i<temp.size(); ++i) {
+			Float time = temp[i].first;
+			const ValueType &value = temp[i].second;
+
+			if (m_times.back() == time)
+				SLog(EError, "Duplicate time value in animated transformation!");
+
+			/* Ignore irrelevant keys */
+			if (i+1 < temp.size() && value == temp[i+1].second &&
+					value == m_values.back())
+				continue;
+			else if (i+1 == temp.size() && value == m_values.back())
+				continue;
+
+			m_times.push_back(time);
+			m_values.push_back(value);
+		}
+
+		return !(m_values.size() == 0 || (m_values.size() == 1 && isNoOp(m_values[0])));
+	}
 protected:
 	/// Evaluate the animation track using linear interpolation
-	inline value_type lerp(size_t idx0, size_t idx1, Float t) const;
+	inline ValueType lerp(size_t idx0, size_t idx1, Float t) const;
 
-	inline void unserialize(Stream *stream, value_type &value) {
-		value = stream->readElement<value_type>();
+	/// Is this a "no-op" transformation?
+	inline bool isNoOp(const ValueType &value) const;
+
+	/// Concatenate two transformations
+	inline ValueType concatenateTransformations(
+			const ValueType &value1, const ValueType &value2) const;
+
+	inline void unserialize(Stream *stream, ValueType &value) {
+		value = stream->readElement<ValueType>();
 	}
 
-	inline void serialize(Stream *stream, const value_type &value) const {
-		stream->writeElement<value_type>(value);
+	inline void serialize(Stream *stream, const ValueType &value) const {
+		stream->writeElement<ValueType>(value);
 	}
 private:
-	std::vector<value_type> m_values;
+	std::vector<ValueType> m_values;
 };
 
 template<typename T> inline T AnimationTrack<T>::lerp(size_t idx0, size_t idx1, Float t) const {
@@ -148,6 +244,53 @@ template<typename T> inline T AnimationTrack<T>::lerp(size_t idx0, size_t idx1, 
 /// Partial specialization for quaternions (uses \ref slerp())
 template<> inline Quaternion AnimationTrack<Quaternion>::lerp(size_t idx0, size_t idx1, Float t) const {
 	return slerp(m_values[idx0], m_values[idx1], t);
+}
+
+template<typename T> inline T AnimationTrack<T>::concatenateTransformations(
+		const T &value1, const T &value2) const {
+	return value1 * value2;
+}
+
+template<> inline Vector AnimationTrack<Vector>::concatenateTransformations(
+		const Vector &value1, const Vector &value2) const {
+	if (m_type == ETranslationXYZ)
+		return value1 + value2;
+	else
+		return Vector(value1.x * value2.x, value1.y * value2.y, value1.z * value2.z);
+}
+
+template<> inline Float AnimationTrack<Float>::concatenateTransformations(
+		const Float &value1, const Float &value2) const {
+	if (m_type == ETranslationX || m_type == ETranslationY || m_type == ETranslationZ)
+		return value1 + value2;
+	else
+		return value1 * value2;
+}
+
+template<typename T> inline bool AnimationTrack<T>::isNoOp(const ValueType &value) const {
+	return false;
+}
+
+template<> inline bool AnimationTrack<Float>::isNoOp(const Float &value) const {
+	if ((m_type == ETranslationX || m_type == ETranslationY || m_type == ETranslationZ) && value == 0)
+		return true;
+	else if ((m_type == ERotationX || m_type == ERotationY || m_type == ERotationZ) && value == 0)
+		return true;
+	else if ((m_type == EScaleX || m_type == EScaleY || m_type == EScaleZ) && value == 1)
+		return true;
+	return false;
+}
+
+template<> inline bool AnimationTrack<Vector>::isNoOp(const Vector &value) const {
+	if (m_type == ETranslationXYZ && value.isZero())
+		return true;
+	else if (m_type == EScaleXYZ && (value.x == 1 && value.y == 1 && value.z == 1))
+		return true;
+	return false;
+}
+
+template<> inline bool AnimationTrack<Quaternion>::isNoOp(const Quaternion &value) const {
+	return value.isIdentity();
 }
 
 template<> inline void AnimationTrack<Point>::unserialize(Stream *stream, Point &value) {
@@ -178,8 +321,8 @@ template<> inline void AnimationTrack<Quaternion>::serialize(Stream *stream, con
  * \brief Animated transformation with an underlying keyframe representation
  * \ingroup librender
  */
-class MTS_EXPORT_RENDER AnimatedTransform : public Object {
-protected:
+class MTS_EXPORT_CORE AnimatedTransform : public Object {
+private:
 	/// Internal functor used by \ref eval() and \ref SimpleCache
 	struct MTS_EXPORT_RENDER TransformFunctor {
 	public:
@@ -204,11 +347,26 @@ public:
 	/// Unserialized an animated transformation from a binary data stream
 	AnimatedTransform(Stream *stream);
 
+	/// Copy constructor
+	AnimatedTransform(const AnimatedTransform *trafo);
+
 	/// Return the number of associated animation tracks
 	inline size_t getTrackCount() const { return m_tracks.size(); }
 
+	/// Find a track of the given type
+	AbstractAnimationTrack *findTrack(AbstractAnimationTrack::EType type);
+
+	/// Find a track of the given type
+	const AbstractAnimationTrack *findTrack(AbstractAnimationTrack::EType type) const;
+
 	/// Look up one of the tracks by index
+	inline AbstractAnimationTrack *getTrack(size_t idx) { return m_tracks[idx]; }
+
+	/// Look up one of the tracks by index (const version)
 	inline const AbstractAnimationTrack *getTrack(size_t idx) const { return m_tracks[idx]; }
+
+	/// Return the used keyframes as a set
+	void collectKeyframes(std::set<Float> &result) const;
 
 	/// Append an animation track
 	void addTrack(AbstractAnimationTrack *track);
@@ -221,7 +379,7 @@ public:
 	 * to this function.
 	 */
 	inline const Transform &eval(Float t) const {
-		if (m_tracks.size() == 0)
+		if (EXPECT_TAKEN(m_tracks.size() == 0))
 			return m_transform;
 		else
 			return m_cache.get(TransformFunctor(m_tracks), t);
@@ -229,6 +387,12 @@ public:
 
 	/// Is the animation static?
 	inline bool isStatic() const { return m_tracks.size() == 0; }
+
+	/**
+	 * \brief Sort all animation tracks and remove unnecessary
+	 * data (for user-provided input)
+	 */
+	void sortAndSimplify();
 
 	/// Transform a point by an affine / non-projective matrix
 	inline Point transformAffine(Float t, const Point &p) const {
@@ -290,6 +454,9 @@ public:
 		eval(t).operator()(r, dest);
 	}
 
+	/// Prepend a scale transformation to the transform (this is often useful)
+	void prependScale(const Vector &scale);
+
 	/// Serialize to a binary data stream
 	void serialize(Stream *stream) const;
 
@@ -317,4 +484,4 @@ private:
 
 MTS_NAMESPACE_END
 
-#endif /* __MITSUBA_RENDER_TRACK_H_ */
+#endif /* __MITSUBA_CORE_TRACK_H_ */

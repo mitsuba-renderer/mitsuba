@@ -30,7 +30,7 @@ MTS_NAMESPACE_BEGIN
 /*!\plugin{rectangle}{Rectangle intersection primitive}
  * \order{3}
  * \parameters{
- *     \parameter{toWorld}{\Transform}{
+ *     \parameter{toWorld}{\Transform\Or\Animation}{
  *	      Specifies a linear object-to-world transformation.
  *        It is allowed to use non-uniform scaling, but no shear.
  *        \default{none (i.e. object space $=$ world space)}

@@ -59,6 +59,8 @@ public:
 		EVector,
 		/// 4x4 transform for homogeneous coordinates
 		ETransform,
+		/// An animated 4x4 transformation
+		EAnimatedTransform,
 		/// Discretized color spectrum
 		ESpectrum,
 		/// Arbitrary-length string
@@ -152,6 +154,15 @@ public:
 	/// Get a linear transformation (with default)
 	Transform getTransform(const std::string &name, const Transform &defVal) const;
 
+	/// Set an animated linear transformation
+	void setAnimatedTransform(const std::string &name, const AnimatedTransform *value, bool warnDuplicates = true);
+	/// Get an animated linear transformation
+	ref<const AnimatedTransform> getAnimatedTransform(const std::string &name) const;
+	/// Get an animated linear transformation (with default)
+	ref<const AnimatedTransform> getAnimatedTransform(const std::string &name, const AnimatedTransform *defVal) const;
+	/// Get an animated linear transformation (with default)
+	ref<const AnimatedTransform> getAnimatedTransform(const std::string &name, const Transform &defVal) const;
+
 	/// Set a spectral power distribution
 	void setSpectrum(const std::string &name, const Spectrum &value, bool warnDuplicates = true);
 	/// Get a spectral power distribution
@@ -184,6 +195,10 @@ public:
 	std::string getAsString(const std::string &name) const;
 	/// Return one of the parameters (converting it to a string if necessary, with default value)
 	std::string getAsString(const std::string &name, const std::string &defVal) const;
+
+	/// Copy an attribute from another Properties object and potentially rename it
+	void copyAttribute(const Properties &properties,
+		const std::string &sourceName, const std::string &targetName);
 
 	/// Store an array containing the names of all stored properties
 	void putPropertyNames(std::vector<std::string> &results) const;

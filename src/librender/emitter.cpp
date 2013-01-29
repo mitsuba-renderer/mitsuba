@@ -18,15 +18,14 @@
 
 #include <mitsuba/render/emitter.h>
 #include <mitsuba/render/medium.h>
-#include <mitsuba/render/track.h>
+#include <mitsuba/core/track.h>
 #include <mitsuba/render/shape.h>
 
 MTS_NAMESPACE_BEGIN
 
 AbstractEmitter::AbstractEmitter(const Properties &props)
  : ConfigurableObject(props), m_shape(NULL), m_type(0) {
-	m_worldTransform = new AnimatedTransform(
-		props.getTransform("toWorld", Transform()));
+	m_worldTransform = props.getAnimatedTransform("toWorld", Transform());
 }
 
 AbstractEmitter::AbstractEmitter(Stream *stream, InstanceManager *manager)

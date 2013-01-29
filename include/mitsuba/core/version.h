@@ -26,13 +26,13 @@ MTS_NAMESPACE_BEGIN
  * \brief Current release of Mitsuba
  * \ingroup libcore
  */
-#define MTS_VERSION "0.4.2"
+#define MTS_VERSION "0.4.3"
 
 /**
  * \brief Year of the current release
  * \ingroup libcore
  */
-#define MTS_YEAR "2012"
+#define MTS_YEAR "2013"
 
 /**
  * \brief A simple data structure for representing and

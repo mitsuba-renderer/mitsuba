@@ -35,13 +35,14 @@ mkdir -p $RPM_BUILD_ROOT/usr/share/mitsuba/plugins
 mkdir -p $RPM_BUILD_ROOT/usr/share/pixmaps
 mkdir -p $RPM_BUILD_ROOT/usr/share/applications
 mkdir -p $RPM_BUILD_ROOT/usr/include
-strip dist/lib* dist/mtsgui dist/mitsuba dist/mtssrv dist/mtsutil
+strip dist/lib* dist/mtsgui dist/mitsuba dist/mtssrv dist/mtsutil dist/mtsimport
 strip dist/plugins/* dist/python/*/*
 cp dist/libmitsuba-*.so $RPM_BUILD_ROOT%{_libdir}
 cp dist/mtsgui $RPM_BUILD_ROOT%{_bindir}
 cp dist/mitsuba $RPM_BUILD_ROOT%{_bindir}
 cp dist/mtssrv $RPM_BUILD_ROOT%{_bindir}
 cp dist/mtsutil $RPM_BUILD_ROOT%{_bindir}
+cp dist/mtsimport $RPM_BUILD_ROOT%{_bindir}
 cp dist/python/2.7/mitsuba.so $RPM_BUILD_ROOT%{_libdir}/python2.7/lib-dynload
 cp dist/plugins/* $RPM_BUILD_ROOT/usr/share/mitsuba/plugins
 cp -Rdp dist/data $RPM_BUILD_ROOT/usr/share/mitsuba/data

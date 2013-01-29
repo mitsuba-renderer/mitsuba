@@ -1,4 +1,4 @@
-Import('env', 'os', 'glob', 'sys', 'hasQt', 'hasCollada', 'hasBreakpad', 'mainEnv', 
+Import('env', 'os', 'glob', 'sys', 'hasQt', 'hasCollada', 'hasBreakpad', 'mainEnv',
 	'resources', 'converter_objects')
 
 # For running Uic & Moc (below)
@@ -58,7 +58,7 @@ if hasQt:
 			qtEnv.Prepend(LIBPATH=env['COLLADALIBDIR'])
 		if env.has_key('COLLADALIB'):
 			qtEnv.Prepend(LIBS=env['COLLADALIB'])
-	
+
 	if sys.platform == 'darwin':
 		mainEnv_osx = mainEnv.Clone()
 		qtEnv_osx = qtEnv.Clone()

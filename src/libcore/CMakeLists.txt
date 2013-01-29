@@ -70,6 +70,7 @@ set(HDRS
   ${INCLUDE_DIR}/thread.h
   ${INCLUDE_DIR}/timer.h
   ${INCLUDE_DIR}/tls.h
+  ${INCLUDE_DIR}/track.h
   ${INCLUDE_DIR}/transform.h
   ${INCLUDE_DIR}/triangle.h
   ${INCLUDE_DIR}/util.h
@@ -118,6 +119,7 @@ set(SRCS
   thread.cpp
   timer.cpp
   tls.cpp
+  track.cpp
   transform.cpp
   triangle.cpp
   util.cpp

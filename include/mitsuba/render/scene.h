@@ -133,7 +133,7 @@ public:
 		int sceneResID, int sensorResID, int samplerResID);
 
 	/// Write out the current (partially rendered) image
-	void flush();
+	void flush(RenderQueue *queue, const RenderJob *job);
 
 	/**
 	 * \brief Cancel a running rendering job

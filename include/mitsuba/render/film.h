@@ -61,7 +61,7 @@ public:
 	virtual void setDestinationFile(const fs::path &filename, uint32_t blockSize) = 0;
 
 	/// Develop the film and write the result to the previously specified filename
-	virtual void develop() = 0;
+	virtual void develop(const Scene *scene, Float renderTime) = 0;
 
 	/**
 	 * \brief Develop the contents of a subregion of the film and store

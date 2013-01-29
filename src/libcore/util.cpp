@@ -28,13 +28,15 @@
 
 #if defined(__OSX__)
 #include <sys/sysctl.h>
-#elif defined(WIN32)
+#include <mach/mach.h>
+#elif defined(__WINDOWS__)
 #include <direct.h>
+#include <psapi.h>
 #else
 #include <malloc.h>
 #endif
 
-#if defined(WIN32)
+#if defined(__WINDOWS__)
 # include <windows.h>
 # include <winsock2.h>
 # include <ws2tcpip.h>
@@ -134,7 +136,7 @@ std::string memString(size_t size) {
 }
 
 void * __restrict allocAligned(size_t size) {
-#if defined(WIN32)
+#if defined(__WINDOWS__)
 	return _aligned_malloc(size, L1_CACHE_LINE_SIZE);
 #elif defined(__OSX__)
 	/* OSX malloc already returns 16-byte aligned data suitable
@@ -146,7 +148,7 @@ void * __restrict allocAligned(size_t size) {
 }
 
 void freeAligned(void *ptr) {
-#if defined(WIN32)
+#if defined(__WINDOWS__)
 	_aligned_free(ptr);
 #else
 	free(ptr);
@@ -154,7 +156,7 @@ void freeAligned(void *ptr) {
 }
 
 int getCoreCount() {
-#if defined(WIN32)
+#if defined(__WINDOWS__)
 	SYSTEM_INFO sys_info;
 	GetSystemInfo(&sys_info);
 	return sys_info.dwNumberOfProcessors;
@@ -169,7 +171,45 @@ int getCoreCount() {
 #endif
 }
 
-#if defined(WIN32)
+size_t getPrivateMemoryUsage() {
+#if defined(__WINDOWS__)
+	PROCESS_MEMORY_COUNTERS_EX pmc;
+	GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
+	return (size_t) pmc.PrivateUsage; /* Process-private memory usage (RAM + swap) */
+#elif defined(__OSX__)
+	struct task_basic_info_64 t_info;
+	mach_msg_type_number_t t_info_count = TASK_BASIC_INFO_64_COUNT;
+
+	if (task_info(mach_task_self(), TASK_BASIC_INFO_64,
+			(task_info_t)&t_info, &t_info_count) != KERN_SUCCESS)
+		return 0;
+
+	return (size_t) t_info.resident_size; /* Not exactly what we want -- oh well.. */
+#else
+	FILE* file = fopen("/proc/self/status", "r");
+	if (!file)
+		return 0;
+
+	char buffer[128];
+	size_t result = 0;
+	while (fgets(buffer, sizeof(buffer), file) != NULL) {
+		if (strncmp(buffer, "VmRSS:", 6) != 0 && /* Non-swapped physical memory specific to this process */
+		    strncmp(buffer, "VmSwap:", 7) != 0)  /* Swapped memory specific to this process */
+			continue;
+
+		char *line = buffer;
+		while (*line < '0' || *line > '9')
+			++line;
+		line[strlen(line)-3] = '\0';
+		result += (size_t) atoi(line) * 1024;
+	}
+
+	fclose(file);
+	return result;
+#endif
+}
+
+#if defined(__WINDOWS__)
 std::string lastErrorText() {
 	DWORD errCode = GetLastError();
 	char *errorText = NULL;
@@ -192,7 +232,7 @@ std::string lastErrorText() {
 
 bool enableFPExceptions() {
 	bool exceptionsWereEnabled = false;
-#if defined(WIN32)
+#if defined(__WINDOWS__)
 	_clearfp();
 	uint32_t cw = _controlfp(0, 0);
 	exceptionsWereEnabled = ~cw & (_EM_INVALID | _EM_ZERODIVIDE | _EM_OVERFLOW);
@@ -211,7 +251,7 @@ bool enableFPExceptions() {
 
 bool disableFPExceptions() {
 	bool exceptionsWereEnabled = false;
-#if defined(WIN32)
+#if defined(__WINDOWS__)
 	_clearfp();
 	uint32_t cw = _controlfp(0, 0);
 	exceptionsWereEnabled = ~cw & (_EM_INVALID | _EM_ZERODIVIDE | _EM_OVERFLOW);
@@ -230,7 +270,7 @@ bool disableFPExceptions() {
 
 void restoreFPExceptions(bool oldState) {
 	bool currentState;
-#if defined(WIN32)
+#if defined(__WINDOWS__)
 	uint32_t cw = _controlfp(0, 0);
 	currentState = ~cw & (_EM_INVALID | _EM_ZERODIVIDE | _EM_OVERFLOW);
 #elif defined(__OSX__)
@@ -249,7 +289,7 @@ void restoreFPExceptions(bool oldState) {
 std::string getHostName() {
 	char hostName[128];
 	if (gethostname(hostName, sizeof(hostName)) != 0)
-#if defined(WIN32)
+#if defined(__WINDOWS__)
 		SLog(EError, "Could not retrieve the computer's host name: %s!",
 			lastErrorText().c_str());
 #else
@@ -280,7 +320,7 @@ std::string getFQDN() {
 		fqdn, NI_MAXHOST, NULL, 0, 0);
 	if (retVal != 0) {
 		freeaddrinfo(addrInfo);
-#if defined(WIN32)
+#if defined(__WINDOWS__)
 		SLog(EWarn, "Could not retrieve the computer's fully "
 			"qualified domain name: error %i!", WSAGetLastError());
 #else
@@ -304,7 +344,7 @@ std::string formatString(const char *fmt, ...) {
 	char tmp[512];
 	va_list iterator;
 
-#if defined(WIN32)
+#if defined(__WINDOWS__)
 	va_start(iterator, fmt);
 	size_t size = _vscprintf(fmt, iterator) + 1;
 

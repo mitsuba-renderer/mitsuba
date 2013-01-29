@@ -193,6 +193,9 @@ public:
 	/**
 	 * \brief Return the shape's surface area
 	 *
+	 * Assumes that the object is not undergoing some kind of
+	 * time-dependent scaling.
+	 *
 	 * The default implementation throws an exception
 	 */
 	virtual Float getSurfaceArea() const;

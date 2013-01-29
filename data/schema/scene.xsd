@@ -26,7 +26,7 @@
 				<xsd:element name="rgb" type="rgb"/>
 				<xsd:element name="srgb" type="string"/>
 				<xsd:element name="blackbody" type="blackbody"/>
-				
+
 				<xsd:element name="alias" type="alias"/>
 			</xsd:choice>
 			<xsd:attribute name="version" type="xsd:string"/>
@@ -43,6 +43,7 @@
 			<xsd:element name="vector" type="point"/>
 			<xsd:element name="boolean" type="boolean"/>
 			<xsd:element name="transform" type="transform"/>
+			<xsd:element name="animation" type="animation"/>
 			<xsd:element name="string" type="string"/>
 			<xsd:element name="spectrum" type="spectrum"/>
 			<xsd:element name="rgb" type="rgb"/>
@@ -50,14 +51,14 @@
 			<xsd:element name="blackbody" type="blackbody"/>
 		</xsd:choice>
 	</xsd:group>
-	
+
 	<xsd:complexType name="objectBase">
 		<xsd:attribute name="type" type="xsd:string" use="required"/>
 		<xsd:attribute name="name" type="xsd:string"/>
 		<xsd:attribute name="id" type="xsd:string"/>
 	</xsd:complexType>
 
-	
+
 	<xsd:complexType name="object">
 		<xsd:complexContent>
 			<xsd:extension base="objectBase">
@@ -140,7 +141,7 @@
 			</xsd:extension>
 		</xsd:complexContent>
 	</xsd:complexType>
-	
+
 	<!-- MEDIUM Element -->
 	<xsd:complexType name="medium">
 		<xsd:complexContent>
@@ -297,7 +298,7 @@
 	<xsd:complexType name="include">
 		<xsd:attribute name="filename" type="xsd:string" use="required"/>
 	</xsd:complexType>
-	
+
 	<xsd:complexType name="alias">
 		<xsd:attribute name="id" type="xsd:string" use="required"/>
 		<xsd:attribute name="as" type="xsd:string" use="required"/>
@@ -311,6 +312,23 @@
 			<xsd:element name="lookat" type="lookAt"/>
 			<xsd:element name="scale" type="scale"/>
 			<xsd:element name="matrix" type="matrix"/>
+		</xsd:choice>
+		<xsd:attribute name="name" type="xsd:string" use="required"/>
+	</xsd:complexType>
+	<xsd:complexType name="animationTransform">
+		<xsd:choice minOccurs="0" maxOccurs="unbounded">
+			<xsd:element name="translate" type="translate"/>
+			<xsd:element name="rotate" type="rotate"/>
+			<xsd:element name="lookAt" type="lookAt"/>
+			<xsd:element name="lookat" type="lookAt"/>
+			<xsd:element name="scale" type="scale"/>
+			<xsd:element name="matrix" type="matrix"/>
+		</xsd:choice>
+		<xsd:attribute name="time" type="doubleType" use="required"/>
+	</xsd:complexType>
+	<xsd:complexType name="animation">
+		<xsd:choice minOccurs="0" maxOccurs="unbounded">
+			<xsd:element name="transform" type="animationTransform"/>
 		</xsd:choice>
 		<xsd:attribute name="name" type="xsd:string" use="required"/>
 	</xsd:complexType>
