@@ -258,7 +258,7 @@ void AnimatedTransform::collectKeyframes(std::set<Float> &result) const {
 	}
 
 	if (result.size() == 0)
-		result.insert(0);
+		result.insert((Float) 0);
 }
 
 void AnimatedTransform::serialize(Stream *stream) const {
