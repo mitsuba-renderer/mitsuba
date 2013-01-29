@@ -278,7 +278,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 								*dest++ = convertScalar<DestFormat>(value * 0.950456f, 1.0f, NULL, multiplier, invDestGamma);
 								*dest++ = convertScalar<DestFormat>(value, 1.0f, NULL, multiplier, invDestGamma);
 								*dest++ = convertScalar<DestFormat>(value * 1.08875f, 1.0f, NULL, multiplier, invDestGamma);
-								*source++;
+								source++;
 							}
 							break;
 
