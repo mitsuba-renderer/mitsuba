@@ -34,7 +34,7 @@ libcore_objects = [
 	'mstream.cpp', 'sched.cpp', 'sched_remote.cpp', 'sshstream.cpp',
 	'zstream.cpp', 'shvector.cpp', 'fresolver.cpp', 'rfilter.cpp',
 	'quad.cpp', 'mmap.cpp', 'chisquare.cpp', 'warp.cpp', 'vmf.cpp',
-	'tls.cpp', 'ssemath.cpp', 'spline.cpp'
+	'tls.cpp', 'ssemath.cpp', 'spline.cpp', 'track.cpp'
 ]
 
 # Add some platform-specific components
