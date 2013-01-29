@@ -30,6 +30,7 @@
 #include <sys/sysctl.h>
 #include <mach/mach.h>
 #elif defined(__WINDOWS__)
+#include <windows.h>
 #include <direct.h>
 #include <psapi.h>
 #else
@@ -174,7 +175,7 @@ int getCoreCount() {
 size_t getPrivateMemoryUsage() {
 #if defined(__WINDOWS__)
 	PROCESS_MEMORY_COUNTERS_EX pmc;
-	GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
+	GetProcessMemoryInfo(GetCurrentProcess(), (PROCESS_MEMORY_COUNTERS *) &pmc, sizeof(pmc));
 	return (size_t) pmc.PrivateUsage; /* Process-private memory usage (RAM + swap) */
 #elif defined(__OSX__)
 	struct task_basic_info_64 t_info;

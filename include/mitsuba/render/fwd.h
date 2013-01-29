@@ -22,13 +22,6 @@
 
 MTS_NAMESPACE_BEGIN
 
-class AbstractAnimationTrack;
-template <typename T> class AnimationTrack;
-typedef AnimationTrack<Float> FloatTrack;
-typedef AnimationTrack<Quaternion> QuatTrack;
-typedef AnimationTrack<Vector> VectorTrack;
-typedef AnimationTrack<Point> PointTrack;
-class AnimatedTransform;
 class BlockedImageProcess;
 class BlockedRenderProcess;
 class BlockListener;

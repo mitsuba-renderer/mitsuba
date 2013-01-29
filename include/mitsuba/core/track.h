@@ -324,7 +324,7 @@ template<> inline void AnimationTrack<Quaternion>::serialize(Stream *stream, con
 class MTS_EXPORT_CORE AnimatedTransform : public Object {
 private:
 	/// Internal functor used by \ref eval() and \ref SimpleCache
-	struct MTS_EXPORT_RENDER TransformFunctor {
+	struct MTS_EXPORT_CORE TransformFunctor {
 	public:
 		inline TransformFunctor(const std::vector<AbstractAnimationTrack *> &tracks)
 			: m_tracks(tracks) {}

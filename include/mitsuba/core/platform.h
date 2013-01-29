@@ -196,7 +196,7 @@ MTS_NAMESPACE_END
 /// \cond
 // Try to make MSVC++ behave a bit more like C++
 // with an underlying C99 implementation
-// (and dn't include this in the documentation)
+// (and don't include this in the documentation)
 #if defined(_MSC_VER)
 
 #include <float.h>
@@ -204,8 +204,13 @@ MTS_NAMESPACE_END
 #define snprintf _snprintf
 #define vsnprintf _vsnprintf
 
-namespace std {
+#if defined(__64BIT__)
+typedef long long ssize_t;
+#else
+typedef long ssize_t;
+#endif
 
+namespace std {
 	inline char tolower(char c) {
 		return ::tolower(c);
 	}
