@@ -82,6 +82,7 @@ AboutDialog::AboutDialog(QWidget *parent) :
 		SPECTRUM_SAMPLES).c_str();
 
 	ui->label->setText(ui->label->text().replace("MTS_VERSION", MTS_VERSION));
+	ui->label->setText(ui->label->text().replace("MTS_YEAR", MTS_YEAR));
 	ui->label->setText(ui->label->text().replace("CONFIG_FLAGS", configFlags));
 
 #if defined(__OSX__)
