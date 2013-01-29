@@ -18,7 +18,7 @@
 
 #include <mitsuba/render/sensor.h>
 #include <mitsuba/render/medium.h>
-#include <mitsuba/render/track.h>
+#include <mitsuba/core/track.h>
 #include <mitsuba/core/plugin.h>
 #include <boost/algorithm/string.hpp>
 

@@ -1,4 +1,4 @@
-#include <mitsuba/render/track.h>
+#include <mitsuba/core/track.h>
 #include <mitsuba/core/aabb.h>
 
 MTS_NAMESPACE_BEGIN

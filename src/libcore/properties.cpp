@@ -18,7 +18,7 @@
 
 #include <mitsuba/core/properties.h>
 #include <mitsuba/core/netobject.h>
-#include <mitsuba/render/track.h>
+#include <mitsuba/core/track.h>
 
 /* Keep the boost::variant includes outside of properties.h,
    since they noticeably add to the overall compile times */

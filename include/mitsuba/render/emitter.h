@@ -21,7 +21,7 @@
 #define __MITSUBA_RENDER_EMITTER_H_
 
 #include <mitsuba/render/common.h>
-#include <mitsuba/render/track.h>
+#include <mitsuba/core/track.h>
 #include <mitsuba/core/properties.h>
 #include <mitsuba/core/cobject.h>
 #include <mitsuba/render/shader.h>

@@ -17,8 +17,8 @@
 */
 
 #pragma once
-#if !defined(__MITSUBA_RENDER_TRACK_H_)
-#define __MITSUBA_RENDER_TRACK_H_
+#if !defined(__MITSUBA_CORE_TRACK_H_)
+#define __MITSUBA_CORE_TRACK_H_
 
 #include <mitsuba/core/quat.h>
 #include <mitsuba/core/simplecache.h>
@@ -32,7 +32,7 @@ template <typename T> class AnimationTrack;
  * \brief Base class of animation tracks
  * \ingroup librender
  */
-class MTS_EXPORT_RENDER AbstractAnimationTrack : public Object {
+class MTS_EXPORT_CORE AbstractAnimationTrack : public Object {
 	template<typename T> friend class AnimationTrack;
 public:
 	enum EType {
@@ -321,7 +321,7 @@ template<> inline void AnimationTrack<Quaternion>::serialize(Stream *stream, con
  * \brief Animated transformation with an underlying keyframe representation
  * \ingroup librender
  */
-class MTS_EXPORT_RENDER AnimatedTransform : public Object {
+class MTS_EXPORT_CORE AnimatedTransform : public Object {
 private:
 	/// Internal functor used by \ref eval() and \ref SimpleCache
 	struct MTS_EXPORT_RENDER TransformFunctor {
@@ -484,4 +484,4 @@ private:
 
 MTS_NAMESPACE_END
 
-#endif /* __MITSUBA_RENDER_TRACK_H_ */
+#endif /* __MITSUBA_CORE_TRACK_H_ */
