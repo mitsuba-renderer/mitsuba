@@ -65,7 +65,6 @@ set(HDRS
   ${INCLUDE_DIR}/sshstream.h
   ${INCLUDE_DIR}/sstream.h
   ${INCLUDE_DIR}/statistics.h
-  ${INCLUDE_DIR}/stl.h
   ${INCLUDE_DIR}/stream.h
   ${INCLUDE_DIR}/thread.h
   ${INCLUDE_DIR}/timer.h
