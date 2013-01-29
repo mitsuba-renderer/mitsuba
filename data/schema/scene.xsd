@@ -43,7 +43,7 @@
 			<xsd:element name="vector" type="point"/>
 			<xsd:element name="boolean" type="boolean"/>
 			<xsd:element name="transform" type="transform"/>
-			<xsd:element name="atransform" type="atransform"/>
+			<xsd:element name="animation" type="animation"/>
 			<xsd:element name="string" type="string"/>
 			<xsd:element name="spectrum" type="spectrum"/>
 			<xsd:element name="rgb" type="rgb"/>
@@ -326,7 +326,7 @@
 		</xsd:choice>
 		<xsd:attribute name="time" type="doubleType" use="required"/>
 	</xsd:complexType>
-	<xsd:complexType name="atransform">
+	<xsd:complexType name="animation">
 		<xsd:choice minOccurs="0" maxOccurs="unbounded">
 			<xsd:element name="transform" type="animationTransform"/>
 		</xsd:choice>
