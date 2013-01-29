@@ -43,7 +43,7 @@ MTS_NAMESPACE_BEGIN
  *	      Is the cylinder inverted, i.e. should the normal vectors
  *		  be flipped? \default{\code{false}, i.e. the normals point outside}
  *	   }
- *     \parameter{toWorld}{\Transform\Or\ATransform}{
+ *     \parameter{toWorld}{\Transform\Or\Animation}{
  *	      Specifies an optional linear object-to-world transformation.
  *        Note that non-uniform scales are not permitted!
  *        \default{none (i.e. object space $=$ world space)}

@@ -292,7 +292,7 @@ and \emph{animated transformations} as parameters. The latter is useful to
 render scenes involving motion blur. The syntax used to specify these
 is slightly different:
 \begin{xml}
-<atransform name="trafoProperty">
+<animation name="trafoProperty">
   <transform time="0">
      .. chained list of transformations as discussed above ..
   </transform>
@@ -302,7 +302,7 @@ is slightly different:
   </transform>
 
   .. additional transformations (optional) ..
-</atransform>
+</animation>
 \end{xml}
 Mitsuba then decomposes each transformation into a scale, translation, and
 rotation component and interpolates\footnote{Using linear interpolation

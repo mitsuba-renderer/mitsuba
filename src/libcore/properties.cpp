@@ -100,7 +100,7 @@ ref<const AnimatedTransform> Properties::getAnimatedTransform(const std::string 
 	const Transform *result2 = boost::get<Transform>(&it->second.data);
 
 	if (!result1 && !result2)
-		SLog(EError, "The property \"%s\" has the wrong type (expected <atransform> or <transform>). The "
+		SLog(EError, "The property \"%s\" has the wrong type (expected <animation> or <transform>). The "
 				"complete property record is :\n%s", name.c_str(), toString().c_str());
 	it->second.queried = true;
 
@@ -118,7 +118,7 @@ ref<const AnimatedTransform> Properties::getAnimatedTransform(const std::string 
 	const Transform *result2 = boost::get<Transform>(&it->second.data);
 
 	if (!result1 && !result2)
-		SLog(EError, "The property \"%s\" has the wrong type (expected <atransform> or <transform>). The "
+		SLog(EError, "The property \"%s\" has the wrong type (expected <animation> or <transform>). The "
 				"complete property record is :\n%s", name.c_str(), toString().c_str());
 
 	it->second.queried = true;
@@ -138,7 +138,7 @@ ref<const AnimatedTransform> Properties::getAnimatedTransform(const std::string 
 	const Transform *result2 = boost::get<Transform>(&it->second.data);
 
 	if (!result1 && !result2)
-		SLog(EError, "The property \"%s\" has the wrong type (expected <atransform> or <transform>). The "
+		SLog(EError, "The property \"%s\" has the wrong type (expected <animation> or <transform>). The "
 				"complete property record is :\n%s", name.c_str(), toString().c_str());
 	it->second.queried = true;
 

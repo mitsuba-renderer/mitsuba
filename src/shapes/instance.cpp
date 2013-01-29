@@ -25,15 +25,33 @@ MTS_NAMESPACE_BEGIN
  * \parameters{
  *     \parameter{\Unnamed}{\ShapeGroup}{A reference to a
  *     shape group that should be instantiated}
- *     \parameter{toWorld}{\Transform\Or\ATransform}{
+ *     \parameter{toWorld}{\Transform\Or\Animation}{
  *	      Specifies an optional linear instance-to-world transformation.
  *        \default{none (i.e. instance space $=$ world space)}
  *     }
  * }
+ * \renderings{
+ *    \rendering{Surface viewed from the top}{shape_instance_fractal_top}
+ *    \rendering{Surface viewed from the bottom}{shape_instance_fractal_bot}
+ *    \caption{
+ *       A visualization of a fractal surface by Irving and Segerman.
+ *       (a 2D Gospel curve developed up to level 5 along the third
+ *       dimension). This scene makes use of instancing to replicate
+ *       similar structures to cheaply render a structure that effectively
+ *       consists of several hundred millions of triangles.
+ *    }
+ * }
  *
  * This plugin implements a geometry instance used to efficiently replicate
- * geometry many times. For details, please refer to the \pluginref{shapegroup}
- * plugin.
+ * geometry many times. For details on how to create instances, refer to
+ * the \pluginref{shapegroup} plugin.
+ * \remarks{
+ *   \item Note that it is \emph{not} possible to assign a different
+ *    material to each instance --- the material assignment specified within
+ *    the shape group is the one that matters.
+ *   \item Shape groups cannot be used to replicate shapes with
+ *   attached emitters, sensors, or subsurface scattering models.
+ * }
  */
 
 Instance::Instance(const Properties &props) : Shape(props) {

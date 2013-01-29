@@ -55,7 +55,7 @@ MTS_NAMESPACE_BEGIN
  *       Optional flag to flip all normals. \default{\code{false}, i.e.
  *       the normals are left unchanged}.
  *	   }
- *     \parameter{toWorld}{\Transform\Or\ATransform}{
+ *     \parameter{toWorld}{\Transform\Or\Animation}{
  *	      Specifies an optional linear object-to-world transformation.
  *        Note that non-uniform scales are not permitted!
  *        \default{none (i.e. object space $=$ world space)}

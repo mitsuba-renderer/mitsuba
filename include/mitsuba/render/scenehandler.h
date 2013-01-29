@@ -158,7 +158,7 @@ private:
 		EBoolean, EString, ETranslate, ERotate,
 		ELookAt, EScale, EMatrix, EPoint,
 		EVector, ERGB, ESRGB, EBlackBody,
-		ESpectrum, ETransform, EATransform,
+		ESpectrum, ETransform, EAnimation,
 		EInclude, EAlias
 	};
 

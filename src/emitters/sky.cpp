@@ -71,7 +71,7 @@ MTS_NAMESPACE_BEGIN
  *         Specifies the relative amount of samples
  *         allocated to this emitter. \default{1}
  *     }
- *     \parameter{toWorld}{\Transform\Or\ATransform}{
+ *     \parameter{toWorld}{\Transform\Or\Animation}{
  *	      Specifies an optional sensor-to-world transformation.
  *        \default{none (i.e. sensor space $=$ world space)}
  *     }

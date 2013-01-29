@@ -26,7 +26,7 @@ MTS_NAMESPACE_BEGIN
 /*!\plugin{perspective}{Perspective pinhole camera}
  * \order{1}
  * \parameters{
- *     \parameter{toWorld}{\Transform\Or\ATransform}{
+ *     \parameter{toWorld}{\Transform\Or\Animation}{
  *	      Specifies an optional camera-to-world transformation.
  *        \default{none (i.e. camera space $=$ world space)}
  *     }

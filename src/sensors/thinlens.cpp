@@ -29,7 +29,7 @@ MTS_NAMESPACE_BEGIN
 /*!\plugin{thinlens}{Perspective camera with a thin lens}
  * \order{2}
  * \parameters{
- *     \parameter{toWorld}{\Transform\Or\ATransform}{
+ *     \parameter{toWorld}{\Transform\Or\Animation}{
  *	      Specifies an optional camera-to-world transformation.
  *        \default{none (i.e. camera space $=$ world space)}
  *     }

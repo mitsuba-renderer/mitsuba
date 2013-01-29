@@ -27,7 +27,7 @@ MTS_NAMESPACE_BEGIN
 /*!\plugin{telecentric}{Telecentric lens camera}
  * \order{4}
  * \parameters{
- *     \parameter{toWorld}{\Transform\Or\ATransform}{
+ *     \parameter{toWorld}{\Transform\Or\Animation}{
  *	      Specifies an optional sensor-to-world transformation.
  *        \default{none (i.e. camera space $=$ world space)}
  *     }

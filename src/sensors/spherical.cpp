@@ -25,7 +25,7 @@ MTS_NAMESPACE_BEGIN
 /*!\plugin{spherical}{Spherical camera}
  * \order{5}
  * \parameters{
- *     \parameter{toWorld}{\Transform\Or\ATransform}{
+ *     \parameter{toWorld}{\Transform\Or\Animation}{
  *	      Specifies an optional camera-to-world transformation.
  *        \default{none (i.e. camera space $=$ world space)}
  *     }

@@ -55,7 +55,7 @@ MTS_NAMESPACE_BEGIN
  *       this convention. \default{\code{true}, i.e. flip them to get the
  *       correct coordinates}.
  *	   }
- *     \parameter{toWorld}{\Transform\Or\ATransform}{
+ *     \parameter{toWorld}{\Transform\Or\Animation}{
  *	      Specifies an optional linear object-to-world transformation.
  *        Note that non-uniform scales are not permitted!
  *        \default{none (i.e. object space $=$ world space)}
