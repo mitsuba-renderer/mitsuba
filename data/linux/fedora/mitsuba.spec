@@ -63,7 +63,7 @@ rm -rf $RPM_BUILD_ROOT
 /usr/include/*
 %changelog
 
-* Tue Jan 29 2012 Wenzel Jakob <wenzel@cs.cornell.edu> 0.4.3%{?dist}
+* Tue Jan 29 2013 Wenzel Jakob <wenzel@cs.cornell.edu> 0.4.3%{?dist}
 - Upgrade to version 0.4.3
 
 * Wed Oct 31 2012 Wenzel Jakob <wenzel@cs.cornell.edu> 0.4.2%{?dist}
