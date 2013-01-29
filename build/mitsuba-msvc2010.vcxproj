@@ -125,13 +125,15 @@
 			</ClInclude>
 		<ClInclude Include="..\src\samplers\sobolseq.h">
 			</ClInclude>
-		<ClInclude Include="..\src\libhw\veramono14_dsc.h">
+		<ClInclude Include="..\src\libhw\data\veramono14_dsc.h">
 			</ClInclude>
-		<ClInclude Include="..\src\libhw\vera14_dsc.h">
+		<ClInclude Include="..\src\libhw\data\vera14_dsc.h">
 			</ClInclude>
-		<ClInclude Include="..\src\libhw\veramono14_png.h">
+		<ClInclude Include="..\src\libhw\data\shaders.h">
 			</ClInclude>
-		<ClInclude Include="..\src\libhw\vera14_png.h">
+		<ClInclude Include="..\src\libhw\data\veramono14_png.h">
+			</ClInclude>
+		<ClInclude Include="..\src\libhw\data\vera14_png.h">
 			</ClInclude>
 		<ClInclude Include="..\src\medium\materials.h">
 			</ClInclude>
@@ -202,6 +204,8 @@
 		<ClInclude Include="..\src\phase\microflake_fiber.h">
 			</ClInclude>
 		<ClInclude Include="..\src\films\banner.h">
+			</ClInclude>
+		<ClInclude Include="..\src\films\annotations.h">
 			</ClInclude>
 		<ClInclude Include="..\src\shapes\shapegroup.h">
 			</ClInclude>
@@ -287,13 +291,13 @@
 			</ClInclude>
 		<ClInclude Include="..\include\mitsuba\render\volume.h">
 			</ClInclude>
+		<ClInclude Include="..\include\mitsuba\render\sahkdtree4.h">
+			</ClInclude>
 		<ClInclude Include="..\include\mitsuba\render\integrator.h">
 			</ClInclude>
 		<ClInclude Include="..\include\mitsuba\render\subsurface.h">
 			</ClInclude>
 		<ClInclude Include="..\include\mitsuba\render\texture.h">
-			</ClInclude>
-		<ClInclude Include="..\include\mitsuba\render\track.h">
 			</ClInclude>
 		<ClInclude Include="..\include\mitsuba\render\triaccel_sse.h">
 			</ClInclude>
@@ -385,6 +389,8 @@
 			</ClInclude>
 		<ClInclude Include="..\include\mitsuba\core\matrix.inl">
 			</ClInclude>
+		<ClInclude Include="..\include\mitsuba\core\math.h">
+			</ClInclude>
 		<ClInclude Include="..\include\mitsuba\core\ssemath.h">
 			</ClInclude>
 		<ClInclude Include="..\include\mitsuba\core\normal.h">
@@ -409,6 +415,8 @@
 			</ClInclude>
 		<ClInclude Include="..\include\mitsuba\core\statistics.h">
 			</ClInclude>
+		<ClInclude Include="..\include\mitsuba\core\spline.h">
+			</ClInclude>
 		<ClInclude Include="..\include\mitsuba\core\thread.h">
 			</ClInclude>
 		<ClInclude Include="..\include\mitsuba\core\aabb_sse.h">
@@ -430,6 +438,8 @@
 		<ClInclude Include="..\include\mitsuba\core\lrucache.h">
 			</ClInclude>
 		<ClInclude Include="..\include\mitsuba\core\brent.h">
+			</ClInclude>
+		<ClInclude Include="..\include\mitsuba\core\track.h">
 			</ClInclude>
 		<ClInclude Include="..\include\mitsuba\core\chisquare.h">
 			</ClInclude>
@@ -454,8 +464,6 @@
 		<ClInclude Include="..\include\mitsuba\core\triangle.h">
 			</ClInclude>
 		<ClInclude Include="..\include\mitsuba\core\class.h">
-			</ClInclude>
-		<ClInclude Include="..\include\mitsuba\core\stl.h">
 			</ClInclude>
 		<ClInclude Include="..\include\mitsuba\core\warp.h">
 			</ClInclude>
@@ -510,6 +518,8 @@
 		<ClInclude Include="..\include\mitsuba\hw\gpuprogram.h">
 			</ClInclude>
 		<ClInclude Include="..\include\mitsuba\hw\gpugeometry.h">
+			</ClInclude>
+		<ClInclude Include="..\include\mitsuba\hw\shadow.h">
 			</ClInclude>
 		<ClInclude Include="..\include\mitsuba\hw\glrenderer.h">
 			</ClInclude>
@@ -628,8 +638,6 @@
 		<ClCompile Include="..\src\librender\medium.cpp">
 			</ClCompile>
 		<ClCompile Include="..\src\librender\photonmap.cpp">
-			</ClCompile>
-		<ClCompile Include="..\src\librender\track.cpp">
 			</ClCompile>
 		<ClCompile Include="..\src\librender\renderjob.cpp">
 			</ClCompile>
@@ -757,6 +765,8 @@
 			</ClCompile>
 		<ClCompile Include="..\src\libhw\vpl.cpp">
 			</ClCompile>
+		<ClCompile Include="..\src\libhw\shadow.cpp">
+			</ClCompile>
 		<ClCompile Include="..\src\libhw\basicshader.cpp">
 			</ClCompile>
 		<ClCompile Include="..\src\mitsuba\mitsuba.cpp">
@@ -804,6 +814,10 @@
 		<ClCompile Include="..\src\libcore\zstream.cpp">
 			</ClCompile>
 		<ClCompile Include="..\src\libcore\logger.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\libcore\spline.cpp">
+			</ClCompile>
+		<ClCompile Include="..\src\libcore\track.cpp">
 			</ClCompile>
 		<ClCompile Include="..\src\libcore\formatter.cpp">
 			</ClCompile>
@@ -937,6 +951,8 @@
 			</ClCompile>
 		<ClCompile Include="..\src\mtsgui\main.cpp">
 			</ClCompile>
+		<ClCompile Include="..\src\mtsgui\test_simdtonemap.cpp">
+			</ClCompile>
 		<ClCompile Include="..\src\mtsgui\programsettingsdlg.cpp">
 			</ClCompile>
 		<ClCompile Include="..\src\mtsgui\symlinks_auth.cpp">
@@ -1001,11 +1017,7 @@
 			</ClCompile>
 		<ClCompile Include="..\src\utils\addimages.cpp">
 			</ClCompile>
-		<ClCompile Include="..\src\utils\ttest.cpp">
-			</ClCompile>
 		<ClCompile Include="..\src\utils\kdbench.cpp">
-			</ClCompile>
-		<ClCompile Include="..\src\utils\uflakefit.cpp">
 			</ClCompile>
 		<ClCompile Include="..\src\utils\joinrgb.cpp">
 			</ClCompile>
@@ -1021,6 +1033,8 @@
 			</ClCompile>
 		<ClCompile Include="..\src\shapes\ply\ply_parser.cpp">
 			</ClCompile>
+		<ClCompile Include="..\src\shapes\cube.cpp">
+			</ClCompile>
 		<ClCompile Include="..\src\shapes\serialized.cpp">
 			</ClCompile>
 		<ClCompile Include="..\src\shapes\obj.cpp">
@@ -1033,9 +1047,9 @@
 			</ClCompile>
 		<ClCompile Include="..\src\shapes\hair.cpp">
 			</ClCompile>
-		<ClCompile Include="..\src\shapes\ply.cpp">
+		<ClCompile Include="..\src\shapes\deformable.cpp">
 			</ClCompile>
-		<ClCompile Include="..\src\shapes\animatedinstance.cpp">
+		<ClCompile Include="..\src\shapes\ply.cpp">
 			</ClCompile>
 		<ClCompile Include="..\src\shapes\cylinder.cpp">
 			</ClCompile>
