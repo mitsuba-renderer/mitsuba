@@ -117,33 +117,64 @@ MTS_NAMESPACE_BEGIN
  * </film>
  * \end{xml}
  *
- * \subsubsection*{Annotations:}
+ * \subsubsection*{Render-time annotations:}
  * \label{sec:film-annotations}
- * The \pluginref{ldrfilm} and \pluginref{hdrfilm} plugins support an additional
- * feature referred to as \emph{annotations}, which can be quite useful under
- * certain circumstances.
- *
+ * The \pluginref{ldrfilm} and \pluginref{hdrfilm} plugins support a
+ * feature referred to as \emph{render-time annotations} to facilitate
+ * record keeping.
  * Annotations are used to embed useful information inside a rendered image so
  * that this information is later available to anyone viewing the image.
  * Exemplary uses of this feature might be to store the frame or take number,
- * camera parameters, or other relevant scene information.
+ * rendering time, memory usage, camera parameters, or other relevant scene
+ * information.
  *
- * Annotations can either be created by means of a \emph{tag}, which is an entry
- * in the metadata table of the image file (does not modify the actual image data),
- * or a \emph{text} label which is ``burned'' into the image.
- *
+ * Currently, two different types are supported: a \code{metadata} annotation
+ * creates an entry in the metadata table of the image, which is preferable
+ * when the image contents should not be touched. Alternatively, a \code{label}
+ * annotation creates a line of text that is overlaid on top of the image. Note
+ * that this is only visible when opening the output file (i.e. the line is not
+ * shown in the interactive viewer).
  * The syntax of this looks as follows:
  *
  * \begin{xml}
- * <film type="ldrfilm">
- * 	<!-- Create a new metadata entry 'my_tag_name' and set it to the value 'my_tag_value' -->
- * 	<string name="tag('my_tag_name')" value="my_tag_value"/>
+ * <film type="hdrfilm">
+ * 	<!-- Create a new metadata entry 'my_tag_name' and set it to the
+ * 	     value 'my_tag_value' -->
+ * 	<string name="metadata['key_name']" value="Hello!"/>
  *
  * 	<!-- Add the label 'Hello' at the image position X=50, Y=80 -->
- * 	<string name="text(50,80)" value="Hello!"/>
+ * 	<string name="label[50, 80]" value="Hello!"/>
  * </film>
  * \end{xml}
+ *
+ * The \code{value="..."} argument may also include certain identifiers that will be
+ * evaluated and substituted when the rendered image is written to disk. These include
+ * \begin{center}
+ * \begin{savenotes}
+ * \begin{tabular}{ll}
+ * \toprule
+ * \code{\$scene['renderTime']}& Render time of the image, \code{renderTimePrecise} for more digits.\\
+ * \code{\$scene['memUsage']}& Mitsuba memory usage\footnote{The definition of this quantity unfortunately
+ * varies a bit from platform to platform. On Linux and Windows, it denotes the total
+ * amount of allocated RAM and disk-based memory that is private to the process (i.e. not
+ * shared or shareable), which most intuitively captures the amount of memory required for
+ * rendering. On OSX, it denotes the working set size---roughly speaking, this is the
+ * amount of RAM apportioned to the process (i.e. excluding disk-based memory).}.
+ * Use \code{memUsagePrecise} for more digits.\\
+ * \code{\$scene['coreCount']}& Number of local and remote cores working on the rendering job\\
+ * \code{\$scene['blockSize']}& Block size used to parallelize up the rendering workload\\
+ * \code{\$scene['sourceFile']}& Source file name\\
+ * \code{\$scene['destFile']}& Destination file name\\
+ * \code{\$integrator['..']}& Copy a named integrator parameter\\
+ * \code{\$sensor['..']}& Copy a named sensor parameter\\
+ * \code{\$sampler['..']}& Copy a named sampler parameter\\
+ * \code{\$film['..']}& Copy a named film parameter\\
+ * \bottomrule
+ * \end{tabular}
+ * \end{savenotes}
+ * \end{center}
  */
+
 class HDRFilm : public Film {
 public:
 	HDRFilm(const Properties &props) : Film(props) {

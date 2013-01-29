@@ -37,7 +37,7 @@ MTS_NAMESPACE_BEGIN
  *       A visualization of a fractal surface by Irving and Segerman.
  *       (a 2D Gospel curve developed up to level 5 along the third
  *       dimension). This scene makes use of instancing to replicate
- *       similar structures to cheaply render a structure that effectively
+ *       similar structures to cheaply render a shape that effectively
  *       consists of several hundred millions of triangles.
  *    }
  * }

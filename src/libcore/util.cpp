@@ -123,19 +123,6 @@ std::string indent(const std::string &string, int amount) {
 	return oss.str();
 }
 
-std::string memString(size_t size) {
-	Float value = (Float) size;
-	const char *prefixes[] = {
-		"B", "KiB", "MiB", "GiB", "TiB", "PiB"
-	};
-	int prefix = 0;
-	while (prefix < 5 && value > 1024.0f) {
-		value /= 1024.0f; ++prefix;
-	}
-	return formatString(prefix == 0 ?
-			"%.0f %s" : "%.2f %s", value, prefixes[prefix]);
-}
-
 void * __restrict allocAligned(size_t size) {
 #if defined(__WINDOWS__)
 	return _aligned_malloc(size, L1_CACHE_LINE_SIZE);
@@ -809,8 +796,6 @@ Float fresnelDiffuseReflectance(Float eta, bool fast) {
 }
 
 std::string timeString(Float time, bool precise) {
-	std::ostringstream os;
-
 	if (std::isnan(time) || std::isinf(time))
 		return "inf";
 
@@ -825,11 +810,30 @@ std::string timeString(Float time, bool precise) {
 		}
 	}
 
+	std::ostringstream os;
 	os << std::setprecision(precise ? 4 : 1)
 	   << std::fixed << time << suffix;
 
 	return os.str();
 }
+
+std::string memString(size_t size, bool precise) {
+	Float value = (Float) size;
+	const char *suffixes[] = {
+		"B", "KiB", "MiB", "GiB", "TiB", "PiB"
+	};
+	int suffix = 0;
+	while (suffix < 5 && value > 1024.0f) {
+		value /= 1024.0f; ++suffix;
+	}
+
+	std::ostringstream os;
+	os << std::setprecision(suffix == 0 ? 0 : (precise ? 4 : 1))
+	   << std::fixed << value << suffixes[suffix];
+
+	return os.str();
+}
+
 
 Float hypot2(Float a, Float b) {
 	Float r;

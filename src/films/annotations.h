@@ -75,48 +75,68 @@ void annotate(const Scene *scene, const Properties &properties,
 				if (!(strt = strchr((char *) value.c_str(), '$')))
 					break;
 
-				if (strncasecmp(strt, "$rendertime", 11) == 0) {
-					value.replace(strt-value.c_str(), 11, timeString(renderTime));
-				} else if (strncasecmp(strt, "$memusage", 11) == 0) {
-					value.replace(strt-value.c_str(), 11, memString(getPrivateMemoryUsage()));
-				} else {
-					char *par1, *par2;
-					if (!(par1 = strchr(strt, '[')))
-						break;
-					if (!(par2 = strchr(par1, ']')))
-						break;
+				char *par1, *par2;
+				if (!(par1 = strchr(strt, '[')))
+					break;
+				if (!(par2 = strchr(par1, ']')))
+					break;
 
-					std::string propSource   = value.substr(strt-value.c_str()+1, par1-strt-1);
-					std::string propKey = value.substr(par1-value.c_str()+1, par2-par1-1);
-					propSource.erase(std::remove_if(propSource.begin(), propSource.end(), ::isspace), propSource.end());
-					propKey.erase(std::remove_if(propKey.begin(), propKey.end(), ::isspace), propKey.end());
+				std::string propSource   = value.substr(strt-value.c_str()+1, par1-strt-1);
+				std::string propKey = value.substr(par1-value.c_str()+1, par2-par1-1);
+				propSource.erase(std::remove_if(propSource.begin(), propSource.end(), ::isspace), propSource.end());
+				propKey.erase(std::remove_if(propKey.begin(), propKey.end(), ::isspace), propKey.end());
 
-					if (!boost::starts_with(propKey, "'") || !boost::ends_with(propKey, "'"))
-						SLog(EError, "Encountered invalid key '%s'", propKey.c_str());
+				if (!boost::starts_with(propKey, "'") || !boost::ends_with(propKey, "'"))
+					SLog(EError, "Encountered invalid key '%s'", propKey.c_str());
 
-					propKey = propKey.substr(1, propKey.length()-2);
+				propKey = propKey.substr(1, propKey.length()-2);
 
-					const ConfigurableObject *source = NULL;
-					if (propSource == "film")
-						source = scene->getFilm();
-					else if (propSource == "sampler")
-						source = scene->getSampler();
-					else if (propSource == "sensor")
-						source = scene->getSensor();
-					else if (propSource == "integrator")
-						source = scene->getIntegrator();
-					else
-						SLog(EError, "Unknown data source '%s' (must be film/sampler/sensor/integrator)", propSource.c_str());
+				const ConfigurableObject *source = NULL;
+				if (propSource == "scene")
+					source = scene;
+				else if (propSource == "film")
+					source = scene->getFilm();
+				else if (propSource == "sampler")
+					source = scene->getSampler();
+				else if (propSource == "sensor")
+					source = scene->getSensor();
+				else if (propSource == "integrator")
+					source = scene->getIntegrator();
+				else
+					SLog(EError, "Unknown data source '%s' (must be film/sampler/sensor/integrator)", propSource.c_str());
 
-					std::string replacement;
+				std::string replacement;
+
+				if (source == scene) {
+					if (propKey == "renderTime") {
+						replacement = timeString(renderTime);
+					} else if (propKey == "renderTimePrecise") {
+						replacement = timeString(renderTime, true);
+					} else if (propKey == "memUsage") {
+						replacement = memString(getPrivateMemoryUsage());
+					} else if (propKey == "memUsagePrecise") {
+						replacement = memString(getPrivateMemoryUsage(), true);
+					} else if (propKey == "coreCount") {
+						replacement = formatString("%i", Scheduler::getInstance()->getCoreCount());
+					} else if (propKey == "blockSize") {
+						replacement = formatString("%i", scene->getBlockSize());
+					} else if (propKey == "sourceFile") {
+						replacement = scene->getSourceFile().string();
+					} else if (propKey == "destFile") {
+						replacement = scene->getDestinationFile().string();
+					}
+				}
+
+				if (replacement.empty()) {
 					if (propKey == "type")
 						replacement = source->getProperties().getPluginName();
 					else
 						replacement = source->getProperties().getAsString(propKey);
-
-					value.replace(strt-value.c_str(), par2-strt+1, replacement);
 				}
+
+				value.replace(strt-value.c_str(), par2-strt+1, replacement);
 			}
+
 			if (labelAnnotation) {
 				Vector2i size = font->getSize(value);
 				bitmap->fillRect(offset-Vector2i(4, 4), size + Vector2i(8, 8), Spectrum(0.0f));
