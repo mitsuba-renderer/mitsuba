@@ -339,7 +339,7 @@ public:
 
 				Spectrum diff = m_diffuseReflectance->eval(bRec.its);
 				if (m_nonlinear)
-					diff /= Spectrum(1.0f) - m_fdrInt*diff;
+					diff /= Spectrum(1.0f) - diff*m_fdrInt;
 				else
 					diff /= 1 - m_fdrInt;
 
@@ -357,6 +357,7 @@ public:
 			bRec.sampledType = EDiffuseReflection;
 
 			Spectrum diff = m_diffuseReflectance->eval(bRec.its);
+			diff /= Spectrum(1.0f) - m_fdrInt*diff;
 			if (m_nonlinear)
 				diff /= Spectrum(1.0f) - diff*m_fdrInt;
 			else
@@ -424,13 +425,13 @@ public:
 			bRec.wo = Warp::squareToCosineHemisphere(sample);
 			Float Fo = fresnelDielectricExt(Frame::cosTheta(bRec.wo), m_eta);
 
-			pdf = Warp::squareToCosineHemispherePdf(bRec.wo);
-
 			Spectrum diff = m_diffuseReflectance->eval(bRec.its);
 			if (m_nonlinear)
 				diff /= Spectrum(1.0f) - diff*m_fdrInt;
 			else
 				diff /= 1 - m_fdrInt;
+
+			pdf = Warp::squareToCosineHemispherePdf(bRec.wo);
 
 			return diff * (m_invEta2 * (1-Fi) * (1-Fo));
 		}
