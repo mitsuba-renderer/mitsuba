@@ -161,8 +161,12 @@ static void lookupMaterial(const Properties &props, Spectrum &sigmaS, Spectrum &
 		sigmaA = sigmaT - sigmaS;
 	}
 
-	if (props.hasProperty("g"))
-		g = Spectrum(props.getFloat("g"));
+	if (props.hasProperty("g")) {
+		if (props.getType("g") == Properties::ESpectrum)
+			g = props.getSpectrum("g");
+		else
+			g = Spectrum(props.getFloat("g"));
+	}
 
 	if (g.min() <= -1 || g.max() >= 1)
 		SLog(EError, "The anisotropy parameter 'g' must be in the range (-1, 1)!");
