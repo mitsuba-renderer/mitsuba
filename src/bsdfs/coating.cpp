@@ -468,7 +468,7 @@ public:
 			<< "vec3 " << evalName << "_refract(vec3 wi, out float T) {" << endl
 			<< "    float cosThetaI = cosTheta(wi);" << endl
 			<< "    bool entering = cosThetaI > 0.0;" << endl
-			<< "    float eta = " << evalName << "_eta, invEta = 1.0 / eta;" << endl
+			<< "    float invEta = 1.0 / " << evalName << "_eta;" << endl
 			<< "    float sinThetaTSqr =  invEta * invEta * sinTheta2(wi);" << endl
 			<< "    if (sinThetaTSqr >= 1.0) {" << endl
 			<< "        T = 0.0; /* Total internal reflection */" << endl
@@ -476,7 +476,7 @@ public:
 			<< "    } else {" << endl
 			<< "        float cosThetaT = sqrt(1.0 - sinThetaTSqr);" << endl
 			<< "        T = 1.0 - " << evalName << "_schlick(1.0 - abs(cosThetaI));" << endl
-			<< "        return vec3(eta*wi.x, eta*wi.y, entering ? cosThetaT : -cosThetaT);" << endl
+			<< "        return vec3(invEta*wi.x, invEta*wi.y, entering ? cosThetaT : -cosThetaT);" << endl
 			<< "    }" << endl
 			<< "}" << endl
 			<< endl

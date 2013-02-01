@@ -554,7 +554,7 @@ public:
 			<< "vec3 " << evalName << "_refract(vec3 wi, out float T) {" << endl
 			<< "    float cosThetaI = cosTheta(wi);" << endl
 			<< "    bool entering = cosThetaI > 0.0;" << endl
-			<< "    float invEta = " << evalName << "_eta;" << endl
+			<< "    float invEta = 1.0 / " << evalName << "_eta;" << endl
 			<< "    float sinThetaTSqr =  invEta * invEta * sinTheta2(wi);" << endl
 			<< "    if (sinThetaTSqr >= 1.0) {" << endl
 			<< "        T = 0.0; /* Total internal reflection */" << endl
