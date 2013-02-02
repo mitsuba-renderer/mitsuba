@@ -58,7 +58,7 @@ extern MTS_EXPORT_CORE std::string formatString(const char *pFmt, ...);
 extern MTS_EXPORT_CORE std::string timeString(Float time, bool precise = false);
 
 /// Turn a memory size into a human-readable string
-extern MTS_EXPORT_CORE std::string memString(size_t size);
+extern MTS_EXPORT_CORE std::string memString(size_t size, bool precise = false);
 
 /// Return a string representation of a list of objects
 template<class Iterator> std::string containerToString(const Iterator &start, const Iterator &end) {

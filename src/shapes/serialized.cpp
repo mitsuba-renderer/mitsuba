@@ -17,7 +17,6 @@
 */
 
 #include <mitsuba/render/trimesh.h>
-#include <mitsuba/render/scenehandler.h>
 #include <mitsuba/core/properties.h>
 #include <mitsuba/core/fstream.h>
 #include <mitsuba/core/fresolver.h>
@@ -30,6 +29,9 @@
 #define MTS_SERIALIZED_CACHE_SIZE 4
 
 MTS_NAMESPACE_BEGIN
+
+/* Avoid having to include scenehandler.h */
+extern MTS_EXPORT_RENDER void pushSceneCleanupHandler(void (*cleanup)());
 
 /*!\plugin{serialized}{Serialized mesh loader}
  * \order{7}
@@ -57,7 +59,6 @@ MTS_NAMESPACE_BEGIN
  *	   }
  *     \parameter{toWorld}{\Transform\Or\Animation}{
  *	      Specifies an optional linear object-to-world transformation.
- *        Note that non-uniform scales are not permitted!
  *        \default{none (i.e. object space $=$ world space)}
  *     }
  * }
@@ -185,7 +186,7 @@ public:
 			}
 			if (m_normals) {
 				for (size_t i=0; i<m_vertexCount; ++i)
-					m_normals[i] = objectToWorld(m_normals[i]);
+					m_normals[i] = normalize(objectToWorld(m_normals[i]));
 			}
 		}
 
@@ -252,16 +253,23 @@ private:
 		ref<FileStream> m_fstream;
 	};
 
-	struct FileStreamCache : LRUCache<fs::path, std::less<fs::path>,
-		                              boost::shared_ptr<MeshLoader> > {
+	typedef LRUCache<fs::path, std::less<fs::path>,
+		boost::shared_ptr<MeshLoader> > MeshLoaderCache;
 
+	class FileStreamCache : MeshLoaderCache {
+	public:
 		inline boost::shared_ptr<MeshLoader> get(const fs::path& path) {
 			bool dummy;
-			return LRUCache::get(path, dummy);
+			return MeshLoaderCache::get(path, dummy);
 		}
 
-		FileStreamCache() : LRUCache(MTS_SERIALIZED_CACHE_SIZE,
-			&boost::make_shared<MeshLoader, const fs::path&>) {}
+		FileStreamCache() : MeshLoaderCache(MTS_SERIALIZED_CACHE_SIZE,
+			&FileStreamCache::create) { }
+
+	private:
+		inline static boost::shared_ptr<MeshLoader> create(const fs::path &path) {
+			return boost::make_shared<MeshLoader>(path);
+		}
 	};
 
 	/// Release all currently held offset caches / file streams
@@ -281,7 +289,7 @@ private:
 		if (EXPECT_NOT_TAKEN(cache == NULL)) {
 			cache = new FileStreamCache();
 			m_cache.set(cache);
-			SceneHandler::pushCleanupHandler(&SerializedMesh::flushCache);
+			mitsuba::pushSceneCleanupHandler(&SerializedMesh::flushCache);
 		}
 
 		boost::shared_ptr<MeshLoader> meshLoader = cache->get(filePath);

@@ -419,7 +419,8 @@ protected:
 class SmoothCoatingShader : public Shader {
 public:
 	SmoothCoatingShader(Renderer *renderer, Float eta, const BSDF *nested,
-			const Texture *sigmaA) : Shader(renderer, EBSDFShader), m_nested(nested), m_sigmaA(sigmaA), m_eta(eta) {
+			const Texture *sigmaA) : Shader(renderer, EBSDFShader),
+			m_nested(nested), m_sigmaA(sigmaA), m_eta(eta) {
 		m_nestedShader = renderer->registerShaderForResource(m_nested.get());
 		m_sigmaAShader = renderer->registerShaderForResource(m_sigmaA.get());
 		m_R0 = fresnelDielectricExt(1.0f, eta);
@@ -467,15 +468,15 @@ public:
 			<< "vec3 " << evalName << "_refract(vec3 wi, out float T) {" << endl
 			<< "    float cosThetaI = cosTheta(wi);" << endl
 			<< "    bool entering = cosThetaI > 0.0;" << endl
-			<< "    float eta = " << evalName << "_eta;" << endl
-			<< "    float sinThetaTSqr =  eta * eta * sinTheta2(wi);" << endl
+			<< "    float invEta = 1.0 / " << evalName << "_eta;" << endl
+			<< "    float sinThetaTSqr =  invEta * invEta * sinTheta2(wi);" << endl
 			<< "    if (sinThetaTSqr >= 1.0) {" << endl
 			<< "        T = 0.0; /* Total internal reflection */" << endl
 			<< "        return vec3(0.0);" << endl
 			<< "    } else {" << endl
 			<< "        float cosThetaT = sqrt(1.0 - sinThetaTSqr);" << endl
 			<< "        T = 1.0 - " << evalName << "_schlick(1.0 - abs(cosThetaI));" << endl
-			<< "        return vec3(eta*wi.x, eta*wi.y, entering ? cosThetaT : -cosThetaT);" << endl
+			<< "        return vec3(invEta*wi.x, invEta*wi.y, entering ? cosThetaT : -cosThetaT);" << endl
 			<< "    }" << endl
 			<< "}" << endl
 			<< endl
@@ -512,10 +513,11 @@ public:
 			<< "                                 1/abs(cosTheta(woPrime))));" << endl
 			<< "    if (cosTheta(wi)*cosTheta(wo) > 0) {" << endl
 			<< "        vec3 H = normalize(wi + wo);" << endl
+			<< "        if (H.z < 0) H = -H;" << endl
 			<< "        float D = " << evalName << "_D(H)" << ";" << endl
 			<< "        float G = " << evalName << "_G(H, wi, wo);" << endl
-			<< "        float F = " << evalName << "_schlick(1-dot(wi, H));" << endl
-			<< "        result += vec3(F * D * G / (4*cosTheta(wi)));" << endl
+			<< "        float F = " << evalName << "_schlick(1-abs(dot(wi, H)));" << endl
+			<< "        result += vec3(abs(F * D * G) / abs(4*cosTheta(wi)));" << endl
 			<< "    }" << endl
 			<< "    return result;" << endl
 			<< "}" << endl

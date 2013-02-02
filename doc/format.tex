@@ -97,7 +97,7 @@ and one or more emitters. Here is a more complex example:
 
 		<!-- This mesh is an area emitter -->
 		<emitter type="area">
-			<rgb name="intensity" value="100,400,100"/>
+			<rgb name="radiance" value="100,400,100"/>
 		</emitter>
 	</shape>
 </scene>
@@ -289,7 +289,7 @@ do not explicitly have to be specified.
 \subsection{Animated transformations}
 Most shapes, emitters, and sensors in Mitsuba can accept both normal transformations
 and \emph{animated transformations} as parameters. The latter is useful to
-render scenes involving motion blur. The syntax used to specify these
+render scenes involving motion blur (Figure~\ref{fig:animated-transform}). The syntax used to specify these
 is slightly different:
 \begin{xml}
 <animation name="trafoProperty">
@@ -304,6 +304,11 @@ is slightly different:
   .. additional transformations (optional) ..
 </animation>
 \end{xml}
+\renderings{
+ \fbox{\includegraphics[width=.6\textwidth]{images/animated_transform}}\hfill\,
+ \caption{\label{fig:animated-transform}Beware the dragon: a triangle mesh undergoing linear motion with several keyframes (object courtesy of XYZRGB)}
+}
+
 Mitsuba then decomposes each transformation into a scale, translation, and
 rotation component and interpolates\footnote{Using linear interpolation
 for the scale and translation component and spherical linear quaternion
@@ -311,7 +316,7 @@ interpolation for the rotation component.} these for intermediate
 time values.
 It is important to specify appropriate shutter open/close times
 to the sensor so that the motion is visible.
-
+\newpage
 \subsection{References}
 Quite often, you will find yourself using an object (such as a material) in many places. To avoid having
 to declare it over and over again, which wastes memory, you can make use of references. Here is an example

@@ -1,7 +1,7 @@
 Name:		mitsuba
-Version:	0.4.2
+Version:	0.4.3
 Release:	1%{?dist}
-Summary:	Mitsuba renderer 
+Summary:	Mitsuba renderer
 Group:		Applications/Graphics
 License:	GPL-3
 URL:		http://www.mitsuba-renderer.org
@@ -10,11 +10,11 @@ BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildRequires:	gcc-c++ scons boost-devel qt4-devel OpenEXR-devel xerces-c-devel python-devel glew-devel collada-dom-devel eigen3-devel
 Requires:	boost qt4 OpenEXR-libs xerces-c python libGLEWmx collada-dom
 %description
-Mitsuba is an extensible rendering framework written in portable C++. It implements unbiased as well as biased techniques and contains heavy optimizations targeted towards current CPU architectures. 
+Mitsuba is an extensible rendering framework written in portable C++. It implements unbiased as well as biased techniques and contains heavy optimizations targeted towards current CPU architectures.
 
 The program currently runs on Linux, MacOS X and Microsoft Windows and makes use of SSE2 optimizations on x86 and x86_64 platforms. So far, its main use has been as a testbed for algorithm development in computer graphics, but there are many other interesting applications.
 
-Mitsuba comes with a command-line interface as well as a graphical frontend to interactively explore scenes. While navigating, a rough preview is shown that becomes increasingly accurate as soon as all movements are stopped. Once a viewpoint has been chosen, a wide range of rendering techniques can be used to generate images, and their parameters can be tuned from within the program. 
+Mitsuba comes with a command-line interface as well as a graphical frontend to interactively explore scenes. While navigating, a rough preview is shown that becomes increasingly accurate as soon as all movements are stopped. Once a viewpoint has been chosen, a wide range of rendering techniques can be used to generate images, and their parameters can be tuned from within the program.
 %package devel
 Summary:	Mitsuba development files
 Requires:	boost-devel qt4-devel OpenEXR-devel xerces-c-devel python-devel glew-devel collada-dom-devel
@@ -62,6 +62,9 @@ rm -rf $RPM_BUILD_ROOT
 %files devel
 /usr/include/*
 %changelog
+
+* Tue Jan 29 2013 Wenzel Jakob <wenzel@cs.cornell.edu> 0.4.3%{?dist}
+- Upgrade to version 0.4.3
 
 * Wed Oct 31 2012 Wenzel Jakob <wenzel@cs.cornell.edu> 0.4.2%{?dist}
 - Upgrade to version 0.4.2

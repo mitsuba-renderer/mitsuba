@@ -84,7 +84,11 @@ public:
 	 * (For lower roughness values, please switch to the smooth BSDF variants)
 	 */
 	Float transformRoughness(Float value) const {
-		value = std::max(value, (Float) 1e-5f);
+		#if defined(SINGLE_PRECISION)
+			value = std::max(value, (Float) 1e-3f);
+		#else
+			value = std::max(value, (Float) 1e-5f);
+		#endif
 		if (m_type == EPhong || m_type == EAshikhminShirley)
 			value = std::max(2 / (value * value) - 2, (Float) 0.1f);
 		return value;

@@ -274,7 +274,7 @@ void SceneHandler::startElement(const XMLCh* const xmlName,
 	m_context.push(context);
 }
 
-void SceneHandler::pushCleanupHandler(void (*cleanup)()) {
+void pushSceneCleanupHandler(void (*cleanup)()) {
 	__cleanup_tls.get().insert(cleanup);
 }
 

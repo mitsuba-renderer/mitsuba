@@ -68,6 +68,9 @@ private:
 # pragma warning( pop )
 #endif
 
+/// Push a cleanup handler to be executed after loading the scene is done
+extern MTS_EXPORT_RENDER void pushSceneCleanupHandler(void (*cleanup)());
+
 /**
  * \brief XML parser for Mitsuba scene files. To be used with the
  * SAX interface of Xerces-C++.
@@ -101,9 +104,6 @@ public:
 	/// Free the memory taken up by staticInitialization()
 	static void staticShutdown();
 
-	/// Push a cleanup handler to be executed after loading the scene is done
-	static void pushCleanupHandler(void (*cleanup)());
-
 	// -----------------------------------------------------------------------
 	//  Implementation of the SAX DocumentHandler interface
 	// -----------------------------------------------------------------------
@@ -136,8 +136,7 @@ protected:
 private:
 	struct ParseContext {
 		inline ParseContext(ParseContext *_parent)
-		 : parent(_parent) {
-		}
+		 : parent(_parent) { }
 
 		ParseContext *parent;
 		Properties properties;

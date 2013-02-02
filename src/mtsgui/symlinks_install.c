@@ -85,11 +85,12 @@ int main(int argc, char **argv) {
 	install(argv[1], "mtsimport");
 	installPython(argv[1], "2.6");
 	installPython(argv[1], "2.7");
-	struct passwd *pw = getpwuid(atoi(argv[2]));
 
-	appendShellConfig(pw->pw_dir, ".bashrc", "\nexport LD_LIBRARY_PATH=%s/Contents/Frameworks:$LD_LIBRARY_PATH\n", argv[1]);
-	appendShellConfig(pw->pw_dir, ".zshrc", "\nexport LD_LIBRARY_PATH=%s/Contents/Frameworks:$LD_LIBRARY_PATH\n", argv[1]);
-	appendShellConfig(pw->pw_dir, ".cshrc", "\nsetenv LD_LIBRARY_PATH %s/Contents/Frameworks:${LD_LIBRARY_PATH}\n", argv[1]);
+	/// this is not required anymore as of Mitsuba 0.4.3
+	//struct passwd *pw = getpwuid(atoi(argv[2]));
+	//appendShellConfig(pw->pw_dir, ".bashrc", "\nexport LD_LIBRARY_PATH=%s/Contents/Frameworks:$LD_LIBRARY_PATH\n", argv[1]);
+	//appendShellConfig(pw->pw_dir, ".zshrc", "\nexport LD_LIBRARY_PATH=%s/Contents/Frameworks:$LD_LIBRARY_PATH\n", argv[1]);
+	//appendShellConfig(pw->pw_dir, ".cshrc", "\nsetenv LD_LIBRARY_PATH %s/Contents/Frameworks:${LD_LIBRARY_PATH}\n", argv[1]);
 
 	return 0;
 }

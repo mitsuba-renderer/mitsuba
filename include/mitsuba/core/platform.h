@@ -203,13 +203,14 @@ MTS_NAMESPACE_END
 
 #define snprintf _snprintf
 #define vsnprintf _vsnprintf
-#define strncasecmp _strnicmp
 
+namespace mitsuba {
 #if defined(__64BIT__)
 typedef long long ssize_t;
 #else
 typedef long ssize_t;
 #endif
+};
 
 namespace std {
 	inline char tolower(char c) {
