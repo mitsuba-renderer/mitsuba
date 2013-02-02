@@ -8,6 +8,13 @@
 
 MTS_NAMESPACE_BEGIN
 
+#if defined(__WINDOWS__)
+namespace
+{
+void dummyModuleFunc() {}
+}
+#endif
+
 FileResolver::FileResolver() {
 	m_paths.push_back(fs::current_path());
 #if defined(__LINUX__)
@@ -37,13 +44,22 @@ FileResolver::FileResolver() {
 #elif defined(__WINDOWS__)
 	std::vector<WCHAR> lpFilename(MAX_PATH);
 
+	// Module handle to this DLL. If the function fails it sets handle to NULL.
+	// In that case GetModuleFileName will get the name of the executable which
+	// is acceptable soft-failure behavior.
+	HMODULE handle;
+	GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS
+	                 | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+          reinterpret_cast<LPCWSTR>(&dummyModuleFunc), &handle);
+
 	// Try to get the path with the default MAX_PATH length (260 chars)
-	DWORD nSize = GetModuleFileNameW(NULL, &lpFilename[0], MAX_PATH);
+	DWORD nSize = GetModuleFileNameW(handle, &lpFilename[0], MAX_PATH);
 
 	// Adjust the buffer size in case if was too short
-	while (nSize == lpFilename.size()) {
+	while (nSize != 0 && nSize == lpFilename.size()) {
 		lpFilename.resize(nSize * 2);
-		nSize = GetModuleFileNameW(NULL, &lpFilename[0], nSize);
+		nSize = GetModuleFileNameW(handle, &lpFilename[0],
+			static_cast<DWORD>(lpFilename.size()));
 	}
 
 	// There is an error if and only if the function returns 0
