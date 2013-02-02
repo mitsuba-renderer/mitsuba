@@ -66,7 +66,8 @@ public:
 
 	int run(int argc, char **argv) {
 		ref<FileResolver> fileResolver = Thread::getThread()->getFileResolver();
-		char optchar, *end_ptr = NULL;
+		int optchar;
+		char *end_ptr = NULL;
 		Float intersectionCost = -1, traversalCost = -1, emptySpaceBonus = -1;
 		int stopPrims = -1, maxDepth = -1, exactPrims = -1, minMaxBins = -1;
 		bool clip = true, parallel = true, retract = true, fitParameters = false;
