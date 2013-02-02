@@ -175,6 +175,34 @@ static FINLINE uint64_t rdtsc(void) {
   __asm__ __volatile__ ("rdtsc" : "=a"(lo), "=d"(hi));
   return ((uint64_t) lo)| (((uint64_t) hi) << 32);
 }
+#elif defined(__ARMEL__)
+static FINLINE uint64_t rdtsc(void) {
+	// Code from gperftoos:
+	// https://code.google.com/p/gperftools/source/browse/trunk/src/base/cycleclock.h
+	uint32_t pmccntr;
+	uint32_t pmuseren;
+	uint32_t pmcntenset;
+	// Read the user mode perf monitor counter access permissions.
+	asm volatile ("mrc p15, 0, %0, c9, c14, 0" : "=r" (pmuseren));
+	if (EXPECT_TAKEN(pmuseren & 1)) {  // Allows reading perfmon counters for user mode code.
+		asm volatile ("mrc p15, 0, %0, c9, c12, 1" : "=r" (pmcntenset));
+		if (EXPECT_TAKEN(pmcntenset & 0x80000000ul)) {  // Is it counting?
+			asm volatile ("mrc p15, 0, %0, c9, c13, 0" : "=r" (pmccntr));
+			// The counter is set up to count every 64th cycle
+			return static_cast<uint64_t>(pmccntr) * 64;  // Should optimize to << 6
+		}
+	}
+	// Soft-failover, assuming 1.5GHz CPUs
+#if defined(_POSIX_TIMERS) && (_POSIX_TIMERS > 0) && defined(_POSIX_CPUTIME)
+	timespec ts;
+	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ts);
+	return static_cast<uint64_t>((ts.tv_sec + ts.tv_nsec * 1e-9) * 1.5e9);
+#else
+	timeval tv;
+	gettimeofday(&tv, NULL);
+	return static_cast<uint64_t>((tv.tv_sec + tv.tv_usec * 1e-6) * 1.5e9);
+#endif
+}
 #endif
 #elif defined(__MSVC__)
 static FINLINE __int64 rdtsc(void) {
