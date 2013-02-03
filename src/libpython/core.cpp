@@ -347,6 +347,12 @@ static bp::tuple spectrum_toXYZ(const Spectrum &s) {
 	return bp::make_tuple(x, y, z);
 }
 
+static bp::tuple spectrum_toIPT(const Spectrum &s) {
+	Float I, P, T;
+	s.toIPT(I, P, T);
+	return bp::make_tuple(I, P, T);
+}
+
 void aabb_expandby_aabb(AABB *aabb, const AABB &aabb2) { aabb->expandBy(aabb2); }
 void aabb_expandby_point(AABB *aabb, const Point &p) { aabb->expandBy(p); }
 Float aabb_distanceto_aabb(AABB *aabb, const AABB &aabb2) { return aabb->distanceTo(aabb2); }
@@ -526,9 +532,10 @@ Transform transform_glOrthographic2(Float clipLeft, Float clipRight,
 		clipBottom, clipTop, clipNear, clipFar);
 }
 
-
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(fromLinearRGB_overloads, fromLinearRGB, 3, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(fromXYZ_overloads, fromXYZ, 3, 4)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(fromIPT_overloads, fromIPT, 3, 4)
+
 
 void export_core() {
 	bp::to_python_converter<fs::path, path_to_python_str>();
@@ -981,6 +988,8 @@ void export_core() {
 		.def("getLuminance", &Spectrum::getLuminance)
 		.def("fromXYZ", &Spectrum::fromXYZ, fromXYZ_overloads())
 		.def("toXYZ", &spectrum_toXYZ)
+		.def("fromIPT", &Spectrum::fromIPT, fromIPT_overloads())
+		.def("toIPT", &spectrum_toIPT)
 		.def("fromLinearRGB", &Spectrum::fromLinearRGB, fromLinearRGB_overloads())
 		.def("toLinearRGB", &spectrum_toLinearRGB)
 		.def("fromSRGB", &Spectrum::fromSRGB)
