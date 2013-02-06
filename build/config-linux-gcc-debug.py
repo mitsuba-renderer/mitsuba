@@ -20,11 +20,11 @@ GLLIB          = ['GL', 'GLU', 'GLEWmx', 'Xxf86vm', 'X11']
 GLFLAGS        = ['-DGLEW_MX']
 BOOSTLIB       = ['boost_system', 'boost_filesystem', 'boost_thread']
 COLLADAINCLUDE = ['/usr/include/collada-dom', '/usr/include/collada-dom/1.4']
-COLLADALIB     = ['collada14dom']
+COLLADALIB     = ['collada14dom', 'xml2']
 
 # The following assumes that the Mitsuba bindings should be built for the
 # "default" Python version. It is also possible to build bindings for multiple
-# versions at the same time by explicitly specifying e.g. PYTHON27INCLUDE, 
+# versions at the same time by explicitly specifying e.g. PYTHON27INCLUDE,
 # PYTHON27LIB, PYTHON27LIBDIR and PYTHON32INCLUDE, PYTHON32LIB, PYTHON32LIBDIR
 
 pyver = os.popen("python --version 2>&1 | grep -oE '([[:digit:]].[[:digit:]])'").read().strip().replace('.', '')
