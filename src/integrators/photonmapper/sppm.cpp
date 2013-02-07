@@ -187,6 +187,10 @@ public:
 		enableFPExceptions();
 #endif
 
+#if defined(MTS_OPENMP)
+		Thread::initializeOpenMP(nCores);
+#endif
+
 		int it=0;
 		while (m_running) {
 			distributedRTPass(scene, samplers);

@@ -242,6 +242,10 @@ public:
 			}
 		}
 
+		#if defined(MTS_OPENMP)
+			Thread::initializeOpenMP(nCores);
+		#endif
+
 		int it = 0;
 		while (m_running)
 			photonMapPass(++it, queue, job, film, sceneResID, sensorResID, indepSamplerResID);
