@@ -156,7 +156,7 @@ public:
 		bool sampleTransmission = (bRec.typeMask & ENull)
 				&& (bRec.component == -1 || bRec.component == 1) && measure == EDiscrete;
 
-		Float R = fresnelDielectricExt(Frame::cosTheta(bRec.wi), m_eta), T = 1-R;
+		Float R = fresnelDielectricExt(std::abs(Frame::cosTheta(bRec.wi)), m_eta), T = 1-R;
 
 		// Account for internal reflections: R' = R + TRT + TR^3T + ..
 		if (R < 1)
@@ -181,7 +181,7 @@ public:
 		bool sampleTransmission = (bRec.typeMask & ENull)
 				&& (bRec.component == -1 || bRec.component == 1) && measure == EDiscrete;
 
-		Float R = fresnelDielectricExt(Frame::cosTheta(bRec.wi), m_eta), T = 1-R;
+		Float R = fresnelDielectricExt(std::abs(Frame::cosTheta(bRec.wi)), m_eta), T = 1-R;
 
 		// Account for internal reflections: R' = R + TRT + TR^3T + ..
 		if (R < 1)
