@@ -118,8 +118,6 @@ public:
 		m_components.push_back(ENull | EFrontSide | EBackSide
 			| (m_specularTransmittance->isConstant() ? 0 : ESpatiallyVarying));
 
-		m_components.clear();
-		m_components.push_back(ENull | EFrontSide | EBackSide);
 		m_usesRayDifferentials = false;
 
 		m_usesRayDifferentials =
