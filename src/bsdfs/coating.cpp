@@ -225,7 +225,7 @@ public:
 			&& (bRec.component == -1 || bRec.component < (int) m_components.size()-1);
 
 		if (measure == EDiscrete && sampleSpecular &&
-				absDot(reflect(bRec.wi), bRec.wo) > 1-DeltaEpsilon) {
+			    std::abs(dot(reflect(bRec.wi), bRec.wo)-1) < DeltaEpsilon) {
 			return m_specularReflectance->eval(bRec.its) *
 				fresnelDielectricExt(std::abs(Frame::cosTheta(bRec.wi)), m_eta);
 		} else if (sampleNested) {
@@ -274,7 +274,7 @@ public:
 			(1-R12) * (1-m_specularSamplingWeight));
 
 		if (measure == EDiscrete && sampleSpecular &&
-				absDot(reflect(bRec.wi), bRec.wo) > 1-DeltaEpsilon) {
+			    std::abs(dot(reflect(bRec.wi), bRec.wo)-1) < DeltaEpsilon) {
 			return sampleNested ? probSpecular : 1.0f;
 		} else if (sampleNested) {
 			Float R21;

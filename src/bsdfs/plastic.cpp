@@ -255,7 +255,7 @@ public:
 		if (hasSpecular) {
 			/* Check if the provided direction pair matches an ideal
 			   specular reflection; tolerate some roundoff errors */
-			if (absDot(reflect(bRec.wi), bRec.wo) > 1-DeltaEpsilon)
+			if (std::abs(dot(reflect(bRec.wi), bRec.wo)-1) < DeltaEpsilon)
 				return m_specularReflectance->eval(bRec.its) * Fi;
 		} else if (hasDiffuse) {
 			Float Fo = fresnelDielectricExt(Frame::cosTheta(bRec.wo), m_eta);
@@ -294,7 +294,7 @@ public:
 		if (hasSpecular && measure == EDiscrete) {
 			/* Check if the provided direction pair matches an ideal
 			   specular reflection; tolerate some roundoff errors */
-			if (absDot(reflect(bRec.wi), bRec.wo) > 1-DeltaEpsilon)
+			if (std::abs(dot(reflect(bRec.wi), bRec.wo)-1) < DeltaEpsilon)
 				return probSpecular;
 		} else if (hasDiffuse && measure == ESolidAngle) {
 			return Warp::squareToCosineHemispherePdf(bRec.wo) * (1-probSpecular);

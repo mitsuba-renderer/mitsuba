@@ -163,12 +163,12 @@ public:
 			R += T*T * R / (1-R*R);
 
 		if (Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo) >= 0) {
-			if (!sampleReflection || absDot(reflect(bRec.wi), bRec.wo) < 1-DeltaEpsilon)
+			if (!sampleReflection || std::abs(dot(reflect(bRec.wi), bRec.wo)-1) > DeltaEpsilon)
 				return Spectrum(0.0f);
 
 			return m_specularReflectance->eval(bRec.its) * R;
 		} else {
-			if (!sampleTransmission || absDot(transmit(bRec.wi), bRec.wo) < 1-DeltaEpsilon)
+			if (!sampleTransmission || std::abs(dot(transmit(bRec.wi), bRec.wo)-1) > DeltaEpsilon)
 				return Spectrum(0.0f);
 
 			return m_specularTransmittance->eval(bRec.its) * (1 - R);
@@ -188,12 +188,12 @@ public:
 			R += T*T * R / (1-R*R);
 
 		if (Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo) >= 0) {
-			if (!sampleReflection || absDot(reflect(bRec.wi), bRec.wo) < 1-DeltaEpsilon)
+			if (!sampleReflection || std::abs(dot(reflect(bRec.wi), bRec.wo)-1) > DeltaEpsilon)
 				return 0.0f;
 
 			return sampleTransmission ? R : 1.0f;
 		} else {
-			if (!sampleTransmission || absDot(transmit(bRec.wi), bRec.wo) < 1-DeltaEpsilon)
+			if (!sampleTransmission || std::abs(dot(transmit(bRec.wi), bRec.wo)-1) > DeltaEpsilon)
 				return 0.0f;
 
 			return sampleReflection ? 1-R : 1.0f;

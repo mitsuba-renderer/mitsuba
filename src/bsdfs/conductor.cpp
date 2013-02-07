@@ -229,7 +229,7 @@ public:
 		if (!sampleReflection || measure != EDiscrete ||
 			Frame::cosTheta(bRec.wi) <= 0 ||
 			Frame::cosTheta(bRec.wo) <= 0 ||
-			absDot(reflect(bRec.wi), bRec.wo) < 1-DeltaEpsilon)
+			std::abs(dot(reflect(bRec.wi), bRec.wo)-1) > DeltaEpsilon)
 			return Spectrum(0.0f);
 
 		return m_specularReflectance->eval(bRec.its) *
@@ -245,7 +245,7 @@ public:
 		if (!sampleReflection || measure != EDiscrete ||
 			Frame::cosTheta(bRec.wi) <= 0 ||
 			Frame::cosTheta(bRec.wo) <= 0 ||
-			absDot(reflect(bRec.wi), bRec.wo) < 1-DeltaEpsilon)
+			std::abs(dot(reflect(bRec.wi), bRec.wo)-1) > DeltaEpsilon)
 			return 0.0f;
 
 		return 1.0f;
