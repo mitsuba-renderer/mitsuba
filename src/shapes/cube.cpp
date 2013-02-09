@@ -43,7 +43,7 @@ static uint32_t CubeData_triangles[][3] = {{0, 1, 2}, {3, 0, 2}, {4, 5, 6}, {7, 
  * }
  *
  * \renderings{
- *     \rendering{Basic example, see \lstref{cube-basic}}
+ *     \rendering{Basic example}
  *         {shape_cube_basic}
  *     \rendering{A textured and stretched cube with the default parameterization
  *      (Listing~\ref{lst:cube-example})}
