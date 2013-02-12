@@ -17,11 +17,10 @@
 
 MTS_NAMESPACE_BEGIN
 
-#if defined(__WINDOWS__)
-namespace
-{
-void dummyModuleFunc() {}
-}
+#if defined(__WINDOWS__) || defined(__LINUX__)
+	namespace {
+		void dummySymbol() { }
+	}
 #endif
 
 FileResolver::FileResolver() {
@@ -29,7 +28,8 @@ FileResolver::FileResolver() {
 	fs::path basePath;
 #if defined(__LINUX__)
 	Dl_info info;
-	dladdr((void *) &FileResolver::toString, &info);
+
+	dladdr((const void *) &dummySymbol, &info);
 	if (info.dli_fname) {
 		/* Try to detect a few default setups */
 		if (boost::starts_with(info.dli_fname, "/usr/lib")) {
@@ -38,7 +38,7 @@ FileResolver::FileResolver() {
 			basePath = fs::path("/usr/local/share/mitsuba");
 		} else {
 			/* This is a locally-compiled repository */
-			basePath = fs::path(info.dli_fname).parent_path().parent_path().parent_path();
+			basePath = fs::path(info.dli_fname).parent_path();
 		}
 	}
 #elif defined(__OSX__)
@@ -63,7 +63,7 @@ FileResolver::FileResolver() {
 	HMODULE handle;
 	GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS
 	                 | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-          reinterpret_cast<LPCWSTR>(&dummyModuleFunc), &handle);
+          reinterpret_cast<LPCWSTR>(&dummySymbol), &handle);
 
 	// Try to get the path with the default MAX_PATH length (260 chars)
 	DWORD nSize = GetModuleFileNameW(handle, &lpFilename[0], MAX_PATH);
@@ -81,7 +81,11 @@ FileResolver::FileResolver() {
 	else
 		Log(EError, "Could not detect the executable path! (%s)", lastErrorText().c_str());
 #endif
-	m_paths.push_back(fs::canonical(basePath));
+	#if BOOST_VERSION >= 104800
+		m_paths.push_back(fs::canonical(basePath));
+	#else
+		m_paths.push_back(fs::absolute(basePath));
+	#endif
 	m_paths.push_back(fs::current_path());
 }
 
