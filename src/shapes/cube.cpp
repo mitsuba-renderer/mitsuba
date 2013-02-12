@@ -21,7 +21,7 @@
 
 MTS_NAMESPACE_BEGIN
 
-static Float CubeData_vertexPositions[][3] = {{1, 0, 0}, {1, 0, 1}, {0, 0, 1}, {0, 0, 0}, {1, 1, 0}, {0, 1, 0}, {0, 1, 1}, {1, 1, 1}, {1, 0, 0}, {1, 1, 0}, {1, 1, 1}, {1, 0, 1}, {1, 0, 1}, {1, 1, 1}, {0, 1, 1}, {0, 0, 1}, {0, 0, 1}, {0, 1, 1}, {0, 1, 0}, {0, 0, 0}, {1, 1, 0}, {1, 0, 0}, {0, 0, 0}, {0, 1, 0}};
+static Float CubeData_vertexPositions[][3] = {{1, -1, -1}, {1, -1, 1}, {-1, -1, 1}, {-1, -1, -1}, {1, 1, -1}, {-1, 1, -1}, {-1, 1, 1}, {1, 1, 1}, {1, -1, -1}, {1, 1, -1}, {1, 1, 1}, {1, -1, 1}, {1, -1, 1}, {1, 1, 1}, {-1, 1, 1}, {-1, -1, 1}, {-1, -1, 1}, {-1, 1, 1}, {-1, 1, -1}, {-1, -1, -1}, {1, 1, -1}, {1, -1, -1}, {-1, -1, -1}, {-1, 1, -1}};
 
 static Float CubeData_vertexNormals[][3] = {{0, -1, 0}, {0, -1, 0}, {0, -1, 0}, {0, -1, 0}, {0, 1, 0}, {0, 1, 0}, {0, 1, 0}, {0, 1, 0}, {1, 0, 0}, {1, 0, 0}, {1, 0, 0}, {1, 0, 0}, {0, 0, 1}, {0, 0, 1}, {0, 0, 1}, {0, 0, 1}, {-1, 0, 0}, {-1, 0, 0}, {-1, 0, 0}, {-1, 0, 0}, {0, 0, -1}, {0, 0, -1}, {0, 0, -1}, {0, 0, -1}};
 
@@ -51,7 +51,7 @@ static uint32_t CubeData_triangles[][3] = {{0, 1, 2}, {3, 0, 2}, {4, 5, 6}, {7, 
  * }
  *
  * This shape plugin describes a simple cube/cuboid intersection primitive. By
- * default, it creates a cube between the world-space positions $(0, 0, 0)$ and $(1,1,1)$.
+ * default, it creates a cube between the world-space positions $(-1, -1, -1)$ and $(1,1,1)$.
  * However, an arbitrary linear transformation may be specified to translate, rotate, scale
  * or skew it as desired. The parameterization of this shape maps every face onto the
  * rectangle $[0,1]^2$ in $uv$ space.
