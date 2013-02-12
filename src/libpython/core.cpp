@@ -21,17 +21,6 @@
 #include <mitsuba/render/scene.h>
 #include <boost/algorithm/string.hpp>
 
-#if defined(__LINUX__)
-# if !defined(_GNU_SOURCE)
-#  define _GNU_SOURCE
-# endif
-# include <dlfcn.h>
-#elif defined(__OSX__)
-# include <mach-o/dyld.h>
-#elif defined(__WINDOWS__)
-# include <windows.h>
-#endif
-
 using namespace mitsuba;
 
 void initializeFramework() {
@@ -48,31 +37,6 @@ void initializeFramework() {
 	Scheduler::staticInitialization();
 	SHVector::staticInitialization();
 	SceneHandler::staticInitialization();
-
-
-	#if defined(__LINUX__)
-	#elif defined(__OSX__)
-	#elif defined(__WINDOWS__)
-		HMODULE hm;
-		std::vector<WCHAR> lpFilename(MAX_PATH);
-		if (GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
-			GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCSTR) &initializeFramework, &hm)) {
-			std::vector<WCHAR> lpFilename(MAX_PATH);
-
-			// Try to get the path with the default MAX_PATH length (260 chars)
-			DWORD nSize = GetModuleFileNameW(hm, &lpFilename[0], MAX_PATH);
-
-			// Adjust the buffer size in case if was too short
-			while (nSize == lpFilename.size()) {
-				lpFilename.resize(nSize * 2);
-				nSize = GetModuleFileNameW(hm, &lpFilename[0], nSize);
-			}
-
-			if (nSize)
-				basePath = fs::path(lpFilename).parent_path().parent_path().parent_path();
-		}
-	#endif
-
 }
 
 void shutdownFramework() {

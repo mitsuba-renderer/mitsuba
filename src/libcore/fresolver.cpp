@@ -1,10 +1,19 @@
 #include <mitsuba/core/fresolver.h>
 #include <boost/algorithm/string.hpp>
 
-#if defined(__WINDOWS__)
+#if defined(__LINUX__)
+# if !defined(_GNU_SOURCE)
+#  define _GNU_SOURCE
+# endif
+# include <dlfcn.h>
+#elif defined(__OSX__)
+# include <mach-o/dyld.h>
+#elif defined(__WINDOWS__)
 # include <windows.h>
 # include <vector>
 #endif
+
+
 
 MTS_NAMESPACE_BEGIN
 
@@ -16,8 +25,6 @@ void dummyModuleFunc() {}
 #endif
 
 FileResolver::FileResolver() {
-	m_paths.push_back(fs::current_path());
-
 	/* Try to detect the base path of the Mitsuba installation */
 	fs::path basePath;
 #if defined(__LINUX__)
@@ -45,6 +52,8 @@ FileResolver::FileResolver() {
 		}
 	}
 	MTS_AUTORELEASE_END()
+	if (basePath.empty())
+		Log(EError, "Could not detect the executable path!");
 #elif defined(__WINDOWS__)
 	std::vector<WCHAR> lpFilename(MAX_PATH);
 
@@ -67,17 +76,13 @@ FileResolver::FileResolver() {
 	}
 
 	// There is an error if and only if the function returns 0
-	if (nSize != 0) {
-		fs::path path(lpFilename);
-		if (boost::to_lower_copy(path.filename().string()).find("python") == std::string::npos)
-			prependPath(path.parent_path());
-	} else {
-		const std::string msg(lastErrorText());
-		Log(EError, "Could not detect the executable path! (%s)", msg.c_str());
-	}
+	if (nSize != 0)
+		basePath = fs::path(lpFilename);
+	else
+		Log(EError, "Could not detect the executable path! (%s)", lastErrorText().c_str());
 #endif
-	Thread::getThread()->getFileResolver()->prependPath(basePath);
-
+	m_paths.push_back(fs::canonical(basePath));
+	m_paths.push_back(fs::current_path());
 }
 
 FileResolver *FileResolver::clone() const {
