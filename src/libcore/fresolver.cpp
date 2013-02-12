@@ -77,7 +77,7 @@ FileResolver::FileResolver() {
 
 	// There is an error if and only if the function returns 0
 	if (nSize != 0)
-		basePath = fs::path(lpFilename);
+		basePath = fs::path(lpFilename).parent_path();
 	else
 		Log(EError, "Could not detect the executable path! (%s)", lastErrorText().c_str());
 #endif
