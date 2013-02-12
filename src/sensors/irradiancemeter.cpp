@@ -38,6 +38,9 @@ MTS_NAMESPACE_BEGIN
  * provided surface.
  * Such a sensor is useful for conducting virtual experiments and
  * testing the renderer for correctness.
+ * The result is normalized so that an irradiance sensor inside an
+ * integrating sphere with constant radiance 1 records
+ * an irradiance value of $\pi$.
  *
  * To create an irradiance meter, instantiate the desired measurement
  * shape and specify the sensor as its child. Note that when the
@@ -106,7 +109,7 @@ public:
 		ray.maxt = std::numeric_limits<Float>::infinity();
 
 		PositionSamplingRecord pRec(ray.time);
-		m_shape->samplePosition(pRec, Point2(
+			m_shape->samplePosition(pRec, Point2(
 			pixelSample.x * m_invResolution.x,
 			pixelSample.y * m_invResolution.y));
 
@@ -114,7 +117,7 @@ public:
 		ray.setDirection(Frame(pRec.n).toWorld(
 			Warp::squareToCosineHemisphere(otherSample)));
 
-		return Spectrum(1.0f);
+		return Spectrum(M_PI);
 	}
 
 	Spectrum samplePosition(PositionSamplingRecord &pRec,
@@ -127,15 +130,16 @@ public:
 			samplePos.y = (extra->y + sample.y) * m_invResolution.y;
 		}
 
+		m_shape->samplePosition(pRec, samplePos);
+
 		pRec.uv = Point2(samplePos.x * m_resolution.x,
 			samplePos.y * m_resolution.y);
 
-		m_shape->samplePosition(pRec, samplePos);
-		return Spectrum(1.0f);
+		return Spectrum(M_PI / (pRec.pdf * m_shape->getSurfaceArea()));
 	}
 
 	Spectrum evalPosition(const PositionSamplingRecord &pRec) const {
-		return Spectrum(m_shape->pdfPosition(pRec));
+		return Spectrum(M_PI / m_shape->getSurfaceArea());
 	}
 
 	Float pdfPosition(const PositionSamplingRecord &pRec) const {
@@ -182,8 +186,11 @@ public:
 		   a reference point within a medium or on a transmissive surface
 		   will set dRec.refN = 0, hence they should always be accepted. */
 		if (dot(dRec.d, dRec.refN) >= 0 && dot(dRec.d, dRec.n) < 0 && dRec.pdf != 0.0f) {
-			dRec.uv = Point2(0.5f);
-			return Spectrum(1.0f / dRec.pdf);
+			dRec.uv = Point2(
+				dRec.uv.x * m_resolution.x,
+				dRec.uv.y * m_resolution.y);
+
+			return Spectrum(1.0f / (dRec.pdf * m_shape->getSurfaceArea()));
 		} else {
 			dRec.pdf = 0.0f;
 			return Spectrum(0.0f);
@@ -198,6 +205,23 @@ public:
 		} else {
 			return 0.0f;
 		}
+	}
+
+	Spectrum eval(const Intersection &its, const Vector &d, Point2 &samplePos) const {
+		if (dot(its.shFrame.n, d) < 0)
+			return Spectrum(0.0f);
+
+		samplePos = Point2(
+			its.uv.x * m_resolution.x,
+			its.uv.y * m_resolution.y);
+
+		return Spectrum(1.0f / m_shape->getSurfaceArea());
+	}
+
+	bool getSamplePosition(const PositionSamplingRecord &pRec,
+			const DirectionSamplingRecord &dRec, Point2 &samplePosition) const {
+		samplePosition = pRec.uv;
+		return true;
 	}
 
 	void setParent(ConfigurableObject *parent) {

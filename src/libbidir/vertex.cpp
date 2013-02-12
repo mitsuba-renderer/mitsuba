@@ -1145,6 +1145,9 @@ bool PathVertex::cast(const Scene *scene, EVertexType desired) {
 		PositionSamplingRecord pRec(its);
 		pRec.object = sensor;
 		pRec.pdf = 0.0f;
+
+		Vector2i size = sensor->getFilm()->getSize();
+		pRec.uv.x *= size.x; pRec.uv.y *= size.y;
 		getPositionSamplingRecord() = pRec;
 		degenerate = sensor->getType() & Sensor::EDeltaDirection;
 
