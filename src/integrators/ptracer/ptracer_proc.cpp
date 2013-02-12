@@ -88,8 +88,13 @@ void CaptureParticleWorker::handleEmission(const PositionSamplingRecord &pRec,
 	DirectSamplingRecord dRec(pRec.p, pRec.time);
 	int maxInteractions = m_maxPathDepth - 1;
 
+	/* Create a dummy intersection to ensure that sampleAttenuatedSensorDirect()
+	   treats the light source vertex as being located on a surface */
+	Intersection its;
+	its.p = pRec.p;
+
 	Spectrum value = weight * m_scene->sampleAttenuatedSensorDirect(
-			dRec, medium, maxInteractions, m_sampler->next2D(), m_sampler);
+			dRec, its, medium, maxInteractions, m_sampler->next2D(), m_sampler);
 
 	if (value.isZero())
 		return;
