@@ -91,7 +91,8 @@ void collect_zombies(int s) {
 #endif
 
 int mtssrv(int argc, char **argv) {
-	char optchar, *end_ptr = NULL;
+	int optchar;
+	char *end_ptr = NULL;
 
 	try {
 		/* Default settings */

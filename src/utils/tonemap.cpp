@@ -68,7 +68,8 @@ public:
 
 	int run(int argc, char **argv) {
 		ref<FileResolver> fileResolver = Thread::getThread()->getFileResolver();
-		char optchar, *end_ptr = NULL;
+		int optchar;
+		char *end_ptr = NULL;
 		optind = 1;
 		Float gamma = -1, multiplier = 1;
 		Bitmap::EFileFormat format = Bitmap::EPNG;

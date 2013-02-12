@@ -70,7 +70,8 @@ void help() {
 
 int importMain(int argc, char **argv) {
 	bool srgb = false, mapSmallerSide = true;
-	char optchar, *end_ptr = NULL;
+	int optchar;
+	char *end_ptr = NULL;
 	int xres = -1, yres = -1;
 	std::string filmType = "hdrfilm";
 	FileResolver *fileResolver = Thread::getThread()->getFileResolver();

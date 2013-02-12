@@ -136,7 +136,8 @@ void help() {
 
 
 int mtsutil(int argc, char **argv) {
-	char optchar, *end_ptr = NULL;
+	int optchar;
+	char *end_ptr = NULL;
 
 	try {
 		/* Default settings */

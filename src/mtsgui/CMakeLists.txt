@@ -169,7 +169,7 @@ add_mts_exe(mtsgui ${MTS_EXE_TYPE} ${SRCS} ${HDRS}
   PCH "${CMAKE_CURRENT_SOURCE_DIR}/pch/mtsgui_precompiled.hpp"
   RES_ICON "${PROJECT_SOURCE_DIR}/data/windows/mitsuba.ico"
   RES_DESCRIPTION "Mitsuba interactive Qt-based frontend"
-  LINK_LIBRARIES ${LIBS})
+  MTS_HW LINK_LIBRARIES ${LIBS})
   
  
 # Custom targets to copy the bundle files and the PreviewSettings objects
