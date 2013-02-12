@@ -141,7 +141,7 @@ inline DirectionSamplingRecord::DirectionSamplingRecord(const Intersection &its,
 
 inline DirectSamplingRecord::DirectSamplingRecord(const Intersection &refIts)
 	: PositionSamplingRecord(refIts.time), ref(refIts.p), refN(0.0f) {
-	if ((refIts.shape->getBSDF()->getType() & BSDF::ETransmission) == 0)
+	if ((refIts.shape->getBSDF()->getType() & (BSDF::ETransmission | BSDF::EBackSide)) == 0)
 		refN = refIts.shFrame.n;
 }
 
