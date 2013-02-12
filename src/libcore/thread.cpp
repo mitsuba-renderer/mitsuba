@@ -18,7 +18,7 @@
 
 #include <mitsuba/core/lock.h>
 #include <mitsuba/core/fresolver.h>
-#ifdef MTS_OPENMP
+#if defined(MTS_OPENMP)
 # include <omp.h>
 #endif
 
@@ -452,14 +452,16 @@ void Thread::staticShutdown() {
 	ThreadPrivate::self = NULL;
 	detail::destroyGlobalTLS();
 #if defined(__OSX__)
-	if (__omp_key_created)
-		pthread_key_delete(__omp_key);
+	#if defined(MTS_OPENMP)
+		if (__omp_key_created)
+			pthread_key_delete(__omp_key);
+	#endif
 	__mts_autorelease_shutdown();
 #endif
 }
 
 void Thread::initializeOpenMP(size_t threadCount) {
-#ifdef MTS_OPENMP
+#if defined(MTS_OPENMP)
 	ref<Logger> logger = Thread::getThread()->getLogger();
 	ref<FileResolver> fResolver = Thread::getThread()->getFileResolver();
 
