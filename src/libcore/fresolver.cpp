@@ -10,29 +10,33 @@ MTS_NAMESPACE_BEGIN
 
 FileResolver::FileResolver() {
 	m_paths.push_back(fs::current_path());
-#if defined(__LINUX__)
-	char exePathTemp[PATH_MAX];
-	memset(exePathTemp, 0, PATH_MAX);
-	if (readlink("/proc/self/exe", exePathTemp, PATH_MAX) != -1) {
-		fs::path exePath(exePathTemp);
 
-		/* Make sure that we're not running inside a Python interpreter */
-		if (exePath.filename().string().find("python") == std::string::npos) {
-			prependPath(exePath.parent_path());
-			// Handle local installs: ~/local/bin/:~/local/share/mitsuba/*
-			fs::path sharedDir = exePath.parent_path().parent_path()
-				/ fs::path("share") / fs::path("mitsuba");
-			if (fs::exists(sharedDir))
-				prependPath(sharedDir);
+	/* Try to detect the base path of the Mitsuba installation */
+	fs::path basePath;
+#if defined(__LINUX__)
+	Dl_info info;
+	dladdr((void *) &FileResolver::toString, &info);
+	if (info.dli_fname) {
+		/* Try to detect a few default setups */
+		if (boost::starts_with(info.dli_fname, "/usr/lib")) {
+			basePath = fs::path("/usr/share/mitsuba");
+		} else if (boost::starts_with(info.dli_fname, "/usr/local/lib")) {
+			basePath = fs::path("/usr/local/share/mitsuba");
+		} else {
+			/* This is a locally-compiled repository */
+			basePath = fs::path(info.dli_fname).parent_path().parent_path().parent_path();
 		}
-	} else {
-		Log(EError, "Could not detect the executable path!");
 	}
 #elif defined(__OSX__)
 	MTS_AUTORELEASE_BEGIN()
-	fs::path path = __mts_bundlepath();
-	if (path.filename() != fs::path("Python.app"))
-		prependPath(path);
+	uint32_t imageCount = _dyld_image_count();
+	for (uint32_t i=0; i<imageCount; ++i) {
+		const char *imageName = _dyld_get_image_name(i);
+		if (boost::ends_with(imageName, "libmitsuba-core.dylib")) {
+			basePath = fs::path(imageName).parent_path().parent_path().parent_path();
+			break;
+		}
+	}
 	MTS_AUTORELEASE_END()
 #elif defined(__WINDOWS__)
 	std::vector<WCHAR> lpFilename(MAX_PATH);
@@ -56,6 +60,8 @@ FileResolver::FileResolver() {
 		Log(EError, "Could not detect the executable path! (%s)", msg.c_str());
 	}
 #endif
+	Thread::getThread()->getFileResolver()->prependPath(basePath);
+
 }
 
 FileResolver *FileResolver::clone() const {
