@@ -90,7 +90,7 @@ public:
 			m_spectrum.serialize(stream);
 		else if (m_type == Properties::EFloat)
 			stream->writeFloat(m_float);
-		else if (m_type == Properties::EPoint)
+		else if (m_type == Properties::EVector)
 			m_vector.serialize(stream);
 		else
 			Log(EError, "Internal error - unknown data type");
@@ -133,7 +133,7 @@ public:
 		oss << "ConstantDataSource[value=";
 		if (m_type == Properties::EFloat)
 			oss << m_float;
-		else if (m_type == Properties::EPoint)
+		else if (m_type == Properties::EVector)
 			oss << m_vector.toString();
 		else if (m_type == Properties::ESpectrum)
 			oss << m_spectrum.toString();
