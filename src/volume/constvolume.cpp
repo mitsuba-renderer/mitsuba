@@ -117,7 +117,7 @@ public:
 	}
 
 	bool supportsVectorLookups() const {
-		return m_type == Properties::EPoint;
+		return m_type == Properties::EVector;
 	}
 
 	Float getStepSize() const {
