@@ -341,6 +341,7 @@ bp::object cast(ConfigurableObject *obj) {
 	TryCast(Medium);
 	TryCast(VolumeDataSource);
 	TryCast(Film);
+	TryCast(ProjectiveCamera);
 	TryCast(Sensor);
 	TryCast(Emitter);
 	TryCast(Sampler);
