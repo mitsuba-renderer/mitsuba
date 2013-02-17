@@ -941,12 +941,14 @@ void export_core() {
 	AbstractAnimationTrack *(AnimatedTransform::*animatedTransform_findTrack)(AbstractAnimationTrack::EType) = &AnimatedTransform::findTrack;
 
 	BP_CLASS(AnimatedTransform, Object, (bp::init<Transform>()))
+		.def(bp::init<>())
 		.def(bp::init<Stream *>())
 		.def(bp::init<AnimatedTransform *>())
 		.def("getTrackCount", &AnimatedTransform::getTrackCount)
 		.def("findTrack", animatedTransform_findTrack, BP_RETURN_VALUE)
 		.def("getTrack", animatedTransform_getTrack, BP_RETURN_VALUE)
 		.def("addTrack", &AnimatedTransform::addTrack)
+		.def("appendTransform", &AnimatedTransform::appendTransform)
 		.def("isStatic", &AnimatedTransform::isStatic)
 		.def("sortAndSimplify", &AnimatedTransform::sortAndSimplify)
 		.def("serialize", &AnimatedTransform::serialize)

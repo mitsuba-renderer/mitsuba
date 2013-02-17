@@ -383,6 +383,16 @@ public:
 	void addTrack(AbstractAnimationTrack *track);
 
 	/**
+	 * \brief Convenience function, which appends a linear transformation to the track
+	 *
+	 * Internally, a polar decomposition is used to split the transformation into scale,
+	 * translation, and rotation, which are all separately interpolated.
+	 *
+	 * \remark Remember to run \ref sortAndSimplify() after adding all transformations.
+	 */
+	void appendTransform(Float time, const Transform &trafo);
+
+	/**
 	 * \brief Compute the transformation for the specified time value
 	 *
 	 * Note that the returned reference leads to a thread-local cache.

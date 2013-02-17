@@ -265,7 +265,7 @@ public:
 	inline Float getShutterOpenTime() const { return m_shutterOpenTime; }
 
 	/// Set the length, for which the shutter remains open
-	inline void setShutterOpenTime(Float time) { m_shutterOpenTime = time; }
+	void setShutterOpenTime(Float time);
 
 	/**
 	 * \brief Does the method \ref sampleRay() require a uniformly distributed

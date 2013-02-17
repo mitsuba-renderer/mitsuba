@@ -57,6 +57,15 @@ void Sensor::serialize(Stream *stream, InstanceManager *manager) const {
 	stream->writeFloat(m_shutterOpenTime);
 }
 
+void Sensor::setShutterOpenTime(Float time) {
+	m_shutterOpenTime = time;
+	if (m_shutterOpenTime == 0)
+		m_type |= EDeltaTime;
+	else
+		m_type &= ~EDeltaTime;
+}
+
+
 Spectrum Sensor::eval(const Intersection &its, const Vector &d,
 		Point2 &samplePos) const {
 	Log(EError, "%s::eval(const Intersection &, const Vector &, "
