@@ -362,8 +362,8 @@ sensor.setShutterOpenTime(1)
 
 stepSize = 5
 for i in range(0,360 / stepSize):
-    rotationCur  = Transform.rotate(Vector(0, 0, 1), i);
-    rotationNext = Transform.rotate(Vector(0, 0, 1), i+stepSize);
+    rotationCur  = Transform.rotate(Vector(0, 0, 1), i*stepSize);
+    rotationNext = Transform.rotate(Vector(0, 0, 1), (i+1)*stepSize);
 
     trafoCur  = Transform.lookAt(rotationCur  * Point(0,-6,4),
         Point(0, 0, .5), rotationCur  * Vector(0, 1, 0))
