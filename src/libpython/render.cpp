@@ -357,14 +357,17 @@ void export_render() {
 		.def("getShutterOpenTime", &Sensor::getShutterOpenTime)
 		.def("setShutterOpenTime", &Sensor::setShutterOpenTime);
 
-	void (ProjectiveCamera::*projectiveCamera_setInverseViewTransform1)(const Transform &) = &ProjectiveCamera::setInverseViewTransform;
-	void (ProjectiveCamera::*projectiveCamera_setInverseViewTransform2)(AnimatedTransform *) = &ProjectiveCamera::setInverseViewTransform;
+	void (ProjectiveCamera::*projectiveCamera_setWorldTransform1)(const Transform &) = &ProjectiveCamera::setWorldTransform;
+	void (ProjectiveCamera::*projectiveCamera_setWorldTransform2)(AnimatedTransform *) = &ProjectiveCamera::setWorldTransform;
+	const Transform (ProjectiveCamera::*projectiveCamera_getWorldTransform1)(Float t) const = &ProjectiveCamera::getWorldTransform;
+	const AnimatedTransform *(ProjectiveCamera::*projectiveCamera_getWorldTransform2)(void) const = &ProjectiveCamera::getWorldTransform;
 
 	BP_CLASS(ProjectiveCamera, Sensor, bp::no_init)
 		.def("getViewTransform", &ProjectiveCamera::getViewTransform, BP_RETURN_VALUE)
-		.def("getInverseViewTransform", &ProjectiveCamera::getInverseViewTransform, BP_RETURN_VALUE)
-		.def("setInverseViewTransform", projectiveCamera_setInverseViewTransform1)
-		.def("setInverseViewTransform", projectiveCamera_setInverseViewTransform2)
+		.def("getWorldTransform", projectiveCamera_getWorldTransform1, BP_RETURN_VALUE)
+		.def("getWorldTransform", projectiveCamera_getWorldTransform2, BP_RETURN_VALUE)
+		.def("setWorldTransform", projectiveCamera_setWorldTransform1)
+		.def("setWorldTransform", projectiveCamera_setWorldTransform2)
 		.def("getProjectionTransform", &ProjectiveCamera::getProjectionTransform, BP_RETURN_VALUE)
 		.def("getNearClip", &ProjectiveCamera::getNearClip)
 		.def("getFarClip", &ProjectiveCamera::getFarClip)

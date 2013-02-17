@@ -376,13 +376,15 @@ protected:
  */
 class MTS_EXPORT_RENDER ProjectiveCamera : public Sensor {
 public:
+	using Sensor::getWorldTransform;
+
 	/// Return the world-to-view (aka "view") transformation at time \c t
 	inline const Transform getViewTransform(Float t) const {
 		return getWorldTransform()->eval(t).inverse();
 	}
 
 	/// Return the view-to-world transformation at time \c t
-	inline const Transform getInverseViewTransform(Float t) const {
+	inline const Transform getWorldTransform(Float t) const {
 		return getWorldTransform()->eval(t);
 	}
 
@@ -390,13 +392,13 @@ public:
 	 * \brief Overwrite the view-to-world transformation
 	 * with a static (i.e. non-animated) transformation.
 	 */
-	void setInverseViewTransform(const Transform &trafo);
+	void setWorldTransform(const Transform &trafo);
 
 	/**
 	 * \brief Overwrite the view-to-world transformation
 	 * with an animated transformation
 	 */
-	void setInverseViewTransform(AnimatedTransform *trafo);
+	void setWorldTransform(AnimatedTransform *trafo);
 
 	/**
 	 * \brief Return a projection matrix suitable for rendering the

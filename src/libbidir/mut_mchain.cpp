@@ -103,7 +103,7 @@ bool MultiChainPerturbation::sampleMutation(
 		return false;
 
 	Float focusDistance = sensor->getFocusDistance() /
-		absDot(sensor->getInverseViewTransform(0)(Vector(0,0,1)), ray.d);
+		absDot(sensor->getWorldTransform(0)(Vector(0,0,1)), ray.d);
 
 	/* Correct direction based on the current aperture sample.
 	   This is necessary to support thin lens cameras */
