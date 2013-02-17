@@ -86,15 +86,18 @@ bp::list scene_getSensors(Scene *scene) {
 	bp::list list;
 	ref_vector<Sensor> &sensors = scene->getSensors();
 	for (size_t i=0; i<sensors.size(); ++i)
-		list.append(bp::object(sensors[i].get()));
+		list.append(cast(sensors[i].get()));
 	return list;
 }
+
+bp::object scene_getSensor(Scene *scene) { return cast(scene->getSensor()); }
+bp::object scene_getIntegrator(Scene *scene) { return cast(scene->getIntegrator()); }
 
 bp::list scene_getMeshes(Scene *scene) {
 	bp::list list;
 	std::vector<TriMesh *> &meshes = scene->getMeshes();
 	for (size_t i=0; i<meshes.size(); ++i)
-		list.append(bp::object(meshes[i]));
+		list.append(cast(meshes[i]));
 	return list;
 }
 
@@ -102,7 +105,7 @@ bp::list scene_getShapes(Scene *scene) {
 	bp::list list;
 	ref_vector<Shape> &shapes = scene->getShapes();
 	for (size_t i=0; i<shapes.size(); ++i)
-		list.append(bp::object(shapes[i].get()));
+		list.append(cast(shapes[i].get()));
 	return list;
 }
 
@@ -110,7 +113,7 @@ bp::list scene_getEmitters(Scene *scene) {
 	bp::list list;
 	ref_vector<Emitter> &emitters = scene->getEmitters();
 	for (size_t i=0; i<emitters.size(); ++i)
-		list.append(bp::object(emitters[i].get()));
+		list.append(cast(emitters[i].get()));
 	return list;
 }
 
@@ -118,7 +121,7 @@ bp::list scene_getMedia(Scene *scene) {
 	bp::list list;
 	ref_vector<Medium> &media = scene->getMedia();
 	for (size_t i=0; i<media.size(); ++i)
-		list.append(bp::object(media[i].get()));
+		list.append(cast(media[i].get()));
 	return list;
 }
 
@@ -143,8 +146,6 @@ void export_render() {
 		.value("EDiscrete", EDiscrete)
 		.export_values();
 
-	Sensor *(Scene::*scene_getSensor)(void) = &Scene::getSensor;
-	Integrator *(Scene::*scene_getIntegrator)(void) = &Scene::getIntegrator;
 	Sampler *(Scene::*scene_getSampler)(void) = &Scene::getSampler;
 	Film *(Scene::*scene_getFilm)(void) = &Scene::getFilm;
 
@@ -182,10 +183,10 @@ void export_render() {
 		.def("hasMedia", &Scene::hasMedia)
 		.def("addSensor", &Scene::addSensor)
 		.def("removeSensor", &Scene::removeSensor)
-		.def("getSensor", scene_getSensor, BP_RETURN_VALUE)
+		.def("getSensor", &scene_getSensor, BP_RETURN_VALUE)
 		.def("setSensor", &Scene::setSensor)
 		.def("getSensors", &scene_getSensors)
-		.def("getIntegrator", scene_getIntegrator, BP_RETURN_VALUE)
+		.def("getIntegrator", &scene_getIntegrator, BP_RETURN_VALUE)
 		.def("setIntegrator", &Scene::setIntegrator)
 		.def("getSampler", scene_getSampler, BP_RETURN_VALUE)
 		.def("setSampler", &Scene::setSampler)

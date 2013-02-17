@@ -157,6 +157,7 @@ public:
 
 namespace mitsuba {
 	class SerializableObject;
+	class ConfigurableObject;
 };
 
 typedef std::vector<std::string> StringVector;
@@ -165,6 +166,7 @@ typedef std::map<std::string, std::string> StringMap;
 
 extern void export_core();
 extern void export_render();
+extern bp::object cast(mitsuba::ConfigurableObject *obj);
 
 #endif /* __PYTHON_BASE_H */
 
