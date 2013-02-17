@@ -347,3 +347,39 @@ logger.setLogLevel(EDebug)
 
 Log(EInfo, 'Test message')
 \end{python}
+\subsubsection{Rendering a turntable animation with motion blur}
+Rendering a turntable animation is a fairly common task that is
+conveniently accomplished via the Python interface. In a turntable
+video, the camera rotates around a completely static object or scene.
+The following snippet does this for the material test ball scene downloadable
+on the main website, complete with motion blur. It assumes that the
+scene and scheduler have been set up approriately using one of the previous
+snippets.
+\begin{python}
+sensor = scene.getSensor()
+sensor.setShutterOpen(0)
+sensor.setShutterOpenTime(1)
+
+stepSize = 5
+for i in range(0,360 / stepSize):
+    rotationCur  = Transform.rotate(Vector(0, 0, 1), i);
+    rotationNext = Transform.rotate(Vector(0, 0, 1), i+stepSize);
+
+    trafoCur  = Transform.lookAt(rotationCur  * Point(0,-6,4),
+        Point(0, 0, .5), rotationCur  * Vector(0, 1, 0))
+    trafoNext = Transform.lookAt(rotationNext * Point(0,-6,4),
+        Point(0, 0, .5), rotationNext * Vector(0, 1, 0))
+
+    atrafo = AnimatedTransform()
+    atrafo.appendTransform(0, trafoCur)
+    atrafo.appendTransform(1, trafoNext)
+    atrafo.sortAndSimplify()
+    sensor.setWorldTransform(atrafo)
+
+    scene.setDestinationFile('frame_%03i.png' % i)
+    job = RenderJob('job_%i' % i, scene, queue)
+    job.start()
+
+    queue.waitLeft(0)
+    queue.join()
+\end{python}
