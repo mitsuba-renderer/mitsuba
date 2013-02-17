@@ -205,6 +205,11 @@ void ProjectiveCamera::setInverseViewTransform(const Transform &trafo) {
 	m_properties.setTransform("toWorld", trafo, false);
 }
 
+void ProjectiveCamera::setInverseViewTransform(AnimatedTransform *trafo) {
+	m_worldTransform = trafo;
+	m_properties.setAnimatedTransform("toWorld", trafo, false);
+}
+
 PerspectiveCamera::PerspectiveCamera(const Properties &props)
 	: ProjectiveCamera(props), m_xfov(0.0f) {
 	props.markQueried("fov");

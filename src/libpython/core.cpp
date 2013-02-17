@@ -327,7 +327,6 @@ Point transform_mul_point(Transform *transform, const Point &point) { return tra
 Ray transform_mul_ray(Transform *transform, const Ray &ray) { return transform->operator()(ray); }
 Transform transform_mul_transform(Transform *transform, const Transform &other) { return *transform * other; }
 
-
 bp::object cast(ConfigurableObject *obj) {
 	const Class *cls = obj->getClass();
 	#define TryCast(ClassName) if (cls->derivesFrom(MTS_CLASS(ClassName))) \
@@ -478,6 +477,16 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(fromLinearRGB_overloads, fromLinearRGB, 3
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(fromXYZ_overloads, fromXYZ, 3, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(fromIPT_overloads, fromIPT, 3, 4)
 
+#define IMPLEMENT_ANIMATION_TRACK(Name) \
+	BP_CLASS(Name, AbstractAnimationTrack, (bp::init<AbstractAnimationTrack::EType, size_t>())) \
+		.def(bp::init<Name *>()) \
+		.def("reserve", &Name::reserve) \
+		.def("prependTransformation", &Name::prependTransformation) \
+		.def("appendTransformation", &Name::appendTransformation) \
+		.def("eval", &Name::eval, BP_RETURN_VALUE) \
+		.def("setValue", &Name::setValue) \
+		.def("getValue", &Name::getValue, BP_RETURN_VALUE) \
+		.def("append", &Name::append)
 
 void export_core() {
 	bp::to_python_converter<fs::path, path_to_python_str>();
@@ -896,6 +905,54 @@ void export_core() {
 		.def("isRunning", &Scheduler::isRunning)
 		.def("isBusy", &Scheduler::isBusy)
 		.staticmethod("getInstance");
+
+	BP_CLASS(AbstractAnimationTrack, Object, bp::no_init)
+		.def("getType", &AbstractAnimationTrack::getType)
+		.def("setTime", &AbstractAnimationTrack::setTime)
+		.def("getTime", &AbstractAnimationTrack::getTime)
+		.def("getSize", &AbstractAnimationTrack::getSize)
+		.def("clone", &AbstractAnimationTrack::clone, BP_RETURN_VALUE);
+
+	IMPLEMENT_ANIMATION_TRACK(FloatTrack);
+	IMPLEMENT_ANIMATION_TRACK(VectorTrack);
+	IMPLEMENT_ANIMATION_TRACK(PointTrack);
+	IMPLEMENT_ANIMATION_TRACK(QuatTrack);
+
+	BP_SETSCOPE(AbstractAnimationTrack_class);
+	bp::enum_<AbstractAnimationTrack::EType>("EType")
+		.value("EInvalid", AbstractAnimationTrack::EInvalid)
+		.value("ETranslationX", AbstractAnimationTrack::ETranslationX)
+		.value("ETranslationY", AbstractAnimationTrack::ETranslationY)
+		.value("ETranslationZ", AbstractAnimationTrack::ETranslationZ)
+		.value("ETranslationXYZ", AbstractAnimationTrack::ETranslationXYZ)
+		.value("EScaleX", AbstractAnimationTrack::EScaleX)
+		.value("EScaleY", AbstractAnimationTrack::EScaleY)
+		.value("EScaleZ", AbstractAnimationTrack::EScaleZ)
+		.value("EScaleXYZ", AbstractAnimationTrack::EScaleXYZ)
+		.value("ERotationX", AbstractAnimationTrack::ERotationX)
+		.value("ERotationY", AbstractAnimationTrack::ERotationY)
+		.value("ERotationZ", AbstractAnimationTrack::ERotationZ)
+		.value("ERotationQuat", AbstractAnimationTrack::ERotationQuat)
+		.export_values();
+
+	BP_SETSCOPE(coreModule);
+
+	AbstractAnimationTrack *(AnimatedTransform::*animatedTransform_getTrack)(size_t) = &AnimatedTransform::getTrack;
+	AbstractAnimationTrack *(AnimatedTransform::*animatedTransform_findTrack)(AbstractAnimationTrack::EType) = &AnimatedTransform::findTrack;
+
+	BP_CLASS(AnimatedTransform, Object, (bp::init<Transform>()))
+		.def(bp::init<Stream *>())
+		.def(bp::init<AnimatedTransform *>())
+		.def("getTrackCount", &AnimatedTransform::getTrackCount)
+		.def("findTrack", animatedTransform_findTrack, BP_RETURN_VALUE)
+		.def("getTrack", animatedTransform_getTrack, BP_RETURN_VALUE)
+		.def("addTrack", &AnimatedTransform::addTrack)
+		.def("isStatic", &AnimatedTransform::isStatic)
+		.def("sortAndSimplify", &AnimatedTransform::sortAndSimplify)
+		.def("serialize", &AnimatedTransform::serialize)
+		.def("getTranslationBounds", &AnimatedTransform::getTranslationBounds, BP_RETURN_VALUE)
+		.def("getSpatialBounds", &AnimatedTransform::getSpatialBounds, BP_RETURN_VALUE)
+		.def("eval", &AnimatedTransform::eval, BP_RETURN_VALUE);
 
 	BP_STRUCT(Spectrum, bp::init<>())
 		.def("__init__", bp::make_constructor(spectrum_array_constructor))

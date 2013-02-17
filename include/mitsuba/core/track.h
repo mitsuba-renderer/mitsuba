@@ -132,6 +132,12 @@ public:
 			m_values[i] = concatenateTransformations(m_values[i], value);
 	}
 
+	/// Append a transformation to every entry of this track
+	void appendTransformation(const ValueType &value) {
+		for (size_t i=0; i<m_values.size(); ++i)
+			m_values[i] = concatenateTransformations(value, m_values[i]);
+	}
+
 	/// Serialize to a binary data stream
 	inline void serialize(Stream *stream) const {
 		stream->writeUInt(m_type);
@@ -257,6 +263,11 @@ template<> inline Vector AnimationTrack<Vector>::concatenateTransformations(
 		return value1 + value2;
 	else
 		return Vector(value1.x * value2.x, value1.y * value2.y, value1.z * value2.z);
+}
+
+template<> inline Point AnimationTrack<Point>::concatenateTransformations(
+		const Point &value1, const Point &value2) const {
+	return value1 + value2;
 }
 
 template<> inline Float AnimationTrack<Float>::concatenateTransformations(

@@ -258,8 +258,14 @@ public:
 	/// Return the time value of the shutter opening event
 	inline Float getShutterOpen() const { return m_shutterOpen; }
 
+	/// Set the time value of the shutter opening event
+	void setShutterOpen(Float time) { m_shutterOpen = time; }
+
 	/// Return the length, for which the shutter remains open
 	inline Float getShutterOpenTime() const { return m_shutterOpenTime; }
+
+	/// Set the length, for which the shutter remains open
+	inline void setShutterOpenTime(Float time) { m_shutterOpenTime = time; }
 
 	/**
 	 * \brief Does the method \ref sampleRay() require a uniformly distributed
@@ -381,10 +387,16 @@ public:
 	}
 
 	/**
-	 * \brief Overwrite the inverse world-to-view transformation
+	 * \brief Overwrite the view-to-world transformation
 	 * with a static (i.e. non-animated) transformation.
 	 */
-	virtual void setInverseViewTransform(const Transform &trafo);
+	void setInverseViewTransform(const Transform &trafo);
+
+	/**
+	 * \brief Overwrite the view-to-world transformation
+	 * with an animated transformation
+	 */
+	void setInverseViewTransform(AnimatedTransform *trafo);
 
 	/**
 	 * \brief Return a projection matrix suitable for rendering the

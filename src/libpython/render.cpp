@@ -353,12 +353,18 @@ void export_render() {
 
 	BP_CLASS(Sensor, ConfigurableObject, bp::no_init) // incomplete
 		.def("getShutterOpen", &Sensor::getShutterOpen)
-		.def("getShutterOpenTime", &Sensor::getShutterOpenTime);
+		.def("setShutterOpen", &Sensor::setShutterOpen)
+		.def("getShutterOpenTime", &Sensor::getShutterOpenTime)
+		.def("setShutterOpenTime", &Sensor::setShutterOpenTime);
+
+	void (ProjectiveCamera::*projectiveCamera_setInverseViewTransform1)(const Transform &) = &ProjectiveCamera::setInverseViewTransform;
+	void (ProjectiveCamera::*projectiveCamera_setInverseViewTransform2)(AnimatedTransform *) = &ProjectiveCamera::setInverseViewTransform;
 
 	BP_CLASS(ProjectiveCamera, Sensor, bp::no_init)
 		.def("getViewTransform", &ProjectiveCamera::getViewTransform, BP_RETURN_VALUE)
 		.def("getInverseViewTransform", &ProjectiveCamera::getInverseViewTransform, BP_RETURN_VALUE)
-		.def("setInverseViewTransform", &ProjectiveCamera::setInverseViewTransform)
+		.def("setInverseViewTransform", projectiveCamera_setInverseViewTransform1)
+		.def("setInverseViewTransform", projectiveCamera_setInverseViewTransform2)
 		.def("getProjectionTransform", &ProjectiveCamera::getProjectionTransform, BP_RETURN_VALUE)
 		.def("getNearClip", &ProjectiveCamera::getNearClip)
 		.def("getFarClip", &ProjectiveCamera::getFarClip)
