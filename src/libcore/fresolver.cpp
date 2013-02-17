@@ -47,7 +47,7 @@ FileResolver::FileResolver() {
 	for (uint32_t i=0; i<imageCount; ++i) {
 		const char *imageName = _dyld_get_image_name(i);
 		if (boost::ends_with(imageName, "libmitsuba-core.dylib")) {
-			basePath = fs::path(imageName).parent_path().parent_path().parent_path();
+			basePath = fs::canonical(imageName).parent_path().parent_path().parent_path();
 			break;
 		}
 	}
