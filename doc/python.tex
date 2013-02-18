@@ -383,3 +383,7 @@ for i in range(0,360 / stepSize):
     queue.waitLeft(0)
     queue.join()
 \end{python}
+A useful property of this approach is that scene loading and initialization
+must only take place once. Performance-wise, this compares favourably with
+running many separate rendering jobs, e.g. using the \code{mitsuba}
+command-line executable.
