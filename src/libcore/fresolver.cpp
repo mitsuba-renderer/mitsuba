@@ -1,46 +1,59 @@
 #include <mitsuba/core/fresolver.h>
 #include <boost/algorithm/string.hpp>
 
-#if defined(__WINDOWS__)
+#if defined(__LINUX__)
+# if !defined(_GNU_SOURCE)
+#  define _GNU_SOURCE
+# endif
+# include <dlfcn.h>
+#elif defined(__OSX__)
+# include <mach-o/dyld.h>
+#elif defined(__WINDOWS__)
 # include <windows.h>
 # include <vector>
 #endif
 
+
+
 MTS_NAMESPACE_BEGIN
 
-#if defined(__WINDOWS__)
-namespace
-{
-void dummyModuleFunc() {}
-}
+#if defined(__WINDOWS__) || defined(__LINUX__)
+	namespace {
+		void dummySymbol() { }
+	}
 #endif
 
 FileResolver::FileResolver() {
-	m_paths.push_back(fs::current_path());
+	/* Try to detect the base path of the Mitsuba installation */
+	fs::path basePath;
 #if defined(__LINUX__)
-	char exePathTemp[PATH_MAX];
-	memset(exePathTemp, 0, PATH_MAX);
-	if (readlink("/proc/self/exe", exePathTemp, PATH_MAX) != -1) {
-		fs::path exePath(exePathTemp);
+	Dl_info info;
 
-		/* Make sure that we're not running inside a Python interpreter */
-		if (exePath.filename().string().find("python") == std::string::npos) {
-			prependPath(exePath.parent_path());
-			// Handle local installs: ~/local/bin/:~/local/share/mitsuba/*
-			fs::path sharedDir = exePath.parent_path().parent_path()
-				/ fs::path("share") / fs::path("mitsuba");
-			if (fs::exists(sharedDir))
-				prependPath(sharedDir);
+	dladdr((const void *) &dummySymbol, &info);
+	if (info.dli_fname) {
+		/* Try to detect a few default setups */
+		if (boost::starts_with(info.dli_fname, "/usr/lib")) {
+			basePath = fs::path("/usr/share/mitsuba");
+		} else if (boost::starts_with(info.dli_fname, "/usr/local/lib")) {
+			basePath = fs::path("/usr/local/share/mitsuba");
+		} else {
+			/* This is a locally-compiled repository */
+			basePath = fs::path(info.dli_fname).parent_path();
 		}
-	} else {
-		Log(EError, "Could not detect the executable path!");
 	}
 #elif defined(__OSX__)
 	MTS_AUTORELEASE_BEGIN()
-	fs::path path = __mts_bundlepath();
-	if (path.filename() != fs::path("Python.app"))
-		prependPath(path);
+	uint32_t imageCount = _dyld_image_count();
+	for (uint32_t i=0; i<imageCount; ++i) {
+		const char *imageName = _dyld_get_image_name(i);
+		if (boost::ends_with(imageName, "libmitsuba-core.dylib")) {
+			basePath = fs::canonical(imageName).parent_path().parent_path().parent_path();
+			break;
+		}
+	}
 	MTS_AUTORELEASE_END()
+	if (basePath.empty())
+		Log(EError, "Could not detect the executable path!");
 #elif defined(__WINDOWS__)
 	std::vector<WCHAR> lpFilename(MAX_PATH);
 
@@ -50,7 +63,7 @@ FileResolver::FileResolver() {
 	HMODULE handle;
 	GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS
 	                 | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-          reinterpret_cast<LPCWSTR>(&dummyModuleFunc), &handle);
+          reinterpret_cast<LPCWSTR>(&dummySymbol), &handle);
 
 	// Try to get the path with the default MAX_PATH length (260 chars)
 	DWORD nSize = GetModuleFileNameW(handle, &lpFilename[0], MAX_PATH);
@@ -63,15 +76,17 @@ FileResolver::FileResolver() {
 	}
 
 	// There is an error if and only if the function returns 0
-	if (nSize != 0) {
-		fs::path path(lpFilename);
-		if (boost::to_lower_copy(path.filename().string()).find("python") == std::string::npos)
-			prependPath(path.parent_path());
-	} else {
-		const std::string msg(lastErrorText());
-		Log(EError, "Could not detect the executable path! (%s)", msg.c_str());
-	}
+	if (nSize != 0)
+		basePath = fs::path(lpFilename).parent_path();
+	else
+		Log(EError, "Could not detect the executable path! (%s)", lastErrorText().c_str());
 #endif
+	#if BOOST_VERSION >= 104800
+		m_paths.push_back(fs::canonical(basePath));
+	#else
+		m_paths.push_back(fs::absolute(basePath));
+	#endif
+	m_paths.push_back(fs::current_path());
 }
 
 FileResolver *FileResolver::clone() const {

@@ -31,7 +31,6 @@
 #include <mitsuba/core/fresolver.h>
 #include <mitsuba/render/scene.h>
 #include <boost/algorithm/string.hpp>
-#include <Eigen/SVD>
 #include <boost/unordered_set.hpp>
 
 MTS_NAMESPACE_BEGIN
@@ -256,15 +255,6 @@ void SceneHandler::startElement(const XMLCh* const xmlName,
 			break;
 		case EAnimation: {
 				m_animatedTransform = new AnimatedTransform();
-				ref<VectorTrack> translation = new VectorTrack(VectorTrack::ETranslationXYZ);
-				ref<QuatTrack> rotation = new QuatTrack(VectorTrack::ERotationQuat);
-				ref<VectorTrack> scaling = new VectorTrack(VectorTrack::EScaleXYZ);
-				translation->reserve(2);
-				rotation->reserve(2);
-				scaling->reserve(2);
-				m_animatedTransform->addTrack(translation);
-				m_animatedTransform->addTrack(rotation);
-				m_animatedTransform->addTrack(scaling);
 			}
 			break;
 		default:
@@ -619,42 +609,8 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 					context.parent->properties.setTransform(
 						context.attributes["name"], m_transform);
 				} else {
-					/* Compute the polar decomposition and insert into the animated transform
-					   uh oh.. we have to get rid of 2 matrix libraries at some point :) */
-					typedef Eigen::Matrix<Float, 3, 3> EMatrix;
-					const Matrix4x4 m = m_transform.getMatrix();
-
-					EMatrix A;
-					A << m(0, 0), m(0, 1), m(0, 2),
-						 m(1, 0), m(1, 1), m(1, 2),
-						 m(2, 0), m(2, 1), m(2, 2);
-
-					Eigen::JacobiSVD<EMatrix> svd(A, Eigen::ComputeFullU | Eigen::ComputeFullV);
-					EMatrix U = svd.matrixU(), V = svd.matrixV(), S = svd.singularValues().asDiagonal();
-
-					if (svd.singularValues().prod() < 0) {
-						S = -S; U = -U;
-					}
-
-					EMatrix Q = U*V.transpose();
-					EMatrix P = V*S*V.transpose();
-
-					VectorTrack *translation = (VectorTrack *) m_animatedTransform->getTrack(0);
-					QuatTrack *rotation = (QuatTrack *) m_animatedTransform->getTrack(1);
-					VectorTrack *scaling = (VectorTrack *) m_animatedTransform->getTrack(2);
-
 					Float time = parseFloat("time", context.attributes["time"]);
-					rotation->append(time, Quaternion::fromMatrix(
-						Matrix4x4(
-							Q(0, 0), Q(0, 1), Q(0, 2), 0.0f,
-							Q(1, 0), Q(1, 1), Q(1, 2), 0.0f,
-							Q(2, 0), Q(2, 1), Q(2, 2), 0.0f,
-							0.0f,    0.0f,    0.0f,    1.0f
-						)
-					));
-
-					scaling->append(time, Vector(P(0, 0), P(1, 1), P(2, 2)));
-					translation->append(time, Vector(m(0, 3), m(1, 3), m(2, 3)));
+					m_animatedTransform->appendTransform(time, m_transform);
 				}
 			}
 			break;

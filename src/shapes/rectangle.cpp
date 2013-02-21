@@ -212,6 +212,7 @@ public:
 		pRec.n = m_frame.n;
 		pRec.pdf = m_invSurfaceArea;
 		pRec.measure = EArea;
+		pRec.uv = sample;
 	}
 
 	Float pdfPosition(const PositionSamplingRecord &pRec) const {

@@ -710,7 +710,13 @@ bool PathVertex::propagatePerturbation(const Scene *scene, const PathVertex *pre
 
 	bRec.typeMask = BSDF::EAll;
 	Float prob = bsdf->pdf(bRec, EDiscrete);
-	weight[mode] = bsdf->eval(bRec, EDiscrete)/prob;
+	if (prob == 0) {
+		SLog(EWarn, "Unable to recreate specular vertex in perturbation (bsdf=%s)",
+			bsdf->toString().c_str());
+		return false;
+	}
+
+	weight[mode] = bsdf->eval(bRec, EDiscrete) / prob;
 	pdf[mode] = prob;
 	measure = EDiscrete;
 	componentType = componentType_;
@@ -1139,6 +1145,9 @@ bool PathVertex::cast(const Scene *scene, EVertexType desired) {
 		PositionSamplingRecord pRec(its);
 		pRec.object = sensor;
 		pRec.pdf = 0.0f;
+
+		Vector2i size = sensor->getFilm()->getSize();
+		pRec.uv.x *= size.x; pRec.uv.y *= size.y;
 		getPositionSamplingRecord() = pRec;
 		degenerate = sensor->getType() & Sensor::EDeltaDirection;
 

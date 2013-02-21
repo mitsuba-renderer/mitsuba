@@ -881,7 +881,7 @@ Spectrum Scene::sampleAttenuatedEmitterDirect(DirectSamplingRecord &dRec,
 	Spectrum value = emitter->sampleDirect(dRec, sample);
 
 	if (dRec.pdf != 0) {
-		if (its.isMediumTransition())
+		if (its.shape && its.isMediumTransition())
 			medium = its.getTargetMedium(dRec.d);
 		value *= evalTransmittance(its.p, true, dRec.p, emitter->isOnSurface(),
 				dRec.time, medium, interactions, sampler) / emPdf;
@@ -931,7 +931,7 @@ Spectrum Scene::sampleAttenuatedSensorDirect(DirectSamplingRecord &dRec,
 	Spectrum value = m_sensor->sampleDirect(dRec, sample);
 
 	if (dRec.pdf != 0) {
-		if (its.isMediumTransition())
+		if (its.shape && its.isMediumTransition())
 			medium = its.getTargetMedium(dRec.d);
 		value *= evalTransmittance(its.p, true, dRec.p, m_sensor->isOnSurface(),
 				dRec.time, medium, interactions, sampler);

@@ -137,9 +137,11 @@ void Instance::fillIntersectionRecord(const Ray &_ray,
 	trafo.inverse()(_ray, ray);
 	kdtree->fillIntersectionRecord<false>(ray, temp, its);
 
+	Vector s = trafo(its.shFrame.s);
 	its.shFrame.n = normalize(trafo(its.shFrame.n));
-	its.shFrame.s = normalize(trafo(its.shFrame.s));
-	its.shFrame.t = normalize(trafo(its.shFrame.t));
+	its.shFrame.s = normalize(s - its.shFrame.n
+		* dot(its.shFrame.n, s));
+	its.shFrame.t = cross(its.shFrame.n, its.shFrame.s);
 	its.geoFrame = Frame(normalize(trafo(its.geoFrame.n)));
 	its.dpdu = trafo(its.dpdu);
 	its.dpdv = trafo(its.dpdv);

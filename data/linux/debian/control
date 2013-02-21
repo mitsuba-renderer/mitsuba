@@ -7,7 +7,7 @@ Build-Depends: debhelper (>= 7), build-essential, scons, qt4-dev-tools,
 	libxerces-c-dev, libboost-dev, libglewmx-dev, libxxf86vm-dev,
 	collada-dom-dev, libboost-system-dev, libboost-filesystem-dev,
 	libboost-python-dev, libboost-thread-dev, libgl1-mesa-dev, 
-	libglu1-mesa-dev, pkg-config, libeigen3-dev
+	libglu1-mesa-dev, pkg-config, libeigen3-dev, libxml2-dev
 Standards-Version: 3.8.3
 Homepage: http://www.mitsuba-renderer.org
 

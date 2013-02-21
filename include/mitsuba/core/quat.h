@@ -84,6 +84,11 @@ template <typename T> struct TQuaternion {
 		return *this;
 	}
 
+	/// Unary negation operator
+	TQuaternion operator-() const {
+		return TQuaternion(-v, -w);
+	}
+
 	/// Multiply the quaternion by the given scalar and return the result
 	TQuaternion operator*(T f) const {
 		return TQuaternion(v*f, w*f);
@@ -230,20 +235,19 @@ template <typename T> struct TQuaternion {
 	 * rotation matrix.
 	 */
 	static TQuaternion fromMatrix(const Matrix4x4 &m) {
-		/// Implementation from PBRT
+		// Implementation from PBRT, originally based on the matrix
+		// and quaternion FAQ (http://www.j3d.org/matrix_faq/matrfaq_latest.html)
 		T trace = m(0, 0) + m(1, 1) + m(2, 2);
 		TVector3<T> v; T w;
-		if (trace > 0.f) {
-			// Compute w from matrix trace, then xyz
-			// 4w^2 = m[0, 0] + m[1, 1] + m[2, 2] + m[3, 3] (but m[3, 3] == 1)
+
+		if (trace > Epsilon) {
 			T s = std::sqrt(trace + 1.0f);
-			w = s / 2.0f;
+			w = s * 0.5f;
 			s = 0.5f / s;
 			v.x = (m(2, 1) - m(1, 2)) * s;
 			v.y = (m(0, 2) - m(2, 0)) * s;
 			v.z = (m(1, 0) - m(0, 1)) * s;
 		} else {
-			// Compute largest of $x$, $y$, or $z$, then remaining components
 			const int nxt[3] = {1, 2, 0};
 			T q[3];
 			int i = 0;
@@ -350,8 +354,15 @@ template <typename T> inline TQuaternion<T> normalize(const TQuaternion<T> &q) {
 }
 
 template <typename T> inline TQuaternion<T> slerp(const TQuaternion<T> &q1,
-	const TQuaternion<T> &q2, Float t) {
+	const TQuaternion<T> &_q2, Float t) {
+	TQuaternion<T> q2(_q2);
+
 	T cosTheta = dot(q1, q2);
+	if (cosTheta < 0) {
+		/* Take the short way! */
+		q2 = -q2;
+		cosTheta = -cosTheta;
+	}
 	if (cosTheta > .9995f) {
 		// Revert to plain linear interpolation
 		return normalize(q1 * (1.0f - t) +  q2 * t);

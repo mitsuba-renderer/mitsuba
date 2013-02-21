@@ -258,8 +258,14 @@ public:
 	/// Return the time value of the shutter opening event
 	inline Float getShutterOpen() const { return m_shutterOpen; }
 
+	/// Set the time value of the shutter opening event
+	void setShutterOpen(Float time) { m_shutterOpen = time; }
+
 	/// Return the length, for which the shutter remains open
 	inline Float getShutterOpenTime() const { return m_shutterOpenTime; }
+
+	/// Set the length, for which the shutter remains open
+	void setShutterOpenTime(Float time);
 
 	/**
 	 * \brief Does the method \ref sampleRay() require a uniformly distributed
@@ -370,21 +376,29 @@ protected:
  */
 class MTS_EXPORT_RENDER ProjectiveCamera : public Sensor {
 public:
+	using Sensor::getWorldTransform;
+
 	/// Return the world-to-view (aka "view") transformation at time \c t
 	inline const Transform getViewTransform(Float t) const {
 		return getWorldTransform()->eval(t).inverse();
 	}
 
 	/// Return the view-to-world transformation at time \c t
-	inline const Transform getInverseViewTransform(Float t) const {
+	inline const Transform getWorldTransform(Float t) const {
 		return getWorldTransform()->eval(t);
 	}
 
 	/**
-	 * \brief Overwrite the inverse world-to-view transformation
+	 * \brief Overwrite the view-to-world transformation
 	 * with a static (i.e. non-animated) transformation.
 	 */
-	virtual void setInverseViewTransform(const Transform &trafo);
+	void setWorldTransform(const Transform &trafo);
+
+	/**
+	 * \brief Overwrite the view-to-world transformation
+	 * with an animated transformation
+	 */
+	void setWorldTransform(AnimatedTransform *trafo);
 
 	/**
 	 * \brief Return a projection matrix suitable for rendering the

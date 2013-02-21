@@ -262,6 +262,15 @@ void Spectrum::toLinearRGB(Float &r, Float &g, Float &b) const {
 	b =  0.055648f * x + -0.204043f * y +  1.057311f * z;
 }
 
+void Spectrum::fromXYZ(Float x, Float y, Float z, EConversionIntent intent) {
+	/* Convert from XYZ tristimulus values to ITU-R Rec. BT.709 linear RGB */
+	Float r =  3.240479f*x - 1.537150f*y - 0.498535f*z;
+	Float g = -0.969256f*x + 1.875991f*y + 0.041556f*z;
+	Float b =  0.055648f*x - 0.204043f*y + 1.057311f*z;
+
+	fromLinearRGB(r, g, b, intent);
+}
+
 void Spectrum::fromLinearRGB(Float r, Float g, Float b, EConversionIntent intent) {
 	Spectrum result(0.0f);
 
@@ -341,6 +350,43 @@ void Spectrum::fromLinearRGB(Float r, Float g, Float b, EConversionIntent intent
 }
 
 #endif
+
+void Spectrum::toIPT(Float &I, Float &P, Float &T) const {
+	/* Based on "High Dynamic Range Imaging" by Reinhard et al. */
+	Float X, Y, Z;
+	toXYZ(X, Y, Z);
+
+	/* Convert to LMS cone excitation space (assumes D65 illum.) */
+	Float L =   0.4002 * X + 0.7075 * Y - 0.0807 * Z;
+	Float M = - 0.2280 * X + 1.1500 * Y + 0.0612 * Z;
+	Float S =   0.0000 * X + 0.0000 * Y + 0.9184 * Z;
+
+	/* Nonlinear transformation for perceptual uniformity */
+	Float Lp = math::signum(L) * std::pow(std::abs(L), (Float) 0.43);
+	Float Mp = math::signum(M) * std::pow(std::abs(M), (Float) 0.43);
+	Float Sp = math::signum(S) * std::pow(std::abs(S), (Float) 0.43);
+
+	/* Second linear transformation to get to IPT space */
+	I = 0.4000 * Lp + 0.4000 * Mp + 0.2000 * Sp;
+	P = 4.4550 * Lp - 4.8510 * Mp + 0.3960 * Sp;
+	T = 0.8056 * Lp + 0.3572 * Mp - 1.1628 * Sp;
+}
+
+void Spectrum::fromIPT(Float I, Float P, Float T, EConversionIntent intent) {
+	Float Lp = 1.0000 * I + 0.0976 * P + 0.2052 * T;
+	Float Mp = 1.0000 * I - 0.1139 * P + 0.1332 * T;
+	Float Sp = 1.0000 * I + 0.0326 * P - 0.6769 * T;
+
+	Float L = math::signum(Lp) * std::pow(std::abs(Lp), (Float) (1.0/0.43));
+	Float M = math::signum(Mp) * std::pow(std::abs(Mp), (Float) (1.0/0.43));
+	Float S = math::signum(Sp) * std::pow(std::abs(Sp), (Float) (1.0/0.43));
+
+	Float X = 1.8502 * L - 1.1383 * M + 0.2384 * S;
+	Float Y = 0.3668 * L + 0.6439 * M - 0.0107 * S;
+	Float Z = 0.0000 * L + 0.0000 * M + 1.0889 * S;
+
+	fromXYZ(X, Y, Z, intent);
+}
 
 inline Float toSRGBComponent(Float value) {
 	if (value <= (Float) 0.0031308)

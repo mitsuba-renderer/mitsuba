@@ -45,6 +45,24 @@ bp::object shape_rayIntersect(const Shape *shape, const Ray &ray, Float mint, Fl
 	return bp::object(its);
 }
 
+bp::object scene_rayIntersect(const Scene *scene, const Ray &ray) {
+	Intersection its;
+
+	if (!scene->rayIntersect(ray, its))
+		return bp::object();
+
+	return bp::object(its);
+}
+
+bp::object scene_rayIntersectAll(const Scene *scene, const Ray &ray) {
+	Intersection its;
+
+	if (!scene->rayIntersectAll(ray, its))
+		return bp::object();
+
+	return bp::object(its);
+}
+
 bp::tuple shape_getCurvature(const Shape *shape, const Intersection &its, bool shadingFrame) {
 	Float H, K;
 	shape->getCurvature(its, H, K, shadingFrame);
@@ -57,12 +75,54 @@ bp::tuple shape_getNormalDerivative(const Shape *shape, const Intersection &its,
 	return bp::make_tuple(dpdu, dpdv);
 }
 
-
 ref<Scene> loadScene(const fs::path &filename, const StringMap &params) {
 	SceneHandler::ParameterMap pmap;
 	for (StringMap::const_iterator it = params.begin(); it != params.end(); ++it)
 		pmap[it->first]=it->second;
 	return SceneHandler::loadScene(filename, pmap);
+}
+
+bp::list scene_getSensors(Scene *scene) {
+	bp::list list;
+	ref_vector<Sensor> &sensors = scene->getSensors();
+	for (size_t i=0; i<sensors.size(); ++i)
+		list.append(cast(sensors[i].get()));
+	return list;
+}
+
+bp::object scene_getSensor(Scene *scene) { return cast(scene->getSensor()); }
+bp::object scene_getIntegrator(Scene *scene) { return cast(scene->getIntegrator()); }
+
+bp::list scene_getMeshes(Scene *scene) {
+	bp::list list;
+	std::vector<TriMesh *> &meshes = scene->getMeshes();
+	for (size_t i=0; i<meshes.size(); ++i)
+		list.append(cast(meshes[i]));
+	return list;
+}
+
+bp::list scene_getShapes(Scene *scene) {
+	bp::list list;
+	ref_vector<Shape> &shapes = scene->getShapes();
+	for (size_t i=0; i<shapes.size(); ++i)
+		list.append(cast(shapes[i].get()));
+	return list;
+}
+
+bp::list scene_getEmitters(Scene *scene) {
+	bp::list list;
+	ref_vector<Emitter> &emitters = scene->getEmitters();
+	for (size_t i=0; i<emitters.size(); ++i)
+		list.append(cast(emitters[i].get()));
+	return list;
+}
+
+bp::list scene_getMedia(Scene *scene) {
+	bp::list list;
+	ref_vector<Medium> &media = scene->getMedia();
+	for (size_t i=0; i<media.size(); ++i)
+		list.append(cast(media[i].get()));
+	return list;
 }
 
 void export_render() {
@@ -86,6 +146,9 @@ void export_render() {
 		.value("EDiscrete", EDiscrete)
 		.export_values();
 
+	Sampler *(Scene::*scene_getSampler)(void) = &Scene::getSampler;
+	Film *(Scene::*scene_getFilm)(void) = &Scene::getFilm;
+
 	BP_CLASS(Scene, NetworkedObject, bp::init<>())
 		.def(bp::init<Properties>())
 		.def(bp::init<Scene *>())
@@ -96,6 +159,14 @@ void export_render() {
 		.def("postprocess", &Scene::postprocess)
 		.def("flush", &Scene::flush)
 		.def("cancel", &Scene::cancel)
+		.def("rayIntersect", &scene_rayIntersect)
+		.def("rayIntersectAll", &scene_rayIntersectAll)
+		.def("evalTransmittance", &Scene::evalTransmittance)
+		.def("evalTransmittanceAll", &Scene::evalTransmittanceAll)
+		.def("sampleEmitterDirect", &Scene::sampleEmitterDirect)
+		.def("sampleSensorDirect", &Scene::sampleSensorDirect)
+		.def("pdfEmitterDirect", &Scene::pdfEmitterDirect)
+		.def("pdfSensorDirect", &Scene::pdfSensorDirect)
 		.def("getAABB", &Scene::getAABB, BP_RETURN_VALUE)
 		.def("getBSphere", &Scene::getBSphere, BP_RETURN_VALUE)
 		.def("getBlockSize", &Scene::getBlockSize)
@@ -104,7 +175,26 @@ void export_render() {
 		.def("setSourceFile", &Scene::setSourceFile)
 		.def("getDestinationFile", &Scene::getDestinationFile, BP_RETURN_VALUE)
 		.def("setDestinationFile", &Scene::setDestinationFile)
-		.def("destinationExists", &Scene::destinationExists);
+		.def("destinationExists", &Scene::destinationExists)
+		.def("hasEnvironmentEmitter", &Scene::hasEnvironmentEmitter)
+		.def("getEnvironmentEmitter", &Scene::getEnvironmentEmitter, BP_RETURN_VALUE)
+		.def("hasDegenerateSensor", &Scene::hasDegenerateSensor)
+		.def("hasDegenerateEmitters", &Scene::hasDegenerateEmitters)
+		.def("hasMedia", &Scene::hasMedia)
+		.def("addSensor", &Scene::addSensor)
+		.def("removeSensor", &Scene::removeSensor)
+		.def("getSensor", &scene_getSensor, BP_RETURN_VALUE)
+		.def("setSensor", &Scene::setSensor)
+		.def("getSensors", &scene_getSensors)
+		.def("getIntegrator", &scene_getIntegrator, BP_RETURN_VALUE)
+		.def("setIntegrator", &Scene::setIntegrator)
+		.def("getSampler", scene_getSampler, BP_RETURN_VALUE)
+		.def("setSampler", &Scene::setSampler)
+		.def("getFilm", scene_getFilm, BP_RETURN_VALUE)
+		.def("getShapes", &scene_getShapes)
+		.def("getMeshes", &scene_getMeshes)
+		.def("getEmitters", &scene_getEmitters)
+		.def("getMedia", &scene_getMedia);
 
 	BP_CLASS(Sampler, ConfigurableObject, bp::no_init)
 		.def("clone", &Sampler::clone, BP_RETURN_VALUE)
@@ -175,6 +265,37 @@ void export_render() {
 		.def("LoSub", &Intersection::LoSub)
 		.def("__repr__", &Intersection::toString);
 
+	BP_STRUCT(PositionSamplingRecord, bp::init<>())
+		.def(bp::init<Float>())
+		.def(bp::init<Intersection, EMeasure>())
+		.def_readwrite("p", &PositionSamplingRecord::p)
+		.def_readwrite("time", &PositionSamplingRecord::time)
+		.def_readwrite("n", &PositionSamplingRecord::n)
+		.def_readwrite("pdf", &PositionSamplingRecord::pdf)
+		.def_readwrite("measure", &PositionSamplingRecord::measure)
+		.def_readwrite("uv", &PositionSamplingRecord::uv)
+		.def_readwrite("object", &PositionSamplingRecord::object)
+		.def("__repr__", &PositionSamplingRecord::toString);
+
+	BP_STRUCT(DirectionSamplingRecord, bp::init<>())
+		.def(bp::init<Vector, EMeasure>())
+		.def(bp::init<Intersection, EMeasure>())
+		.def_readwrite("d", &DirectionSamplingRecord::d)
+		.def_readwrite("pdf", &DirectionSamplingRecord::pdf)
+		.def_readwrite("measure", &DirectionSamplingRecord::measure)
+		.def("__repr__", &DirectionSamplingRecord::toString);
+
+	BP_SUBSTRUCT(DirectSamplingRecord, PositionSamplingRecord, bp::init<>())
+		.def(bp::init<Point, Float>())
+		.def(bp::init<Intersection>())
+		.def(bp::init<MediumSamplingRecord>())
+		.def_readwrite("ref", &DirectSamplingRecord::ref)
+		.def_readwrite("refN", &DirectSamplingRecord::refN)
+		.def_readwrite("d", &DirectSamplingRecord::d)
+		.def_readwrite("dist", &DirectSamplingRecord::dist)
+		.def("setQuery", &DirectSamplingRecord::setQuery)
+		.def("__repr__", &DirectSamplingRecord::toString);
+
 	Medium *(Shape::*shape_getInteriorMedium)(void) = &Shape::getInteriorMedium;
 	Medium *(Shape::*shape_getExteriorMedium)(void) = &Shape::getExteriorMedium;
 	Sensor *(Shape::*shape_getSensor)(void) = &Shape::getSensor;
@@ -229,6 +350,31 @@ void export_render() {
 		.def("serialize", triMesh_serialize1)
 		.def("serialize", triMesh_serialize2)
 		.def("writeOBJ", &TriMesh::writeOBJ);
+
+	BP_CLASS(Sensor, ConfigurableObject, bp::no_init) // incomplete
+		.def("getShutterOpen", &Sensor::getShutterOpen)
+		.def("setShutterOpen", &Sensor::setShutterOpen)
+		.def("getShutterOpenTime", &Sensor::getShutterOpenTime)
+		.def("setShutterOpenTime", &Sensor::setShutterOpenTime);
+
+	void (ProjectiveCamera::*projectiveCamera_setWorldTransform1)(const Transform &) = &ProjectiveCamera::setWorldTransform;
+	void (ProjectiveCamera::*projectiveCamera_setWorldTransform2)(AnimatedTransform *) = &ProjectiveCamera::setWorldTransform;
+	const Transform (ProjectiveCamera::*projectiveCamera_getWorldTransform1)(Float t) const = &ProjectiveCamera::getWorldTransform;
+	const AnimatedTransform *(ProjectiveCamera::*projectiveCamera_getWorldTransform2)(void) const = &ProjectiveCamera::getWorldTransform;
+
+	BP_CLASS(ProjectiveCamera, Sensor, bp::no_init)
+		.def("getViewTransform", &ProjectiveCamera::getViewTransform, BP_RETURN_VALUE)
+		.def("getWorldTransform", projectiveCamera_getWorldTransform1, BP_RETURN_VALUE)
+		.def("getWorldTransform", projectiveCamera_getWorldTransform2, BP_RETURN_VALUE)
+		.def("setWorldTransform", projectiveCamera_setWorldTransform1)
+		.def("setWorldTransform", projectiveCamera_setWorldTransform2)
+		.def("getProjectionTransform", &ProjectiveCamera::getProjectionTransform, BP_RETURN_VALUE)
+		.def("getNearClip", &ProjectiveCamera::getNearClip)
+		.def("getFarClip", &ProjectiveCamera::getFarClip)
+		.def("getFocusDistance", &ProjectiveCamera::getFocusDistance)
+		.def("setNearClip", &ProjectiveCamera::setNearClip)
+		.def("setFarClip", &ProjectiveCamera::setFarClip)
+		.def("setFocusDistance", &ProjectiveCamera::setFocusDistance);
 
 	BP_STRUCT(BSDFSamplingRecord, (bp::init<const Intersection &, Sampler *, ETransportMode>()))
 		.def(bp::init<const Intersection &, const Vector &, ETransportMode>())

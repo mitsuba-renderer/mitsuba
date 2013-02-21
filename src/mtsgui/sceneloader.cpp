@@ -153,7 +153,7 @@ void SceneLoader::run() {
 			m_result->fileName = m_filename;
 			m_result->shortName = fileInfo.fileName();
 			if (sensor->getClass()->derivesFrom(MTS_CLASS(PerspectiveCamera))) {
-				m_result->up = static_cast<PerspectiveCamera *>(sensor)->getInverseViewTransform(
+				m_result->up = static_cast<PerspectiveCamera *>(sensor)->getWorldTransform(
 					sensor->getShutterOpen() + 0.5f * sensor->getShutterOpenTime())(Vector(0, 1, 0));
 			} else {
 				m_result->up = Vector(0.0f);

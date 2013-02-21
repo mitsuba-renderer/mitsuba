@@ -132,6 +132,12 @@ public:
 			m_values[i] = concatenateTransformations(m_values[i], value);
 	}
 
+	/// Append a transformation to every entry of this track
+	void appendTransformation(const ValueType &value) {
+		for (size_t i=0; i<m_values.size(); ++i)
+			m_values[i] = concatenateTransformations(value, m_values[i]);
+	}
+
 	/// Serialize to a binary data stream
 	inline void serialize(Stream *stream) const {
 		stream->writeUInt(m_type);
@@ -259,6 +265,11 @@ template<> inline Vector AnimationTrack<Vector>::concatenateTransformations(
 		return Vector(value1.x * value2.x, value1.y * value2.y, value1.z * value2.z);
 }
 
+template<> inline Point AnimationTrack<Point>::concatenateTransformations(
+		const Point &value1, const Point &value2) const {
+	return value1 + value2;
+}
+
 template<> inline Float AnimationTrack<Float>::concatenateTransformations(
 		const Float &value1, const Float &value2) const {
 	if (m_type == ETranslationX || m_type == ETranslationY || m_type == ETranslationZ)
@@ -370,6 +381,16 @@ public:
 
 	/// Append an animation track
 	void addTrack(AbstractAnimationTrack *track);
+
+	/**
+	 * \brief Convenience function, which appends a linear transformation to the track
+	 *
+	 * Internally, a polar decomposition is used to split the transformation into scale,
+	 * translation, and rotation, which are all separately interpolated.
+	 *
+	 * \remark Remember to run \ref sortAndSimplify() after adding all transformations.
+	 */
+	void appendTransform(Float time, const Transform &trafo);
 
 	/**
 	 * \brief Compute the transformation for the specified time value

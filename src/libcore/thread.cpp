@@ -18,7 +18,7 @@
 
 #include <mitsuba/core/lock.h>
 #include <mitsuba/core/fresolver.h>
-#ifdef MTS_OPENMP
+#if defined(MTS_OPENMP)
 # include <omp.h>
 #endif
 
@@ -396,6 +396,7 @@ static boost::mutex __unmanagedMutex;
 #if defined(MTS_OPENMP) && defined(__OSX__)
 static int __omp_threadCount = 0;
 static pthread_key_t __omp_key;
+static bool __omp_key_created;
 
 int mts_omp_get_max_threads() {
 	/* This function exists to sidestep an annoying
@@ -451,29 +452,39 @@ void Thread::staticShutdown() {
 	ThreadPrivate::self = NULL;
 	detail::destroyGlobalTLS();
 #if defined(__OSX__)
+	#if defined(MTS_OPENMP)
+		if (__omp_key_created)
+			pthread_key_delete(__omp_key);
+	#endif
 	__mts_autorelease_shutdown();
 #endif
 }
 
 void Thread::initializeOpenMP(size_t threadCount) {
-#ifdef MTS_OPENMP
+#if defined(MTS_OPENMP)
 	ref<Logger> logger = Thread::getThread()->getLogger();
 	ref<FileResolver> fResolver = Thread::getThread()->getFileResolver();
 
 	#if defined(__OSX__)
+		if (!__omp_key_created) {
+			pthread_key_create(&__omp_key, NULL);
+			__omp_key_created = true;
+		}
 		__omp_threadCount = threadCount;
-		pthread_key_create(&__omp_key, NULL);
 	#endif
 
+	if (omp_get_dynamic())
+		omp_set_dynamic(0);
+
 	omp_set_num_threads((int) threadCount);
-	omp_set_dynamic(false);
 
 	int counter = 0;
 
 	#pragma omp parallel
 	{
 		#if defined(__OSX__)
-			pthread_setspecific(__omp_key, reinterpret_cast<void *>(counter));
+			if (!pthread_getspecific(__omp_key))
+				pthread_setspecific(__omp_key, reinterpret_cast<void *>(counter));
 		#endif
 		detail::initializeLocalTLS();
 		Thread *thread = Thread::getThread();
@@ -484,14 +495,25 @@ void Thread::initializeOpenMP(size_t threadCount) {
 					formatString("omp%i", counter));
 				counter++;
 			}
+			const std::string threadName = "Mitsuba: " + thread->getName();
+
+			#if defined(__LINUX__)
+				prctl(PR_SET_NAME, threadName.c_str());
+			#elif defined(__OSX__)
+				pthread_setname_np(threadName.c_str());
+			#elif defined(__WINDOWS__)
+				SetThreadName(threadName.c_str());
+			#endif
+
 			thread->d->running = false;
 			thread->d->joined = false;
 			thread->d->fresolver = fResolver;
 			thread->d->logger = logger;
 			thread->incRef();
 			ThreadPrivate::self->set(thread);
+
 			#pragma omp critical
-			__unmanagedThreads.push_back((UnmanagedThread *) thread);
+				__unmanagedThreads.push_back((UnmanagedThread *) thread);
 		}
 	}
 #else

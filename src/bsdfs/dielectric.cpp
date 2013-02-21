@@ -235,12 +235,12 @@ public:
 		Float F = fresnelDielectricExt(Frame::cosTheta(bRec.wi), cosThetaT, m_eta);
 
 		if (Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo) >= 0) {
-			if (!sampleReflection || absDot(reflect(bRec.wi), bRec.wo) < 1-DeltaEpsilon)
+			if (!sampleReflection || std::abs(dot(reflect(bRec.wi), bRec.wo)-1) > DeltaEpsilon)
 				return Spectrum(0.0f);
 
 			return m_specularReflectance->eval(bRec.its) * F;
 		} else {
-			if (!sampleTransmission || absDot(refract(bRec.wi, cosThetaT), bRec.wo) < 1-DeltaEpsilon)
+			if (!sampleTransmission || std::abs(dot(refract(bRec.wi, cosThetaT), bRec.wo)-1) > DeltaEpsilon)
 				return Spectrum(0.0f);
 
 			/* Radiance must be scaled to account for the solid angle compression
@@ -262,12 +262,12 @@ public:
 		Float F = fresnelDielectricExt(Frame::cosTheta(bRec.wi), cosThetaT, m_eta);
 
 		if (Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo) >= 0) {
-			if (!sampleReflection || absDot(reflect(bRec.wi), bRec.wo) < 1-DeltaEpsilon)
+			if (!sampleReflection || std::abs(dot(reflect(bRec.wi), bRec.wo)-1) > DeltaEpsilon)
 				return 0.0f;
 
 			return sampleTransmission ? F : 1.0f;
 		} else {
-			if (!sampleTransmission || absDot(refract(bRec.wi, cosThetaT), bRec.wo) < 1-DeltaEpsilon)
+			if (!sampleTransmission || std::abs(dot(refract(bRec.wi, cosThetaT), bRec.wo)-1) > DeltaEpsilon)
 				return 0.0f;
 
 			return sampleReflection ? 1-F : 1.0f;

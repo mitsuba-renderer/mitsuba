@@ -57,6 +57,15 @@ void Sensor::serialize(Stream *stream, InstanceManager *manager) const {
 	stream->writeFloat(m_shutterOpenTime);
 }
 
+void Sensor::setShutterOpenTime(Float time) {
+	m_shutterOpenTime = time;
+	if (m_shutterOpenTime == 0)
+		m_type |= EDeltaTime;
+	else
+		m_type &= ~EDeltaTime;
+}
+
+
 Spectrum Sensor::eval(const Intersection &its, const Vector &d,
 		Point2 &samplePos) const {
 	Log(EError, "%s::eval(const Intersection &, const Vector &, "
@@ -200,9 +209,14 @@ void ProjectiveCamera::setFarClip(Float farClip) {
 ProjectiveCamera::~ProjectiveCamera() {
 }
 
-void ProjectiveCamera::setInverseViewTransform(const Transform &trafo) {
+void ProjectiveCamera::setWorldTransform(const Transform &trafo) {
 	m_worldTransform = new AnimatedTransform(trafo);
 	m_properties.setTransform("toWorld", trafo, false);
+}
+
+void ProjectiveCamera::setWorldTransform(AnimatedTransform *trafo) {
+	m_worldTransform = trafo;
+	m_properties.setAnimatedTransform("toWorld", trafo, false);
 }
 
 PerspectiveCamera::PerspectiveCamera(const Properties &props)
