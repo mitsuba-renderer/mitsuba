@@ -24,7 +24,7 @@ else
 fi
 unset pyver
 
-if [ "$ZSH_VERSION" ]; then
+if [[ ! -z "$ZSH_VERSION" && -d "$mitsuba_plugin_dir" ]]; then
 	# Zsh autocomplete for mitsuba, mtsutil, and mtssrv
 	mitsuba_plugins=$(ls -1 "$mitsuba_plugin_dir" | grep -oE '\w+(\.so|\.dylib)' | sed 's/.so$//;s/.dylib$//')
 	compdef "_arguments '-c[connect to host(s)]:host:_hosts' '-s[connect to list of hosts in a file]:hostfile:_files' '-o[output file]:out:_files' '*:scene:_files -g \*.\(xml\|XML\)'" mitsuba
