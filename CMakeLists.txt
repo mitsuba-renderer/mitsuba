@@ -47,12 +47,14 @@ else()
   message(STATUS "mitsuba ${MTS_VERSION} (${MTS_DATE})")
 endif()
 
+# Setup the build options
+include (MitsubaBuildOptions)
+
 # Find the external libraries and setup the paths
 include (MitsubaExternal)
 
-# Setup the build options, include paths and compile definitions
-include (MitsubaBuildOptions)
-
+# Main mitsuba include directory
+include_directories("include")
 
 # ===== Prerequisite resources =====
 
