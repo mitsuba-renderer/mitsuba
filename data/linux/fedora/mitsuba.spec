@@ -1,5 +1,5 @@
 Name:		mitsuba
-Version:	0.4.3
+Version:	0.4.4
 Release:	1%{?dist}
 Summary:	Mitsuba renderer
 Group:		Applications/Graphics
