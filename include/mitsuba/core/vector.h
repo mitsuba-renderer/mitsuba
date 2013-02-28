@@ -361,7 +361,7 @@ template <typename T> struct TVector2 {
 
 	/// Return the 2-norm of this vector
 	LengthType length() const {
-		return static_cast<LengthType> (std::sqrt(lengthSquared()));
+		return (LengthType) std::sqrt((LengthType) lengthSquared());
 	}
 
 	/// Return whether or not this vector is identically zero
@@ -562,7 +562,7 @@ template <typename T> struct TVector3 {
 
 	/// Return the 2-norm of this vector
 	LengthType length() const {
-		return static_cast<LengthType> (std::sqrt(lengthSquared()));
+		return (LengthType) std::sqrt((LengthType) lengthSquared());
 	}
 
 	/// Return whether or not this vector is identically zero
@@ -776,7 +776,7 @@ template <typename T> struct TVector4 {
 
 	/// Return the 2-norm of this vector
 	LengthType length() const {
-		return static_cast<LengthType> (std::sqrt(lengthSquared()));
+		return (LengthType) std::sqrt((LengthType) lengthSquared());
 	}
 
 	/// Return whether or not this vector is identically zero
