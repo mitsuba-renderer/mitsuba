@@ -6,15 +6,17 @@ if (NOT DEFINED MTS_VERSION)
   message(FATAL_ERROR "This file has to be included from the main build file.")
 endif()
 
-# Image format definitions
-if (PNG_FOUND)
-  add_definitions(-DMTS_HAS_LIBPNG=1)
-endif()
-if (JPEG_FOUND)
-  add_definitions(-DMTS_HAS_LIBJPEG=1)
-endif()
-if (OPENEXR_FOUND)
-  add_definitions(-DMTS_HAS_OPENEXR=1)
+# Default initial compiler flags which may be modified by advanced users
+if (MTS_CMAKE_INIT)
+  set(MTS_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+  if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    set(MTS_CXX_FLAGS "-fvisibility=hidden -pipe -march=nocona -mfpmath=sse -ffast-math -Wall -Winvalid-pch")
+  endif()
+  if (MTS_CXX_FLAGS)
+    set(CMAKE_CXX_FLAGS "${MTS_CXX_FLAGS} ${CMAKE_CXX_FLAGS}" CACHE
+      STRING "Flags used by the compiler during all build types." FORCE)
+    set(MTS_CXX_FLAGS)
+  endif()
 endif()
 
 # Top level configuration definitions
@@ -107,15 +109,7 @@ endif()
 if (WIN32 AND CMAKE_SIZEOF_VOID_P EQUAL 8)
   add_definitions(-DWIN64)
 endif()
-
-
-# Main mitsuba include directory
-include_directories("include")
-
-# Includes for the common libraries
-include_directories(${Boost_INCLUDE_DIRS} ${Eigen_INCLUDE_DIR})
-
-# If we are using the system OpenEXR, add its headers which half.h requires
-if (OPENEXR_FOUND)
-  include_directories(${ILMBASE_INCLUDE_DIRS})
+if (MSVC AND MTS_SSE AND NOT CMAKE_CL_64)
+  set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS} /arch:SSE2")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /arch:SSE2")
 endif()

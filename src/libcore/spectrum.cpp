@@ -348,9 +348,9 @@ void Spectrum::toIPT(Float &I, Float &P, Float &T) const {
 	toXYZ(X, Y, Z);
 
 	/* Convert to LMS cone excitation space (assumes D65 illum.) */
-	Float L =   0.4002 * X + 0.7075 * Y - 0.0807 * Z;
-	Float M = - 0.2280 * X + 1.1500 * Y + 0.0612 * Z;
-	Float S =   0.0000 * X + 0.0000 * Y + 0.9184 * Z;
+	Float L =   0.4002f * X + 0.7075f * Y - 0.0807f * Z;
+	Float M = - 0.2280f * X + 1.1500f * Y + 0.0612f * Z;
+	Float S =   0.0000f * X + 0.0000f * Y + 0.9184f * Z;
 
 	/* Nonlinear transformation for perceptual uniformity */
 	Float Lp = math::signum(L) * std::pow(std::abs(L), (Float) 0.43);
@@ -358,23 +358,23 @@ void Spectrum::toIPT(Float &I, Float &P, Float &T) const {
 	Float Sp = math::signum(S) * std::pow(std::abs(S), (Float) 0.43);
 
 	/* Second linear transformation to get to IPT space */
-	I = 0.4000 * Lp + 0.4000 * Mp + 0.2000 * Sp;
-	P = 4.4550 * Lp - 4.8510 * Mp + 0.3960 * Sp;
-	T = 0.8056 * Lp + 0.3572 * Mp - 1.1628 * Sp;
+	I = 0.4000f * Lp + 0.4000f * Mp + 0.2000f * Sp;
+	P = 4.4550f * Lp - 4.8510f * Mp + 0.3960f * Sp;
+	T = 0.8056f * Lp + 0.3572f * Mp - 1.1628f * Sp;
 }
 
 void Spectrum::fromIPT(Float I, Float P, Float T, EConversionIntent intent) {
-	Float Lp = 1.0000 * I + 0.0976 * P + 0.2052 * T;
-	Float Mp = 1.0000 * I - 0.1139 * P + 0.1332 * T;
-	Float Sp = 1.0000 * I + 0.0326 * P - 0.6769 * T;
+	Float Lp = 1.0000f * I + 0.0976f * P + 0.2052f * T;
+	Float Mp = 1.0000f * I - 0.1139f * P + 0.1332f * T;
+	Float Sp = 1.0000f * I + 0.0326f * P - 0.6769f * T;
 
 	Float L = math::signum(Lp) * std::pow(std::abs(Lp), (Float) (1.0/0.43));
 	Float M = math::signum(Mp) * std::pow(std::abs(Mp), (Float) (1.0/0.43));
 	Float S = math::signum(Sp) * std::pow(std::abs(Sp), (Float) (1.0/0.43));
 
-	Float X = 1.8502 * L - 1.1383 * M + 0.2384 * S;
-	Float Y = 0.3668 * L + 0.6439 * M - 0.0107 * S;
-	Float Z = 0.0000 * L + 0.0000 * M + 1.0889 * S;
+	Float X = 1.8502f * L - 1.1383f * M + 0.2384f * S;
+	Float Y = 0.3668f * L + 0.6439f * M - 0.0107f * S;
+	Float Z = 0.0000f * L + 0.0000f * M + 1.0889f * S;
 
 	fromXYZ(X, Y, Z, intent);
 }

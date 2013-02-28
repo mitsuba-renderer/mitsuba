@@ -214,6 +214,27 @@ template <> inline TVector1<int> &TVector1<int>::operator/=(int s) {
 	return *this;
 }
 
+namespace detail {
+// Helper structures to define "length" as a floating point value
+
+template <typename T, bool IsInteger = false> struct VectorLength {
+	typedef T type;
+};
+
+template <typename T> struct VectorLength<T, true> {
+	typedef Float type;
+};
+
+template <> struct VectorLength<uint64_t, true> {
+	typedef double type;
+};
+
+template <> struct VectorLength<int64_t, true> {
+	typedef double type;
+};
+
+}
+
 /**
  * \headerfile mitsuba/core/vector.h mitsuba/mitsuba.h
  * \brief Parameterizable two-dimensional vector data structure
@@ -222,6 +243,7 @@ template <> inline TVector1<int> &TVector1<int>::operator/=(int s) {
 template <typename T> struct TVector2 {
 	typedef T          Scalar;
 	typedef TPoint2<T> PointType;
+	typedef typename detail::VectorLength<T, std::numeric_limits<T>::is_integer>::type LengthType;
 
 	T x, y;
 
@@ -338,8 +360,8 @@ template <typename T> struct TVector2 {
 	}
 
 	/// Return the 2-norm of this vector
-	T length() const {
-		return std::sqrt(lengthSquared());
+	LengthType length() const {
+		return static_cast<LengthType> (std::sqrt(lengthSquared()));
 	}
 
 	/// Return whether or not this vector is identically zero
@@ -421,6 +443,7 @@ template <> inline TVector2<int> &TVector2<int>::operator/=(int s) {
 template <typename T> struct TVector3 {
 	typedef T          Scalar;
 	typedef TPoint3<T> PointType;
+	typedef typename detail::VectorLength<T, std::numeric_limits<T>::is_integer>::type LengthType;
 
 	T x, y, z;
 
@@ -538,8 +561,8 @@ template <typename T> struct TVector3 {
 	}
 
 	/// Return the 2-norm of this vector
-	T length() const {
-		return std::sqrt(lengthSquared());
+	LengthType length() const {
+		return static_cast<LengthType> (std::sqrt(lengthSquared()));
 	}
 
 	/// Return whether or not this vector is identically zero
@@ -632,6 +655,7 @@ template <> inline TVector3<int> &TVector3<int>::operator/=(int s) {
 template <typename T> struct TVector4 {
 	typedef T          Scalar;
 	typedef TPoint4<T> PointType;
+	typedef typename detail::VectorLength<T, std::numeric_limits<T>::is_integer>::type LengthType;
 
 	T x, y, z, w;
 
@@ -751,8 +775,8 @@ template <typename T> struct TVector4 {
 	}
 
 	/// Return the 2-norm of this vector
-	T length() const {
-		return std::sqrt(lengthSquared());
+	LengthType length() const {
+		return static_cast<LengthType> (std::sqrt(lengthSquared()));
 	}
 
 	/// Return whether or not this vector is identically zero

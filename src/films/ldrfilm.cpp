@@ -187,8 +187,8 @@ public:
 			std::string key = boost::to_lower_copy(keys[i]);
 			key.erase(std::remove_if(key.begin(), key.end(), ::isspace), key.end());
 
-			if ((boost::starts_with(key, "tag('") && boost::ends_with(key, "')")) ||
-			    (boost::starts_with(key, "text(") && boost::ends_with(key, ")")))
+			if ((boost::starts_with(key, "metadata['") && boost::ends_with(key, "']")) ||
+			    (boost::starts_with(key, "label[") && boost::ends_with(key, "]")))
 				props.markQueried(keys[i]);
 		}
 
