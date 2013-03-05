@@ -189,6 +189,8 @@ might start the with parameters such as the following
 \begin{shell}
 $\texttt{\$}$ mitsuba -xj 2 -c machine1;machine2;...  animation/frame_*.xml
 \end{shell}
+Note that this requires a shell capable of expanding the asterisk into a list of
+filenames. The default Windows shell \code{cmd.exe} does not do this.
 \subsection{Direct connection server}
 \label{sec:mtssrv}
 A Mitsuba compute node can be created using the \code{mtssrv} executable. By default,
