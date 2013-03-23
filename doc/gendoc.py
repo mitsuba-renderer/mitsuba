@@ -1,4 +1,4 @@
-#! /usr/bin/python
+#!/usr/bin/env python
 # 
 # This script walks through all plugin files and 
 # extracts documentation that should go into the
@@ -61,34 +61,28 @@ def process(path, target):
 	for entry in ordering:
 		extract(target, entry[1])
 
+def process_src(target, src_subdir, section=None):
+	if section is None:
+		section = "section_" + src_subdir
+	target.write('\input{{{0}}}\n'.format(section))
+	process('../src/{0}'.format(src_subdir), target)
+
 os.chdir(os.path.dirname(__file__))
-f = open('plugins_generated.tex', 'w')
-f.write('\input{section_shapes}\n')
-process('../src/shapes', f)
-f.write('\input{section_bsdf}\n')
-process('../src/bsdfs', f)
-f.write('\input{section_textures}\n')
-process('../src/textures', f)
-f.write('\input{section_subsurface}\n')
-process('../src/subsurface', f)
-f.write('\input{section_media}\n')
-process('../src/medium', f)
-f.write('\input{section_phase}\n')
-process('../src/phase', f)
-f.write('\input{section_volumes}\n')
-process('../src/volume', f)
-f.write('\input{section_emitters}\n')
-process('../src/emitters', f)
-f.write('\input{section_sensors}\n')
-process('../src/sensors', f)
-f.write('\input{section_integrators}\n')
-process('../src/integrators', f)
-f.write('\input{section_samplers}\n')
-process('../src/samplers', f)
-f.write('\input{section_films}\n')
-process('../src/films', f)
-f.write('\input{section_rfilters}\n')
-f.close()
+with open('plugins_generated.tex', 'w') as f:
+	process_src(f, 'shapes')
+	process_src(f, 'bsdfs', 'section_bsdf')
+	process_src(f, 'textures')
+	process_src(f, 'subsurface')
+	process_src(f, 'medium', 'section_media')
+	process_src(f, 'phase')
+	process_src(f, 'volume', 'section_volumes')
+	process_src(f, 'emitters')
+	process_src(f, 'sensors')
+	process_src(f, 'integrators')
+	process_src(f, 'samplers')
+	process_src(f, 'films')
+	process_src(f, 'rfilters')
+
 os.system('bibtex main.aux')
 os.system('pdflatex main.tex')
 #os.system('pdflatex main.tex | grep -i warning | grep -v "Package \(typearea\|hyperref\)"')
