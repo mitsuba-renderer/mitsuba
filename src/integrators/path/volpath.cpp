@@ -195,7 +195,7 @@ public:
 						&& (!m_hideEmitters || scattered)) {
 						Spectrum value = throughput * scene->evalEnvironment(ray);
 						if (rRec.medium)
-							value *= rRec.medium->evalTransmittance(ray);
+							value *= rRec.medium->evalTransmittance(ray, rRec.sampler);
 						Li += value;
 					}
 

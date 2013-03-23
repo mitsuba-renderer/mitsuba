@@ -25,7 +25,7 @@
 MTS_NAMESPACE_BEGIN
 
 /**
- * \brief Bidirectional mutatation strategy
+ * \brief Bidirectional mutation strategy
  *
  * This class implements a slightly extended version of the bidirectional
  * mutation proposed by Veach. The main change is that it builds on top of

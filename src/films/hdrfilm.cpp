@@ -416,8 +416,15 @@ public:
 		}
 
 		fs::path filename = m_destFile;
+		std::string properExtension;
+		if (m_fileFormat == Bitmap::EOpenEXR)
+			properExtension = ".exr";
+		else if (m_fileFormat == Bitmap::ERGBE)
+			properExtension = ".rgbe";
+		else
+			properExtension = ".pfm";
+
 		std::string extension = boost::to_lower_copy(filename.extension().string());
-		std::string properExtension = (m_fileFormat == Bitmap::EOpenEXR) ? ".exr" : ".rgbe";
 		if (extension != properExtension)
 			filename.replace_extension(properExtension);
 

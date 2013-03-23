@@ -87,7 +87,8 @@ MTS_NAMESPACE_BEGIN
  */
 class PhotonMapIntegrator : public SamplingIntegrator {
 public:
-	PhotonMapIntegrator(const Properties &props) : SamplingIntegrator(props) {
+	PhotonMapIntegrator(const Properties &props) : SamplingIntegrator(props),
+		  m_parentIntegrator(NULL) {
 		/* Number of lsamples for direct illumination */
 		m_directSamples = props.getInteger("directSamples", 16);
 		/* Number of BSDF samples when intersecting a glossy material */
@@ -150,7 +151,7 @@ public:
 
 	/// Unserialize from a binary data stream
 	PhotonMapIntegrator(Stream *stream, InstanceManager *manager)
-	 : SamplingIntegrator(stream, manager) {
+	 : SamplingIntegrator(stream, manager), m_parentIntegrator(NULL) {
 		m_directSamples = stream->readInt();
 		m_glossySamples = stream->readInt();
 		m_maxDepth = stream->readInt();

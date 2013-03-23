@@ -262,15 +262,6 @@ void Spectrum::toLinearRGB(Float &r, Float &g, Float &b) const {
 	b =  0.055648f * x + -0.204043f * y +  1.057311f * z;
 }
 
-void Spectrum::fromXYZ(Float x, Float y, Float z, EConversionIntent intent) {
-	/* Convert from XYZ tristimulus values to ITU-R Rec. BT.709 linear RGB */
-	Float r =  3.240479f*x - 1.537150f*y - 0.498535f*z;
-	Float g = -0.969256f*x + 1.875991f*y + 0.041556f*z;
-	Float b =  0.055648f*x - 0.204043f*y + 1.057311f*z;
-
-	fromLinearRGB(r, g, b, intent);
-}
-
 void Spectrum::fromLinearRGB(Float r, Float g, Float b, EConversionIntent intent) {
 	Spectrum result(0.0f);
 

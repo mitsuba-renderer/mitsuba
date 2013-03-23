@@ -55,6 +55,7 @@ public:
 		m_sampler = static_cast<Sampler *>(getResource("sampler"));
 		m_integrator = static_cast<SamplingIntegrator *>(getResource("integrator"));
 		m_scene->wakeup(NULL, m_resources);
+		m_integrator->wakeup(NULL, m_resources);
 	}
 
 	void process(const WorkUnit *workUnit, WorkResult *workResult,

@@ -55,7 +55,7 @@ MTS_NAMESPACE_BEGIN
  *
  *     <bsdf type="dielectric"/>
  *
- *     <bsdf type="roughroughdielectric">
+ *     <bsdf type="roughdielectric">
  *         <float name="alpha" value="0.3"/>
  *     </bsdf>
  * </bsdf>

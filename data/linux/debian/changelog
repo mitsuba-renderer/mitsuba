@@ -1,3 +1,14 @@
+mitsuba (0.4.4-1) unstable; urgency=low
+  * Improved Python support for rendering animations and motion blur
+  * Photon mapper logic rewrite to account for certain missing specular paths
+  * Robustness improvements for specular+diffuse materials such as 'plastic'
+  * Fixed a remaining issue in the instancing frame computation code
+  * The thindielectric plugin formerly computed incorrect transmittance values
+  * The cube shape is now centered at the origin by default
+  * The TLS cleanup logic has been fixed to avoid a potential crash in mtssrv
+  * Other minor improvements, which are listed in the repository log
+ -- Wenzel Jakob <wenzel@cs.cornell.edu>  Thu, 28 Feb 2013 00:00:00 -0400
+
 mitsuba (0.4.3-1) unstable; urgency=low
   * Motion blur: Support for arbitrary linear camera, object, and sensor motion
     to produce motion blur in renderings.

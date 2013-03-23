@@ -174,7 +174,7 @@ public:
 		sampler->m_scramble = m_scramble;
 		sampler->m_permutations = m_permutations;
 		for (size_t i=0; i<m_req1D.size(); ++i)
-			sampler->request2DArray(m_req1D[i]);
+			sampler->request1DArray(m_req1D[i]);
 		for (size_t i=0; i<m_req2D.size(); ++i)
 			sampler->request2DArray(m_req2D[i]);
 		return sampler.get();

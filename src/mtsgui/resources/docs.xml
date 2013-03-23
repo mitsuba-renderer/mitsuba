@@ -352,7 +352,7 @@
 		<param name="volumePhotons" readableName="Volume photons" type="integer" default="250000">Number of photons to collect for the volume photon map (if applicable)</param>
 		<param name="globalLookupRadius" readableName="Lookup radius (global)" type="float" default="0.05">Radius of lookups in the global photon map (relative to the scene size)</param>
 		<param name="causticLookupRadius" readableName="Lookup radius (caustic)" type="float" default="0.0125">Radius of lookups in the caustic photon map (relative to the scene size)</param>
-		<param name="lookupSize" readableName="Caustic photon map lookup size" type="integer" default="120">Number of photons that should be fetched in photon map queries</param>
+		<param name="lookupSize" readableName="Photon map lookup size" type="integer" default="120">Number of photons that should be fetched in photon map queries</param>
 		<param name="granularity" readableName="Work unit granularity" importance="1" type="integer" default="0">Granularity of photon tracing work units (in shot particles, 0 => decide automatically)</param>
 		<param name="rrDepth" readableName="Russian Roulette starting depth" type="integer" default="5" importance="1">
 			Specifies the minimum path depth, after which the implementation will start to use the
