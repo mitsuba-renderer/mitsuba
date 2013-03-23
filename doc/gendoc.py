@@ -83,6 +83,8 @@ with open('plugins_generated.tex', 'w') as f:
 	process_src(f, 'films')
 	process_src(f, 'rfilters')
 
+os.system('pdflatex main.tex')
 os.system('bibtex main.aux')
+os.system('pdflatex main.tex')
 os.system('pdflatex main.tex')
 #os.system('pdflatex main.tex | grep -i warning | grep -v "Package \(typearea\|hyperref\)"')
