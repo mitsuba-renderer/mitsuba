@@ -66,8 +66,22 @@ def process_src(target, src_subdir, section=None):
 		section = "section_" + src_subdir
 	target.write('\input{{{0}}}\n'.format(section))
 	process('../src/{0}'.format(src_subdir), target)
+    
+def texify(texfile):
+	from subprocess import Popen, PIPE, check_call
+	version = Popen(["pdflatex", "-version"], stdout=PIPE).communicate()[0]
+	# Call decode() to convert from bytes to string, required in Python 3
+	if re.match('.*MiKTeX.*', version.decode()):
+		# MiKTeX's "texify" calls latex/bibtex in tandem automatically
+		print("Running texify on {0}...".format(texfile))
+		check_call(['texify', '-pq', texfile])
+	else:
+		check_call(['pdflatex', texfile])
+		check_call(['bibtex',   texfile.replace('.tex', '.aux')])
+		check_call(['pdflatex', texfile])
+		check_call(['pdflatex', texfile])
 
-os.chdir(os.path.dirname(__file__))
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
 with open('plugins_generated.tex', 'w') as f:
 	process_src(f, 'shapes')
 	process_src(f, 'bsdfs', 'section_bsdf')
@@ -83,8 +97,5 @@ with open('plugins_generated.tex', 'w') as f:
 	process_src(f, 'films')
 	process_src(f, 'rfilters')
 
-os.system('pdflatex main.tex')
-os.system('bibtex main.aux')
-os.system('pdflatex main.tex')
-os.system('pdflatex main.tex')
+texify('main.tex')
 #os.system('pdflatex main.tex | grep -i warning | grep -v "Package \(typearea\|hyperref\)"')
