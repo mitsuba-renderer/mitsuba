@@ -210,8 +210,8 @@ public:
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		Film::serialize(stream, manager);
 		stream->writeBool(m_hasBanner);
-		stream->writeUInt(m_fileFormat);
 		stream->writeUInt(m_pixelFormat);
+		stream->writeUInt(m_fileFormat);
 		stream->writeFloat(m_gamma);
 		stream->writeUInt(m_tonemapMethod);
 		stream->writeFloat(m_exposure);
