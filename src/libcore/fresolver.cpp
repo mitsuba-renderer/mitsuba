@@ -33,7 +33,7 @@ FileResolver::FileResolver() {
 	if (info.dli_fname) {
 		/* Try to detect a few default setups */
 		if (boost::starts_with(info.dli_fname, "/usr/lib") ||
-			boost::starts_with(info.dli_name, "/lib")) {
+			boost::starts_with(info.dli_fname, "/lib")) {
 			basePath = fs::path("/usr/share/mitsuba");
 		} else if (boost::starts_with(info.dli_fname, "/usr/local/lib")) {
 			basePath = fs::path("/usr/local/share/mitsuba");
