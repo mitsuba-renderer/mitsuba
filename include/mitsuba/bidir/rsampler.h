@@ -83,7 +83,7 @@ public:
 	 * underlying random number generator has been used
 	 * outside of this class
 	 */
-	inline void updateSampleIndex(uint64_t index) { m_sampleIndex = index; }
+	inline void updateSampleIndex(size_t index) { m_sampleIndex = index; }
 
 	MTS_DECLARE_CLASS()
 protected:
