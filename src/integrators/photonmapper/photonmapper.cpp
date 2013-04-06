@@ -580,7 +580,7 @@ public:
 			RadianceQueryRecord rRec2;
 			Intersection &bsdfIts = rRec2.its;
 
-			DirectSamplingRecord dRec;
+			DirectSamplingRecord dRec(its);
 			for (int i=0; i<numBSDFSamples; ++i) {
 				/* Sample BSDF * cos(theta) */
 				BSDFSamplingRecord bRec(its, rRec.sampler, ERadiance);
