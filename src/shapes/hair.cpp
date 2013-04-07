@@ -350,8 +350,9 @@ public:
 			int j = (i==0) ? axis1 : axis2;
 			Float alpha = ellipseAxes[0][j];
 			Float beta = ellipseAxes[1][j];
-			Float ratio = beta/alpha, tmp = std::sqrt(1+ratio*ratio);
-			Float cosTheta = 1/tmp, sinTheta = ratio/tmp;
+			Float tmp = 1 / std::sqrt(alpha*alpha + beta*beta);
+			Float cosTheta = alpha * tmp, sinTheta = beta*tmp;
+
 			Point p1 = ellipseCenter + cosTheta*ellipseAxes[0] + sinTheta*ellipseAxes[1];
 			Point p2 = ellipseCenter - cosTheta*ellipseAxes[0] - sinTheta*ellipseAxes[1];
 
