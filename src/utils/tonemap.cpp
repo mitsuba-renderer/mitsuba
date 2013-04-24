@@ -237,9 +237,9 @@ public:
 				}
 
 				fs::path inputFile = fileResolver->resolve(argv[i]);
-				Log(EInfo, "Loading EXR image \"%s\" ..", inputFile.string().c_str());
+				Log(EInfo, "Loading image \"%s\" ..", inputFile.string().c_str());
 				ref<FileStream> is = new FileStream(inputFile, FileStream::EReadOnly);
-				ref<Bitmap> input = new Bitmap(Bitmap::EOpenEXR, is);
+				ref<Bitmap> input = new Bitmap(Bitmap::EAuto, is);
 
 				if (crop[2] != -1 && crop[3] != -1)
 					input = input->crop(Point2i(crop[0], crop[1]), Vector2i(crop[2], crop[3]));
@@ -282,9 +282,9 @@ public:
 		} else {
 			for (int i=optind; i<argc; ++i) {
 				fs::path inputFile = fileResolver->resolve(argv[i]);
-				Log(EInfo, "Loading EXR image \"%s\" ..", inputFile.string().c_str());
+				Log(EInfo, "Loading image \"%s\" ..", inputFile.string().c_str());
 				ref<FileStream> is = new FileStream(inputFile, FileStream::EReadOnly);
-				ref<Bitmap> input = new Bitmap(Bitmap::EOpenEXR, is);
+				ref<Bitmap> input = new Bitmap(Bitmap::EAuto, is);
 
 				if (crop[2] != -1 && crop[3] != -1)
 					input = input->crop(Point2i(crop[0], crop[1]), Vector2i(crop[2], crop[3]));
