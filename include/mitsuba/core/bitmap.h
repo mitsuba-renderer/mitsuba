@@ -700,7 +700,7 @@ public:
 	void flipVertically();
 
 	/// Perform the specified rotatation & flip operation
-	void rotateFlip(ERotateFlipType type) const;
+	ref<Bitmap> rotateFlip(ERotateFlipType type) const;
 
 	/**
 	 * \brief Accumulate the contents of another bitmap into the

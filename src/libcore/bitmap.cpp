@@ -427,8 +427,7 @@ ref<Bitmap> Bitmap::rotateFlip(ERotateFlipType type) const {
 	if (m_componentFormat == EBitmask)
 		Log(EError, "Transformations involving bitmasks are currently not supported!");
 
-	int width = m_width, height = m_height;
-	int bypp = getBytesPerPixel();
+	int width = m_size.x, height = m_size.y;
 	bool flip_x = (type & 6) == 2 || (type & 6) == 4;
 	bool flip_y = (type & 3) == 1 || (type & 3) == 2;
 	bool rotate_90 = type & 1;
@@ -436,21 +435,23 @@ ref<Bitmap> Bitmap::rotateFlip(ERotateFlipType type) const {
 	if (rotate_90)
 		std::swap(width, height);
 
-	ref<Bitmap> result = new Bitmap(width, height);
+	ref<Bitmap> result = new Bitmap(m_pixelFormat, m_componentFormat,
+		Vector2i(width, height), m_channelCount);
 
-	int src_stride = m_width * bypp,
-	    dst_stride = width * bypp;
+	ssize_t bypp = getBytesPerPixel(),
+		    src_stride = m_size.x * bypp,
+	        dst_stride = width * bypp;
 
 	uint8_t *dst = result->getUInt8Data();
+	uint8_t *dst_row = dst, *src_row = m_data;
 
-	uint8_t *dst_row = dst, *src_row = src;
 	if (flip_x)
-		src_row += bypp * (m_width - 1);
+		src_row += bypp * (m_size.x - 1);
 
 	if (flip_y)
-		src_row += src_stride * (m_height - 1);
+		src_row += src_stride * (m_size.y - 1);
 
-	int src_x_step, src_y_step;
+	ssize_t src_x_step, src_y_step;
 	if (rotate_90) {
 		src_x_step = flip_y ? -src_stride : src_stride;
 		src_y_step = flip_x ? -bypp : bypp;
@@ -459,11 +460,11 @@ ref<Bitmap> Bitmap::rotateFlip(ERotateFlipType type) const {
 		src_y_step = flip_y ? -src_stride : src_stride;
 	}
 
-	for (size_t y=0; y<height; y++) {
+	for (int y=0; y<height; y++) {
 		uint8_t *src_pixel = src_row;
 		uint8_t *dst_pixel = dst_row;
 
-		for (size_t x=0; x<width; x++) {
+		for (int x=0; x<width; x++) {
 			memcpy(dst_pixel, src_pixel, bypp);
 			dst_pixel += bypp;
 			src_pixel += src_x_step;
@@ -472,8 +473,9 @@ ref<Bitmap> Bitmap::rotateFlip(ERotateFlipType type) const {
 		src_row += src_y_step;
 		dst_row += dst_stride;
 	}
-}
 
+	return result;
+}
 
 void Bitmap::accumulate(const Bitmap *bitmap, Point2i sourceOffset,
 		Point2i targetOffset, Vector2i size) {
