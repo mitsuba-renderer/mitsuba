@@ -422,6 +422,58 @@ void Bitmap::flipVertically() {
 	}
 }
 
+ref<Bitmap> Bitmap::rotateFlip(ERotateFlipType type) const {
+	/* Based on the GDI+ rotate/flip function in Wine */
+	if (m_componentFormat == EBitmask)
+		Log(EError, "Transformations involving bitmasks are currently not supported!");
+
+	int width = m_width, height = m_height;
+	int bypp = getBytesPerPixel();
+	bool flip_x = (type & 6) == 2 || (type & 6) == 4;
+	bool flip_y = (type & 3) == 1 || (type & 3) == 2;
+	bool rotate_90 = type & 1;
+
+	if (rotate_90)
+		std::swap(width, height);
+
+	ref<Bitmap> result = new Bitmap(width, height);
+
+	int src_stride = m_width * bypp,
+	    dst_stride = width * bypp;
+
+	uint8_t *dst = result->getUInt8Data();
+
+	uint8_t *dst_row = dst, *src_row = src;
+	if (flip_x)
+		src_row += bypp * (m_width - 1);
+
+	if (flip_y)
+		src_row += src_stride * (m_height - 1);
+
+	int src_x_step, src_y_step;
+	if (rotate_90) {
+		src_x_step = flip_y ? -src_stride : src_stride;
+		src_y_step = flip_x ? -bypp : bypp;
+	} else {
+		src_x_step = flip_x ? -bypp : bypp;
+		src_y_step = flip_y ? -src_stride : src_stride;
+	}
+
+	for (size_t y=0; y<height; y++) {
+		uint8_t *src_pixel = src_row;
+		uint8_t *dst_pixel = dst_row;
+
+		for (size_t x=0; x<width; x++) {
+			memcpy(dst_pixel, src_pixel, bypp);
+			dst_pixel += bypp;
+			src_pixel += src_x_step;
+		}
+
+		src_row += src_y_step;
+		dst_row += dst_stride;
+	}
+}
+
 
 void Bitmap::accumulate(const Bitmap *bitmap, Point2i sourceOffset,
 		Point2i targetOffset, Vector2i size) {

@@ -250,6 +250,26 @@ public:
 		EAuto
 	};
 
+	/// List of different rotation/flip types that can be passed to \ref rotateFlip()
+	enum ERotateFlipType {
+		ERotateNoneFlipNone = 0,
+		ERotate180FlipXY    = ERotateNoneFlipNone,
+		ERotate90FlipNone   = 1,
+		ERotate270FlipXY    = ERotate90FlipNone,
+		ERotate180FlipNone  = 2,
+		ERotateNoneFlipXY   = ERotate180FlipNone,
+		ERotate270FlipNone  = 3,
+		ERotate90FlipXY     = ERotate270FlipNone,
+		ERotateNoneFlipX    = 4,
+		ERotate180FlipY     = ERotateNoneFlipX,
+		ERotate90FlipX      = 5,
+		ERotate270FlipY     = ERotate90FlipX,
+		ERotate180FlipX     = 6,
+		ERotateNoneFlipY    = ERotate180FlipX,
+		ERotate270FlipX     = 7,
+		ERotate90FlipY      = ERotate270FlipX
+	};
+
 	/**
 	 * \brief Create a bitmap of the specified type and allocate
 	 * the necessary amount of memory
@@ -678,6 +698,9 @@ public:
 
 	/// Vertically flip the image contents
 	void flipVertically();
+
+	/// Perform the specified rotatation & flip operation
+	void rotateFlip(ERotateFlipType type) const;
 
 	/**
 	 * \brief Accumulate the contents of another bitmap into the
