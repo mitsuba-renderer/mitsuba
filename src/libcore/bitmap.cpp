@@ -960,7 +960,9 @@ ref<Bitmap> Bitmap::separateChannel(int channelIndex) {
 	if (channelIndex == 0 && channelCount == 1)
 		return this;
 
-	Assert(channelIndex > 0 && channelIndex < channelCount);
+	if (channelIndex < 0 || channelIndex >= channelCount)
+		Log(EError, "Bitmap::separateChannel(%i): channel index "
+			"must be between 0 and %i", channelIndex, channelCount-1);
 
 	ref<Bitmap> result = new Bitmap(ELuminance, m_componentFormat, m_size);
 	result->setMetadata(m_metadata);

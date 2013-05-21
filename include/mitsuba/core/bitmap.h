@@ -340,6 +340,15 @@ public:
 	/// Return whether this image has matching width and height
 	inline bool isSquare() const { return m_size.x == m_size.y; }
 
+	/// Return whether this image has an alpha channel
+	inline bool hasAlpha() const {
+		return
+			m_pixelFormat == ELuminanceAlpha ||
+			m_pixelFormat == ERGBA ||
+			m_pixelFormat == EXYZA ||
+			m_pixelFormat == ESpectrumAlpha;
+	}
+
 	/**
 	 * \brief Return the number bits per component
 	 *

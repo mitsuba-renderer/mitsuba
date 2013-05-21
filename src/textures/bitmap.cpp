@@ -177,6 +177,8 @@ public:
 		fs::path cacheFile;
 		ref<Bitmap> bitmap;
 
+		bool separateAlpha = props.getBoolean("separateAlpha", false);
+
 		if (props.hasProperty("bitmap")) {
 			/* Support initialization via raw data passed from another plugin */
 			bitmap = reinterpret_cast<Bitmap *>(props.getData("bitmap").ptr);
@@ -194,7 +196,12 @@ public:
 				Log(EError, "Could not determine modification time of \"%s\"!", m_filename.string().c_str());
 
 			cacheFile = m_filename;
-			cacheFile.replace_extension(".mip");
+
+			if (!separateAlpha)
+				cacheFile.replace_extension(".mip");
+			else
+				cacheFile.replace_extension(".alpha.mip");
+
 			tryReuseCache = fs::exists(cacheFile) && props.getBoolean("cache", true);
 		}
 
@@ -241,18 +248,27 @@ public:
 			}
 
 			Bitmap::EPixelFormat pixelFormat;
-			switch (bitmap->getPixelFormat()) {
-				case Bitmap::ELuminance:
-				case Bitmap::ELuminanceAlpha:
-					pixelFormat = Bitmap::ELuminance;
-					break;
-				case Bitmap::ERGB:
-				case Bitmap::ERGBA:
-					pixelFormat = Bitmap::ERGB;
-					break;
-				default:
-					Log(EError, "The input image has an unsupported pixel format!");
-					return;
+			if (separateAlpha) {
+				/* Create a texture from the alpha channel of an image */
+				if (!bitmap->hasAlpha())
+					Log(EError, "separateAlpha specified, but the image contains no alpha channel!");
+				pixelFormat = Bitmap::ELuminance;
+				bitmap = bitmap->separateChannel(bitmap->getChannelCount()-1);
+				bitmap->setGamma(1.0f);
+			} else {
+				switch (bitmap->getPixelFormat()) {
+					case Bitmap::ELuminance:
+					case Bitmap::ELuminanceAlpha:
+						pixelFormat = Bitmap::ELuminance;
+						break;
+					case Bitmap::ERGB:
+					case Bitmap::ERGBA:
+						pixelFormat = Bitmap::ERGB;
+						break;
+					default:
+						Log(EError, "The input image has an unsupported pixel format!");
+						return;
+				}
 			}
 
 			/* (Re)generate the MIP map hierarchy; downsample using a
