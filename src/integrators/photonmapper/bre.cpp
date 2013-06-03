@@ -116,21 +116,20 @@ void BeamRadianceEstimator::serialize(Stream *stream, InstanceManager *manager) 
 AABB BeamRadianceEstimator::buildHierarchy(IndexType index) {
 	BRENode &node = m_nodes[index];
 
+	Point center = node.photon.getPosition();
+	Float radius = node.radius;
+	node.aabb = AABB(
+		center - Vector(radius, radius, radius),
+		center + Vector(radius, radius, radius)
+	);
+
 	if (!node.photon.isLeaf()) {
 		IndexType left = node.photon.getLeftIndex(index);
 		IndexType right = node.photon.getRightIndex(index);
-		node.aabb.reset();
 		if (left)
 			node.aabb.expandBy(buildHierarchy(left));
 		if (right)
 			node.aabb.expandBy(buildHierarchy(right));
-	} else {
-		Point center = node.photon.getPosition();
-		Float radius = node.radius;
-		node.aabb = AABB(
-			center - Vector(radius, radius, radius),
-			center + Vector(radius, radius, radius)
-		);
 	}
 
 	return node.aabb;
