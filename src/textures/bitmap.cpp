@@ -177,7 +177,7 @@ public:
 		fs::path cacheFile;
 		ref<Bitmap> bitmap;
 
-		bool separateAlpha = props.getBoolean("separateAlpha", false);
+		m_separateAlpha = props.getBoolean("separateAlpha", false);
 
 		if (props.hasProperty("bitmap")) {
 			/* Support initialization via raw data passed from another plugin */
@@ -197,7 +197,7 @@ public:
 
 			cacheFile = m_filename;
 
-			if (!separateAlpha)
+			if (!m_separateAlpha)
 				cacheFile.replace_extension(".mip");
 			else
 				cacheFile.replace_extension(".alpha.mip");
@@ -248,7 +248,7 @@ public:
 			}
 
 			Bitmap::EPixelFormat pixelFormat;
-			if (separateAlpha) {
+			if (m_separateAlpha) {
 				/* Create a texture from the alpha channel of an image */
 				if (!bitmap->hasAlpha())
 					Log(EError, "separateAlpha specified, but the image contains no alpha channel!");
@@ -321,6 +321,7 @@ public:
 		m_wrapModeV = (ReconstructionFilter::EBoundaryCondition) stream->readUInt();
 		m_gamma = stream->readFloat();
 		m_maxAnisotropy = stream->readFloat();
+		m_separateAlpha = stream->readBool();
 
 		size_t size = stream->readSize();
 		ref<MemoryStream> mStream = new MemoryStream(size);
@@ -339,18 +340,27 @@ public:
 		rfilter->configure();
 
 		Bitmap::EPixelFormat pixelFormat;
-		switch (bitmap->getPixelFormat()) {
-			case Bitmap::ELuminance:
-			case Bitmap::ELuminanceAlpha:
-				pixelFormat = Bitmap::ELuminance;
-				break;
-			case Bitmap::ERGB:
-			case Bitmap::ERGBA:
-				pixelFormat = Bitmap::ERGB;
-				break;
-			default:
-				Log(EError, "The input image has an unsupported pixel format!");
-				return;
+		if (m_separateAlpha) {
+			/* Create a texture from the alpha channel of an image */
+			if (!bitmap->hasAlpha())
+				Log(EError, "separateAlpha specified, but the image contains no alpha channel!");
+			pixelFormat = Bitmap::ELuminance;
+			bitmap = bitmap->separateChannel(bitmap->getChannelCount()-1);
+			bitmap->setGamma(1.0f);
+		} else {
+			switch (bitmap->getPixelFormat()) {
+				case Bitmap::ELuminance:
+				case Bitmap::ELuminanceAlpha:
+					pixelFormat = Bitmap::ELuminance;
+					break;
+				case Bitmap::ERGB:
+				case Bitmap::ERGBA:
+					pixelFormat = Bitmap::ERGB;
+					break;
+				default:
+					Log(EError, "The input image has an unsupported pixel format!");
+					return;
+			}
 		}
 
 		if (pixelFormat == Bitmap::ELuminance)
@@ -371,6 +381,7 @@ public:
 		stream->writeUInt(m_wrapModeV);
 		stream->writeFloat(m_gamma);
 		stream->writeFloat(m_maxAnisotropy);
+		stream->writeBool(m_separateAlpha);
 
 		if (!m_filename.empty() && fs::exists(m_filename)) {
 			/* We still have access to the original image -- use that, since
@@ -519,6 +530,7 @@ protected:
 	ReconstructionFilter::EBoundaryCondition m_wrapModeU;
 	ReconstructionFilter::EBoundaryCondition m_wrapModeV;
 	Float m_gamma, m_maxAnisotropy;
+	bool m_separateAlpha;
 	fs::path m_filename;
 };
 
