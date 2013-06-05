@@ -422,6 +422,60 @@ void Bitmap::flipVertically() {
 	}
 }
 
+ref<Bitmap> Bitmap::rotateFlip(ERotateFlipType type) const {
+	/* Based on the GDI+ rotate/flip function in Wine */
+	if (m_componentFormat == EBitmask)
+		Log(EError, "Transformations involving bitmasks are currently not supported!");
+
+	int width = m_size.x, height = m_size.y;
+	bool flip_x = (type & 6) == 2 || (type & 6) == 4;
+	bool flip_y = (type & 3) == 1 || (type & 3) == 2;
+	bool rotate_90 = type & 1;
+
+	if (rotate_90)
+		std::swap(width, height);
+
+	ref<Bitmap> result = new Bitmap(m_pixelFormat, m_componentFormat,
+		Vector2i(width, height), m_channelCount);
+
+	ssize_t bypp = getBytesPerPixel(),
+		    src_stride = m_size.x * bypp,
+	        dst_stride = width * bypp;
+
+	uint8_t *dst = result->getUInt8Data();
+	uint8_t *dst_row = dst, *src_row = m_data;
+
+	if (flip_x)
+		src_row += bypp * (m_size.x - 1);
+
+	if (flip_y)
+		src_row += src_stride * (m_size.y - 1);
+
+	ssize_t src_x_step, src_y_step;
+	if (rotate_90) {
+		src_x_step = flip_y ? -src_stride : src_stride;
+		src_y_step = flip_x ? -bypp : bypp;
+	} else {
+		src_x_step = flip_x ? -bypp : bypp;
+		src_y_step = flip_y ? -src_stride : src_stride;
+	}
+
+	for (int y=0; y<height; y++) {
+		uint8_t *src_pixel = src_row;
+		uint8_t *dst_pixel = dst_row;
+
+		for (int x=0; x<width; x++) {
+			memcpy(dst_pixel, src_pixel, bypp);
+			dst_pixel += bypp;
+			src_pixel += src_x_step;
+		}
+
+		src_row += src_y_step;
+		dst_row += dst_stride;
+	}
+
+	return result;
+}
 
 void Bitmap::accumulate(const Bitmap *bitmap, Point2i sourceOffset,
 		Point2i targetOffset, Vector2i size) {
@@ -906,7 +960,9 @@ ref<Bitmap> Bitmap::separateChannel(int channelIndex) {
 	if (channelIndex == 0 && channelCount == 1)
 		return this;
 
-	Assert(channelIndex > 0 && channelIndex < channelCount);
+	if (channelIndex < 0 || channelIndex >= channelCount)
+		Log(EError, "Bitmap::separateChannel(%i): channel index "
+			"must be between 0 and %i", channelIndex, channelCount-1);
 
 	ref<Bitmap> result = new Bitmap(ELuminance, m_componentFormat, m_size);
 	result->setMetadata(m_metadata);

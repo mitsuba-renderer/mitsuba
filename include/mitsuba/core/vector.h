@@ -662,7 +662,6 @@ template <typename T> struct TVector4 {
 	/// Number of dimensions
 	const static int dim = 4;
 
-
 	/** \brief Construct a new vector without initializing it.
 	 *
 	 * This construtor is useful when the vector will either not
