@@ -381,12 +381,12 @@ public:
 		stream->writeUInt(m_wrapModeV);
 		stream->writeFloat(m_gamma);
 		stream->writeFloat(m_maxAnisotropy);
-		stream->writeBool(m_separateAlpha);
 
 		if (!m_filename.empty() && fs::exists(m_filename)) {
 			/* We still have access to the original image -- use that, since
 			   it is probably much smaller than the in-memory representation */
 			ref<Stream> is = new FileStream(m_filename, FileStream::EReadOnly);
+			stream->writeBool(m_separateAlpha);
 			stream->writeSize(is->getSize());
 			is->copyTo(stream);
 		} else {
@@ -397,6 +397,7 @@ public:
 				m_mipmap1->toBitmap() : m_mipmap3->toBitmap();
 			bitmap->write(Bitmap::EOpenEXR, mStream);
 
+			stream->writeBool(false); /* separateAlpha */
 			stream->writeSize(mStream->getSize());
 			stream->write(mStream->getData(), mStream->getSize());
 		}
