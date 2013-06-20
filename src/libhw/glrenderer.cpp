@@ -157,7 +157,7 @@ void GLRenderer::init(Device *device, Renderer *other) {
 		Log(m_warnLogLevel, "Capabilities: Vertex buffer objects are NOT supported!");
 	}
 
-	if (glewIsSupported("GL_EXT_geometry_shader4")) {
+	if (glewIsSupported("GL_EXT_geometry_shader4") && glewIsSupported("GL_EXT_gpu_shader4")) {
 		m_capabilities->setSupported(
 			RendererCapabilities::EGeometryShaders, true);
 		Log(m_logLevel, "Capabilities: Geometry shaders are supported.");
