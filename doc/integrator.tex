@@ -168,10 +168,11 @@ radiance along a ray differential: here, we simply return the stored color
    }
 \end{cpp}
 
-Let's try building the plugin: edit the \code{SConstruct} file in the main
-directory, and add the following line after the comment ''\code{\# Integrators}'':
+Let's try building the plugin: edit the \code{SConscript} file in the
+\code{integrator} directory, and add the following line before the
+last line containing ''\code{Export('plugins')}'':
 \begin{cpp}
-plugins += env.SharedLibrary('plugins/myIntegrator', ['src/integrators/myIntegrator.cpp'])
+plugins += env.SharedLibrary('myIntegrator', ['myIntegrator.cpp'])
 \end{cpp}
 After calling, \texttt{scons}, you should be able to use your new integrator
 in parallel rendering jobs and you'll get something like this:
