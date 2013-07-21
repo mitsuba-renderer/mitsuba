@@ -49,9 +49,9 @@ MTS_NAMESPACE_END
 \end{cpp}
 The file must also be added to the build system: insert the line
 \begin{shell}
-plugins += $\texttt{env}$.SharedLibrary('plugins/rot13', ['src/utils/rot13.cpp'])
+plugins += $\texttt{env}$.SharedLibrary('rot13', ['rot13.cpp'])
 \end{shell}
-into the SConscript (near the comment ``\code{Build the plugins -- utilities}''). After compiling
+into the \code{utils/SConscript} file. After compiling
 using \code{scons}, the \code{mtsutil} binary should automatically pick up your new utility plugin:
 \begin{shell}
 $\texttt{\$}$ mtsutil
