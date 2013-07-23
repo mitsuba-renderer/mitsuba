@@ -190,7 +190,12 @@ might start the with parameters such as the following
 $\texttt{\$}$ mitsuba -xj 2 -c machine1;machine2;...  animation/frame_*.xml
 \end{shell}
 Note that this requires a shell capable of expanding the asterisk into a list of
-filenames. The default Windows shell \code{cmd.exe} does not do this.
+filenames. The default Windows shell \code{cmd.exe} does not do this---however,
+the PowerShell supports the following syntax:
+\begin{shell}
+dir frame_*.xml | % $\texttt{\{}$ <path to mitsuba.exe> $\texttt{\$\_}$ $\texttt{\}}$
+\end{shell}
+
 \subsection{Direct connection server}
 \label{sec:mtssrv}
 A Mitsuba compute node can be created using the \code{mtssrv} executable. By default,
