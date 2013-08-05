@@ -1100,6 +1100,8 @@ bool MainWindow::isActive() {
 }
 
 void MainWindow::drawHLine(SceneContext *ctx, int x1, int y, int x2, const float *color) {
+	y = std::max(0, std::min(y, ctx->framebuffer->getHeight()-1));
+	x1 = std::max(0, x1); x2 = std::min(x2, ctx->framebuffer->getWidth()-1);
 	float *framebuffer = ctx->framebuffer->getFloat32Data();
 	int fbOffset = (x1 + y*ctx->framebuffer->getWidth())*4;
 	for (int x=x1; x<=x2; x++) {
@@ -1111,6 +1113,8 @@ void MainWindow::drawHLine(SceneContext *ctx, int x1, int y, int x2, const float
 }
 
 void MainWindow::drawVLine(SceneContext *ctx, int x, int y1, int y2, const float *color) {
+	x = std::max(0, std::min(x, ctx->framebuffer->getWidth()-1));
+	y1 = std::max(0, y1); y2 = std::min(y2, ctx->framebuffer->getHeight()-1);
 	float *framebuffer = ctx->framebuffer->getFloat32Data();
 	int width = ctx->framebuffer->getWidth(), fbOffset = (x + y1*width)*4;
 	for (int y=y1; y<=y2; y++) {
