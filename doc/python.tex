@@ -15,6 +15,14 @@ taken care of by default), you may have to set the \code{LD\_LIBRARY\_PATH}
 environment variable before starting Python so that it points to where the
 Mitsuba libraries are installed (e.g. the \code{Mitsuba.app/Contents/Frameworks}
 directory).
+
+When Python crashes directly after the \code{import mitsuba} statement,
+make sure that Mitsuba is linked against the right Python distribution
+(i.e. matching the \code{python} binary you are using). For e.g. Python
+2.7, can be done by adjusting the \code{PYTHON27INCLUDE} and
+\code{PYTHON27LIBDIR} variables in \code{config.py}. For other versions,
+adjust the numbers accordingly.
+
 \paragraph{Windows and Linux:}
 On Windows and \emph{non-packaged} Linux builds, you may have to explicitly
 specify the required extension search path before issuing the \code{import} command, e.g.:
