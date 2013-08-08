@@ -486,7 +486,7 @@ bool solveQuadraticDouble(double a, double b, double c, double &x0, double &x1) 
 bool solveLinearSystem2x2(const Float a[2][2], const Float b[2], Float x[2]) {
 	Float det = a[0][0] * a[1][1] - a[0][1] * a[1][0];
 
-	if (det == 0)
+	if (std::abs(det) <= RCPOVERFLOW)
 		return false;
 
 	Float inverse = (Float) 1.0f / det;
