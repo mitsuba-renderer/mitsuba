@@ -491,7 +491,7 @@ public:
 	/// Compute the inverse (Faster than Matrix::invert)
 	FINLINE bool invert(Matrix2x2 &target) const {
 		Float det = m[0][0]*m[1][1] - m[0][1]*m[1][0];
-		if (det == 0)
+		if (std::abs(det) <= RCPOVERFLOW)
 			return false;
 		Float invDet = 1/det;
 		target.m[0][0] =  m[1][1] * invDet;

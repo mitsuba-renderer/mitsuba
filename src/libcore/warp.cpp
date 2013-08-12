@@ -49,7 +49,6 @@ Vector Warp::squareToCosineHemisphere(const Point2 &sample) {
 	return Vector(p.x, p.y, z);
 }
 
-
 Vector Warp::squareToUniformCone(Float cosCutoff, const Point2 &sample) {
 	Float cosTheta = (1-sample.x) + sample.x * cosCutoff;
 	Float sinTheta = math::safe_sqrt(1.0f - cosTheta * cosTheta);
@@ -81,24 +80,23 @@ Point2 Warp::squareToUniformDiskConcentric(const Point2 &sample) {
 	Float r1 = 2.0f*sample.x - 1.0f;
 	Float r2 = 2.0f*sample.y - 1.0f;
 
-	Point2 coords;
+	/* Modified concencric map code with less branching (by Dave Cline), see
+	   http://psgraphics.blogspot.ch/2011/01/improved-code-for-concentric-map.html */
+	Float phi, r;
 	if (r1 == 0 && r2 == 0) {
-		coords = Point2(0, 0);
-	} else if (r1 > -r2) { /* Regions 1/2 */
-		if (r1 > r2)
-			coords = Point2(r1, (M_PI/4.0f) * r2/r1);
-		else
-			coords = Point2(r2, (M_PI/4.0f) * (2.0f - r1/r2));
-	} else { /* Regions 3/4 */
-		if (r1<r2)
-			coords = Point2(-r1, (M_PI/4.0f) * (4.0f + r2/r1));
-		else
-			coords = Point2(-r2, (M_PI/4.0f) * (6.0f - r1/r2));
+		r = phi = 0;
+	} if (r1*r1 > r2*r2) {
+		r = r1;
+		phi = (M_PI/4.0f) * (r2/r1);
+	} else {
+		r = r2;
+		phi = (M_PI/2.0f) - (r1/r2) * (M_PI/4.0f);
 	}
 
-	Point2 result;
-	math::sincos(coords.y, &result.y, &result.x);
-	return result*coords.x;
+	Float cosPhi, sinPhi;
+	math::sincos(phi, &sinPhi, &cosPhi);
+
+	return Point2(r * cosPhi, r * sinPhi);
 }
 
 Point2 Warp::uniformDiskToSquareConcentric(const Point2 &p) {

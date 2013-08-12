@@ -156,25 +156,25 @@ inline uint64_t sampleTEA(uint32_t v0, uint32_t v1, int rounds = 4) {
 #if defined(DOUBLE_PRECISION)
 inline Float sampleTEAFloat(uint32_t v0, uint32_t v1, int rounds = 4) {
 	/* Trick from MTGP: generate an uniformly distributed
-       single precision number in [1,2) and subtract 1. */
-    union {
+	   single precision number in [1,2) and subtract 1. */
+	union {
 		uint64_t u;
-		float f;
-    } x;
-	x.u = (sampleTEA(v0, v1, rounds) >> 12) | 0x3ff0000000000000;
-    return x.f - 1.0;
+		double f;
+	} x;
+	x.u = (sampleTEA(v0, v1, rounds) >> 12) | 0x3ff0000000000000ULL;
+	return x.f - 1.0;
 }
 
 #else
 inline Float sampleTEAFloat(uint32_t v0, uint32_t v1, int rounds = 4) {
 	/* Trick from MTGP: generate an uniformly distributed
-       single precision number in [1,2) and subtract 1. */
-    union {
+	   single precision number in [1,2) and subtract 1. */
+	union {
 		uint32_t u;
 		float f;
-    } x;
-    x.u = ((sampleTEA(v0, v1, rounds) & 0xFFFFFFFF) >> 9) | 0x3f800000UL;
-    return x.f - 1.0f;
+	} x;
+	x.u = ((sampleTEA(v0, v1, rounds) & 0xFFFFFFFF) >> 9) | 0x3f800000UL;
+	return x.f - 1.0f;
 }
 #endif
 

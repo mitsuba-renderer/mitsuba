@@ -863,9 +863,9 @@ Float GLWidget::autoFocus() const {
 
 	for (size_t sampleIndex=0; sampleIndex<200; ++sampleIndex) {
 		Point2 sample(
-			radicalInverse(2, sampleIndex) * size.x,
-			radicalInverse(3, sampleIndex) * size.y);
-		camera->sampleRay(ray, sample, Point2(0.5f), 0.5f);
+			radicalInverse(2, sampleIndex),
+			radicalInverse(3, sampleIndex));
+		camera->sampleRay(ray, Point2(sample.x * size.x, sample.y*size.y), Point2(0.5f), 0.5f);
 		if (scene->rayIntersect(ray, t, ptr, n, uv)) {
 			Float weight = math::fastexp(-0.5 / variance * (
 				std::pow(sample.x - 0.5f, (Float) 2) +

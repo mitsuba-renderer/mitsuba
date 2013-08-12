@@ -129,6 +129,32 @@ template <typename T> struct TAABB {
 		return (max + min) * (Scalar) 0.5;
 	}
 
+	/// Return the position of one of the corners (in <tt>0..2^dim-1</tt>)
+	inline PointType getCorner(int index) const {
+		PointType result;
+		for (int d=0; d<PointType::dim; ++d) {
+			if (index & (1 << d))
+				result[d] = max[d];
+			else
+				result[d] = min[d];
+		}
+		return result;
+	}
+
+	/// Return a child bounding box in a interval-, quad-, octtree, etc.
+	inline TAABB getChild(int index) const {
+		TAABB result(getCenter());
+
+		for (int d=0; d<PointType::dim; ++d) {
+			if (index & (1 << d))
+				result.max[d] = max[d];
+			else
+				result.min[d] = min[d];
+		}
+
+		return result;
+	}
+
 	/// Check whether a point lies on or inside the bounding box
 	inline bool contains(const PointType &vec) const {
 		for (int i=0; i<PointType::dim; ++i)

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-# 
-# This script walks through all plugin files and 
+#
+# This script walks through all plugin files and
 # extracts documentation that should go into the
 # reference manual
 
@@ -66,7 +66,7 @@ def process_src(target, src_subdir, section=None):
 		section = "section_" + src_subdir
 	target.write('\input{{{0}}}\n'.format(section))
 	process('../src/{0}'.format(src_subdir), target)
-    
+
 def texify(texfile):
 	from subprocess import Popen, PIPE, check_call
 	version = Popen(["pdflatex", "-version"], stdout=PIPE).communicate()[0]
@@ -98,4 +98,3 @@ with open('plugins_generated.tex', 'w') as f:
 	process_src(f, 'rfilters')
 
 texify('main.tex')
-#os.system('pdflatex main.tex | grep -i warning | grep -v "Package \(typearea\|hyperref\)"')

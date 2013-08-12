@@ -53,7 +53,7 @@ MTS_NAMESPACE_BEGIN
  *         and \code{spectrumAlpha}. In the latter two cases,
  *         the number of written channels depends on the value assigned to
  *         \code{SPECTRUM\_SAMPLES} during compilation (see Section~\ref{sec:compiling}
- *         section for details) \default{\code{rgba}}
+ *         section for details) \default{\code{luminance}}
  *     }
  *     \parameter{highQualityEdges}{\Boolean}{
  *        If set to \code{true}, regions slightly outside of the film

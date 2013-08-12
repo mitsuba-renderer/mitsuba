@@ -48,6 +48,8 @@ MTS_NAMESPACE_BEGIN
  *	      which the implementation will start to use the ``russian roulette''
  *	      path termination criterion. \default{\code{5}}
  *	   }
+ *     \parameter{maxPasses}{\Integer}{Maximum number of passes to render (where \code{-1}
+ *        corresponds to rendering until stopped manually). \default{\code{-1}}}
  * }
  * This plugin implements stochastic progressive photon mapping by Hachisuka et al.
  * \cite{Hachisuka2009Stochastic}. This algorithm is an extension of progressive photon
@@ -104,6 +106,8 @@ public:
 		m_mutex = new Mutex();
 		if (m_maxDepth <= 1 && m_maxDepth != -1)
 			Log(EError, "Maximum depth must be set to \"2\" or higher!");
+		if (m_maxPasses <= 0 && m_maxPasses != -1)
+			Log(EError, "Maximum number of Passes must either be set to \"-1\" or \"1\" or higher!");
 	}
 
 	SPPMIntegrator(Stream *stream, InstanceManager *manager)
@@ -191,8 +195,8 @@ public:
 		Thread::initializeOpenMP(nCores);
 #endif
 
-		int it=0;
-		while (m_running) {
+		int it = 0;
+		while (m_running && (m_maxPasses == -1 || it < m_maxPasses)) {
 			distributedRTPass(scene, samplers);
 			photonMapPass(++it, queue, job, film, sceneResID,
 					sensorResID, samplerResID);
@@ -382,7 +386,8 @@ public:
 			<< "  initialRadius = " << m_initialRadius << "," << endl
 			<< "  alpha = " << m_alpha << "," << endl
 			<< "  photonCount = " << m_photonCount << "," << endl
-			<< "  granularity = " << m_granularity << endl
+			<< "  granularity = " << m_granularity << "," << endl
+			<< "  maxPasses = " << m_maxPasses << endl
 			<< "]";
 		return oss.str();
 	}
@@ -399,6 +404,7 @@ private:
 	size_t m_totalEmitted, m_totalPhotons;
 	bool m_running;
 	bool m_autoCancelGathering;
+	int m_maxPasses;
 };
 
 MTS_IMPLEMENT_CLASS_S(SPPMIntegrator, false, Integrator)

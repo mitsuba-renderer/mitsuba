@@ -440,7 +440,7 @@ public:
 
 	/// Divide by a scalar
 	inline friend TSpectrum operator/(Scalar f, TSpectrum &spec) {
-		return spec / f;
+		return TSpectrum(f) / spec;
 	}
 
 	/// Divide by a scalar

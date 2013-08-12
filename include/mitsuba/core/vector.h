@@ -405,6 +405,10 @@ template <typename T> inline T absDot(const TVector2<T> &v1, const TVector2<T> &
 	return std::abs(dot(v1, v2));
 }
 
+template <typename T> inline T det(const TVector2<T> &v1, const TVector2<T> &v2) {
+	return v1.x * v2.y - v1.y * v2.x;
+}
+
 template <typename T> inline TVector2<T> normalize(const TVector2<T> &v) {
 	return v / v.length();
 }
