@@ -245,7 +245,7 @@ bool PathVertex::sampleNext(const Scene *scene, Sampler *sampler,
 				ray.setDirection(pRec.wo);
 				measure = ESolidAngle;
 
-				if (!(phase->getType() & BSDF::ENonSymmetric)) {
+				if (!(phase->getType() & PhaseFunction::ENonSymmetric)) {
 					/* Make use of symmetry -- no need to re-evaluate */
 					pdf[1-mode] = pdf[mode];
 					weight[1-mode] = weight[mode];
@@ -636,7 +636,7 @@ bool PathVertex::perturbDirection(const Scene *scene, const PathVertex *pred,
 
 				measure = ESolidAngle;
 
-				if (!(phase->getType() & BSDF::ENonSymmetric)) {
+				if (!(phase->getType() & PhaseFunction::ENonSymmetric)) {
 					/* Make use of symmetry -- no need to re-evaluate */
 					pdf[1-mode] = pdf[mode];
 					weight[1-mode] = weight[mode];

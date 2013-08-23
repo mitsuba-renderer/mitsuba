@@ -103,6 +103,8 @@ public:
 		m_rrDepth = props.getInteger("rrDepth", 3);
 		/* Indicates if the gathering steps should be canceled if not enough photons are generated. */
 		m_autoCancelGathering = props.getBoolean("autoCancelGathering", true);
+		/* Maximum number of passes to render. -1 renders until the process is stopped. */
+		m_maxPasses = props.getInteger("maxPasses", -1);
 		m_mutex = new Mutex();
 		if (m_maxDepth <= 1 && m_maxDepth != -1)
 			Log(EError, "Maximum depth must be set to \"2\" or higher!");
