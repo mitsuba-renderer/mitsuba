@@ -169,7 +169,7 @@ Spectrum BeamRadianceEstimator::query(const Ray &r, const Medium *medium) const 
 		Float diskDistance = dot(originToCenter, ray.d), radSqr = node.radius * node.radius;
 		Float distSqr = (ray(diskDistance) - node.photon.getPosition()).lengthSquared();
 
-		if (distSqr < radSqr) {
+		if (diskDistance > 0 && distSqr < radSqr) {
 			Float weight = K2(distSqr/radSqr)/radSqr;
 
 			Vector wi = -node.photon.getDirection();
