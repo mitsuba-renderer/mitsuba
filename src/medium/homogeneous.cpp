@@ -276,7 +276,8 @@ public:
 			Sampler *sampler) const {
 		Float rand = sampler->next1D(), sampledDistance;
 		Float samplingDensity = m_samplingDensity;
-		if (rand <= m_mediumSamplingWeight) {
+
+		if (rand < m_mediumSamplingWeight) {
 			rand /= m_mediumSamplingWeight;
 			if (m_strategy != EMaximum) {
 				/* Choose the sampling density to be used */
