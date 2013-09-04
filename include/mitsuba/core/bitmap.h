@@ -726,6 +726,11 @@ public:
 			Point2i targetOffset, Vector2i size);
 
 	/**
+	 * \brief Scale the entire image by a certain value
+	 */
+	void scale(Float value);
+
+	/**
 	 * \brief Color balancing: apply the given scale factors to the
 	 * red, green, and blue channels of the image
 	 *

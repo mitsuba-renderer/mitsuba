@@ -555,6 +555,147 @@ void Bitmap::accumulate(const Bitmap *bitmap, Point2i sourceOffset,
 	}
 }
 
+void Bitmap::scale(Float value) {
+	if (m_componentFormat == EBitmask)
+		Log(EError, "Bitmap::scale(): bitmasks are not supported!");
+
+	size_t nPixels = getPixelCount(), nChannels = getChannelCount();
+
+	if (hasAlpha()) {
+		switch (m_componentFormat) {
+			case EUInt8: {
+					uint8_t *data = (uint8_t *) m_data;
+					for (size_t i=0; i<nPixels; ++i) {
+						for (size_t j=0; j<nChannels-1; ++j) {
+							*data = (uint8_t) std::min((Float) std::numeric_limits<uint8_t>::max(),
+								std::max((Float) 0, *data * value + (Float) 0.5f));
+							++data;
+						}
+						++data;
+					}
+				}
+				break;
+
+			case EUInt16: {
+					uint16_t *data = (uint16_t *) m_data;
+					for (size_t i=0; i<nPixels; ++i) {
+						for (size_t j=0; j<nChannels-1; ++j) {
+							*data = (uint16_t) std::min((Float) std::numeric_limits<uint16_t>::max(),
+								std::max((Float) 0, *data * value + (Float) 0.5f));
+							++data;
+						}
+						++data;
+					}
+				}
+				break;
+
+			case EUInt32: {
+					uint32_t *data = (uint32_t *) m_data;
+					for (size_t i=0; i<nPixels; ++i) {
+						for (size_t j=0; j<nChannels-1; ++j) {
+							*data = (uint32_t) std::min((Float) std::numeric_limits<uint32_t>::max(),
+								std::max((Float) 0, *data * value + (Float) 0.5f));
+							++data;
+						}
+						++data;
+					}
+				}
+				break;
+
+			case EFloat16: {
+					half *data = (half *) m_data;
+					for (size_t i=0; i<nPixels; ++i) {
+						for (size_t j=0; j<nChannels-1; ++j) {
+							*data = (half) (*data * value); ++data;
+						}
+						++data;
+					}
+				}
+				break;
+
+			case EFloat32: {
+					float *data = (float *) m_data;
+					for (size_t i=0; i<nPixels; ++i) {
+						for (size_t j=0; j<nChannels-1; ++j) {
+							*data = (float) (*data * value); ++data;
+						}
+						++data;
+					}
+				}
+				break;
+
+			case EFloat64: {
+					double *data = (double *) m_data;
+					for (size_t i=0; i<nPixels; ++i) {
+						for (size_t j=0; j<nChannels-1; ++j) {
+							*data = (double) (*data * value); ++data;
+						}
+						++data;
+					}
+				}
+				break;
+
+			default:
+				Log(EError, "Bitmap::scale(): unexpected data format!");
+		}
+
+	} else {
+		size_t nEntries = nPixels * nChannels;
+
+		switch (m_componentFormat) {
+			case EUInt8: {
+					uint8_t *data = (uint8_t *) m_data;
+					for (size_t i=0; i<nEntries; ++i)
+						data[i] = (uint8_t) std::min((Float) std::numeric_limits<uint8_t>::max(),
+							std::max((Float) 0, data[i] * value + (Float) 0.5f));
+				}
+				break;
+
+			case EUInt16: {
+					uint16_t *data = (uint16_t *) m_data;
+					for (size_t i=0; i<nEntries; ++i)
+						data[i] = (uint16_t) std::min((Float) std::numeric_limits<uint16_t>::max(),
+							std::max((Float) 0, data[i] * value + (Float) 0.5f));
+				}
+				break;
+
+			case EUInt32: {
+					uint32_t *data = (uint32_t *) m_data;
+					for (size_t i=0; i<nEntries; ++i)
+						data[i] = (uint32_t) std::min((Float) std::numeric_limits<uint32_t>::max(),
+							std::max((Float) 0, data[i] * value + (Float) 0.5f));
+				}
+				break;
+
+			case EFloat16: {
+					half *data = (half *) m_data;
+					for (size_t i=0; i<nEntries; ++i)
+						data[i] = (half) (data[i] * value);
+				}
+				break;
+
+			case EFloat32: {
+					float *data = (float *) m_data;
+					for (size_t i=0; i<nEntries; ++i)
+						data[i] = (float) (data[i] * value);
+				}
+				break;
+
+			case EFloat64: {
+					double *data = (double *) m_data;
+					for (size_t i=0; i<nEntries; ++i)
+						data[i] = (double) (data[i] * value);
+				}
+				break;
+
+			default:
+				Log(EError, "Bitmap::scale(): unexpected data format!");
+		}
+	}
+}
+
+
+
 void Bitmap::colorBalance(Float r, Float g, Float b) {
 	if (m_pixelFormat != ERGB && m_pixelFormat != ERGBA)
 		Log(EError, "colorBalance(): expected a RGB or RGBA image!");
