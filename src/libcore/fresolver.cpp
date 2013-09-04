@@ -1,61 +1,93 @@
 #include <mitsuba/core/fresolver.h>
 #include <boost/algorithm/string.hpp>
 
-#if defined(__WINDOWS__)
+#if defined(__LINUX__)
+# if !defined(_GNU_SOURCE)
+#  define _GNU_SOURCE
+# endif
+# include <dlfcn.h>
+#elif defined(__OSX__)
+# include <mach-o/dyld.h>
+#elif defined(__WINDOWS__)
 # include <windows.h>
 # include <vector>
 #endif
 
+
+
 MTS_NAMESPACE_BEGIN
 
-FileResolver::FileResolver() {
-	m_paths.push_back(fs::current_path());
-#if defined(__LINUX__)
-	char exePathTemp[PATH_MAX];
-	memset(exePathTemp, 0, PATH_MAX);
-	if (readlink("/proc/self/exe", exePathTemp, PATH_MAX) != -1) {
-		fs::path exePath(exePathTemp);
+#if defined(__WINDOWS__) || defined(__LINUX__)
+	namespace {
+		void dummySymbol() { }
+	}
+#endif
 
-		/* Make sure that we're not running inside a Python interpreter */
-		if (exePath.filename().string().find("python") == std::string::npos) {
-			prependPath(exePath.parent_path());
-			// Handle local installs: ~/local/bin/:~/local/share/mitsuba/*
-			fs::path sharedDir = exePath.parent_path().parent_path()
-				/ fs::path("share") / fs::path("mitsuba");
-			if (fs::exists(sharedDir))
-				prependPath(sharedDir);
+FileResolver::FileResolver() {
+	/* Try to detect the base path of the Mitsuba installation */
+	fs::path basePath;
+#if defined(__LINUX__)
+	Dl_info info;
+
+	dladdr((const void *) &dummySymbol, &info);
+	if (info.dli_fname) {
+		/* Try to detect a few default setups */
+		if (boost::starts_with(info.dli_fname, "/usr/lib") ||
+			boost::starts_with(info.dli_fname, "/lib")) {
+			basePath = fs::path("/usr/share/mitsuba");
+		} else if (boost::starts_with(info.dli_fname, "/usr/local/lib")) {
+			basePath = fs::path("/usr/local/share/mitsuba");
+		} else {
+			/* This is a locally-compiled repository */
+			basePath = fs::path(info.dli_fname).parent_path();
 		}
-	} else {
-		Log(EError, "Could not detect the executable path!");
 	}
 #elif defined(__OSX__)
 	MTS_AUTORELEASE_BEGIN()
-	fs::path path = __mts_bundlepath();
-	if (path.filename() != fs::path("Python.app"))
-		prependPath(path);
+	uint32_t imageCount = _dyld_image_count();
+	for (uint32_t i=0; i<imageCount; ++i) {
+		const char *imageName = _dyld_get_image_name(i);
+		if (boost::ends_with(imageName, "libmitsuba-core.dylib")) {
+			basePath = fs::canonical(imageName).parent_path().parent_path().parent_path();
+			break;
+		}
+	}
 	MTS_AUTORELEASE_END()
+	if (basePath.empty())
+		Log(EError, "Could not detect the executable path!");
 #elif defined(__WINDOWS__)
 	std::vector<WCHAR> lpFilename(MAX_PATH);
 
+	// Module handle to this DLL. If the function fails it sets handle to NULL.
+	// In that case GetModuleFileName will get the name of the executable which
+	// is acceptable soft-failure behavior.
+	HMODULE handle;
+	GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS
+	                 | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+          reinterpret_cast<LPCWSTR>(&dummySymbol), &handle);
+
 	// Try to get the path with the default MAX_PATH length (260 chars)
-	DWORD nSize = GetModuleFileNameW(NULL, &lpFilename[0], MAX_PATH);
+	DWORD nSize = GetModuleFileNameW(handle, &lpFilename[0], MAX_PATH);
 
 	// Adjust the buffer size in case if was too short
-	while (nSize == lpFilename.size()) {
+	while (nSize != 0 && nSize == lpFilename.size()) {
 		lpFilename.resize(nSize * 2);
-		nSize = GetModuleFileNameW(NULL, &lpFilename[0], nSize);
+		nSize = GetModuleFileNameW(handle, &lpFilename[0],
+			static_cast<DWORD>(lpFilename.size()));
 	}
 
 	// There is an error if and only if the function returns 0
-	if (nSize != 0) {
-		fs::path path(lpFilename);
-		if (boost::to_lower_copy(path.filename().string()).find("python") == std::string::npos)
-			prependPath(path.parent_path());
-	} else {
-		const std::string msg(lastErrorText());
-		Log(EError, "Could not detect the executable path! (%s)", msg.c_str());
-	}
+	if (nSize != 0)
+		basePath = fs::path(lpFilename).parent_path();
+	else
+		Log(EError, "Could not detect the executable path! (%s)", lastErrorText().c_str());
 #endif
+	#if BOOST_VERSION >= 104800
+		m_paths.push_back(fs::canonical(basePath));
+	#else
+		m_paths.push_back(fs::absolute(basePath));
+	#endif
+	m_paths.push_back(fs::current_path());
 }
 
 FileResolver *FileResolver::clone() const {

@@ -138,7 +138,7 @@ public:
 		sampler->m_arrayStartDim = m_arrayStartDim;
 		sampler->m_arrayEndDim = m_arrayEndDim;
 		for (size_t i=0; i<m_req1D.size(); ++i)
-			sampler->request2DArray(m_req1D[i]);
+			sampler->request1DArray(m_req1D[i]);
 		for (size_t i=0; i<m_req2D.size(); ++i)
 			sampler->request2DArray(m_req2D[i]);
 		return sampler.get();

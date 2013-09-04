@@ -400,7 +400,7 @@ void GLWidget::timerImpulse() {
 		Point origin = (1-t) * m_animationOrigin0 + t * m_animationOrigin1;
 		Point target = (1-t) * m_animationTarget0 + t * m_animationTarget1;
 
-		setInverseViewTransform(
+		setWorldTransform(
 			Transform::lookAt(origin, target, m_context->up));
 
 		if (x == 1.0f)
@@ -414,18 +414,18 @@ void GLWidget::timerImpulse() {
 			* m_clock->getMilliseconds();
 
 		if (m_leftKeyDown)
-			setInverseViewTransform(getInverseViewTransform() *
+			setWorldTransform(getWorldTransform() *
 				Transform::translate(Vector(delta,0,0)));
 		if (m_rightKeyDown)
-			setInverseViewTransform(getInverseViewTransform() *
+			setWorldTransform(getWorldTransform() *
 				Transform::translate(Vector(-delta,0,0)));
 		if (m_downKeyDown) {
-			setInverseViewTransform(getInverseViewTransform() *
+			setWorldTransform(getWorldTransform() *
 				Transform::translate(Vector(0,0,-delta)));
 			camera->setFocusDistance(camera->getFocusDistance() + delta);
 		}
 		if (m_upKeyDown) {
-			setInverseViewTransform(getInverseViewTransform() *
+			setWorldTransform(getWorldTransform() *
 				Transform::translate(Vector(0,0,delta)));
 			camera->setFocusDistance(camera->getFocusDistance() - delta);
 		}
@@ -589,7 +589,7 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 	if (!camera || !m_preview->isRunning())
 		return;
 
-	Transform invView = getInverseViewTransform();
+	Transform invView = getWorldTransform();
 	Point p = invView(Point(0,0,0));
 	Vector d = invView(Vector(0,0,1));
 	bool didMove = false;
@@ -622,7 +622,7 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 			if (coords.x < 0 || coords.x > M_PI)
 				m_context->up *= -1;
 
-			setInverseViewTransform(Transform::lookAt(p, target, m_context->up));
+			setWorldTransform(Transform::lookAt(p, target, m_context->up));
 		} else {
 			Float yaw = -.03f * rel.x() * m_mouseSensitivity;
 			Float pitch = .03f * rel.y() * m_mouseSensitivity;
@@ -634,11 +634,11 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 					* Transform::rotate(Vector(0,1,0), yaw);
 			d = trafo(Vector(0,0,1));
 
-			setInverseViewTransform(Transform::lookAt(p, p+d, up));
+			setWorldTransform(Transform::lookAt(p, p+d, up));
 		}
 		didMove = true;
 	} else if (event->buttons() & Qt::MidButton) {
-		setInverseViewTransform(invView *
+		setWorldTransform(invView *
 			Transform::translate(Vector((Float) rel.x(), (Float) rel.y(), 0)
 				* m_mouseSensitivity * .6f * m_context->movementScale));
 		didMove = true;
@@ -648,7 +648,7 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 			Float fovChange = rel.y() * m_mouseSensitivity * .03f;
 
 			m_context->up = Transform::rotate(d, isRightHanded() ? -roll : roll)(up);
-			setInverseViewTransform(Transform::lookAt(p, p+d, m_context->up));
+			setWorldTransform(Transform::lookAt(p, p+d, m_context->up));
 
 			camera->setXFov(std::min(std::max((Float) 1.0f, camera->getXFov()
 				+ fovChange), (Float) 160.0f));
@@ -671,7 +671,7 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 			camera->setFocusDistance(focusDistance);
 			p = p + (oldFocusDistance - focusDistance) * d;
 
-			setInverseViewTransform(Transform::lookAt(p, p+d, up));
+			setWorldTransform(Transform::lookAt(p, p+d, up));
 		}
 		didMove = true;
 	}
@@ -829,14 +829,14 @@ void GLWidget::wheelEvent(QWheelEvent *event) {
 
 		camera->setFocusDistance(focusDistance);
 
-		Transform invView = getInverseViewTransform();
+		Transform invView = getWorldTransform();
 		Point p  = invView(Point(0,0,0));
 		Vector d = invView(Vector(0,0,1));
 		Vector up = invView(Vector(0,1,0));
 
 		p = p + (oldFocusDistance - focusDistance) * d;
 
-		setInverseViewTransform(Transform::lookAt(p, p+d, up));
+		setWorldTransform(Transform::lookAt(p, p+d, up));
 
 		m_wheelTimer->reset();
 		if (!m_movementTimer->isActive())
@@ -863,9 +863,9 @@ Float GLWidget::autoFocus() const {
 
 	for (size_t sampleIndex=0; sampleIndex<200; ++sampleIndex) {
 		Point2 sample(
-			radicalInverse(2, sampleIndex) * size.x,
-			radicalInverse(3, sampleIndex) * size.y);
-		camera->sampleRay(ray, sample, Point2(0.5f), 0.5f);
+			radicalInverse(2, sampleIndex),
+			radicalInverse(3, sampleIndex));
+		camera->sampleRay(ray, Point2(sample.x * size.x, sample.y*size.y), Point2(0.5f), 0.5f);
 		if (scene->rayIntersect(ray, t, ptr, n, uv)) {
 			Float weight = math::fastexp(-0.5 / variance * (
 				std::pow(sample.x - 0.5f, (Float) 2) +
@@ -1400,7 +1400,7 @@ void GLWidget::reveal(const AABB &aabb) {
 	if (!camera)
 		return;
 
-	Transform invView = getInverseViewTransform();
+	Transform invView = getWorldTransform();
 	Point p  = invView(Point(0,0,0));
 	Vector d = invView(Vector(0,0,1));
 

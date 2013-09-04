@@ -1,3 +1,65 @@
+mitsuba (0.4.4-1) unstable; urgency=low
+  * Improved Python support for rendering animations and motion blur
+  * Photon mapper logic rewrite to account for certain missing specular paths
+  * Robustness improvements for specular+diffuse materials such as 'plastic'
+  * Fixed a remaining issue in the instancing frame computation code
+  * The thindielectric plugin formerly computed incorrect transmittance values
+  * The cube shape is now centered at the origin by default
+  * The TLS cleanup logic has been fixed to avoid a potential crash in mtssrv
+  * Other minor improvements, which are listed in the repository log
+ -- Wenzel Jakob <wenzel@cs.cornell.edu>  Thu, 28 Feb 2013 00:00:00 -0400
+
+mitsuba (0.4.3-1) unstable; urgency=low
+  * Motion blur: Support for arbitrary linear camera, object, and sensor motion
+    to produce motion blur in renderings.
+  * Render-time annotations: added the ability to tag image files with additional
+    information by means of metadata or text labels.
+  * Hide directly visible emitters: convenient feature for removing an environment
+    light source so that an image can be composited onto documents having a
+    different color.
+  * Improved instancing: more robust instancing code with support for
+    non-rigid transformations.
+  * Threading on Windows: fixed various threading-related issues on Windows that
+    previously caused crashes and deadlocks.
+  * Caching: Caching mechanism to further accelerate the loading of
+    .serialized files.
+  * File dialogs: Native File Open/Save dialogs are now used on Windows.
+  * Python: Improved python bindings; easier usage on MacOS X.
+  * Blender interaction: Fixed a issue where GUI tabs containing scenes created
+    in Blender could not be cloned.
+  * Non-uniform scales: All triangle mesh-based shapes now permit
+    non-uniform scales.
+  * NaNs and friends: Increased resilience against various numerical corner cases.
+  * Index-matched participating media: Fixed an unfortunate regression in volpath
+    regarding index-matched media that was accidentally introduced in 0.4.2.
+  * roughdiffuse: Fixed texturing support in the roughdiffuse plugin.
+  * Photon mapping: Fixed some inaccuracies involving participating media when
+    rendered by the photon mapper and the Beam Radiance Estimate.
+  * Conductors: Switched Fresnel reflectance computations for conductors to the
+    exact expressions predicted by geometric optics (an approximation was
+    previously used).
+  * New cube shape: Added a cube shape plugin for convenience. This does
+    exactly what one would expect.
+  * The rest: As usual, a large number of smaller bugfixes and improvements
+    were below the threshold and are thus not listed individually. The
+    repository log has more details.
+ -- Wenzel Jakob <wenzel@cs.cornell.edu>  Tue, 29 Jan 2013 00:00:00 -0400
+
+mitsuba (0.4.2-1) unstable; urgency=low
+  * Volumetric path tracers: improved sampling when dealing with index-matched medium transitions. This is essentially a re-implementation of an optimization that Mitsuba 0.3.1 already had, but which got lost in the bidirectional rewrite.
+  * Batch tonemapper: due to an unfortunate bug, the batch tonemapper in the last release produced invalid results for images containing an alpha channel. This is now fixed.
+  * Shapes: corrected some differential geometry issues in the "cylinder" and "rectangle" shapes.
+  * MLT: fixed 2-stage MLT, which was producing incorrect results.
+  * MEPT: fixed the handling of directional light sources.
+  * Robustness: got rid of various corner-cases that could produce NaNs.
+  * Filenames: to facilitate loading scenes created on Windows/OSX, the Linux version now resolves files case-insensitively if they could not be found after a case-sensitive search.
+  * Python: added Python bindings for shapes and triangle meshes. The Python plugin should now be easier to load (previously, this was unfortunately rather difficult on several platforms). The documentation was also given an overhaul.
+  * Particle tracing: I've decided to disable the adjoint BSDF for shading normals in the particle tracer, since it causes an unacceptable amount of variance in scenes containing poorly tesselated geometry. This affects the plugins ptracer, ppm, sppm and photonmapper.
+  * Subsurface scattering: fixed parallel network renderings involving the dipole model.
+  * Homogeneous medium & dipole: added many more material presets by Narasimhan et al.
+  * OBJ loader: further robustness improvements to the OBJ loader and the associated MTL material translator.
+ -- Wenzel Jakob <wenzel@cs.cornell.edu>  Wed, 31 Oct 2012 00:00:00 -0400
+
 mitsuba (0.4.1-1) unstable; urgency=low
   * negative pixel values in textures and environment maps are handled more gracefully.
   * minor robustness improvements to the OBJ and COLLADA importers.
@@ -35,15 +97,15 @@ mitsuba (0.4.0-1) unstable; urgency=low
 
 mitsuba (0.3.1-1) unstable; urgency=low
 
-  * Photon mapper: The photon mapper had some serious issues in the 
+  * Photon mapper: The photon mapper had some serious issues in the
     last release. These are now fixed, and it should run faster too.
-  * On Linux/x86_64, the performance of the single precision exp() and log() 
+  * On Linux/x86_64, the performance of the single precision exp() and log()
     math library functions is extremely poor. Mitsuba now uses the double
     prevision versions of these functions by default.
   * Primitive clipping: Fixed numerical issues that occurred when using
     primitive clipping in a double precision build.
   * The adaptive integrator now better interacts with certain sub-integrators.
-  * Instanced analytic shapes (e.g. spheres, cylinders, ..) are now supported, 
+  * Instanced analytic shapes (e.g. spheres, cylinders, ..) are now supported,
     and an error involving network rendering with instanced geometry is fixed.
   * Fixed a serious issue that could destroy a scene file when saving from a cloned tab!
   * Fixed some bad GUI behavior in multi-screen setups
@@ -57,30 +119,30 @@ mitsuba (0.3.0-1) unstable; urgency=low
 
   * Added Python bindings that can be used to instantiate plugins
     and control rendering processes.
-  * Spectral rendering: most of the code pertaining to spectral 
-    rendering has seen a significant overhaul. It is now faster and 
+  * Spectral rendering: most of the code pertaining to spectral
+    rendering has seen a significant overhaul. It is now faster and
     in certain cases more accurate.
-  * Flexible material classes: this release introduces a robust and 
-    very general suite of eight physically-based smooth and rough 
+  * Flexible material classes: this release introduces a robust and
+    very general suite of eight physically-based smooth and rough
     (microfacet-based) material classes.
   * Material modifiers: two new material modifiers (bump & coating)
     can be applied to BSDFs to create new materials.
-  * Material verification: the sampling methods of all material 
-    models in Mitsuba are now automatically verified with the help 
+  * Material verification: the sampling methods of all material
+    models in Mitsuba are now automatically verified with the help
     of statistical hypothesis tests (using Chi^2-tests).
-  * Generated documentation: there is now a javadoc-like system, 
-    which extracts documentation directly from the plugin source code 
+  * Generated documentation: there is now a javadoc-like system,
+    which extracts documentation directly from the plugin source code
     and stitches it into a LaTeX reference document.
-  * lookAt: Mitsuba inherited a bug from PBRT, where the <lookAt> 
-    tag changed the handedness of the coordinate system. This is now  
+  * lookAt: Mitsuba inherited a bug from PBRT, where the <lookAt>
+    tag changed the handedness of the coordinate system. This is now
     fixed--also, the syntax of this tag has changed to make it easier to read.
   * Scene portability: A new conversion tool ensures that old and incompatible
-    scenes can be translated into the scene description format of the 
+    scenes can be translated into the scene description format of the
     most recent version.
-  * Contributed plugins: Tom Kazimiers and Papas have contributed 
+  * Contributed plugins: Tom Kazimiers and Papas have contributed
     implementations of the Preetham Sun & Sky model and the Hanrahan-Krueger
     scattering model.
-  * Photon mapping: The Photon map integrator has been rewritten for 
+  * Photon mapping: The Photon map integrator has been rewritten for
     improved accuracy and better performance. Furthermore, the underlying
     data structure has been replaced with a ~50% faster implementation.
 
@@ -125,8 +187,8 @@ mitsuba (0.2.0-1) unstable; urgency=low
 
 mitsuba (0.1.3-1) unstable; urgency=low
 
-  This is mainly a bugfix release to address a serious regression in the 
-  material system. Other notable changes are: 
+  This is mainly a bugfix release to address a serious regression in the
+  material system. Other notable changes are:
 
   * Imported scenes now store relative paths
   * OBJ importing works on Windows
@@ -134,7 +196,7 @@ mitsuba (0.1.3-1) unstable; urgency=low
   * The anisotropic Ward BRDF is now supported in the preview
   * Faster texture loading
   * The renderer now has a testcase framework similar to JUnit
- 
+
  -- Wenzel Jakob <wenzel@cs.cornell.edu>  Wed, 8 Sep 2010 09:59:00 -0400
 
 mitsuba (0.1.2-1) unstable; urgency=low
@@ -150,8 +212,8 @@ mitsuba (0.1.2-1) unstable; urgency=low
     is lacking some required OpenGL features.
   * Create default cameras/lightsources if none are specified in a scene
   * Support for drag & drop in the user interface
-  * The Mitsuba user interface now also doubles as an EXR viewer / tonemapper. 
-    Drag an EXR file onto the UI or open it using the File menu, and the image 
+  * The Mitsuba user interface now also doubles as an EXR viewer / tonemapper.
+    Drag an EXR file onto the UI or open it using the File menu, and the image
     opens in a new tab. Afterwards, it is possible to export the image as a tonemapped
     8-bit PNG image.
   * The realtime preview now has a 'force diffuse' feature to improve
@@ -165,6 +227,6 @@ mitsuba (0.1.2-1) unstable; urgency=low
 
 mitsuba (0.1.1-1) unstable; urgency=low
 
-  * Initial release 
+  * Initial release
 
  -- Wenzel Jakob <wenzel@cs.cornell.edu>  Sat, 17 Jul 2010 23:56:03 -0400

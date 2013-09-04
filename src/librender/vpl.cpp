@@ -30,7 +30,7 @@ static void appendVPL(const Scene *scene, Random *random,
 
 	const Sensor *sensor = scene->getSensor();
 	Float time = sensor->getShutterOpen()
-		+ 0.5f * sensor->getShutterOpenTime();
+		+ sensor->getShutterOpenTime() * random->nextFloat();
 
 	if (prune) {
 		/* Possibly reject VPLs if they are unlikely to be
@@ -86,11 +86,12 @@ size_t generateVPLs(const Scene *scene, Random *random,
 		sampler = static_cast<Sampler *> (PluginManager::getInstance()->
 			createObject(MTS_CLASS(Sampler), props));
 		sampler->configure();
+		sampler->generate(Point2i(0));
 	}
 
 	const Sensor *sensor = scene->getSensor();
 	Float time = sensor->getShutterOpen()
-		+ 0.5f * sensor->getShutterOpenTime();
+		+ sensor->getShutterOpenTime() * sampler->next1D();
 
 	const Frame stdFrame(Vector(1,0,0), Vector(0,1,0), Vector(0,0,1));
 
@@ -110,6 +111,7 @@ size_t generateVPLs(const Scene *scene, Random *random,
 		if (!emitter->isEnvironmentEmitter() && emitter->needsDirectionSample()) {
 			VPL lumVPL(EPointEmitterVPL, weight);
 			lumVPL.its.p = pRec.p;
+			lumVPL.its.time = time;
 			lumVPL.its.shFrame = pRec.n.isZero() ? stdFrame : Frame(pRec.n);
 			lumVPL.emitter = emitter;
 			appendVPL(scene, random, lumVPL, prune, vpls);
@@ -128,6 +130,7 @@ size_t generateVPLs(const Scene *scene, Random *random,
 
 			VPL lumVPL(EDirectionalEmitterVPL, weight2);
 			lumVPL.its.p = Point(0.0);
+			lumVPL.its.time = time;
 			lumVPL.its.shFrame = Frame(-diRec.d);
 			lumVPL.emitter = emitter;
 			appendVPL(scene, random, lumVPL, false, vpls);

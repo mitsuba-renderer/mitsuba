@@ -43,6 +43,8 @@ MTS_NAMESPACE_BEGIN
  *	      which the implementation will start to use the ``russian roulette''
  *	      path termination criterion. \default{\code{5}}
  *	   }
+ *     \parameter{maxPasses}{\Integer}{Maximum number of passes to render (where \code{-1}
+ *        corresponds to rendering until stopped manually). \default{\code{-1}}}
  * }
  * This plugin implements the progressive photon mapping algorithm by Hachisuka et al.
  * \cite{Hachisuka2008Progressive}. Progressive photon mapping is a variant of photon
@@ -109,9 +111,14 @@ public:
 		m_rrDepth = props.getInteger("rrDepth", 3);
 		/* Indicates if the gathering steps should be canceled if not enough photons are generated. */
 		m_autoCancelGathering = props.getBoolean("autoCancelGathering", true);
+        /* Maximum number of passes to render. -1 renders until the process is stopped. */
+		m_maxPasses = props.getInteger("maxPasses", -1);
+
 		m_mutex = new Mutex();
 		if (m_maxDepth <= 1 && m_maxDepth != -1)
 			Log(EError, "Maximum depth must either be set to \"-1\" or \"2\" or higher!");
+		if (m_maxPasses <= 0 && m_maxPasses != -1)
+			Log(EError, "Maximum number of Passes must either be set to \"-1\" or \"1\" or higher!");
 	}
 
 	virtual ~PPMIntegrator() {
@@ -242,9 +249,14 @@ public:
 			}
 		}
 
+		#if defined(MTS_OPENMP)
+			Thread::initializeOpenMP(nCores);
+		#endif
+
 		int it = 0;
-		while (m_running)
+		while (m_running && (m_maxPasses == -1 || it < m_maxPasses)) {
 			photonMapPass(++it, queue, job, film, sceneResID, sensorResID, indepSamplerResID);
+        }
 
 #ifdef MTS_DEBUG_FP
 		disableFPExceptions();
@@ -384,7 +396,8 @@ public:
 			<< "  initialRadius = " << m_initialRadius << "," << endl
 			<< "  alpha = " << m_alpha << "," << endl
 			<< "  photonCount = " << m_photonCount << "," << endl
-			<< "  granularity = " << m_granularity << endl
+			<< "  granularity = " << m_granularity << "," << endl
+			<< "  maxPasses = " << m_maxPasses << endl
 			<< "]";
 		return oss.str();
 	}
@@ -400,6 +413,7 @@ private:
 	bool m_running;
 	bool m_autoCancelGathering;
 	ref<Mutex> m_mutex;
+	int m_maxPasses;
 };
 
 MTS_IMPLEMENT_CLASS(PPMIntegrator, false, Integrator)

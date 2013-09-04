@@ -85,9 +85,21 @@ struct Frame {
 	}
 
 	/** \brief Assuming that the given direction is in the local coordinate
+	 * system, return the squared cosine of the angle between the normal and v */
+	inline static Float cosTheta2(const Vector &v) {
+		return v.z * v.z;
+	}
+
+	/** \brief Assuming that the given direction is in the local coordinate
 	 * system, return the cosine of the angle between the normal and v */
 	inline static Float cosTheta(const Vector &v) {
 		return v.z;
+	}
+
+	/** \brief Assuming that the given direction is in the local coordinate
+	 * system, return the squared sine of the angle between the normal and v */
+	inline static Float sinTheta2(const Vector &v) {
+		return 1.0f - v.z * v.z;
 	}
 
 	/** \brief Assuming that the given direction is in the local coordinate
@@ -109,9 +121,12 @@ struct Frame {
 	}
 
 	/** \brief Assuming that the given direction is in the local coordinate
-	 * system, return the squared sine of the angle between the normal and v */
-	inline static Float sinTheta2(const Vector &v) {
-		return 1.0f - v.z * v.z;
+	 * system, return the squared tangent of the angle between the normal and v */
+	inline static Float tanTheta2(const Vector &v) {
+		Float temp = 1 - v.z*v.z;
+		if (temp <= 0.0f)
+			return 0.0f;
+		return temp / (v.z * v.z);
 	}
 
 	/** \brief Assuming that the given direction is in the local coordinate

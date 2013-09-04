@@ -18,7 +18,7 @@
 
 #include <mitsuba/render/emitter.h>
 #include <mitsuba/render/medium.h>
-#include <mitsuba/render/track.h>
+#include <mitsuba/core/track.h>
 
 MTS_NAMESPACE_BEGIN
 

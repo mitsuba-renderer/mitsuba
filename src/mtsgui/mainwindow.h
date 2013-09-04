@@ -193,8 +193,8 @@ private slots:
 	void updateStatus();
 	void onPreviewSettingsClose();
 	void onOpenDialogClose(int reason);
-	void onSaveAsDialogClose(int reason);
 	void onExportDialogClose(int reason);
+	void onSaveAsDialogClose(int reason);
 	void onRenderSettingsClose(int reason);
 	void onImportDialogClose(int reason);
 	void onSceneInformationClose(int reason);
@@ -204,6 +204,9 @@ private slots:
 	void onSelectionChanged();
 
 private:
+	void exportImage(const QString &fileName);
+	void saveSceneAs(const QString &fileName);
+
     Ui::MainWindow *ui;
 	QAction *m_actRecent[MAX_RECENT_FILES];
 	QAction *m_clearRecent;

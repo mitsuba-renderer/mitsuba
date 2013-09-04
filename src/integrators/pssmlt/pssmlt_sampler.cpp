@@ -50,7 +50,7 @@ void PSSMLTSampler::serialize(Stream *stream, InstanceManager *manager) const {
 }
 
 void PSSMLTSampler::configure() {
-	m_logRatio = -std::log(m_s2/m_s1);
+	m_logRatio = -math::fastlog(m_s2/m_s1);
 	m_time = 0;
 	m_largeStepTime = 0;
 	m_largeStep = false;

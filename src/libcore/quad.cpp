@@ -96,6 +96,7 @@ static std::pair<double, double> legendreQ(int l, double x) {
 	if (l == 1) {
 		return std::make_pair(0.5 * (3*x*x-1) - 1, 3*x);
 	} else {
+		/* Evaluate the recurrence in double precision */
 		double Lppred = 1.0, Lpred = x, Lcur = 0.0,
 		       Dppred = 0.0, Dpred = 1.0, Dcur = 0.0;
 
@@ -111,6 +112,65 @@ static std::pair<double, double> legendreQ(int l, double x) {
 
 		return std::make_pair(Lnext - Lppred, Dnext - Dppred);
 	}
+}
+
+double legendreP(int l, int m, double x) {
+	double p_mm = 1;
+
+	if (m > 0) {
+		double somx2 = std::sqrt((1 - x) * (1 + x));
+		double fact = 1;
+		for (int i=1; i<=m; i++) {
+			p_mm *= (-fact) * somx2;
+			fact += 2;
+		}
+	}
+
+	if (l == m)
+		return p_mm;
+
+	double p_mmp1 = x * (2*m + 1) * p_mm;
+	if (l == m+1)
+		return p_mmp1;
+
+	double p_ll = 0;
+	for (int ll=m+2; ll <= l; ++ll) {
+		p_ll = ((2*ll-1)*x*p_mmp1 - (ll+m-1) * p_mm) / (ll-m);
+		p_mm = p_mmp1;
+		p_mmp1 = p_ll;
+	}
+
+	return p_ll;
+}
+
+float legendreP(int l, int m, float x) {
+	/* Evaluate the recurrence in double precision */
+	double p_mm = 1;
+
+	if (m > 0) {
+		double somx2 = std::sqrt((1 - x) * (1 + x));
+		double fact = 1;
+		for (int i=1; i<=m; i++) {
+			p_mm *= (-fact) * somx2;
+			fact += 2;
+		}
+	}
+
+	if (l == m)
+		return (float) p_mm;
+
+	double p_mmp1 = x * (2*m + 1) * p_mm;
+	if (l == m+1)
+		return (float) p_mmp1;
+
+	double p_ll = 0;
+	for (int ll=m+2; ll <= l; ++ll) {
+		p_ll = ((2*ll-1)*x*p_mmp1 - (ll+m-1) * p_mm) / (ll-m);
+		p_mm = p_mmp1;
+		p_mmp1 = p_ll;
+	}
+
+	return (float) p_ll;
 }
 
 void gaussLegendre(int n, Float *nodes, Float *weights) {

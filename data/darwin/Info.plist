@@ -90,5 +90,7 @@
 	<string>YES</string>
 	<key>BreakpadVendor</key>
 	<string>the Mitsuba authors</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
 </dict>
 </plist>

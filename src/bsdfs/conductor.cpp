@@ -19,6 +19,8 @@
 #include <mitsuba/render/bsdf.h>
 #include <mitsuba/core/fresolver.h>
 #include <mitsuba/hw/basicshader.h>
+#include <boost/algorithm/string.hpp>
+#include "ior.h"
 
 MTS_NAMESPACE_BEGIN
 
@@ -28,11 +30,12 @@ MTS_NAMESPACE_BEGIN
  * \parameters{
  *     \parameter{material}{\String}{Name of a material preset, see
  *           \tblref{conductor-iors}.\!\default{\texttt{Cu} / copper}}
- *     \parameter{eta}{\Spectrum}{Real part of the material's index
- *           of refraction \default{based on the value of \texttt{material}}}
- *     \parameter{k}{\Spectrum}{Imaginary part of the material's index of
- *             refraction, also known as absorption coefficient.
- *             \default{based on the value of \texttt{material}}}
+ *     \parameter{eta, k}{\Spectrum}{Real and imaginary components of the material's index of
+ *             refraction \default{based on the value of \texttt{material}}}
+ *     \parameter{extEta}{\Float\Or\String}{
+ *           Real-valued index of refraction of the surrounding dielectric,
+ *           or a material name of a dielectric \default{\code{air}}
+ *     }
  *     \parameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
  *         factor that can be used to modulate the specular reflection component. Note
  *         that for physical realism, this parameter should never be touched. \default{1.0}}
@@ -70,6 +73,9 @@ MTS_NAMESPACE_BEGIN
  * coatings, which are not actually conductors. These materials can also
  * be used with this plugin, though note that the plugin will ignore any
  * refraction component that the actual material might have had.
+ * There is also a special material profile named \code{none}, which disables
+ * the computation of Fresnel reflectances and produces an idealized
+ * 100% reflecting mirror.
  *
  * When using this plugin, you should ideally compile Mitsuba with support for
  * spectral rendering to get the most accurate results. While it also works
@@ -127,7 +133,7 @@ MTS_NAMESPACE_BEGIN
  * K, K\_palik           & Polycrystalline potassium &&   W                     & Tungsten \\
  * Li, Li\_palik         & Lithium &&                     \\
  * MgO, MgO\_palik       & Magnesium oxide &&             \\
- * Mo, Mo\_palik         & Molybdenum &&                  \\
+ * Mo, Mo\_palik         & Molybdenum &&                  none & No mat. profile ($\to$ 100% reflecting mirror)\\
  * \bottomrule
  * \end{tabular}
  * \caption{
@@ -150,15 +156,23 @@ public:
 		m_specularReflectance = new ConstantSpectrumTexture(
 			props.getSpectrum("specularReflectance", Spectrum(1.0f)));
 
-		std::string material = props.getString("material", "Cu");
-		Spectrum materialEta, materialK;
-		materialEta.fromContinuousSpectrum(InterpolatedSpectrum(
-			fResolver->resolve("data/ior/" + material + ".eta.spd")));
-		materialK.fromContinuousSpectrum(InterpolatedSpectrum(
-			fResolver->resolve("data/ior/" + material + ".k.spd")));
+		std::string materialName = props.getString("material", "Cu");
 
-		m_eta = props.getSpectrum("eta", materialEta);
-		m_k = props.getSpectrum("k", materialK);
+		Spectrum intEta, intK;
+		if (boost::to_lower_copy(materialName) == "none") {
+			intEta = Spectrum(0.0f);
+			intK = Spectrum(1.0f);
+		} else {
+			intEta.fromContinuousSpectrum(InterpolatedSpectrum(
+				fResolver->resolve("data/ior/" + materialName + ".eta.spd")));
+			intK.fromContinuousSpectrum(InterpolatedSpectrum(
+				fResolver->resolve("data/ior/" + materialName + ".k.spd")));
+		}
+
+		Float extEta = lookupIOR(props, "extEta", "air");
+
+		m_eta = props.getSpectrum("eta", intEta) / extEta;
+		m_k   = props.getSpectrum("k", intK) / extEta;
 	}
 
 	SmoothConductor(Stream *stream, InstanceManager *manager)
@@ -215,11 +229,11 @@ public:
 		if (!sampleReflection || measure != EDiscrete ||
 			Frame::cosTheta(bRec.wi) <= 0 ||
 			Frame::cosTheta(bRec.wo) <= 0 ||
-			absDot(reflect(bRec.wi), bRec.wo) < 1-DeltaEpsilon)
+			std::abs(dot(reflect(bRec.wi), bRec.wo)-1) > DeltaEpsilon)
 			return Spectrum(0.0f);
 
 		return m_specularReflectance->eval(bRec.its) *
-			fresnelConductor(Frame::cosTheta(bRec.wi), m_eta, m_k);
+			fresnelConductorExact(Frame::cosTheta(bRec.wi), m_eta, m_k);
 	}
 
 	Float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const {
@@ -231,7 +245,7 @@ public:
 		if (!sampleReflection || measure != EDiscrete ||
 			Frame::cosTheta(bRec.wi) <= 0 ||
 			Frame::cosTheta(bRec.wo) <= 0 ||
-			absDot(reflect(bRec.wi), bRec.wo) < 1-DeltaEpsilon)
+			std::abs(dot(reflect(bRec.wi), bRec.wo)-1) > DeltaEpsilon)
 			return 0.0f;
 
 		return 1.0f;
@@ -250,7 +264,7 @@ public:
 		bRec.eta = 1.0f;
 
 		return m_specularReflectance->eval(bRec.its) *
-			fresnelConductor(Frame::cosTheta(bRec.wi), m_eta, m_k);
+			fresnelConductorExact(Frame::cosTheta(bRec.wi), m_eta, m_k);
 	}
 
 	Spectrum sample(BSDFSamplingRecord &bRec, Float &pdf, const Point2 &sample) const {
@@ -267,7 +281,7 @@ public:
 		pdf = 1;
 
 		return m_specularReflectance->eval(bRec.its) *
-			fresnelConductor(Frame::cosTheta(bRec.wi), m_eta, m_k);
+			fresnelConductorExact(Frame::cosTheta(bRec.wi), m_eta, m_k);
 	}
 
 	Float getRoughness(const Intersection &its, int component) const {
@@ -310,7 +324,7 @@ public:
 		m_specularReflectanceShader = renderer->registerShaderForResource(m_specularReflectance.get());
 
 		/* Compute the reflectance at perpendicular incidence */
-		m_R0 = fresnelConductor(1.0f, eta, k);
+		m_R0 = fresnelConductorExact(1.0f, eta, k);
 
 		m_alpha = 0.4f;
 	}

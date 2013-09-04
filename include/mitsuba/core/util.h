@@ -58,7 +58,7 @@ extern MTS_EXPORT_CORE std::string formatString(const char *pFmt, ...);
 extern MTS_EXPORT_CORE std::string timeString(Float time, bool precise = false);
 
 /// Turn a memory size into a human-readable string
-extern MTS_EXPORT_CORE std::string memString(size_t size);
+extern MTS_EXPORT_CORE std::string memString(size_t size, bool precise = false);
 
 /// Return a string representation of a list of objects
 template<class Iterator> std::string containerToString(const Iterator &start, const Iterator &end) {
@@ -109,6 +109,9 @@ extern MTS_EXPORT_CORE int getCoreCount();
 
 /// Return the host name of this machine
 extern MTS_EXPORT_CORE std::string getHostName();
+
+/// Return the process private memory usage in bytes
+extern MTS_EXPORT_CORE size_t getPrivateMemoryUsage();
 
 /// Return the fully qualified domain name of this machine
 extern MTS_EXPORT_CORE std::string getFQDN();
@@ -171,6 +174,34 @@ static FINLINE uint64_t rdtsc(void) {
   unsigned hi, lo;
   __asm__ __volatile__ ("rdtsc" : "=a"(lo), "=d"(hi));
   return ((uint64_t) lo)| (((uint64_t) hi) << 32);
+}
+#elif defined(__ARMEL__)
+static FINLINE uint64_t rdtsc(void) {
+	// Code from gperftoos:
+	// https://code.google.com/p/gperftools/source/browse/trunk/src/base/cycleclock.h
+	uint32_t pmccntr;
+	uint32_t pmuseren;
+	uint32_t pmcntenset;
+	// Read the user mode perf monitor counter access permissions.
+	asm volatile ("mrc p15, 0, %0, c9, c14, 0" : "=r" (pmuseren));
+	if (EXPECT_TAKEN(pmuseren & 1)) {  // Allows reading perfmon counters for user mode code.
+		asm volatile ("mrc p15, 0, %0, c9, c12, 1" : "=r" (pmcntenset));
+		if (EXPECT_TAKEN(pmcntenset & 0x80000000ul)) {  // Is it counting?
+			asm volatile ("mrc p15, 0, %0, c9, c13, 0" : "=r" (pmccntr));
+			// The counter is set up to count every 64th cycle
+			return static_cast<uint64_t>(pmccntr) * 64;  // Should optimize to << 6
+		}
+	}
+	// Soft-failover, assuming 1.5GHz CPUs
+#if defined(_POSIX_TIMERS) && (_POSIX_TIMERS > 0) && defined(_POSIX_CPUTIME)
+	timespec ts;
+	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ts);
+	return static_cast<uint64_t>((ts.tv_sec + ts.tv_nsec * 1e-9) * 1.5e9);
+#else
+	timeval tv;
+	gettimeofday(&tv, NULL);
+	return static_cast<uint64_t>((tv.tv_sec + tv.tv_usec * 1e-6) * 1.5e9);
+#endif
 }
 #endif
 #elif defined(__MSVC__)
@@ -340,162 +371,6 @@ extern MTS_EXPORT_CORE bool solveQuadratic(Float a, Float b,
 extern MTS_EXPORT_CORE bool solveQuadraticDouble(double a, double b,
 	double c, double &x0, double &x1);
 
-/**
- * \brief Evaluate a cubic spline interpolant of a regularly sampled 1D function
- *
- * This implementation relies on Catmull-Rom splines, i.e. it uses finite
- * differences to approximate the derivatives at the endpoints of each spline
- * segment.
- *
- * \param x
- *      Evaluation point
- * \param data
- *      Floating point array containing \c size regularly spaced evaluations
- *      in the range [\c min,\c max] of the function to be approximated.
- * \param min
- *      Position of the first knot
- * \param max
- *      Position of the last knot
- * \param size
- *      Denotes the size of the \c data array
- * \return
- *      The interpolated value or zero when \c x lies outside of [\c min, \c max]
- */
-extern MTS_EXPORT_CORE Float interpCubic1D(Float x, const Float *data,
-		Float min, Float max, size_t size);
-
-/**
- * \brief Evaluate a cubic spline interpolant of an \a irregularly sampled 1D function
- *
- * This implementation relies on Catmull-Rom splines, i.e. it uses finite
- * differences to approximate the derivatives at the endpoints of each spline
- * segment.
- *
- * \param x
- *      Evaluation point
- * \param nodes
- *      Floating point array containing \c size irregularly spaced values
- *      denoting positions the where the function to be interpolated was evaluated.
- *      They must be provided in \a increasing order.
- * \param data
- *      Floating point array containing interpolant values matched to
- *      the entries of \c nodes.
- * \param size
- *      Denotes the size of the \c data array
- * \return
- *      The interpolated value or zero when \c x lies outside of \a [\c min, \c max]
- */
-extern MTS_EXPORT Float interpCubic1DIrregular(Float x, const Float *nodes,
-		const Float *data, size_t size);
-
-/**
- * \brief Evaluate a cubic spline interpolant of a regularly sampled 2D function
- *
- * This implementation relies on a tensor product of Catmull-Rom splines, i.e. it uses
- * finite differences to approximate the derivatives at the endpoints of each spline
- * patch.
- *
- * \param p
- *      Evaluation point
- * \param data
- *      A 2D floating point array of <tt>size.x*size.y</tt> cells containing regularly
- *      spaced evaluations of the function to be interpolated on the domain <tt>[min, max]</tt>.
- *      Consecutive entries of this array correspond to increments in the 'x' coordinate.
- * \param min
- *      Position of the first knot on each dimension
- * \param max
- *      Position of the last knot on each dimension
- * \param size
- *      Denotes the size of the \c data array (along each dimension)
- * \return
- *      The interpolated value or zero when \c p lies outside of the knot range
- */
-extern MTS_EXPORT_CORE Float interpCubic2D(const Point2 &p, const Float *data,
-		const Point2 &min, const Point2 &max, const Size2 &size);
-
-/**
- * \brief Evaluate a cubic spline interpolant of an \a irregularly sampled 2D function
- *
- * This implementation relies on a tensor product of Catmull-Rom splines, i.e. it uses
- * finite differences to approximate the derivatives at the endpoints of each spline
- * region.
- *
- * When the underlying function is sampled on a regular grid, \ref interpCubic2D()
- * should be preferred, since data lookups will be considerably faster.
- *
- * \param p
- *      Evaluation point
- * \param nodes
- *      Pointer to a list for each dimension denoting the positions where the function
- *      to be interpolated was evaluated. The <tt>i</tt>-th array must have
- *      size <tt>size[i]</tt> and contain position values in \a increasing order.
- * \param data
- *      A 2D floating point array of <tt>size.x*size.y</tt> cells containing irregularly
- *      spaced evaluations of the function to be interpolated on the domain <tt>[min, max]</tt>.
- *      Consecutive entries of this array correspond to increments in the 'x' coordinate.
- * \param size
- *      Denotes the size of the \c data array (along each dimension)
- * \return
- *      The interpolated value or zero when \c p lies outside of the knot range
- */
-extern MTS_EXPORT_CORE Float interpCubic2DIrregular(const Point2 &p, const Float **nodes,
-		const Float *data, const Size2 &size);
-
-/**
- * \brief Evaluate a cubic spline interpolant of a regularly sampled 3D function
- *
- * This implementation relies on a tensor product of Catmull-Rom splines, i.e. it uses
- * finite differences to approximate the derivatives at the endpoints of each spline
- * region.
- *
- * \param p
- *      Evaluation point of the interpolant
- * \param data
- *      A 3D floating point array of <tt>size.x*size.y*size.z</tt> cells containing regularly
- *      spaced evaluations of the function to be interpolated on the domain <tt>[min, max]</tt>.
- *      Consecutive entries of this array correspond to increments in the 'x' coordinate,
- *      then 'y', and finally 'z' increments.
- * \param min
- *      Position of the first knot on each dimension
- * \param max
- *      Position of the last knot on each dimension
- * \param size
- *      Denotes the size of the \c data array (along each dimension)
- * \return
- *      The interpolated value or zero when \c p lies outside of the knot range
- */
-extern MTS_EXPORT_CORE Float interpCubic3D(const Point3 &p, const Float *data,
-		const Point3 &min, const Point3 &max, const Size3 &size);
-
-/**
- * \brief Evaluate a cubic spline interpolant of an \a irregularly sampled 3D function
- *
- * This implementation relies on a tensor product of Catmull-Rom splines, i.e. it uses
- * finite differences to approximate the derivatives at the endpoints of each spline
- * region.
- *
- * When the underlying function is sampled on a regular grid, \ref interpCubic3D()
- * should be preferred, since data lookups will be considerably faster.
- *
- * \param p
- *      Evaluation point
- * \param nodes
- *      Pointer to a list for each dimension denoting the positions where the function
- *      to be interpolated was evaluated. The <tt>i</tt>-th array must have
- *      size <tt>size[i]</tt> and contain position values in \a increasing order.
- * \param data
- *      A 2D floating point array of <tt>size.x*size.y</tt> cells containing irregularly
- *      spaced evaluations of the function to be interpolated on the domain <tt>[min, max]</tt>.
- *      Consecutive entries of this array correspond to increments in the 'x' coordinate,
- *      then 'y', and finally 'z' increments.
- * \param size
- *      Denotes the size of the \c data array (along each dimension)
- * \return
- *      The interpolated value or zero when \c p lies outside of the knot range
- */
-extern MTS_EXPORT_CORE Float interpCubic3DIrregular(const Point3 &p, const Float **nodes,
-		const Float *data, const Size3 &size);
-
 //// Convert radians to degrees
 inline Float radToDeg(Float value) { return value * (180.0f / M_PI); }
 
@@ -663,22 +538,99 @@ inline Float fresnelDielectricExt(Float cosThetaI, Float eta) { Float cosThetaT;
 	return fresnelDielectricExt(cosThetaI, cosThetaT, eta); }
 
 /**
- * \brief Calculates the unpolarized fresnel reflection coefficient
- * at a planar interface between vacuum and a conductor.
+ * \brief Calculates the unpolarized Fresnel reflection coefficient
+ * at a planar interface having a complex-valued relative index of
+ * refraction (approximate scalar version)
+ *
+ * The implementation of this function relies on a simplified expression
+ * that becomes increasingly accurate as k grows.
+ *
+ * The name of this function is a slight misnomer, since it supports
+ * the general case of a complex-valued relative index of refraction
+ * (rather than being restricted to conductors)
  *
  * \param cosThetaI
  * 		Cosine of the angle between the normal and the incident ray
  * \param eta
- * 		Real refractive index (wavelength-dependent)
+ * 		Relative refractive index (real component)
  * \param k
- * 		Imaginary refractive index (wavelength-dependent)
+ * 		Relative refractive index (imaginary component)
  * \ingroup libpython
  */
-extern MTS_EXPORT_CORE Spectrum fresnelConductor(Float cosThetaI,
+extern MTS_EXPORT_CORE Float fresnelConductorApprox(Float cosThetaI,
+		Float eta, Float k);
+
+/**
+ * \brief Calculates the unpolarized Fresnel reflection coefficient
+ * at a planar interface having a complex-valued relative index of
+ * refraction (approximate vectorized version)
+ *
+ * The implementation of this function relies on a simplified expression
+ * that becomes increasingly accurate as k grows.
+ *
+ * The name of this function is a slight misnomer, since it supports
+ * the general case of a complex-valued relative index of refraction
+ * (rather than being restricted to conductors)
+ *
+ * \param cosThetaI
+ * 		Cosine of the angle between the normal and the incident ray
+ * \param eta
+ * 		Relative refractive index (real component)
+ * \param k
+ * 		Relative refractive index (imaginary component)
+ * \ingroup libpython
+ */
+extern MTS_EXPORT_CORE Spectrum fresnelConductorApprox(Float cosThetaI,
 		const Spectrum &eta, const Spectrum &k);
 
 /**
- * \brief Calculates the diffuse unpolarized fresnel reflectance of
+ * \brief Calculates the unpolarized Fresnel reflection coefficient
+ * at a planar interface having a complex-valued relative index of
+ * refraction (accurate scalar version)
+ *
+ * The implementation of this function computes the exact unpolarized
+ * Fresnel reflectance for a complex index of refraction change.
+ *
+ * The name of this function is a slight misnomer, since it supports
+ * the general case of a complex-valued relative index of refraction
+ * (rather than being restricted to conductors)
+ *
+ * \param cosThetaI
+ * 		Cosine of the angle between the normal and the incident ray
+ * \param eta
+ * 		Relative refractive index (real component)
+ * \param k
+ * 		Relative refractive index (imaginary component)
+ * \ingroup libpython
+ */
+extern MTS_EXPORT_CORE Float fresnelConductorExact(Float cosThetaI,
+		Float eta, Float k);
+
+/**
+ * \brief Calculates the unpolarized Fresnel reflection coefficient
+ * at a planar interface having a complex-valued relative index of
+ * refraction (accurate vectorized version)
+ *
+ * The implementation of this function computes the exact unpolarized
+ * Fresnel reflectance for a complex index of refraction change.
+ *
+ * The name of this function is a slight misnomer, since it supports
+ * the general case of a complex-valued relative index of refraction
+ * (rather than being restricted to conductors)
+ *
+ * \param cosThetaI
+ * 		Cosine of the angle between the normal and the incident ray
+ * \param eta
+ * 		Relative refractive index (real component)
+ * \param k
+ * 		Relative refractive index (imaginary component)
+ * \ingroup libpython
+ */
+extern MTS_EXPORT_CORE Spectrum fresnelConductorExact(Float cosThetaI,
+		const Spectrum &eta, const Spectrum &k);
+
+/**
+ * \brief Calculates the diffuse unpolarized Fresnel reflectance of
  * a dielectric material (sometimes referred to as "Fdr").
  *
  * This value quantifies what fraction of diffuse incident illumination

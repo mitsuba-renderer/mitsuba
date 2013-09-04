@@ -405,7 +405,7 @@ void Scene::initializeBidirectional() {
 		aabb.expandBy(emitter->getAABB());
 		if (!(emitter->getType() & Emitter::EDeltaPosition))
 			m_degenerateEmitters = false;
-	}
+}
 	m_aabb = aabb;
 }
 
@@ -419,12 +419,20 @@ bool Scene::preprocess(RenderQueue *queue, const RenderJob *job,
 		sceneResID, sensorResID, samplerResID))
 		return false;
 
-	/* Pre-process step for all sub-surface integrators */
+	/* Pre-process step for all sub-surface integrators (each one in independence) */
+	for (ref_vector<Subsurface>::iterator it = m_ssIntegrators.begin();
+			it != m_ssIntegrators.end(); ++it)
+		(*it)->setActive(false);
+
 	for (ref_vector<Subsurface>::iterator it = m_ssIntegrators.begin();
 		it != m_ssIntegrators.end(); ++it)
 		if (!(*it)->preprocess(this, queue, job,
 				sceneResID, sensorResID, samplerResID))
 			return false;
+
+	for (ref_vector<Subsurface>::iterator it = m_ssIntegrators.begin();
+			it != m_ssIntegrators.end(); ++it)
+		(*it)->setActive(true);
 
 	return true;
 }
@@ -443,8 +451,8 @@ void Scene::cancel() {
 	m_integrator->cancel();
 }
 
-void Scene::flush() {
-	m_sensor->getFilm()->develop();
+void Scene::flush(RenderQueue *queue, const RenderJob *job) {
+	m_sensor->getFilm()->develop(this, queue->getRenderTime(job));
 }
 
 void Scene::setDestinationFile(const fs::path &name) {
@@ -459,7 +467,7 @@ void Scene::postprocess(RenderQueue *queue, const RenderJob *job,
 		int sceneResID, int sensorResID, int samplerResID) {
 	m_integrator->postprocess(this, queue, job, sceneResID,
 		sensorResID, samplerResID);
-	m_sensor->getFilm()->develop();
+	m_sensor->getFilm()->develop(this, queue->getRenderTime(job));
 }
 
 void Scene::addChild(const std::string &name, ConfigurableObject *child) {
@@ -873,7 +881,7 @@ Spectrum Scene::sampleAttenuatedEmitterDirect(DirectSamplingRecord &dRec,
 	Spectrum value = emitter->sampleDirect(dRec, sample);
 
 	if (dRec.pdf != 0) {
-		if (its.isMediumTransition())
+		if (its.shape && its.isMediumTransition())
 			medium = its.getTargetMedium(dRec.d);
 		value *= evalTransmittance(its.p, true, dRec.p, emitter->isOnSurface(),
 				dRec.time, medium, interactions, sampler) / emPdf;
@@ -923,7 +931,7 @@ Spectrum Scene::sampleAttenuatedSensorDirect(DirectSamplingRecord &dRec,
 	Spectrum value = m_sensor->sampleDirect(dRec, sample);
 
 	if (dRec.pdf != 0) {
-		if (its.isMediumTransition())
+		if (its.shape && its.isMediumTransition())
 			medium = its.getTargetMedium(dRec.d);
 		value *= evalTransmittance(its.p, true, dRec.p, m_sensor->isOnSurface(),
 				dRec.time, medium, interactions, sampler);

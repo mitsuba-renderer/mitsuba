@@ -68,6 +68,9 @@ private:
 # pragma warning( pop )
 #endif
 
+/// Push a cleanup handler to be executed after loading the scene is done
+extern MTS_EXPORT_RENDER void pushSceneCleanupHandler(void (*cleanup)());
+
 /**
  * \brief XML parser for Mitsuba scene files. To be used with the
  * SAX interface of Xerces-C++.
@@ -133,8 +136,7 @@ protected:
 private:
 	struct ParseContext {
 		inline ParseContext(ParseContext *_parent)
-		 : parent(_parent) {
-		}
+		 : parent(_parent) { }
 
 		ParseContext *parent;
 		Properties properties;
@@ -155,7 +157,8 @@ private:
 		EBoolean, EString, ETranslate, ERotate,
 		ELookAt, EScale, EMatrix, EPoint,
 		EVector, ERGB, ESRGB, EBlackBody,
-		ESpectrum, ETransform, EInclude, EAlias
+		ESpectrum, ETransform, EAnimation,
+		EInclude, EAlias
 	};
 
 	typedef std::pair<ETag, const Class *> TagEntry;
@@ -170,6 +173,7 @@ private:
 	std::stack<ParseContext> m_context;
 	TagMap m_tags;
 	Transform m_transform;
+	ref<AnimatedTransform> m_animatedTransform;
 	bool m_isIncludedFile;
 };
 

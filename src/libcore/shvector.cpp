@@ -62,12 +62,12 @@ Float SHVector::eval(Float theta, Float phi) const {
 
 	for (int l=0; l<m_bands; ++l) {
 		for (int m=1; m<=l; ++m) {
-			Float L = legendre(l, m, cosTheta) * normalization(l, m);
+			Float L = legendreP(l, m, cosTheta) * normalization(l, m);
 			result += operator()(l, -m) * SQRT_TWO * sinPhi[m-1] * L;
 			result += operator()(l, m)  * SQRT_TWO * cosPhi[m-1] * L;
 		}
 
-		result += operator()(l, 0) * legendre(l, 0, cosTheta) * normalization(l, 0);
+		result += operator()(l, 0) * legendreP(l, 0, cosTheta) * normalization(l, 0);
 	}
 	return result;
 }
@@ -105,12 +105,12 @@ Float SHVector::eval(const Vector &v) const {
 
 	for (int l=0; l<m_bands; ++l) {
 		for (int m=1; m<=l; ++m) {
-			Float L = legendre(l, m, cosTheta) * normalization(l, m);
+			Float L = legendreP(l, m, cosTheta) * normalization(l, m);
 			result += operator()(l, -m) * SQRT_TWO * sinPhi[m-1] * L;
 			result += operator()(l, m)  * SQRT_TWO * cosPhi[m-1] * L;
 		}
 
-		result += operator()(l, 0) * legendre(l, 0, cosTheta) * normalization(l, 0);
+		result += operator()(l, 0) * legendreP(l, 0, cosTheta) * normalization(l, 0);
 	}
 	return result;
 }
@@ -118,45 +118,15 @@ Float SHVector::eval(const Vector &v) const {
 Float SHVector::evalAzimuthallyInvariant(Float theta, Float phi) const {
 	Float result = 0, cosTheta = std::cos(theta);
 	for (int l=0; l<m_bands; ++l)
-		result += operator()(l, 0) * legendre(l, 0, cosTheta) * normalization(l, 0);
+		result += operator()(l, 0) * legendreP(l, 0, cosTheta) * normalization(l, 0);
 	return result;
 }
 
 Float SHVector::evalAzimuthallyInvariant(const Vector &v) const {
 	Float result = 0, cosTheta = v.z;
 	for (int l=0; l<m_bands; ++l)
-		result += operator()(l, 0) * legendre(l, 0, cosTheta) * normalization(l, 0);
+		result += operator()(l, 0) * legendreP(l, 0, cosTheta) * normalization(l, 0);
 	return result;
-}
-
-Float SHVector::legendre(int l, int m, Float x) {
-	/* Code from "Spherical Harmonics Lighting: The Gritty Details" */
-	Float pmm = (Float) 1;
-	if (m>0) {
-		Float somx2 = std::sqrt(((Float) 1 - x) * ((Float) 1 + x));
-		Float fact = 1.0;
-		for (int i=1; i<=m; i++) {
-			pmm *= (-fact) * somx2;
-			fact += (Float) 2;
-		}
-	}
-
-	if (l==m)
-		return pmm;
-
-	Float pmmp1 = x * ((Float) 2 * m + (Float) 1) * pmm;
-	if (l==m+1)
-		return pmmp1;
-
-	Float pll = (Float) 0;
-	for (int ll=m+2; ll<=l; ++ll) {
-		pll = (((Float) 2 * ll - (Float) 1)*x*pmmp1
-			- (ll + m - (Float) 1) * pmm ) / (ll-m);
-		pmm = pmmp1;
-		pmmp1 = pll;
-	}
-
-	return pll;
 }
 
 void SHVector::normalize() {
@@ -559,8 +529,8 @@ Float *SHSampler::legendreIntegrals(Float a, Float b) {
 
 	for (int l=0; l<m_bands; ++l) {
 		for (int m=0; m<=l; ++m) {
-			Pa[I(l,m)] = SHVector::legendre(l, m, a);
-			Pb[I(l,m)] = SHVector::legendre(l, m, b);
+			Pa[I(l,m)] = legendreP(l, m, a);
+			Pb[I(l,m)] = legendreP(l, m, b);
 		}
 	}
 

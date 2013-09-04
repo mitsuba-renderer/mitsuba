@@ -111,7 +111,11 @@ void Logger::log(ELogLevel level, const Class *theClass,
 		memset(exePath, 0, PATH_MAX);
 		if (readlink(formatString("/proc/%i/exe", ppid).c_str(), exePath, PATH_MAX) != -1) {
 			if (!strcmp(exePath, "/usr/bin/gdb")) {
+#if defined(__i386__) || defined(__x86_64__)
 				__asm__ ("int $3");
+#else
+				__builtin_trap();
+#endif
 			}
 		}
 #elif defined(__OSX__)

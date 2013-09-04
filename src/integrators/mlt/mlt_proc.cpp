@@ -122,7 +122,7 @@ public:
 		result->clear();
 
 		/// Reconstruct the seed path
-		m_pathSampler->reconstructPath(wu->getSeed(), *current);
+		m_pathSampler->reconstructPath(wu->getSeed(), m_config.importanceMap, *current);
 		relWeight = current->getRelativeWeight();
 		BDAssert(!relWeight.isZero());
 
@@ -235,7 +235,9 @@ public:
 					}
 				#endif
 
-				if (Qxy <= 0 || Qyx < 0 || std::isnan(Qxy) || std::isnan(Qyx)) {
+				if (Qxy == 0) { // be tolerant of this (can occasionally happen due to floating point inaccuracies)
+					a = 0;
+				} else if (Qxy < 0 || Qyx < 0 || std::isnan(Qxy) || std::isnan(Qyx)) {
 					#if defined(MTS_BD_DEBUG)
 						Log(EDebug, "Source path: %s", current->toString().c_str());
 						Log(EDebug, "Proposal path: %s", proposed->toString().c_str());
@@ -367,6 +369,7 @@ void MLTProcess::develop() {
 			value += direct[i];
 		target[i] = value;
 	}
+
 	m_film->setBitmap(m_developBuffer);
 	m_refreshTimer->reset();
 

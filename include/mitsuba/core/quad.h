@@ -35,6 +35,12 @@ extern MTS_EXPORT_CORE float legendreP(int l, float x);
 /// Evaluate the l-th Legendre polynomial using recurrence (double precision)
 extern MTS_EXPORT_CORE double legendreP(int l, double x);
 
+/// Evaluate an associated Legendre polynomial using recurrence (single precision)
+extern MTS_EXPORT_CORE float legendreP(int l, int m, float x);
+
+/// Evaluate an associated Legendre polynomial using recurrence (double precision)
+extern MTS_EXPORT_CORE double legendreP(int l, int m, double x);
+
 /// Evaluate the l-th Legendre polynomial and its derivative using recurrence (single precision)
 extern MTS_EXPORT_CORE std::pair<float, float> legendrePD(int l, float x);
 

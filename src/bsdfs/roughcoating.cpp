@@ -58,8 +58,8 @@ MTS_NAMESPACE_BEGIN
  *      model absorption --- should be specified in inverse units of \code{sigmaA})\default{1}}
  *     \parameter{sigmaA}{\Spectrum\Or\Texture}{The absorption coefficient of the
  *      coating layer. \default{0, i.e. there is no absorption}}
- *     \parameter{specular\showbreak Transmittance}{\Spectrum\Or\Texture}{Optional
- *         factor that can be used to modulate the specular transmission component. Note
+ *     \parameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
+ *         factor that can be used to modulate the specular reflection component. Note
  *         that for physical realism, this parameter should never be touched. \default{1.0}}
  *     \parameter{\Unnamed}{\BSDF}{A nested BSDF model that should be coated.}
  * }
@@ -391,7 +391,7 @@ public:
 				(probSpecular*m_specularSamplingWeight +
 				(1-probSpecular) * (1-m_specularSamplingWeight));
 
-			if (sample.y <= probSpecular) {
+			if (sample.y < probSpecular) {
 				sample.y /= probSpecular;
 			} else {
 				sample.y = (sample.y - probSpecular) / (1 - probSpecular);
@@ -554,7 +554,7 @@ public:
 			<< "vec3 " << evalName << "_refract(vec3 wi, out float T) {" << endl
 			<< "    float cosThetaI = cosTheta(wi);" << endl
 			<< "    bool entering = cosThetaI > 0.0;" << endl
-			<< "    float invEta = " << evalName << "_eta;" << endl
+			<< "    float invEta = 1.0 / " << evalName << "_eta;" << endl
 			<< "    float sinThetaTSqr =  invEta * invEta * sinTheta2(wi);" << endl
 			<< "    if (sinThetaTSqr >= 1.0) {" << endl
 			<< "        T = 0.0; /* Total internal reflection */" << endl

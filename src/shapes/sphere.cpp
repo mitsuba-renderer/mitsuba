@@ -37,7 +37,7 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{radius}{\Float}{
  *	     Radius of the sphere in object-space units \default{1}
  *	   }
- *     \parameter{toWorld}{\Transform}{
+ *     \parameter{toWorld}{\Transform\Or\Animation}{
  *	      Specifies an optional linear object-to-world transformation.
  *        Note that non-uniform scales are not permitted!
  *        \default{none (i.e. object space $=$ world space)}
@@ -172,8 +172,9 @@ public:
 		if (!solveQuadraticDouble(A, B, C, nearT, farT))
 			return false;
 
-		if (nearT > maxt || farT < mint)
+		if (!(nearT <= maxt && farT >= mint)) /* NaN-aware conditionals */
 			return false;
+
 		if (nearT < mint) {
 			if (farT > maxt)
 				return false;
@@ -273,7 +274,7 @@ public:
 
 	void getNormalDerivative(const Intersection &its,
 			Vector &dndu, Vector &dndv, bool shadingFrame) const {
-		Float invRadius = 1.0f / m_radius;
+		Float invRadius = (m_flipNormals ? -1.0f : 1.0f) / m_radius;
 		dndu = its.dpdu * invRadius;
 		dndv = its.dpdv * invRadius;
 	}
@@ -468,8 +469,8 @@ public:
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "Sphere[" << endl
-			<< "  radius = " << m_radius << ", " << endl
-			<< "  center = " << m_center.toString() << ", " << endl
+			<< "  radius = " << m_radius << "," << endl
+			<< "  center = " << m_center.toString() << "," << endl
 			<< "  bsdf = " << indent(m_bsdf.toString()) << "," << endl;
 		if (isMediumTransition())
 			oss << "  interiorMedium = " << indent(m_interiorMedium.toString()) << "," << endl

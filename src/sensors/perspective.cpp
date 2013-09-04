@@ -18,7 +18,7 @@
 
 #include <mitsuba/render/sensor.h>
 #include <mitsuba/render/medium.h>
-#include <mitsuba/render/track.h>
+#include <mitsuba/core/track.h>
 #include <mitsuba/core/frame.h>
 
 MTS_NAMESPACE_BEGIN
@@ -113,7 +113,7 @@ public:
 		   foreshortening terms caused by the aperture, hence the flag "EOnSurface" */
 		m_type |= EDeltaPosition | EPerspectiveCamera | EOnSurface | EDirectionSampleMapsToPixels;
 
-		if (props.getTransform("toWorld", Transform()).hasScale())
+		if (props.getAnimatedTransform("toWorld", Transform())->eval(0).hasScale())
 			Log(EError, "Scale factors in the camera-to-world "
 				"transformation are not allowed!");
 	}

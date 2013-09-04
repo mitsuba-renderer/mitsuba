@@ -41,8 +41,6 @@
 #include <mitsuba/core/getopt.h>
 #endif
 
-XERCES_CPP_NAMESPACE_USE
-
 class ConsoleGeometryConverter : public GeometryConverter {
 public:
 	inline ConsoleGeometryConverter() {
@@ -72,7 +70,8 @@ void help() {
 
 int importMain(int argc, char **argv) {
 	bool srgb = false, mapSmallerSide = true;
-	char optchar, *end_ptr = NULL;
+	int optchar;
+	char *end_ptr = NULL;
 	int xres = -1, yres = -1;
 	std::string filmType = "hdrfilm";
 	FileResolver *fileResolver = Thread::getThread()->getFileResolver();
@@ -163,6 +162,7 @@ int mts_main(int argc, char **argv) {
 	int retval;
 
 	/* Initialize Xerces-C */
+	XERCES_CPP_NAMESPACE_USE
 	try {
 		XMLPlatformUtils::Initialize();
 	} catch(const XMLException &toCatch) {
@@ -242,7 +242,7 @@ int mts_main(int argc, char **argv) {
 	return retval;
 }
 
-#if !defined(__OSX__)
+#if !defined(__OSX__) && !defined(__WINDOWS__)
 int main(int argc, char **argv) {
 	return mts_main(argc, argv);
 }

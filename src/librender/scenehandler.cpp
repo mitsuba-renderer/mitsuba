@@ -31,6 +31,7 @@
 #include <mitsuba/core/fresolver.h>
 #include <mitsuba/render/scene.h>
 #include <boost/algorithm/string.hpp>
+#include <boost/unordered_set.hpp>
 
 MTS_NAMESPACE_BEGIN
 XERCES_CPP_NAMESPACE_USE
@@ -45,6 +46,10 @@ XERCES_CPP_NAMESPACE_USE
 	#define XMLLog(level, fmt, ...) Thread::getThread()->getLogger()->log(\
 		level, NULL, __FILE__, __LINE__, fmt, ## __VA_ARGS__)
 #endif
+
+typedef void (*CleanupFun) ();
+typedef boost::unordered_set<CleanupFun> CleanupSet;
+static PrimitiveThreadLocal<CleanupSet> __cleanup_tls;
 
 SceneHandler::SceneHandler(const SAXParser *parser,
 	const ParameterMap &params, NamedObjectMap *namedObjects,
@@ -97,6 +102,7 @@ SceneHandler::SceneHandler(const SAXParser *parser,
 	m_tags["blackbody"]  = TagEntry(EBlackBody,  (Class *) NULL);
 	m_tags["spectrum"]   = TagEntry(ESpectrum,   (Class *) NULL);
 	m_tags["transform"]  = TagEntry(ETransform,  (Class *) NULL);
+	m_tags["animation"] = TagEntry(EAnimation, (Class *) NULL);
 	m_tags["include"]    = TagEntry(EInclude,    (Class *) NULL);
 	m_tags["alias"]      = TagEntry(EAlias,      (Class *) NULL);
 
@@ -155,6 +161,13 @@ void SceneHandler::startDocument() {
 
 void SceneHandler::endDocument() {
 	SAssert(m_scene != NULL);
+
+	/* Call cleanup handlers */
+	CleanupSet &cleanup = __cleanup_tls.get();
+	for (CleanupSet::iterator it = cleanup.begin();
+			it != cleanup.end(); ++it)
+		(*it)();
+	cleanup.clear();
 }
 
 void SceneHandler::characters(const XMLCh* const name,
@@ -167,11 +180,12 @@ void SceneHandler::characters(const XMLCh* const name,
 Float SceneHandler::parseFloat(const std::string &name,
 		const std::string &str, Float defVal) const {
 	char *end_ptr = NULL;
-	if (str == "") {
+	if (str.empty()) {
 		if (defVal == -1)
 			XMLLog(EError, "Missing floating point value (in <%s>)", name.c_str());
 		return defVal;
 	}
+
 	Float result = (Float) std::strtod(str.c_str(), &end_ptr);
 	if (*end_ptr != '\0')
 		XMLLog(EError, "Invalid floating point value specified (in <%s>)", name.c_str());
@@ -184,7 +198,6 @@ void SceneHandler::startElement(const XMLCh* const xmlName,
 
 	ParseContext context((name == "scene") ? NULL : &m_context.top());
 
-	/* Convert attributes to ISO-8859-1 */
 	for (size_t i=0; i<xmlAttributes.getLength(); i++) {
 		std::string attrValue = transcode(xmlAttributes.getValue(i));
 		if (attrValue.length() > 0 && attrValue.find('$') != attrValue.npos) {
@@ -196,7 +209,7 @@ void SceneHandler::startElement(const XMLCh* const xmlName,
 					++pos;
 				}
 			}
-			if (attrValue.find('$') != attrValue.npos)
+			if (attrValue.find('$') != attrValue.npos && attrValue.find('[') == attrValue.npos)
 				XMLLog(EError, "The scene referenced an undefined parameter: \"%s\"", attrValue.c_str());
 		}
 
@@ -240,11 +253,19 @@ void SceneHandler::startElement(const XMLCh* const xmlName,
 		case ETransform:
 			m_transform = Transform();
 			break;
+		case EAnimation: {
+				m_animatedTransform = new AnimatedTransform();
+			}
+			break;
 		default:
 			break;
 	}
 
 	m_context.push(context);
+}
+
+void pushSceneCleanupHandler(void (*cleanup)()) {
+	__cleanup_tls.get().insert(cleanup);
 }
 
 void SceneHandler::endElement(const XMLCh* const xmlName) {
@@ -255,7 +276,7 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 	if (context.attributes.find("id") != context.attributes.end())
 		context.properties.setID(context.attributes["id"]);
 
-	ref<ConfigurableObject> object = NULL;
+	ref<ConfigurableObject> object;
 
 	TagMap::const_iterator it = m_tags.find(name);
 	if (it == m_tags.end())
@@ -575,9 +596,22 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 			}
 			break;
 
+		case EAnimation: {
+				m_animatedTransform->sortAndSimplify();
+				context.parent->properties.setAnimatedTransform(
+					context.attributes["name"], m_animatedTransform);
+				m_animatedTransform = NULL;
+			}
+			break;
+
 		case ETransform: {
-				context.parent->properties.setTransform(
-					context.attributes["name"], m_transform);
+				if (!m_animatedTransform.get()) {
+					context.parent->properties.setTransform(
+						context.attributes["name"], m_transform);
+				} else {
+					Float time = parseFloat("time", context.attributes["time"]);
+					m_animatedTransform->appendTransform(time, m_transform);
+				}
 			}
 			break;
 
@@ -623,11 +657,61 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 			}
 			break;
 
-		default:
-			if (tag.second == NULL)
-				XMLLog(EError, "Internal error: could not instantiate an object "
-					"corresponding to the tag '%s'", name.c_str());
-			object = m_pluginManager->createObject(tag.second, context.properties);
+		default: {
+				if (tag.second == NULL)
+					XMLLog(EError, "Internal error: could not instantiate an object "
+						"corresponding to the tag '%s'", name.c_str());
+
+				Properties &props = context.properties;
+
+				/* Convenience hack: allow passing animated transforms to arbitrary shapes
+				   and then internally rewrite this into a shape group + animated instance */
+				if (tag.second == MTS_CLASS(Shape)
+					&& props.hasProperty("toWorld")
+					&& props.getType("toWorld") == Properties::EAnimatedTransform
+					&& (props.getPluginName() != "instance" && props.getPluginName() != "disk")) {
+					/* (The 'disk' plugin also directly supports animated transformations, so
+					    the instancing trick isn't required for it) */
+
+					ref<const AnimatedTransform> trafo = props.getAnimatedTransform("toWorld");
+					props.removeProperty("toWorld");
+
+					if (trafo->isStatic())
+						props.setTransform("toWorld", trafo->eval(0));
+
+					object = m_pluginManager->createObject(tag.second, props);
+
+					if (!trafo->isStatic()) {
+						object = m_pluginManager->createObject(tag.second, props);
+						/* If the object has children, append them */
+						for (std::vector<std::pair<std::string, ConfigurableObject *> >
+								::iterator it = context.children.begin();
+								it != context.children.end(); ++it) {
+							if (it->second != NULL) {
+								object->addChild(it->first, it->second);
+								it->second->setParent(object);
+								it->second->decRef();
+							}
+						}
+						context.children.clear();
+
+						object->configure();
+
+						ref<Shape> shapeGroup = static_cast<Shape *> (
+							m_pluginManager->createObject(MTS_CLASS(Shape), Properties("shapegroup")));
+						shapeGroup->addChild(object);
+						shapeGroup->configure();
+
+						Properties instanceProps("instance");
+						instanceProps.setAnimatedTransform("toWorld", trafo);
+						object = m_pluginManager->createObject(instanceProps);
+						object->addChild(shapeGroup);
+
+					}
+				} else {
+					object = m_pluginManager->createObject(tag.second, props);
+				}
+			}
 			break;
 	}
 

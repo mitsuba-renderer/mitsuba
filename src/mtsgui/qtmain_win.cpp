@@ -44,12 +44,12 @@
 # error This source file can only be used in Windows builds
 #endif
 
-#include <QVector>
-#include <QByteArray>
-#include <QString>
+#include <QtCore/QVector>
+#include <QtCore/QByteArray>
+#include <QtCore/QString>
 
 #define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
+#include <windows.h>
 
 /*
   This file contains the code in the qtmain library for Windows.

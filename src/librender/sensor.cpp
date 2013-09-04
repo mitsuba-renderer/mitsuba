@@ -18,7 +18,7 @@
 
 #include <mitsuba/render/sensor.h>
 #include <mitsuba/render/medium.h>
-#include <mitsuba/render/track.h>
+#include <mitsuba/core/track.h>
 #include <mitsuba/core/plugin.h>
 #include <boost/algorithm/string.hpp>
 
@@ -56,6 +56,15 @@ void Sensor::serialize(Stream *stream, InstanceManager *manager) const {
 	stream->writeFloat(m_shutterOpen);
 	stream->writeFloat(m_shutterOpenTime);
 }
+
+void Sensor::setShutterOpenTime(Float time) {
+	m_shutterOpenTime = time;
+	if (m_shutterOpenTime == 0)
+		m_type |= EDeltaTime;
+	else
+		m_type &= ~EDeltaTime;
+}
+
 
 Spectrum Sensor::eval(const Intersection &its, const Vector &d,
 		Point2 &samplePos) const {
@@ -200,9 +209,14 @@ void ProjectiveCamera::setFarClip(Float farClip) {
 ProjectiveCamera::~ProjectiveCamera() {
 }
 
-void ProjectiveCamera::setInverseViewTransform(const Transform &trafo) {
+void ProjectiveCamera::setWorldTransform(const Transform &trafo) {
 	m_worldTransform = new AnimatedTransform(trafo);
 	m_properties.setTransform("toWorld", trafo, false);
+}
+
+void ProjectiveCamera::setWorldTransform(AnimatedTransform *trafo) {
+	m_worldTransform = trafo;
+	m_properties.setAnimatedTransform("toWorld", trafo, false);
 }
 
 PerspectiveCamera::PerspectiveCamera(const Properties &props)
@@ -260,6 +274,7 @@ void PerspectiveCamera::configure() {
 			SLog(EError, "Could not parse the focal length (must be of the form "
 				"<x>mm, where <x> is a positive integer)!");
 
+		m_properties.removeProperty("focalLength");
 		setDiagonalFov(2 * 180/M_PI* std::atan(std::sqrt((Float) (36*36+24*24)) / (2*value)));
 	}
 }

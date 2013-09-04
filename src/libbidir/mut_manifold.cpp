@@ -274,6 +274,7 @@ bool ManifoldPerturbation::sampleMutation(
 		proposal.append(m_pool.allocEdge());
 	}
 	proposal.append(source, m, k+1);
+
 	proposal.vertex(a) = proposal.vertex(a)->clone(m_pool);
 	proposal.vertex(c) = proposal.vertex(c)->clone(m_pool);
 
@@ -521,8 +522,8 @@ bool ManifoldPerturbation::sampleMutation(
 		}
 	}
 
-	if ((vb_old->isSurfaceInteraction() && m_thetaDiffSurfaceSamples < DIFF_SAMPLES) ||
-		(vb_old->isMediumInteraction() && m_thetaDiffMediumSamples < DIFF_SAMPLES)) {
+	if (((vb_old->isSurfaceInteraction() && m_thetaDiffSurfaceSamples < DIFF_SAMPLES) ||
+		(vb_old->isMediumInteraction() && m_thetaDiffMediumSamples < DIFF_SAMPLES)) && b+1 != k && b-1 != 0) {
 		LockGuard guard(m_thetaDiffMutex);
 
 		if ((vb_old->isSurfaceInteraction() && m_thetaDiffSurfaceSamples < DIFF_SAMPLES) ||
@@ -586,6 +587,7 @@ bool ManifoldPerturbation::sampleMutation(
 			}
 		}
 	}
+
 	if (!PathVertex::connect(m_scene,
 			proposal.vertexOrNull(q-1),
 			proposal.edgeOrNull(q-1),
@@ -662,6 +664,10 @@ Float ManifoldPerturbation::Q(const Path &source, const Path &proposal,
 		if (prob == 0)
 			return 0.0f;
 		weight /= prob;
+
+		/* Catch very low probabilities which round to +inf in the above division operation */
+		if (!std::isfinite(weight.average()))
+			return 0.0f;
 	} else {
 		Frame frame(source.vertex(a+step)->getGeometricNormal());
 

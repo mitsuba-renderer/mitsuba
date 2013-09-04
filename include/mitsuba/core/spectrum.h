@@ -440,7 +440,7 @@ public:
 
 	/// Divide by a scalar
 	inline friend TSpectrum operator/(Scalar f, TSpectrum &spec) {
-		return spec / f;
+		return TSpectrum(f) / spec;
 	}
 
 	/// Divide by a scalar
@@ -490,6 +490,14 @@ public:
 		TSpectrum value;
 		for (int i=0; i<N; i++)
 			value.s[i] = std::sqrt(s[i]);
+		return value;
+	}
+
+	/// Component-wise square root
+	inline TSpectrum safe_sqrt() const {
+		TSpectrum value;
+		for (int i=0; i<N; i++)
+			value.s[i] = math::safe_sqrt(s[i]);
 		return value;
 	}
 
@@ -710,13 +718,41 @@ public:
 
 	/**
 	 * \brief Convert XYZ tristimulus into a plausible spectral
-	 * power distribution
+	 * reflectance or spectral power distribution
 	 *
 	 * The \ref EConversionIntent parameter can be used to provide more
 	 * information on how to solve this highly under-constrained problem.
 	 * The default is \ref EReflectance.
 	 */
 	void fromXYZ(Float x, Float y, Float z,
+			EConversionIntent intent = EReflectance);
+
+	/**
+	 * \brief Convert from a spectral power distribution to
+	 * the perceptually uniform IPT color space by Ebner and Fairchild
+	 *
+	 * This is useful e.g. for computing color differences.
+	 * \c I encodes intensity, \c P (protan) roughly encodes
+	 * red-green color opponency, and \c T (tritan) encodes
+	 * blue-red color opponency. For normalized input, the
+	 * range of attainable values is given by
+	 * \f I\in $[0,1], P,T\in [-1,1]\f$.
+	 *
+	 * In the Python API, this function returns a 3-tuple
+	 * with the result of the operation.
+	 */
+	void toIPT(Float &I, Float &P, Float &T) const;
+
+	/**
+	 * \brief Convert a color value represented in the IPT
+	 * space into a plausible spectral reflectance or
+	 * spectral power distribution.
+	 *
+	 * The \ref EConversionIntent parameter can be used to provide more
+	 * information on how to solve this highly under-constrained problem.
+	 * The default is \ref EReflectance.
+	 */
+	void fromIPT(Float I, Float P, Float T,
 			EConversionIntent intent = EReflectance);
 
 #if SPECTRUM_SAMPLES == 3

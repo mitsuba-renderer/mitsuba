@@ -1,8 +1,8 @@
 Import('env', 'sys', 'os')
 
 libhw_objects = [
-	'session.cpp', 'device.cpp', 'gputexture.cpp', 'gpugeometry.cpp', 
-	'gpuprogram.cpp', 'renderer.cpp', 'glrenderer.cpp', 'glprogram.cpp', 
+	'session.cpp', 'device.cpp', 'gputexture.cpp', 'gpugeometry.cpp',
+	'gpuprogram.cpp', 'renderer.cpp', 'glrenderer.cpp', 'glprogram.cpp',
 	'glgeometry.cpp', 'gltexture.cpp', 'gpusync.cpp', 'glsync.cpp',
 	'vpl.cpp', 'font.cpp', 'viewer.cpp', 'basicshader.cpp', 'shadow.cpp']
 
@@ -14,7 +14,7 @@ if sys.platform == 'win32':
 elif sys.platform == 'linux2':
 	libhw_objects += ['x11session.cpp',
 		'x11device.cpp',
-		'glxdevice.cpp', 
+		'glxdevice.cpp',
 		'glxrenderer.cpp']
 
 glEnv = env.Clone()

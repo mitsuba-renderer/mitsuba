@@ -53,15 +53,30 @@ void ImportDialog::changeEvent(QEvent *e) {
 }
 
 void ImportDialog::on_inputBrowse_clicked(bool checked) {
-	QFileDialog dialog(this);
-	dialog.setNameFilter(tr("All supported formats (*.dae *.zae *.obj);;"
+	const QString filter(tr("All supported formats (*.dae *.zae *.obj);;"
 		"COLLADA 1.4 scenes (*.dae *.zae);; Wavefront OBJ scenes (*.obj)"));
+	QString fname;
+#if MTSGUI_STATIC_QFILEDIALOG
+	QSettings settings;
+	const QString currInput = ui->inputEdit->text();
+	const QString initialDir(currInput.isEmpty() ?
+		settings.value("importDir").toString() :
+		QFileInfo(currInput).absolutePath());
+	fname = QFileDialog::getOpenFileName(this, QString(), initialDir, filter);
+	if (!fname.isEmpty()) {
+		settings.setValue("importDir", QFileInfo(fname).absolutePath());
+	}
+#else
+	QFileDialog dialog(this);
+	dialog.setNameFilter(filter);
 	dialog.setAcceptMode(QFileDialog::AcceptOpen);
 	dialog.setViewMode(QFileDialog::Detail);
 	dialog.setWindowModality(Qt::ApplicationModal);
-
 	if (dialog.exec()) {
-		QString fname = dialog.selectedFiles()[0];
+		fname = dialog.selectedFiles()[0];
+	}
+#endif
+	if (!fname.isEmpty()) {
 		ui->inputEdit->setText(fname);
 		QFileInfo info(fname);
 		ui->directoryEdit->setText(info.absoluteDir().absolutePath());
@@ -71,25 +86,47 @@ void ImportDialog::on_inputBrowse_clicked(bool checked) {
 }
 
 void ImportDialog::on_directoryBrowse_clicked(bool checked) {
+	QString dirName;
+#if MTSGUI_STATIC_QFILEDIALOG
+	QSettings settings;
+	QString initialDir = ui->directoryEdit->text();
+	dirName = QFileDialog::getExistingDirectory(this, QString(), initialDir);
+#else
 	QFileDialog dialog(this);
 	dialog.setAcceptMode(QFileDialog::AcceptOpen);
 	dialog.setFileMode(QFileDialog::DirectoryOnly);
 	dialog.setWindowModality(Qt::ApplicationModal);
 	if (dialog.exec()) {
-		QString fname = dialog.selectedFiles()[0];
-		ui->directoryEdit->setText(fname);
+		dirName = dialog.selectedFiles()[0];
+	}
+#endif
+	if (!dirName.isEmpty()) {
+		ui->directoryEdit->setText(dirName);
 		refresh();
 	}
 }
 
 void ImportDialog::on_adjustmentBrowse_clicked(bool checked) {
+	const QString filter(tr("Import adjustment files (*.xml)"));
+	QString fname;
+#if MTSGUI_STATIC_QFILEDIALOG
+	QString currFile = ui->adjustmentEdit->text();
+	if (currFile.isEmpty()) {
+		currFile = ui->inputEdit->text();
+	}
+	fname = QFileDialog::getOpenFileName(this, QString(),
+		QFileInfo(currFile).absolutePath(), filter);
+#else
 	QFileDialog dialog(this);
-	dialog.setNameFilter(tr("Import adjustment files (*.xml)"));
+	dialog.setNameFilter(filter);
 	dialog.setAcceptMode(QFileDialog::AcceptOpen);
 	dialog.setViewMode(QFileDialog::Detail);
 	dialog.setWindowModality(Qt::ApplicationModal);
 	if (dialog.exec()) {
-		QString fname = dialog.selectedFiles()[0];
+		fname = dialog.selectedFiles()[0];
+	}
+#endif
+	if (!fname.isEmpty()) {
 		ui->adjustmentEdit->setText(fname);
 		refresh();
 	}

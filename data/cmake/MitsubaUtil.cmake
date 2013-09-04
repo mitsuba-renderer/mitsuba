@@ -141,14 +141,16 @@ function(mts_win_resource target_filename name ext description)
   endif()
   
   set(RC_DESCRIPTION "${description}")
-  #TODO Add the hg revision number to the version, e.g. 0.0.0-hg000000000000
-  set(RC_VERSION "${MTS_VERSION}")
-  set(RC_VERSION_COMMA "${MTS_VERSION}.0")
-  string(REPLACE "." "," RC_VERSION_COMMA ${RC_VERSION_COMMA})
+  if (MTS_HAS_VALID_REV)
+    set(RC_VERSION "${MTS_VERSION}-${MTS_VERSION_BUILD}hg${MTS_REV_ID}")
+  else()
+    set(RC_VERSION "${MTS_VERSION}")
+  endif()
+  set(RC_VERSION_COMMA "${MTS_VERSION_MAJOR},${MTS_VERSION_MINOR},${MTS_VERSION_PATCH},0")
   set(RC_FILENAME "${name}${ext}")
   set(RC_NAME "${name}")
-  #TODO Set the year programmatically
-  set(RC_YEAR "2012")
+  # MTS_DATE has the format YYYY.MM.DD
+  string(SUBSTRING "${MTS_DATE}" 0 4 RC_YEAR)
   
   configure_file("${RC_FILE}" "${target_filename}" ESCAPE_QUOTES @ONLY)
 endfunction()
@@ -308,15 +310,15 @@ macro (add_mts_plugin _plugin_name)
     add_library (${_plugin_name} MODULE ${_plugin_srcs})
   endif ()
   
-  set(core_libraries "mitsuba-core" "mitsuba-render")
+  set(_plugin_core_libraries "mitsuba-core" "mitsuba-render")
   if (_plugin_MTS_HW)
-    list(APPEND core_libraries "mitsuba-hw")
+    list(APPEND _plugin_core_libraries "mitsuba-hw")
   endif()
   if (_plugin_MTS_BIDIR)
-    list(APPEND core_libraries "mitsuba-bidir")
+    list(APPEND _plugin_core_libraries "mitsuba-bidir")
   endif()
   target_link_libraries (${_plugin_name} 
-    ${core_libraries} ${_plugin_LINK_LIBRARIES})
+    ${_plugin_core_libraries} ${_plugin_LINK_LIBRARIES})
   
   set_target_properties (${_plugin_name} PROPERTIES PREFIX "")
   if (APPLE)
@@ -367,6 +369,7 @@ endif()
 #                   [RES_ICON filename]
 #                   [RES_DESCRIPTION "Description string"]
 #                   [NO_INSTALL]
+#                   [MTS_HW] [MTS_BIDIR]
 #                   [NO_MTS_PCH | PCH pch_header] )
 #
 # The executable name is taken from the first argument. The target gets
@@ -374,6 +377,11 @@ endif()
 # in the "MTS_CORELIBS" variable Additional libraries
 # (for example, libpng) may be specified after the optionl LINK_LIBRARIES
 # keyword.
+#
+# By default the executables are linked against mitsuba-core and mitsuba-render.
+# When MTS_HW is set, the executable will be linked against with mitsuba-hw.
+# When MTS_BIDIR is specified, the executable will also be linked against 
+# mitsuba-bidir.
 #
 # The optional keyword WIN32, if presents, gets passed to add_executable(...)
 # to produce a Windows executable using winmain, thus it won't have a
@@ -388,7 +396,7 @@ endif()
 # builds; other platforms simply ignore this value as with RES_ICON.
 #
 macro (add_mts_exe _exe_name)
-  CMAKE_PARSE_ARGUMENTS(_exe "WIN32;NO_INSTALL;NO_MTS_PCH"
+  CMAKE_PARSE_ARGUMENTS(_exe "WIN32;NO_INSTALL;MTS_HW;MTS_BIDIR;NO_MTS_PCH"
     "PCH;RES_ICON;RES_DESCRIPTION" "LINK_LIBRARIES" ${ARGN})
   set (_exe_srcs ${_exe_UNPARSED_ARGUMENTS})
   if (_exe_WIN32)
@@ -425,8 +433,15 @@ macro (add_mts_exe _exe_name)
   else ()
     add_executable (${_exe_name} ${_exe_TYPE} ${_exe_srcs})
   endif ()
-  target_link_libraries (${_exe_name}
-    ${MTS_CORELIBS} ${_exe_LINK_LIBRARIES})
+
+  set(_exe_core_libraries "mitsuba-core" "mitsuba-render")
+  if (_exe_MTS_HW)
+    list(APPEND _exe_core_libraries "mitsuba-hw")
+  endif()
+  if (_exe_MTS_BIDIR)
+    list(APPEND _exe_core_libraries "mitsuba-bidir")
+  endif()
+  target_link_libraries (${_exe_name} ${_exe_core_libraries} ${_exe_LINK_LIBRARIES})
   if (WIN32)
     set_target_properties (${_exe_name} PROPERTIES VERSION "${MTS_VERSION}")
   endif()

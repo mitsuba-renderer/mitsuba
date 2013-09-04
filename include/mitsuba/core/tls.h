@@ -141,7 +141,8 @@ protected:
 	}
 
 	inline static void destruct(void *data) {
-		delete static_cast<ValueType *>(data);
+		if (data)
+			delete static_cast<ValueType *>(data);
 	}
 protected:
 	detail::ThreadLocalBase m_base;

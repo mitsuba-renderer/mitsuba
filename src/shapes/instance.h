@@ -40,7 +40,7 @@ public:
 	void configure();
 
 	/// Return the object-to-world transformation used by this instance
-	inline Transform getWorldTransform() const { return m_objectToWorld; }
+	inline const AnimatedTransform *getWorldTransform() const { return m_transform.get(); }
 
 	/// Add a child ConfigurableObject
 	void addChild(const std::string &name, ConfigurableObject *child);
@@ -56,8 +56,6 @@ public:
 	// =============================================================
 
 	AABB getAABB() const;
-
-	Float getSurfaceArea() const;
 
 	bool rayIntersect(const Ray &_ray, Float mint,
 			Float maxt, Float &t, void *temp) const;
@@ -80,8 +78,7 @@ public:
 	MTS_DECLARE_CLASS()
 private:
 	ref<ShapeGroup> m_shapeGroup;
-	Transform m_objectToWorld, m_worldToObject;
-	Float m_invScale;
+	ref<const AnimatedTransform> m_transform;
 };
 
 MTS_NAMESPACE_END

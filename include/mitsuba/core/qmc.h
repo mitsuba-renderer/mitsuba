@@ -40,7 +40,7 @@ extern const int MTS_EXPORT_CORE primeTable[primeTableSize];
 /// Van der Corput radical inverse in base 2 with single precision
 inline float radicalInverse2Single(uint32_t n, uint32_t scramble = 0U) {
 	/* Efficiently reverse the bits in 'n' using binary operations */
-#if defined __GNUC__ && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 2))
+#if (defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 2))) || defined(__clang__)
 	n = __builtin_bswap32(n);
 #else
 	n = (n << 16) | (n >> 16);
@@ -59,7 +59,7 @@ inline float radicalInverse2Single(uint32_t n, uint32_t scramble = 0U) {
 /// Van der Corput radical inverse in base 2 with double precision
 inline double radicalInverse2Double(uint64_t n, uint64_t scramble = 0ULL) {
 	/* Efficiently reverse the bits in 'n' using binary operations */
-#if defined __GNUC__ && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 2))
+#if (defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 2))) || defined(__clang__)
 	n = __builtin_bswap64(n);
 #else
 	n = (n << 32) | (n >> 32);
@@ -156,25 +156,25 @@ inline uint64_t sampleTEA(uint32_t v0, uint32_t v1, int rounds = 4) {
 #if defined(DOUBLE_PRECISION)
 inline Float sampleTEAFloat(uint32_t v0, uint32_t v1, int rounds = 4) {
 	/* Trick from MTGP: generate an uniformly distributed
-       single precision number in [1,2) and subtract 1. */
-    union {
+	   single precision number in [1,2) and subtract 1. */
+	union {
 		uint64_t u;
-		float f;
-    } x;
-	x.u = (sampleTEA(v0, v1, rounds) >> 12) | 0x3ff0000000000000;
-    return x.f - 1.0;
+		double f;
+	} x;
+	x.u = (sampleTEA(v0, v1, rounds) >> 12) | 0x3ff0000000000000ULL;
+	return x.f - 1.0;
 }
 
 #else
 inline Float sampleTEAFloat(uint32_t v0, uint32_t v1, int rounds = 4) {
 	/* Trick from MTGP: generate an uniformly distributed
-       single precision number in [1,2) and subtract 1. */
-    union {
+	   single precision number in [1,2) and subtract 1. */
+	union {
 		uint32_t u;
 		float f;
-    } x;
-    x.u = ((sampleTEA(v0, v1, rounds) & 0xFFFFFFFF) >> 9) | 0x3f800000UL;
-    return x.f - 1.0f;
+	} x;
+	x.u = ((sampleTEA(v0, v1, rounds) & 0xFFFFFFFF) >> 9) | 0x3f800000UL;
+	return x.f - 1.0f;
 }
 #endif
 

@@ -38,6 +38,11 @@
 #include <ImfOutputFile.h>
 #include <ImfChannelList.h>
 #include <ImfStringAttribute.h>
+#include <ImfIntAttribute.h>
+#include <ImfFloatAttribute.h>
+#include <ImfDoubleAttribute.h>
+#include <ImfVecAttribute.h>
+#include <ImfMatrixAttribute.h>
 #include <ImfVersion.h>
 #include <ImfIO.h>
 #include <ImathBox.h>
@@ -233,7 +238,7 @@ extern "C" {
 		p->mgr.free_in_buffer = 0;
 	}
 
-	METHODDEF(void) jpeg_error_exit (j_common_ptr cinfo) {
+	METHODDEF(void) jpeg_error_exit (j_common_ptr cinfo) throw(std::runtime_error) {
 		char msg[JMSG_LENGTH_MAX];
 		(*cinfo->err->format_message) (cinfo, msg);
 		SLog(EError, "Critcal libjpeg error: %s", msg);
@@ -386,19 +391,6 @@ int Bitmap::getBytesPerComponent() const {
 	}
 }
 
-
-void Bitmap::setString(const std::string &key, const std::string &value) {
-	m_metadata[key] = value;
-}
-
-std::string Bitmap::getString(const std::string &key) const {
-	std::map<std::string, std::string>::const_iterator it = m_metadata.find(key);
-	if (it != m_metadata.end())
-		return it->second;
-	else
-		return "";
-}
-
 Bitmap::~Bitmap() {
 	if (m_data)
 		freeAligned(m_data);
@@ -430,47 +422,113 @@ void Bitmap::flipVertically() {
 	}
 }
 
-void Bitmap::accumulate(const Bitmap *bitmap, const Point2i &offset) {
+ref<Bitmap> Bitmap::rotateFlip(ERotateFlipType type) const {
+	/* Based on the GDI+ rotate/flip function in Wine */
+	if (m_componentFormat == EBitmask)
+		Log(EError, "Transformations involving bitmasks are currently not supported!");
+
+	int width = m_size.x, height = m_size.y;
+	bool flip_x = (type & 6) == 2 || (type & 6) == 4;
+	bool flip_y = (type & 3) == 1 || (type & 3) == 2;
+	bool rotate_90 = type & 1;
+
+	if (rotate_90)
+		std::swap(width, height);
+
+	ref<Bitmap> result = new Bitmap(m_pixelFormat, m_componentFormat,
+		Vector2i(width, height), m_channelCount);
+
+	ssize_t bypp = getBytesPerPixel(),
+		    src_stride = m_size.x * bypp,
+	        dst_stride = width * bypp;
+
+	uint8_t *dst = result->getUInt8Data();
+	uint8_t *dst_row = dst, *src_row = m_data;
+
+	if (flip_x)
+		src_row += bypp * (m_size.x - 1);
+
+	if (flip_y)
+		src_row += src_stride * (m_size.y - 1);
+
+	ssize_t src_x_step, src_y_step;
+	if (rotate_90) {
+		src_x_step = flip_y ? -src_stride : src_stride;
+		src_y_step = flip_x ? -bypp : bypp;
+	} else {
+		src_x_step = flip_x ? -bypp : bypp;
+		src_y_step = flip_y ? -src_stride : src_stride;
+	}
+
+	for (int y=0; y<height; y++) {
+		uint8_t *src_pixel = src_row;
+		uint8_t *dst_pixel = dst_row;
+
+		for (int x=0; x<width; x++) {
+			memcpy(dst_pixel, src_pixel, bypp);
+			dst_pixel += bypp;
+			src_pixel += src_x_step;
+		}
+
+		src_row += src_y_step;
+		dst_row += dst_stride;
+	}
+
+	return result;
+}
+
+void Bitmap::accumulate(const Bitmap *bitmap, Point2i sourceOffset,
+		Point2i targetOffset, Vector2i size) {
 	Assert(getPixelFormat() == bitmap->getPixelFormat() &&
 	       getComponentFormat() == bitmap->getComponentFormat() &&
 	       getChannelCount() == bitmap->getChannelCount());
 
-	const int
-		offsetX = std::max(offset.x, 0),
-		offsetY = std::max(offset.y, 0),
-		endX    = std::min(offset.x + bitmap->getSize().x, m_size.x),
-		endY    = std::min(offset.y + bitmap->getSize().y, m_size.y);
+	Vector2i offsetIncrease(
+		std::max(0, std::max(-sourceOffset.x, -targetOffset.x)),
+		std::max(0, std::max(-sourceOffset.y, -targetOffset.y))
+	);
 
-	if (offsetX >= endX || offsetY >= endY)
+	sourceOffset += offsetIncrease;
+	targetOffset += offsetIncrease;
+	size -= offsetIncrease;
+
+	Vector2i sizeDecrease(
+		std::max(0, std::max(sourceOffset.x + size.x - bitmap->getWidth(), targetOffset.x + size.x - getWidth())),
+		std::max(0, std::max(sourceOffset.y + size.y - bitmap->getHeight(), targetOffset.y + size.y - getHeight())));
+
+	size -= sizeDecrease;
+
+	if (size.x <= 0 || size.y <= 0)
 		return;
 
 	const size_t
-		columns      = (endX - offsetX) * m_channelCount,
+		columns      = size.x * m_channelCount,
 		pixelStride  = getBytesPerPixel(),
-		sourceStride = bitmap->getSize().x * pixelStride,
-		targetStride = m_size.x * pixelStride;
+		sourceStride = bitmap->getWidth() * pixelStride,
+		targetStride = getWidth() * pixelStride;
 
 	const uint8_t *source = bitmap->getUInt8Data() +
-		(offsetX - offset.x + (offsetY - offset.y) * bitmap->getSize().x) * pixelStride;
+		(sourceOffset.x + sourceOffset.y * (size_t) bitmap->getWidth()) * pixelStride;
 
 	uint8_t *target = m_data +
-		(offsetX + offsetY * m_size.x) * pixelStride;
+		(targetOffset.x + targetOffset.y * (size_t) m_size.x) * pixelStride;
 
-	for (int y = offsetY; y < endY; ++y) {
+	for (int y = 0; y < size.y; ++y) {
 		switch (m_componentFormat) {
 			case EUInt8:
 				for (size_t i = 0; i < columns; ++i)
-					((uint8_t *) target)[i] += ((uint8_t *) source)[i];
+					((uint8_t *) target)[i] = (uint8_t) std::min(0xFF, ((uint8_t *) source)[i] + ((uint8_t *) target)[i]);
+
 				break;
 
 			case EUInt16:
 				for (size_t i = 0; i < columns; ++i)
-					((uint16_t *) target)[i] += ((uint16_t *) source)[i];
+					((uint16_t *) target)[i] = (uint16_t) std::min(0xFFFF, ((uint16_t *) source)[i] + ((uint16_t *) target)[i]);
 				break;
 
 			case EUInt32:
 				for (size_t i = 0; i < columns; ++i)
-					((uint32_t *) target)[i] += ((uint32_t *) source)[i];
+					((uint32_t *) target)[i] = std::min((uint32_t) 0xFFFFFFFFUL, ((uint32_t *) source)[i] + ((uint32_t *) target)[i]);
 				break;
 
 			case EFloat16:
@@ -554,8 +612,9 @@ void Bitmap::setPixel(const Point2i &pos, const Spectrum &value) {
 }
 
 void Bitmap::drawHLine(int y, int x1, int x2, const Spectrum &value) {
-	AssertEx( y >= 0 &&  y < m_size.y &&
-	         x1 >= 0 && x2 < m_size.x, "Bitmap::drawVLine(): out of bounds!");
+	if (y < 0 || y >= m_size.y)
+		return;
+	x1 = std::max(x1, 0); x2 = std::min(x2, m_size.x-1);
 
 	const FormatConverter *cvt = FormatConverter::getInstance(
 		std::make_pair(EFloat, m_componentFormat)
@@ -574,8 +633,9 @@ void Bitmap::drawHLine(int y, int x1, int x2, const Spectrum &value) {
 }
 
 void Bitmap::drawVLine(int x, int y1, int y2, const Spectrum &value) {
-	AssertEx( x >= 0 &&  x < m_size.x &&
-	         y1 >= 0 && y2 < m_size.y, "Bitmap::drawVLine(): out of bounds!");
+	if (x < 0 || x >= m_size.x)
+		return;
+	y1 = std::max(y1, 0); y2 = std::min(y2, m_size.y-1);
 
 	const FormatConverter *cvt = FormatConverter::getInstance(
 		std::make_pair(EFloat, m_componentFormat)
@@ -601,9 +661,12 @@ void Bitmap::drawRect(const Point2i &offset, const Vector2i &size, const Spectru
 	drawVLine(offset.x + size.x - 1, offset.y, offset.y + size.y - 1, value);
 }
 
-void Bitmap::fill(const Point2i &offset, const Vector2i &size, const Spectrum &value) {
-	AssertEx(offset.x >= 0 && offset.x + size.x <= m_size.x &&
-	         offset.y >= 0 && offset.y + size.y <= m_size.y, "Bitmap::fill(): out of bounds!");
+void Bitmap::fillRect(Point2i offset, Vector2i size, const Spectrum &value) {
+	int sx = std::max(0, -offset.x), sy = std::max(0, -offset.y);
+	size.x -= sx; size.y -= sy; offset.x += sx; offset.y += sy;
+
+	size.x -= std::max(0, offset.x + size.x - m_size.x);
+	size.y -= std::max(0, offset.y + size.y - m_size.y);
 
 	const FormatConverter *cvt = FormatConverter::getInstance(
 		std::make_pair(EFloat, m_componentFormat)
@@ -897,7 +960,9 @@ ref<Bitmap> Bitmap::separateChannel(int channelIndex) {
 	if (channelIndex == 0 && channelCount == 1)
 		return this;
 
-	Assert(channelIndex > 0 && channelIndex < channelCount);
+	if (channelIndex < 0 || channelIndex >= channelCount)
+		Log(EError, "Bitmap::separateChannel(%i): channel index "
+			"must be between 0 and %i", channelIndex, channelCount-1);
 
 	ref<Bitmap> result = new Bitmap(ELuminance, m_componentFormat, m_size);
 	result->setMetadata(m_metadata);
@@ -994,6 +1059,79 @@ ref<Bitmap> Bitmap::crop(const Point2i &offset, const Vector2i &size) const {
 
 	return result;
 }
+
+void Bitmap::applyMatrix(Float matrix_[3][3]) {
+	int stride = 0;
+
+	if (m_pixelFormat == ERGB || m_pixelFormat == EXYZ)
+		stride = 3;
+	else if (m_pixelFormat == ERGBA || m_pixelFormat == EXYZA)
+		stride = 4;
+	else
+		Log(EError, "Bitmap::applyMatrix(): unsupported pixel format!");
+
+	size_t pixels = (size_t) m_size.x * (size_t) m_size.y;
+
+	switch (m_componentFormat) {
+		case EFloat16: {
+			float matrix[3][3];
+			half *data = getFloat16Data();
+			for (int i=0; i<3; ++i)
+				for (int j=0; j<3; ++j)
+					matrix[i][j] = (float) matrix_[i][j];
+
+			for (size_t i=0; i<pixels; ++i) {
+				float result[3] = { 0.0f, 0.0f, 0.0f };
+				for (int i=0; i<3; ++i)
+					for (int j=0; j<3; ++j)
+						result[i] += matrix[i][j] * (float) data[j];
+				for (int i=0; i<3; ++i)
+					data[i] = (half) result[i];
+				data += stride;
+			}
+		}
+		break;
+
+		case EFloat32: {
+			float matrix[3][3], *data = getFloat32Data();
+			for (int i=0; i<3; ++i)
+				for (int j=0; j<3; ++j)
+					matrix[i][j] = (float) matrix_[i][j];
+
+			for (size_t i=0; i<pixels; ++i) {
+				float result[3] = { 0.0f, 0.0f, 0.0f };
+				for (int i=0; i<3; ++i)
+					for (int j=0; j<3; ++j)
+						result[i] += matrix[i][j] * data[j];
+				for (int i=0; i<3; ++i)
+					data[i] = result[i];
+				data += stride;
+			}
+		}
+		break;
+
+		case EFloat64: {
+			double matrix[3][3], *data = getFloat64Data();
+			for (int i=0; i<3; ++i)
+				for (int j=0; j<3; ++j)
+					matrix[i][j] = (double) matrix_[i][j];
+
+			for (size_t i=0; i<pixels; ++i) {
+				double result[3] = { 0.0, 0.0, 0.0 };
+				for (int i=0; i<3; ++i)
+					for (int j=0; j<3; ++j)
+						result[i] += matrix[i][j] * data[j];
+				for (int i=0; i<3; ++i)
+					data[i] = result[i];
+				data += stride;
+			}
+		}
+		break;
+		default:
+			Log(EError, "Bitmap::applyMatrix(): unsupported component format!");
+	}
+}
+
 
 /// Bitmap resampling utility function
 template <typename Scalar> static void resample(const ReconstructionFilter *rfilter,
@@ -1099,12 +1237,17 @@ std::string Bitmap::toString() const {
 		<< "  type = " << m_pixelFormat << endl
 		<< "  componentFormat = " << m_componentFormat << endl
 		<< "  size = " << m_size.toString() << endl;
-	if (!m_metadata.empty()) {
+
+	std::vector<std::string> keys = m_metadata.getPropertyNames();
+	if (!keys.empty()) {
 		oss << "  metadata = {" << endl;
-		for (std::map<std::string, std::string>::const_iterator it = m_metadata.begin();
-				it != m_metadata.end();) {
-			oss << "    \"" << it->first << "\" => \"" << it->second << "\"";
-			if (++it != m_metadata.end())
+		for (std::vector<std::string>::const_iterator it = keys.begin(); it != keys.end(); ) {
+			std::string value = m_metadata.getAsString(*it);
+			if (value.size() > 50)
+				value = value.substr(0, 50) + ".. [truncated]";
+
+			oss << "    \"" << *it << "\" => \"" << value << "\"";
+			if (++it != keys.end())
 				oss << ",";
 			oss << endl;
 		}
@@ -1191,7 +1334,7 @@ void Bitmap::readPNG(Stream *stream) {
     png_get_text(png_ptr, info_ptr, &text_ptr, &textIdx);
 
 	for (int i=0; i<textIdx; ++i, text_ptr++)
-		m_metadata[text_ptr->key] = text_ptr->text;
+		setMetadataString(text_ptr->key, text_ptr->text);
 
 	int intent; double gamma;
 	if (png_get_sRGB(png_ptr, info_ptr, &intent)) {
@@ -1267,20 +1410,23 @@ void Bitmap::writePNG(Stream *stream, int compression) const {
 
 	png_text *text = NULL;
 
-	std::map<std::string, std::string> metadata = m_metadata;
-	metadata["generated-by"] = "Mitsuba version " MTS_VERSION;
+	Properties metadata(m_metadata);
+	metadata.setString("generatedBy", "Mitsuba version " MTS_VERSION);
 
-	text = new png_text[metadata.size()];
-	memset(text, 0, sizeof(png_text) * metadata.size());
-	int textIndex = 0;
-	for (std::map<std::string, std::string>::iterator it = metadata.begin();
-		it != metadata.end(); ++it) {
-		text[textIndex].key = const_cast<char *>(it->first.c_str());
-		text[textIndex].text = const_cast<char *>(it->second.c_str());
-		text[textIndex++].compression = PNG_TEXT_COMPRESSION_NONE;
+	std::vector<std::string> keys = metadata.getPropertyNames();
+	std::vector<std::string> values(keys.size());
+
+	text = new png_text[keys.size()];
+	memset(text, 0, sizeof(png_text) * keys.size());
+
+	for (size_t i = 0; i<keys.size(); ++i) {
+		values[i] = metadata.getAsString(keys[i]);
+		text[i].key = const_cast<char *>(keys[i].c_str());
+		text[i].text = const_cast<char *>(values[i].c_str());
+		text[i].compression = PNG_TEXT_COMPRESSION_NONE;
 	}
 
-	png_set_text(png_ptr, info_ptr, text, textIndex);
+	png_set_text(png_ptr, info_ptr, text, (int) keys.size());
 
 	if (m_gamma == -1)
 		png_set_sRGB_gAMA_and_cHRM(png_ptr, info_ptr, PNG_sRGB_INTENT_ABSOLUTE);
@@ -1575,11 +1721,37 @@ void Bitmap::readOpenEXR(Stream *stream, const std::string &_prefix) {
 	/* Load metadata if present */
 	for (Imf::Header::ConstIterator it = header.begin(); it != header.end(); ++it) {
 		std::string name = it.name(), typeName = it.attribute().typeName();
-		const Imf::StringAttribute *sattr = NULL;
+		const Imf::StringAttribute *sattr;
+		const Imf::IntAttribute *iattr;
+		const Imf::FloatAttribute *fattr;
+		const Imf::DoubleAttribute *dattr;
+		const Imf::V3fAttribute *vattr;
+		const Imf::M44fAttribute *mattr;
 
 		if (typeName == "string" &&
 			(sattr = header.findTypedAttribute<Imf::StringAttribute>(name.c_str())))
-			m_metadata[name] = sattr->value();
+			m_metadata.setString(name, sattr->value());
+		else if (typeName == "int" &&
+			(iattr = header.findTypedAttribute<Imf::IntAttribute>(name.c_str())))
+			m_metadata.setInteger(name, iattr->value());
+		else if (typeName == "float" &&
+			(fattr = header.findTypedAttribute<Imf::FloatAttribute>(name.c_str())))
+			m_metadata.setFloat(name, (Float) fattr->value());
+		else if (typeName == "double" &&
+			(dattr = header.findTypedAttribute<Imf::DoubleAttribute>(name.c_str())))
+			m_metadata.setFloat(name, (Float) dattr->value());
+		else if (typeName == "v3f" &&
+			(vattr = header.findTypedAttribute<Imf::V3fAttribute>(name.c_str()))) {
+			Imath::V3f vec = vattr->value();
+			m_metadata.setVector(name, Vector(vec.x, vec.y, vec.z));
+		} else if (typeName == "m44f" &&
+			(mattr = header.findTypedAttribute<Imf::M44fAttribute>(name.c_str()))) {
+			Matrix4x4 M;
+			for (int i=0; i<4; ++i)
+				for (int j=0; j<4; ++j)
+					M(i, j) = mattr->value().x[i][j];
+			m_metadata.setTransform(name, Transform(M));
+		}
 	}
 
 	updateChannelCount();
@@ -1806,13 +1978,45 @@ void Bitmap::writeOpenEXR(Stream *stream,
 			pixelFormat = ERGBA;
 	#endif
 
-	std::map<std::string, std::string> metadata = m_metadata;
-	metadata["generated-by"] = "Mitsuba version " MTS_VERSION;
+	Properties metadata(m_metadata);
+	metadata.setString("generatedBy", "Mitsuba version " MTS_VERSION);
+
+	std::vector<std::string> keys = metadata.getPropertyNames();
 
 	Imf::Header header(m_size.x, m_size.y);
-	for (std::map<std::string, std::string>::const_iterator it = metadata.begin();
-			it != metadata.end(); ++it)
-		header.insert(it->first.c_str(), Imf::StringAttribute(it->second.c_str()));
+	for (std::vector<std::string>::const_iterator it = keys.begin(); it != keys.end(); ++it) {
+		Properties::EPropertyType type = metadata.getType(*it);
+
+		switch (type) {
+			case Properties::EString:
+				header.insert(it->c_str(), Imf::StringAttribute(metadata.getString(*it)));
+				break;
+			case Properties::EInteger:
+				header.insert(it->c_str(), Imf::IntAttribute(metadata.getInteger(*it)));
+				break;
+			case Properties::EFloat:
+				header.insert(it->c_str(), Imf::FloatAttribute((float) metadata.getFloat(*it)));
+				break;
+			case Properties::EPoint: {
+					Point val = metadata.getPoint(*it);
+					header.insert(it->c_str(), Imf::V3fAttribute(
+						Imath::V3f((float) val.x, (float) val.y, (float) val.z)));
+				}
+				break;
+			case Properties::ETransform: {
+					Matrix4x4 val = metadata.getTransform(*it).getMatrix();
+					header.insert(it->c_str(), Imf::M44fAttribute(Imath::M44f(
+						(float) val(0, 0), (float) val(0, 1), (float) val(0, 2), (float) val(0, 3),
+						(float) val(1, 0), (float) val(1, 1), (float) val(1, 2), (float) val(1, 3),
+						(float) val(2, 0), (float) val(2, 1), (float) val(2, 2), (float) val(2, 3),
+						(float) val(3, 0), (float) val(3, 1), (float) val(3, 2), (float) val(3, 3))));
+				}
+				break;
+			default:
+				header.insert(it->c_str(), Imf::StringAttribute(metadata.getAsString(*it)));
+				break;
+		}
+	}
 
 	if (pixelFormat == EXYZ || pixelFormat == EXYZA) {
 		Imf::addChromaticities(header, Imf::Chromaticities(
@@ -2273,14 +2477,16 @@ void Bitmap::writeRGBE(Stream *stream) const {
 		Log(EError, "writeRGBE(): pixel format must be ERGB or ERGBA!");
 
 	stream->writeLine("#?RGBE");
-	for (std::map<std::string, std::string>::const_iterator it = m_metadata.begin();
-			it != m_metadata.end(); ++it) {
-		stream->writeLine(formatString("# Metadata [%s]:", it->first.c_str()));
-		std::istringstream iss(it->second);
+
+	std::vector<std::string> keys = m_metadata.getPropertyNames();
+	for (std::vector<std::string>::const_iterator it = keys.begin(); it != keys.end(); ) {
+		stream->writeLine(formatString("# Metadata [%s]:", it->c_str()));
+		std::istringstream iss(m_metadata.getAsString(*it));
 		std::string buf;
 		while (std::getline(iss, buf))
 			stream->writeLine(formatString("#   %s", buf.c_str()));
 	}
+
 	stream->writeLine("FORMAT=32-bit_rle_rgbe\n");
 	stream->writeLine(formatString("-Y %i +X %i", m_size.y, m_size.x));
 

@@ -393,6 +393,16 @@ public:
 		m_invTransform.serialize(stream);
 	}
 
+	/// Equality comparison operator
+	inline bool operator==(const Transform &trafo) const {
+		return m_transform == trafo.m_transform;
+	}
+
+	/// Inequality comparison operator
+	inline bool operator!=(const Transform &trafo) const {
+		return m_transform != trafo.m_transform;
+	}
+
 	/// Return a string representation
 	std::string toString() const;
 private:

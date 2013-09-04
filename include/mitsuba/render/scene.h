@@ -133,7 +133,7 @@ public:
 		int sceneResID, int sensorResID, int samplerResID);
 
 	/// Write out the current (partially rendered) image
-	void flush();
+	void flush(RenderQueue *queue, const RenderJob *job);
 
 	/**
 	 * \brief Cancel a running rendering job
@@ -1096,11 +1096,9 @@ public:
 	/// Return the scene's normal shapes (including triangular meshes)
 	inline const ref_vector<Shape> &getShapes() const { return m_shapes; }
 
-	/**
-	 * \brief Return the scene's shapes (including triangular meshes)
-	 */
+	/// Return a set of special shapes related to emitter/sensor geometry in bidirectional renderings
 	inline ref_vector<Shape> &getSpecialShapes() { return m_specialShapes; }
-	/// Return the scene's shapes (including triangular meshes)
+	/// Return a set of special shapes related to emitter/sensor geometry in bidirectional renderings
 	inline const ref_vector<Shape> &getSpecialShapes() const { return m_specialShapes; }
 
 	/// Return the scene's emitters

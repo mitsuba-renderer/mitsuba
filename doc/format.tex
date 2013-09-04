@@ -1,8 +1,8 @@
 \section{Scene file format}
 \label{sec:format}
-Mitsuba uses a very simple and general XML-based format to represent scenes.  
-Since the framework's philosophy is to represent discrete blocks of functionality as plugins, 
-a scene file can essentially be interpreted as description that determines which 
+Mitsuba uses a very simple and general XML-based format to represent scenes.
+Since the framework's philosophy is to represent discrete blocks of functionality as plugins,
+a scene file can essentially be interpreted as description that determines which
 plugins should be instantiated and how they should interface with each other.
 In the following, we'll look at a few examples to get a feeling for the scope of the
 format.
@@ -18,17 +18,17 @@ something like this:
 </scene>
 \end{xml}
 The scene version attribute denotes the release of Mitsuba that was used to
-create the scene. This information allows Mitsuba to always correctly process the 
+create the scene. This information allows Mitsuba to always correctly process the
 file irregardless of any potential future changes in the scene description language.
 
 This example already contains the most important things to know about format: you can have
-\emph{objects} (such as the objects instantiated by the \code{scene} or \code{shape} tags), 
-which are allowed to be nested within each other. Each object optionally accepts \emph{properties} 
-(such as the \code{string} tag), which further characterize its behavior. All objects except 
+\emph{objects} (such as the objects instantiated by the \code{scene} or \code{shape} tags),
+which are allowed to be nested within each other. Each object optionally accepts \emph{properties}
+(such as the \code{string} tag), which further characterize its behavior. All objects except
 for the root object (the \code{scene}) cause the renderer to search and load a plugin from disk,
-hence you must provide the plugin name using \code{type=".."} parameter. 
+hence you must provide the plugin name using \code{type=".."} parameter.
 
-The object tags also let the renderer know \emph{what kind} of object is to be instantiated: for instance, 
+The object tags also let the renderer know \emph{what kind} of object is to be instantiated: for instance,
 any plugin loaded using the \code{shape} tag must conform to the \emph{Shape} interface, which is
 certainly the case for the plugin named \code{obj} (it contains a WaveFront OBJ loader).
 Similarly, you could write
@@ -40,12 +40,12 @@ Similarly, you could write
 	</shape>
 </scene>
 \end{xml}
-This loads a different plugin (\code{sphere}) which is still a \emph{Shape}, but instead represents 
-a sphere configured with a radius of 10 world-space units. Mitsuba ships with 
+This loads a different plugin (\code{sphere}) which is still a \emph{Shape}, but instead represents
+a sphere configured with a radius of 10 world-space units. Mitsuba ships with
 a large number of plugins; please refer to the next chapter for a detailed
 overview of them.
 
-The most common scene setup is to declare an integrator, some geometry, a sensor (e.g. a camera), a film, a sampler  
+The most common scene setup is to declare an integrator, some geometry, a sensor (e.g. a camera), a film, a sampler
 and one or more emitters. Here is a more complex example:
 \begin{xml}
 <?xml version="1.0" encoding="utf-8"?>
@@ -92,20 +92,20 @@ and one or more emitters. Here is a more complex example:
 	<shape type="serialized">
 		<string name="filename" value="lightsource.serialized"/>
 		<transform name="toWorld">
-			<translate x="5" x="-3" z="1"/>
+			<translate x="5" y="-3" z="1"/>
 		</transform>
 
 		<!-- This mesh is an area emitter -->
 		<emitter type="area">
-			<rgb name="intensity" value="100,400,100"/>
+			<rgb name="radiance" value="100,400,100"/>
 		</emitter>
 	</shape>
 </scene>
 \end{xml}
 This example introduces several new object types (\code{integrator, sensor, bsdf, sampler, film}, and \code{emitter})
-and property types (\code{integer}, \code{transform}, and \code{rgb}). 
+and property types (\code{integer}, \code{transform}, and \code{rgb}).
 As you can see in the example, objects are usually declared at the top level except if there is some
-inherent relation that links them to another object. For instance, BSDFs are usually specific to a certain geometric object, so 
+inherent relation that links them to another object. For instance, BSDFs are usually specific to a certain geometric object, so
 they appear as a child object of a shape. Similarly, the sampler and film affect the way in which
 rays are generated from the sensor and how it records the resulting radiance samples, hence they are nested inside it.
 
@@ -135,45 +135,45 @@ uses a basic linear RGB representation\footnote{The official
 releases all use linear RGB---to do spectral renderings, you will have
 to compile Mitsuba yourself.}.
 Irrespective of which internal representation is used, Mitsuba supports
-several different ways of specifying color information, which is then 
+several different ways of specifying color information, which is then
 converted appropriately.
 
-The preferred way of passing color spectra to the renderer is to explicitly 
+The preferred way of passing color spectra to the renderer is to explicitly
 denote the  associated wavelengths of each value:
 \begin{xml}
 <spectrum name="spectrumProperty" value="400:0.56, 500:0.18, 600:0.58, 700:0.24"/>
 \end{xml}
-This is a mapping from wavelength in nanometers (before the colon) 
+This is a mapping from wavelength in nanometers (before the colon)
 to a reflectance or intensity value (after the colon).
 Values in between are linearly interpolated from the two closest neighbors.
-A useful shortcut to get a completely uniform spectrum, it is to provide 
+A useful shortcut to get a completely uniform spectrum, it is to provide
 only a single value:
 \begin{xml}
 <spectrum name="spectrumProperty" value="0.56"/>
 \end{xml}
 
 Another (discouraged) option is to directly provide the spectrum in Mitsuba's
-internal representation, avoiding the need for any kind of conversion. 
+internal representation, avoiding the need for any kind of conversion.
 However, this is problematic, since the associated scene will likely not work
-anymore when Mitsuba is compiled with a different value of 
-\texttt{SPECTRUM\_SAMPLES}. 
-For completeness, the possibility is explained nonetheless. Assuming that 
-the 360-830$nm$ range is discretized into ten 47$nm$-sized blocks 
-(i.e. \texttt{SPECTRUM\_SAMPLES} is set to 10), their values can be specified 
+anymore when Mitsuba is compiled with a different value of
+\texttt{SPECTRUM\_SAMPLES}.
+For completeness, the possibility is explained nonetheless. Assuming that
+the 360-830$nm$ range is discretized into ten 47$nm$-sized blocks
+(i.e. \texttt{SPECTRUM\_SAMPLES} is set to 10), their values can be specified
 as follows:
 \begin{xml}
 <spectrum name="spectrumProperty" value=".2, .2, .8, .4, .6, .5, .1, .9, .4, .2"/>
 \end{xml}
 
-Another convenient way of providing color spectra is by specifying linear RGB 
+Another convenient way of providing color spectra is by specifying linear RGB
 or sRGB values using floating-point triplets or hex values:
 \begin{xml}
 <rgb name="spectrumProperty" value="0.2, 0.8, 0.4"/>
 <srgb name="spectrumProperty" value="0.4, 0.3, 0.2"/>
 <srgb name="spectrumProperty" value="#f9aa34"/>
 \end{xml}
-When Mitsuba is compiled with the default settings, it internally uses 
-linear RGB to represent colors, so these values can directly be used. 
+When Mitsuba is compiled with the default settings, it internally uses
+linear RGB to represent colors, so these values can directly be used.
 However, when configured for doing spectral rendering, a suitable color
 spectrum with the requested RGB reflectance must be found. This is a tricky
 problem, since there is an infinite number of spectra with this property.
@@ -190,9 +190,9 @@ The \texttt{reflectance} intent is used by default, so remember to
 set it to \texttt{illuminant} when defining the brightness of a
 light source with the \texttt{<rgb>} tag.
 
-When spectral power or reflectance distributions are obtained from measurements 
+When spectral power or reflectance distributions are obtained from measurements
 (e.g. at 10$nm$ intervals), they are usually quite unwiedy and can clutter
-the scene description. For this reason, there is yet another way to pass 
+the scene description. For this reason, there is yet another way to pass
 a spectrum by loading it from an external file:
 \begin{xml}
 <spectrum name="spectrumProperty" filename="measuredSpectrum.spd"/>
@@ -213,23 +213,23 @@ are allowed. Here is an example:
 \renderings{
 	\fbox{\includegraphics[width=10cm]{images/blackbody}}
 	\hfill\,
-	\caption{\label{fig:blackbody}A few simulated 
+	\caption{\label{fig:blackbody}A few simulated
 	black body emitters over a range of temperature values}
 }
 \label{sec:blackbody}
-Finally, it is also possible to specify the spectral distribution of a black body emitter (\figref{blackbody}), 
+Finally, it is also possible to specify the spectral distribution of a black body emitter (\figref{blackbody}),
 where the temperature is given in Kelvin.
 \begin{xml}
 <blackbody name="spectrumProperty" temperature="5000K"/>
 \end{xml}
 Note that attaching a black body spectrum to the \texttt{intensity} property
-of a emitter introduces physical units into the rendering process of 
-Mitsuba, which is ordinarily a unitless system\footnote{This means that the 
-units of pixel values in a rendering are completely dependent on the units of 
-the user input, including the unit of world-space distance and the units of 
+of a emitter introduces physical units into the rendering process of
+Mitsuba, which is ordinarily a unitless system\footnote{This means that the
+units of pixel values in a rendering are completely dependent on the units of
+the user input, including the unit of world-space distance and the units of
 the light source emission profile.}.
 
-Specifically, the black body spectrum has units of power ($W$) per 
+Specifically, the black body spectrum has units of power ($W$) per
 unit area ($m^{-2}$) per steradian ($sr^{-1}$) per unit wavelength ($nm^{-1}$).
 If these units are inconsistent with your scene description, you may use the
 optional \texttt{scale} attribute to adjust them, e.g.:
@@ -244,11 +244,11 @@ Points and vectors can be specified as follows:
 <point name="pointProperty" x="3" y="4" z="5"/>
 <vector name="vectorProperty" x="3" y="4" z="5"/>
 \end{xml}
-It is important that whatever you choose as world-space units (meters, inches, etc.) is 
+It is important that whatever you choose as world-space units (meters, inches, etc.) is
 used consistently in all places.
 \subsubsection{Transformations}
 Transformations are the only kind of property that require more than a single tag. The idea is that, starting
-with the identity, one can build up a transformation using a sequence of commands. For instance, a transformation that 
+with the identity, one can build up a transformation using a sequence of commands. For instance, a transformation that
 does a translation followed by a rotation might be written like this:
 \begin{xml}
 <transform name="trafoProperty">
@@ -276,8 +276,8 @@ choices are available:
 \begin{xml}
 <matrix value="0 -0.53 0 -1.79 0.92 0 0 8.03 0 0 0.53 0 0 0 0 1"/>
 \end{xml}
-\item lookat transformations --- this is primarily useful for setting up cameras (and spot lights). The \code{origin} coordinates
-specify the camera origin, \code{target} is the point that the camera will look at, and the 
+\item \code{lookat} transformations --- this is primarily useful for setting up cameras (and spot lights). The \code{origin} coordinates
+specify the camera origin, \code{target} is the point that the camera will look at, and the
 (optional) \code{up} parameter determines the ``upward'' direction in the final rendered image.
 The \code{up} parameter is not needed for spot lights.
 \begin{xml}
@@ -286,7 +286,38 @@ The \code{up} parameter is not needed for spot lights.
 \end{itemize}
 Cordinates that are zero (for \code{translate} and \code{rotate}) or one (for \code{scale})
 do not explicitly have to be specified.
-\subsection{Instancing}
+\subsection{Animated transformations}
+Most shapes, emitters, and sensors in Mitsuba can accept both normal transformations
+and \emph{animated transformations} as parameters. The latter is useful to
+render scenes involving motion blur (Figure~\ref{fig:animated-transform}). The syntax used to specify these
+is slightly different:
+\begin{xml}
+<animation name="trafoProperty">
+  <transform time="0">
+     .. chained list of transformations as discussed above ..
+  </transform>
+
+  <transform time="1">
+     .. chained list of transformations as discussed above ..
+  </transform>
+
+  .. additional transformations (optional) ..
+</animation>
+\end{xml}
+\renderings{
+ \fbox{\includegraphics[width=.6\textwidth]{images/animated_transform}}\hfill\,
+ \caption{\label{fig:animated-transform}Beware the dragon: a triangle mesh undergoing linear motion with several keyframes (object courtesy of XYZRGB)}
+}
+
+Mitsuba then decomposes each transformation into a scale, translation, and
+rotation component and interpolates\footnote{Using linear interpolation
+for the scale and translation component and spherical linear quaternion
+interpolation for the rotation component.} these for intermediate
+time values.
+It is important to specify appropriate shutter open/close times
+to the sensor so that the motion is visible.
+\newpage
+\subsection{References}
 Quite often, you will find yourself using an object (such as a material) in many places. To avoid having
 to declare it over and over again, which wastes memory, you can make use of references. Here is an example
 of how this works:
@@ -297,7 +328,7 @@ of how this works:
 	</texture>
 
 	<bsdf type="diffuse" id="myMaterial">
-		<!-- Reference the texture named myImage and pass it 
+		<!-- Reference the texture named myImage and pass it
 			to the BRDF as the reflectance parameter -->
 		<ref name="reflectance" id="myImage"/>
 	</bsdf>
@@ -311,7 +342,7 @@ of how this works:
 </scene>
 \end{xml}
 By providing a unique \texttt{id} attribute in the
-object declaration, the object is bound to that identifier 
+object declaration, the object is bound to that identifier
 upon instantiation.
 Referencing this identifier at a later point (using the \texttt{<ref id="..."/>} tag)
 will add the instance to the parent object, with no further memory
@@ -326,7 +357,7 @@ it cannot be used to instantiate geometry---if this functionality is needed,
 take a look at the \pluginref{instance} plugin.
 
 \subsection{Including external files}
-A scene can be split into multiple pieces for better readability. 
+A scene can be split into multiple pieces for better readability.
 to include an external file, please use the following command:
 \begin{xml}
 <include filename="nested-scene.xml"/>

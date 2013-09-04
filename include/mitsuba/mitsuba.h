@@ -45,7 +45,7 @@ using std::endl;
 #include <mitsuba/core/constants.h>
 #include <mitsuba/core/fwd.h>
 #include <mitsuba/render/fwd.h>
-#include <mitsuba/core/stl.h>
+#include <mitsuba/core/math.h>
 #include <mitsuba/core/object.h>
 #include <mitsuba/core/ref.h>
 #include <mitsuba/core/tls.h>

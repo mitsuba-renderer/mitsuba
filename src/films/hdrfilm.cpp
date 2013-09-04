@@ -22,6 +22,7 @@
 #include <mitsuba/core/statistics.h>
 #include <boost/algorithm/string.hpp>
 #include "banner.h"
+#include "annotations.h"
 
 MTS_NAMESPACE_BEGIN
 
@@ -46,7 +47,7 @@ MTS_NAMESPACE_BEGIN
  *         the number of written channels depends on the value assigned to
  *         \code{SPECTRUM\_SAMPLES} during compilation (see Section~\ref{sec:compiling}
  *         section for details)
- *         \default{\code{rgba}}
+ *         \default{\code{rgb}}
  *     }
  *     \parameter{componentFormat}{\String}{Specifies the desired floating
  *         point component format used for OpenEXR output. The options are
@@ -87,7 +88,7 @@ MTS_NAMESPACE_BEGIN
  * RGB(A), XYZ(A) tristimulus, or spectrum/spectrum-alpha-based bitmap having a
  * \code{float16}, \code{float32}, or \code{uint32}-based internal representation
  * based on the chosen parameters.
- * The default configuration is RGBA with a \code{float16} component format,
+ * The default configuration is RGB with a \code{float16} component format,
  * which is appropriate for most purposes. Note that the spectral output options
  * only make sense when using a custom build of Mitsuba that has spectral
  * rendering enabled. This is not the case for the downloadable release builds.
@@ -103,19 +104,102 @@ MTS_NAMESPACE_BEGIN
  * Due to the superior accuracy and adoption of OpenEXR, the use of these
  * two alternative formats is discouraged however.
  *
- * When RGB output is selected, the measured spectral power distributions are
+ * When RGB(A) output is selected, the measured spectral power distributions are
  * converted to linear RGB based on the CIE 1931 XYZ color matching curves and
  * the ITU-R Rec. BT.709-3 primaries with a D65 white point.
  *
  * \begin{xml}[caption=Instantiation of a film that writes a full-HD RGBA OpenEXR file without the Mitsuba banner]
  * <film type="hdrfilm">
+ *     <string name="pixelFormat" value="rgba"/>
  *     <integer name="width" value="1920"/>
  *     <integer name="height" value="1080"/>
  *     <boolean name="banner" value="false"/>
  * </film>
  * \end{xml}
-
+ *
+ * \subsubsection*{Render-time annotations:}
+ * \label{sec:film-annotations}
+ * The \pluginref{ldrfilm} and \pluginref{hdrfilm} plugins support a
+ * feature referred to as \emph{render-time annotations} to facilitate
+ * record keeping.
+ * Annotations are used to embed useful information inside a rendered image so
+ * that this information is later available to anyone viewing the image.
+ * Exemplary uses of this feature might be to store the frame or take number,
+ * rendering time, memory usage, camera parameters, or other relevant scene
+ * information.
+ *
+ * Currently, two different types are supported: a \code{metadata} annotation
+ * creates an entry in the metadata table of the image, which is preferable
+ * when the image contents should not be touched. Alternatively, a \code{label}
+ * annotation creates a line of text that is overlaid on top of the image. Note
+ * that this is only visible when opening the output file (i.e. the line is not
+ * shown in the interactive viewer).
+ * The syntax of this looks as follows:
+ *
+ * \begin{xml}
+ * <film type="hdrfilm">
+ * 	<!-- Create a new metadata entry 'my_tag_name' and set it to the
+ * 	     value 'my_tag_value' -->
+ * 	<string name="metadata['key_name']" value="Hello!"/>
+ *
+ * 	<!-- Add the label 'Hello' at the image position X=50, Y=80 -->
+ * 	<string name="label[50, 80]" value="Hello!"/>
+ * </film>
+ * \end{xml}
+ *
+ * The \code{value="..."} argument may also include certain keywords that will be
+ * evaluated and substituted when the rendered image is written to disk. A list all available
+ * keywords is provided in Table~\ref{tbl:film-keywords}.
+ *
+ * Apart from querying the render time,
+ * memory usage, and other scene-related information, it is also possible
+ * to `paste' an existing parameter that was provided to another plugin---for instance,the
+ * the camera transform matrix would be obtained as \code{\$sensor['toWorld']}. The name of
+ * the active integrator plugin is given by \code{\$integrator['type']}, and so on.
+ * All of these can be mixed to build larger fragments, as following example demonstrates.
+ * The result of this annotation is shown in Figure~\ref{fig:annotation-example}.
+ * \begin{xml}[mathescape=false]
+ * <string name="label[10, 10]" value="Integrator: $integrator['type'],
+ *   $film['width']x$film['height'], $sampler['sampleCount'] spp,
+ *   render time: $scene['renderTime'], memory: $scene['memUsage']"/>
+ * \end{xml}
+ * \vspace{1cm}
+ * \renderings{
+ * \fbox{\includegraphics[width=.8\textwidth]{images/annotation_example}}\hfill\,
+ * \caption{\label{fig:annotation-example}A demonstration of the label annotation feature
+ *  given the example string shown above.}
+ * }
+ * \vspace{2cm}
+ * \begin{table}[htb]
+ * \centering
+ * \begin{savenotes}
+ * \begin{tabular}{ll}
+ * \toprule
+ * \code{\$scene['renderTime']}& Image render time, use \code{renderTimePrecise} for more digits.\\
+ * \code{\$scene['memUsage']}& Mitsuba memory usage\footnote{The definition of this quantity unfortunately
+ * varies a bit from platform to platform. On Linux and Windows, it denotes the total
+ * amount of allocated RAM and disk-based memory that is private to the process (i.e. not
+ * shared or shareable), which most intuitively captures the amount of memory required for
+ * rendering. On OSX, it denotes the working set size---roughly speaking, this is the
+ * amount of RAM apportioned to the process (i.e. excluding disk-based memory).}.
+ * Use \code{memUsagePrecise} for more digits.\\
+ * \code{\$scene['coreCount']}& Number of local and remote cores working on the rendering job\\
+ * \code{\$scene['blockSize']}& Block size used to parallelize up the rendering workload\\
+ * \code{\$scene['sourceFile']}& Source file name\\
+ * \code{\$scene['destFile']}& Destination file name\\
+ * \code{\$integrator['..']}& Copy a named integrator parameter\\
+ * \code{\$sensor['..']}& Copy a named sensor parameter\\
+ * \code{\$sampler['..']}& Copy a named sampler parameter\\
+ * \code{\$film['..']}& Copy a named film parameter\\
+ * \bottomrule
+ * \end{tabular}
+ * \end{savenotes}
+ * \caption{\label{tbl:film-keywords}A list of all special
+ * keywords supported by the annotation feature}
+ * \end{table}
+ *
  */
+
 class HDRFilm : public Film {
 public:
 	HDRFilm(const Properties &props) : Film(props) {
@@ -127,7 +211,7 @@ public:
 		std::string fileFormat = boost::to_lower_copy(
 			props.getString("fileFormat", "openexr"));
 		std::string pixelFormat = boost::to_lower_copy(
-			props.getString("pixelFormat", "rgba"));
+			props.getString("pixelFormat", "rgb"));
 		std::string componentFormat = boost::to_lower_copy(
 			props.getString("componentFormat", "float16"));
 
@@ -202,6 +286,16 @@ public:
 				m_componentFormat = Bitmap::EFloat32;
 			}
 
+		}
+
+		std::vector<std::string> keys = props.getPropertyNames();
+		for (size_t i=0; i<keys.size(); ++i) {
+			std::string key = boost::to_lower_copy(keys[i]);
+			key.erase(std::remove_if(key.begin(), key.end(), ::isspace), key.end());
+
+			if ((boost::starts_with(key, "metadata['") && boost::ends_with(key, "']")) ||
+			    (boost::starts_with(key, "label[") && boost::ends_with(key, "]")))
+				props.markQueried(keys[i]);
 		}
 
 		m_storage = new ImageBlock(Bitmap::ESpectrumAlphaWeight, m_cropSize);
@@ -303,7 +397,7 @@ public:
 		m_destFile = destFile;
 	}
 
-	void develop() {
+	void develop(const Scene *scene, Float renderTime) {
 		Log(EDebug, "Developing film ..");
 
 		ref<Bitmap> bitmap = m_storage->getBitmap()->convert(
@@ -322,13 +416,22 @@ public:
 		}
 
 		fs::path filename = m_destFile;
+		std::string properExtension;
+		if (m_fileFormat == Bitmap::EOpenEXR)
+			properExtension = ".exr";
+		else if (m_fileFormat == Bitmap::ERGBE)
+			properExtension = ".rgbe";
+		else
+			properExtension = ".pfm";
+
 		std::string extension = boost::to_lower_copy(filename.extension().string());
-		std::string properExtension = (m_fileFormat == Bitmap::EOpenEXR) ? ".exr" : ".rgbe";
 		if (extension != properExtension)
 			filename.replace_extension(properExtension);
 
 		Log(EInfo, "Writing image to \"%s\" ..", filename.string().c_str());
 		ref<FileStream> stream = new FileStream(filename, FileStream::ETruncWrite);
+
+		annotate(scene, m_properties, bitmap, renderTime, 1.0f);
 
 		/* Attach the log file to the image if this is requested */
 		Logger *logger = Thread::getThread()->getLogger();
@@ -336,10 +439,18 @@ public:
 		if (m_attachLog && logger->readLog(log)) {
 			log += "\n\n";
 			log += Statistics::getInstance()->getStats();
-			bitmap->setString("log", log);
+			bitmap->setMetadataString("log", log);
 		}
 
 		bitmap->write(m_fileFormat, stream);
+	}
+
+	bool hasAlpha() const {
+		return
+			m_pixelFormat == Bitmap::ELuminanceAlpha ||
+			m_pixelFormat == Bitmap::ERGBA ||
+			m_pixelFormat == Bitmap::EXYZA ||
+			m_pixelFormat == Bitmap::ESpectrumAlpha;
 	}
 
 	bool destinationExists(const fs::path &baseName) const {

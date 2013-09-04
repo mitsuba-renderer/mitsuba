@@ -116,21 +116,20 @@ void BeamRadianceEstimator::serialize(Stream *stream, InstanceManager *manager) 
 AABB BeamRadianceEstimator::buildHierarchy(IndexType index) {
 	BRENode &node = m_nodes[index];
 
+	Point center = node.photon.getPosition();
+	Float radius = node.radius;
+	node.aabb = AABB(
+		center - Vector(radius, radius, radius),
+		center + Vector(radius, radius, radius)
+	);
+
 	if (!node.photon.isLeaf()) {
 		IndexType left = node.photon.getLeftIndex(index);
 		IndexType right = node.photon.getRightIndex(index);
-		node.aabb.reset();
 		if (left)
 			node.aabb.expandBy(buildHierarchy(left));
 		if (right)
 			node.aabb.expandBy(buildHierarchy(right));
-	} else {
-		Point center = node.photon.getPosition();
-		Float radius = node.radius;
-		node.aabb = AABB(
-			center - Vector(radius, radius, radius),
-			center + Vector(radius, radius, radius)
-		);
 	}
 
 	return node.aabb;
@@ -170,7 +169,7 @@ Spectrum BeamRadianceEstimator::query(const Ray &r, const Medium *medium) const 
 		Float diskDistance = dot(originToCenter, ray.d), radSqr = node.radius * node.radius;
 		Float distSqr = (ray(diskDistance) - node.photon.getPosition()).lengthSquared();
 
-		if (distSqr < radSqr) {
+		if (diskDistance > 0 && distSqr < radSqr) {
 			Float weight = K2(distSqr/radSqr)/radSqr;
 
 			Vector wi = -node.photon.getDirection();

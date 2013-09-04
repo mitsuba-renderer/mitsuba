@@ -22,7 +22,7 @@
 #include <mitsuba/core/fstream.h>
 #include <mitsuba/core/timer.h>
 #include <mitsuba/core/version.h>
-#include <mitsuba/render/track.h>
+#include <mitsuba/core/track.h>
 #include <dom/domCOLLADA.h>
 #include <dae.h>
 #include <dae/daeErrorHandler.h>

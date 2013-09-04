@@ -250,6 +250,26 @@ public:
 		EAuto
 	};
 
+	/// List of different rotation/flip types that can be passed to \ref rotateFlip()
+	enum ERotateFlipType {
+		ERotateNoneFlipNone = 0,
+		ERotate180FlipXY    = ERotateNoneFlipNone,
+		ERotate90FlipNone   = 1,
+		ERotate270FlipXY    = ERotate90FlipNone,
+		ERotate180FlipNone  = 2,
+		ERotateNoneFlipXY   = ERotate180FlipNone,
+		ERotate270FlipNone  = 3,
+		ERotate90FlipXY     = ERotate270FlipNone,
+		ERotateNoneFlipX    = 4,
+		ERotate180FlipY     = ERotateNoneFlipX,
+		ERotate90FlipX      = 5,
+		ERotate270FlipY     = ERotate90FlipX,
+		ERotate180FlipX     = 6,
+		ERotateNoneFlipY    = ERotate180FlipX,
+		ERotate270FlipX     = 7,
+		ERotate90FlipY      = ERotate270FlipX
+	};
+
 	/**
 	 * \brief Create a bitmap of the specified type and allocate
 	 * the necessary amount of memory
@@ -319,6 +339,15 @@ public:
 
 	/// Return whether this image has matching width and height
 	inline bool isSquare() const { return m_size.x == m_size.y; }
+
+	/// Return whether this image has an alpha channel
+	inline bool hasAlpha() const {
+		return
+			m_pixelFormat == ELuminanceAlpha ||
+			m_pixelFormat == ERGBA ||
+			m_pixelFormat == EXYZA ||
+			m_pixelFormat == ESpectrumAlpha;
+	}
 
 	/**
 	 * \brief Return the number bits per component
@@ -393,17 +422,8 @@ public:
 	/// Draw a rectangle with the specified position and size
 	void drawRect(const Point2i &offset, const Vector2i &size, const Spectrum &value);
 
-	/**
-	 * \brief Color balancing: apply the given scale factors to the
-	 * red, green, and blue channels of the image
-	 *
-	 * When the image is not an \c EFloat16, \c EFloat32, or
-	 * \c EFloat64-based RGB/RGBA image, the function throws an exception
-	 */
-	void colorBalance(Float r, Float g, Float b);
-
 	/// Draw a filled rectangle with the specified position and size
-	void fill(const Point2i &offset, const Vector2i &size, const Spectrum &value);
+	void fillRect(Point2i offset, Vector2i size, const Spectrum &value);
 
 	/// Bitmap equality operator (useful for unit-tests etc.)
 	bool operator==(const Bitmap &bitmap) const;
@@ -688,6 +708,9 @@ public:
 	/// Vertically flip the image contents
 	void flipVertically();
 
+	/// Perform the specified rotatation & flip operation
+	ref<Bitmap> rotateFlip(ERotateFlipType type) const;
+
 	/**
 	 * \brief Accumulate the contents of another bitmap into the
 	 * region of the specified offset
@@ -699,7 +722,43 @@ public:
 	 * use different component formats or channels, or when the
 	 * component format is \ref EBitmask.
 	 */
-	void accumulate(const Bitmap *bitmap, const Point2i &offset);
+	void accumulate(const Bitmap *bitmap, Point2i sourceOffset,
+			Point2i targetOffset, Vector2i size);
+
+	/**
+	 * \brief Color balancing: apply the given scale factors to the
+	 * red, green, and blue channels of the image
+	 *
+	 * When the image is not an \c EFloat16, \c EFloat32, or
+	 * \c EFloat64-based RGB/RGBA image, the function throws an exception
+	 */
+	void colorBalance(Float r, Float g, Float b);
+
+	/**
+	 * Apply a color transformation matrix to the contents of the bitmap
+	 *
+	 * The implementation assumes that the contents have the
+	 * RGB, RGBA, XYZ, or XYZA pixel format and a floating point
+	 * component format.
+	 */
+	void applyMatrix(Float matrix[3][3]);
+
+	/**
+	 * \brief Accumulate the contents of another bitmap into the
+	 * region of the specified offset
+	 *
+	 * This convenience function calls the main <tt>accumulate()</tt>
+	 * implementation with <tt>size</tt> set to <tt>bitmap->getSize()</tt>
+	 * and <tt>sourceOffset</tt> set to zero. Out-of-bounds regions are
+	 * ignored. It is assumed that <tt>bitmap != this</tt>.
+	 *
+	 * \remark This function throws an exception when the bitmaps
+	 * use different component formats or channels, or when the
+	 * component format is \ref EBitmask.
+	 */
+	inline void accumulate(const Bitmap *bitmap, Point2i targetOffset) {
+		accumulate(bitmap, Point2i(0), targetOffset, bitmap->getSize());
+	}
 
 	/**
 	 * \brief Up- or down-sample this image to a different resolution
@@ -747,25 +806,23 @@ public:
 	inline void setGamma(Float gamma) { m_gamma = gamma; }
 
 	/// Set a string-valued metadata field
-	void setString(const std::string &key, const std::string &value);
+	inline void setMetadataString(const std::string &key, const std::string &value) {
+		m_metadata.setString(key, value);
+	}
 
 	/// Return a string-valued metadata field
-	std::string getString(const std::string &key) const;
-
-	/// Return a map of all present metadata
-	inline std::map<std::string, std::string> &getMetadata() {
-		return m_metadata;
+	inline std::string getMetadataString(const std::string &key) const {
+		return m_metadata.getAsString(key);
 	}
 
-	/// Return a map of all present metadata (const version)
-	inline const std::map<std::string, std::string> &getMetadata() const {
-		return m_metadata;
-	}
+	/// Return a \ref Properties object containing the image metadata
+	inline Properties &getMetadata() { return m_metadata; }
 
-	/// Set the metadata associated with the bitmap
-	inline void setMetadata(const std::map<std::string, std::string> &metadata) {
-		m_metadata = metadata;
-	}
+	/// Return a \ref Properties object containing the image metadata (const version)
+	inline const Properties &getMetadata() const { return m_metadata; }
+
+	/// Set the a \ref Properties object containing the image metadata
+	inline void setMetadata(const Properties &metadata) { m_metadata = metadata; }
 
 	//! @}
 	// ======================================================================
@@ -883,9 +940,9 @@ protected:
 	EComponentFormat m_componentFormat;
 	Vector2i m_size;
 	uint8_t *m_data;
-	std::map<std::string, std::string> m_metadata;
 	Float m_gamma;
 	int m_channelCount;
+	Properties m_metadata;
 };
 
 /** \brief Bitmap format conversion helper class

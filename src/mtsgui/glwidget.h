@@ -151,23 +151,23 @@ protected:
 			static_cast<const PerspectiveCamera *>(sensor) : NULL;
 	}
 
-	inline Transform getInverseViewTransform() const {
+	inline Transform getWorldTransform() const {
 		const ProjectiveCamera *camera = getProjectiveCamera();
-		return camera->getInverseViewTransform(
+		return camera->getWorldTransform(
 			camera->getShutterOpen() + 0.5f * camera->getShutterOpenTime()
 		);
 	}
 
 	inline bool isRightHanded() {
-		return getInverseViewTransform().det3x3() > 0;
+		return getWorldTransform().det3x3() > 0;
 	}
 
-	inline void setInverseViewTransform(const Transform &trafo) {
+	inline void setWorldTransform(const Transform &trafo) {
 		/* Preserve the handedness of the current camera transformation */
-		if (getInverseViewTransform().det3x3() * trafo.det3x3() > 0)
-			getProjectiveCamera()->setInverseViewTransform(trafo);
+		if (getWorldTransform().det3x3() * trafo.det3x3() > 0)
+			getProjectiveCamera()->setWorldTransform(trafo);
 		else
-			getProjectiveCamera()->setInverseViewTransform(trafo *
+			getProjectiveCamera()->setWorldTransform(trafo *
 				Transform::scale(Vector(-1,1,1)));
 	}
 

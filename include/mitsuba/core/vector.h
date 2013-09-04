@@ -189,6 +189,13 @@ template <typename T> inline TVector1<T> normalize(const TVector1<T> &v) {
 	return v / v.length();
 }
 
+template <typename T> inline TVector1<T> normalizeStrict(const TVector1<T> &v, const char *errMsg) {
+	Float length = v.length();
+	if (length == 0)
+		SLog(EError, "normalizeStrict(): %s", errMsg);
+	return v / length;
+}
+
 template <> inline TVector1<int> TVector1<int>::operator/(int s) const {
 #ifdef MTS_DEBUG
 	if (s == 0)
@@ -207,6 +214,27 @@ template <> inline TVector1<int> &TVector1<int>::operator/=(int s) {
 	return *this;
 }
 
+namespace detail {
+// Helper structures to define "length" as a floating point value
+
+template <typename T, bool IsInteger = false> struct VectorLength {
+	typedef T type;
+};
+
+template <typename T> struct VectorLength<T, true> {
+	typedef Float type;
+};
+
+template <> struct VectorLength<uint64_t, true> {
+	typedef double type;
+};
+
+template <> struct VectorLength<int64_t, true> {
+	typedef double type;
+};
+
+}
+
 /**
  * \headerfile mitsuba/core/vector.h mitsuba/mitsuba.h
  * \brief Parameterizable two-dimensional vector data structure
@@ -215,6 +243,7 @@ template <> inline TVector1<int> &TVector1<int>::operator/=(int s) {
 template <typename T> struct TVector2 {
 	typedef T          Scalar;
 	typedef TPoint2<T> PointType;
+	typedef typename detail::VectorLength<T, std::numeric_limits<T>::is_integer>::type LengthType;
 
 	T x, y;
 
@@ -331,8 +360,8 @@ template <typename T> struct TVector2 {
 	}
 
 	/// Return the 2-norm of this vector
-	T length() const {
-		return std::sqrt(lengthSquared());
+	LengthType length() const {
+		return (LengthType) std::sqrt((LengthType) lengthSquared());
 	}
 
 	/// Return whether or not this vector is identically zero
@@ -376,8 +405,19 @@ template <typename T> inline T absDot(const TVector2<T> &v1, const TVector2<T> &
 	return std::abs(dot(v1, v2));
 }
 
+template <typename T> inline T det(const TVector2<T> &v1, const TVector2<T> &v2) {
+	return v1.x * v2.y - v1.y * v2.x;
+}
+
 template <typename T> inline TVector2<T> normalize(const TVector2<T> &v) {
 	return v / v.length();
+}
+
+template <typename T> inline TVector2<T> normalizeStrict(const TVector2<T> &v, const char *errMsg) {
+	Float length = v.length();
+	if (length == 0)
+		SLog(EError, "normalizeStrict(): %s", errMsg);
+	return v / length;
 }
 
 template <> inline TVector2<int> TVector2<int>::operator/(int s) const {
@@ -407,6 +447,7 @@ template <> inline TVector2<int> &TVector2<int>::operator/=(int s) {
 template <typename T> struct TVector3 {
 	typedef T          Scalar;
 	typedef TPoint3<T> PointType;
+	typedef typename detail::VectorLength<T, std::numeric_limits<T>::is_integer>::type LengthType;
 
 	T x, y, z;
 
@@ -524,8 +565,8 @@ template <typename T> struct TVector3 {
 	}
 
 	/// Return the 2-norm of this vector
-	T length() const {
-		return std::sqrt(lengthSquared());
+	LengthType length() const {
+		return (LengthType) std::sqrt((LengthType) lengthSquared());
 	}
 
 	/// Return whether or not this vector is identically zero
@@ -582,6 +623,13 @@ template <typename T> inline TVector3<T> normalize(const TVector3<T> &v) {
 	return v / v.length();
 }
 
+template <typename T> inline TVector3<T> normalizeStrict(const TVector3<T> &v, const char *errMsg) {
+	Float length = v.length();
+	if (length == 0)
+		SLog(EError, "normalizeStrict(): %s", errMsg);
+	return v / length;
+}
+
 template <> inline TVector3<int> TVector3<int>::operator/(int s) const {
 #ifdef MTS_DEBUG
 	if (s == 0)
@@ -611,12 +659,12 @@ template <> inline TVector3<int> &TVector3<int>::operator/=(int s) {
 template <typename T> struct TVector4 {
 	typedef T          Scalar;
 	typedef TPoint4<T> PointType;
+	typedef typename detail::VectorLength<T, std::numeric_limits<T>::is_integer>::type LengthType;
 
 	T x, y, z, w;
 
 	/// Number of dimensions
-	const static int dim = 3;
-
+	const static int dim = 4;
 
 	/** \brief Construct a new vector without initializing it.
 	 *
@@ -730,8 +778,8 @@ template <typename T> struct TVector4 {
 	}
 
 	/// Return the 2-norm of this vector
-	T length() const {
-		return std::sqrt(lengthSquared());
+	LengthType length() const {
+		return (LengthType) std::sqrt((LengthType) lengthSquared());
 	}
 
 	/// Return whether or not this vector is identically zero
@@ -779,6 +827,13 @@ template <typename T> inline T absDot(const TVector4<T> &v1, const TVector4<T> &
 
 template <typename T> inline TVector4<T> normalize(const TVector4<T> &v) {
 	return v / v.length();
+}
+
+template <typename T> inline TVector4<T> normalizeStrict(const TVector4<T> &v, const char *errMsg) {
+	Float length = v.length();
+	if (length == 0)
+		SLog(EError, "normalizeStrict(): %s", errMsg);
+	return v / length;
 }
 
 template <> inline TVector4<int> TVector4<int>::operator/(int s) const {

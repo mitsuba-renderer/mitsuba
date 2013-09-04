@@ -34,9 +34,9 @@ MTS_NAMESPACE_BEGIN
  * so that they can efficiently be referenced many times using the
  * \pluginref{instance} plugin. This is useful for rendering things like
  * forests, where only a few distinct types of trees have to be kept
- * in memory.
+ * in memory. An example is given below:
  *
-
+ * \vspace{5mm}
  * \begin{xml}[caption={An example of geometry instancing}, label=lst:instancing]
  * <!-- Declare a named shape group containing two objects -->
  * <shape type="shapegroup" id="myShapeGroup">
@@ -68,14 +68,6 @@ MTS_NAMESPACE_BEGIN
  *     </transform>
  * </shape>
  * \end{xml}
- * \vspace{-2mm}
- * \remarks{
- *   \item Note that it is not possible to assign a different
- *    material to each instance --- the material assignment specified within
- *    the shape group is the one that matters.
- *   \item Shape groups can not be used to replicate shapes with
- *   attached emitters, sensors, or subsurface scattering models.
- * }
  */
 
 ShapeGroup::ShapeGroup(const Properties &props) : Shape(props) {
@@ -120,8 +112,8 @@ Float ShapeGroup::getSurfaceArea() const {
 
 void ShapeGroup::addChild(const std::string &name, ConfigurableObject *child) {
 	const Class *cClass = child->getClass();
-	if (cClass->derivesFrom(MTS_CLASS(ShapeGroup)) || cClass->getName() == "ShapeInstance") {
-		Log(EError, "Nested instancing is not supported!");
+	if (cClass->derivesFrom(MTS_CLASS(ShapeGroup)) || cClass->getName() == "Instance") {
+		Log(EError, "Nested instancing is not permitted");
 	} else if (cClass->derivesFrom(MTS_CLASS(Shape))) {
 		Shape *shape = static_cast<Shape *>(child);
 		if (shape->isEmitter())
@@ -170,7 +162,7 @@ size_t ShapeGroup::getEffectivePrimitiveCount() const {
 std::string ShapeGroup::toString() const {
 	std::ostringstream oss;
 		oss << "ShapeGroup[" << endl
-			<< "  name = \"" << m_name << "\", " << endl
+			<< "  name = \"" << m_name << "\"," << endl
 			<< "  primCount = " << m_kdtree->getPrimitiveCount() << endl
 			<< "]";
 	return oss.str();

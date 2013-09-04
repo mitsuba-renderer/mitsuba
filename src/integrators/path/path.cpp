@@ -38,7 +38,12 @@ static StatsCounter avgPathLength("Path tracer", "Average path length", EAverage
  *	   }
  *     \parameter{strictNormals}{\Boolean}{Be strict about potential
  *        inconsistencies involving shading normals? See the description below
- *        for details.\default{no, i.e. \code{false}}}
+ *        for details.\default{no, i.e. \code{false}}
+ *     }
+ *     \parameter{hideEmitters}{\Boolean}{Hide directly visible emitters?
+ *        See page~\pageref{sec:hideemitters} for details.
+ *        \default{no, i.e. \code{false}}
+ *     }
  * }
  *
  * This integrator implements a basic path tracer and is a \emph{good default choice}
@@ -75,7 +80,8 @@ static StatsCounter avgPathLength("Path tracer", "Average path length", EAverage
  * low-discrepancy sample generators (i.e. \pluginref{ldsampler},
  * \pluginref{halton}, or \pluginref{sobol}).
  *
- * \paragraph{Strict normals:} Triangle meshes often rely on interpolated shading normals
+ * \paragraph{Strict normals:}\label{sec:strictnormals}
+ * Triangle meshes often rely on interpolated shading normals
  * to suppress the inherently faceted appearance of the underlying geometry. These
  * ``fake'' normals are not without problems, however. They can lead to paradoxical
  * situations where a light ray impinges on an object from a direction that is classified as ``outside''
@@ -116,6 +122,7 @@ public:
 		Intersection &its = rRec.its;
 		RayDifferential ray(r);
 		Spectrum Li(0.0f);
+		bool scattered = false;
 
 		/* Perform the first ray intersection (or ignore if the
 		   intersection has already been provided). */
@@ -129,7 +136,8 @@ public:
 			if (!its.isValid()) {
 				/* If no intersection could be found, potentially return
 				   radiance from a environment luminaire if it exists */
-				if (rRec.type & RadianceQueryRecord::EEmittedRadiance)
+				if ((rRec.type & RadianceQueryRecord::EEmittedRadiance)
+					&& (!m_hideEmitters || scattered))
 					Li += throughput * scene->evalEnvironment(ray);
 				break;
 			}
@@ -137,7 +145,8 @@ public:
 			const BSDF *bsdf = its.getBSDF(ray);
 
 			/* Possibly include emitted radiance if requested */
-			if (its.isEmitter() && (rRec.type & RadianceQueryRecord::EEmittedRadiance))
+			if (its.isEmitter() && (rRec.type & RadianceQueryRecord::EEmittedRadiance)
+				&& (!m_hideEmitters || scattered))
 				Li += throughput * its.Le(-ray.d);
 
 			/* Include radiance from a subsurface scattering model if requested */
@@ -201,6 +210,8 @@ public:
 			if (bsdfWeight.isZero())
 				break;
 
+			scattered |= bRec.sampledType != BSDF::ENull;
+
 			/* Prevent light leaks due to the use of shading normals */
 			const Vector wo = its.toWorld(bRec.wo);
 			Float woDotGeoN = dot(its.geoFrame.n, wo);
@@ -224,6 +235,9 @@ public:
 				const Emitter *env = scene->getEnvironmentEmitter();
 
 				if (env) {
+					if (m_hideEmitters && !scattered)
+						break;
+
 					value = env->evalEnvironment(ray);
 					if (!env->fillDirectSamplingRecord(dRec, ray))
 						break;

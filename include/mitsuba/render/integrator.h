@@ -220,6 +220,7 @@ public:
 		medium = _medium;
 		depth = 1;
 		extra = 0;
+		alpha = 1;
 	}
 
 	/// Initialize the query record for a recursive query
@@ -457,6 +458,7 @@ protected:
     int m_maxDepth;
     int m_rrDepth;
 	bool m_strictNormals;
+	bool m_hideEmitters;
 };
 
 MTS_NAMESPACE_END

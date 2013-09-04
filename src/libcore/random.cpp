@@ -477,11 +477,11 @@ Random::Random() : mt(NULL) {
 	seed();
 #else
 #if 0
-	uint64_t buf[MT_N];
-	memset(buf, 0, MT_N * sizeof(uint64_t)); /* Make GCC happy */
+	uint64_t buf[N64];
+	memset(buf, 0, N64 * sizeof(uint64_t)); /* Make GCC happy */
 	ref<FileStream> urandom = new FileStream("/dev/urandom", FileStream::EReadOnly);
-	urandom->readULongArray(buf, MT_N);
-	seed(buf, MT_N);
+	urandom->readULongArray(buf, N64);
+	seed(buf, N64);
 #else
 	seed();
 #endif

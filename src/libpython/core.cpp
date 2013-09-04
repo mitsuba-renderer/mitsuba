@@ -21,17 +21,6 @@
 #include <mitsuba/render/scene.h>
 #include <boost/algorithm/string.hpp>
 
-#if defined(__LINUX__)
-# if !defined(_GNU_SOURCE)
-#  define _GNU_SOURCE
-# endif
-# include <dlfcn.h>
-#elif defined(__OSX__)
-# include <mach-o/dyld.h>
-#elif defined(__WINDOWS__)
-# include <windows.h>
-#endif
-
 using namespace mitsuba;
 
 void initializeFramework() {
@@ -48,54 +37,6 @@ void initializeFramework() {
 	Scheduler::staticInitialization();
 	SHVector::staticInitialization();
 	SceneHandler::staticInitialization();
-
-	fs::path basePath;
-
-	/* Try to detect the base path of the Mitsuba installation */
-	#if defined(__LINUX__)
-		Dl_info info;
-		dladdr((void *) &initializeFramework, &info);
-		if (info.dli_fname) {
-			/* Try to detect a few default setups */
-			if (boost::starts_with(info.dli_fname, "/usr/lib")) {
-				basePath = fs::path("/usr/share/mitsuba");
-			} else if (boost::starts_with(info.dli_fname, "/usr/local/lib")) {
-				basePath = fs::path("/usr/local/share/mitsuba");
-			} else {
-				/* This is a locally-compiled repository */
-				basePath = fs::path(info.dli_fname).parent_path().parent_path().parent_path();
-			}
-		}
-	#elif defined(__OSX__)
-		uint32_t imageCount = _dyld_image_count();
-		for (uint32_t i=0; i<imageCount; ++i) {
-			const char *imageName = _dyld_get_image_name(i);
-			if (boost::ends_with(imageName, "mitsuba.so"))
-				basePath = fs::path(imageName).parent_path().parent_path().parent_path();
-		}
-	#elif defined(__WINDOWS__)
-		HMODULE hm;
-		std::vector<WCHAR> lpFilename(MAX_PATH);
-		if (GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
-			GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCSTR) &initializeFramework, &hm)) {
-			std::vector<WCHAR> lpFilename(MAX_PATH);
-		
-			// Try to get the path with the default MAX_PATH length (260 chars)
-			DWORD nSize = GetModuleFileNameW(hm, &lpFilename[0], MAX_PATH);
-		
-			// Adjust the buffer size in case if was too short
-			while (nSize == lpFilename.size()) {
-				lpFilename.resize(nSize * 2);
-				nSize = GetModuleFileNameW(hm, &lpFilename[0], nSize);
-			}
-
-			if (nSize)
-				basePath = fs::path(lpFilename).parent_path().parent_path().parent_path();
-		}
-	#endif
-
-	if (!basePath.empty())
-		Thread::getThread()->getFileResolver()->prependPath(basePath);
 }
 
 void shutdownFramework() {
@@ -175,7 +116,7 @@ public:
 		bp::extract<Transform> extractTransform(value);
 		bp::extract<Spectrum> extractSpectrum(value);
 
-		if (extractString.check()) {
+		if (extractString.check()){
 			props.setString(name, extractString());
 		} else if (extractBoolean.check() && PyObject_IsInstance(value.ptr(), (PyObject *) &PyBool_Type)) {
 			props.setBoolean(name, extractBoolean());
@@ -204,6 +145,12 @@ struct path_to_python_str {
 	}
 };
 
+
+struct TSpectrum_to_Spectrum {
+	static PyObject* convert(const TSpectrum<Float, SPECTRUM_SAMPLES> &spectrum) {
+		return bp::incref(bp::object(Spectrum(spectrum)).ptr());
+	}
+};
 
 static void Matrix4x4_setItem(Matrix4x4 *matrix, bp::tuple tuple, Float value) {
 	if (bp::len(tuple) != 2)
@@ -341,6 +288,12 @@ static bp::tuple spectrum_toXYZ(const Spectrum &s) {
 	return bp::make_tuple(x, y, z);
 }
 
+static bp::tuple spectrum_toIPT(const Spectrum &s) {
+	Float I, P, T;
+	s.toIPT(I, P, T);
+	return bp::make_tuple(I, P, T);
+}
+
 void aabb_expandby_aabb(AABB *aabb, const AABB &aabb2) { aabb->expandBy(aabb2); }
 void aabb_expandby_point(AABB *aabb, const Point &p) { aabb->expandBy(p); }
 Float aabb_distanceto_aabb(AABB *aabb, const AABB &aabb2) { return aabb->distanceTo(aabb2); }
@@ -374,7 +327,6 @@ Point transform_mul_point(Transform *transform, const Point &point) { return tra
 Ray transform_mul_ray(Transform *transform, const Ray &ray) { return transform->operator()(ray); }
 Transform transform_mul_transform(Transform *transform, const Transform &other) { return *transform * other; }
 
-
 bp::object cast(ConfigurableObject *obj) {
 	const Class *cls = obj->getClass();
 	#define TryCast(ClassName) if (cls->derivesFrom(MTS_CLASS(ClassName))) \
@@ -388,6 +340,7 @@ bp::object cast(ConfigurableObject *obj) {
 	TryCast(Medium);
 	TryCast(VolumeDataSource);
 	TryCast(Film);
+	TryCast(ProjectiveCamera);
 	TryCast(Sensor);
 	TryCast(Emitter);
 	TryCast(Sampler);
@@ -472,6 +425,43 @@ Vector refract3(const Vector &wi, const Normal &n, Float eta) {
 	return refract(wi, n, eta);
 }
 
+void bitmap_applyMatrix(Bitmap *bitmap, bp::list list) {
+	int length = bp::len(list);
+	if (length != 9)
+		SLog(EError, "Require a color matrix specified as a list with 9 entries!");
+
+	Float matrix[3][3];
+
+	int idx = 0;
+	for (int i=0; i<3; ++i)
+		for (int j=0; j<3; ++j)
+			matrix[i][j] = bp::extract<Float>(list[idx++]);
+
+	bitmap->applyMatrix(matrix);
+}
+
+void bitmap_write(Bitmap *bitmap, Bitmap::EFileFormat fmt, Stream *stream) {
+	bitmap->write(fmt, stream);
+}
+
+ref<Bitmap> bitmap_convert_1(Bitmap *bitmap, Bitmap::EPixelFormat pixelFormat, Bitmap::EComponentFormat componentFormat,
+		Float gamma, Float multiplier, Spectrum::EConversionIntent intent) {
+	return bitmap->convert(pixelFormat, componentFormat, gamma, multiplier, intent);
+}
+
+ref<Bitmap> bitmap_convert_2(Bitmap *bitmap, Bitmap::EPixelFormat pixelFormat, Bitmap::EComponentFormat componentFormat,
+		Float gamma, Float multiplier) {
+	return bitmap->convert(pixelFormat, componentFormat, gamma, multiplier);
+}
+
+ref<Bitmap> bitmap_convert_3(Bitmap *bitmap, Bitmap::EPixelFormat pixelFormat, Bitmap::EComponentFormat componentFormat,
+		Float gamma) {
+	return bitmap->convert(pixelFormat, componentFormat, gamma);
+}
+
+ref<Bitmap> bitmap_convert_4(Bitmap *bitmap, Bitmap::EPixelFormat pixelFormat, Bitmap::EComponentFormat componentFormat) {
+	return bitmap->convert(pixelFormat, componentFormat);
+}
 
 Transform transform_glOrthographic1(Float clipNear, Float clipFar) {
 	return Transform::glOrthographic(clipNear, clipFar);
@@ -483,12 +473,24 @@ Transform transform_glOrthographic2(Float clipLeft, Float clipRight,
 		clipBottom, clipTop, clipNear, clipFar);
 }
 
-
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(fromLinearRGB_overloads, fromLinearRGB, 3, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(fromXYZ_overloads, fromXYZ, 3, 4)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(fromIPT_overloads, fromIPT, 3, 4)
+
+#define IMPLEMENT_ANIMATION_TRACK(Name) \
+	BP_CLASS(Name, AbstractAnimationTrack, (bp::init<AbstractAnimationTrack::EType, size_t>())) \
+		.def(bp::init<Name *>()) \
+		.def("reserve", &Name::reserve) \
+		.def("prependTransformation", &Name::prependTransformation) \
+		.def("appendTransformation", &Name::appendTransformation) \
+		.def("eval", &Name::eval, BP_RETURN_VALUE) \
+		.def("setValue", &Name::setValue) \
+		.def("getValue", &Name::getValue, BP_RETURN_VALUE) \
+		.def("append", &Name::append)
 
 void export_core() {
 	bp::to_python_converter<fs::path, path_to_python_str>();
+	bp::to_python_converter<TSpectrum<Float, SPECTRUM_SAMPLES>, TSpectrum_to_Spectrum>();
 	bp::implicitly_convertible<std::string, fs::path>();
 
 	bp::object coreModule(
@@ -708,19 +710,28 @@ void export_core() {
 		.def("clear", &InterpolatedSpectrum::clear)
 		.def("zeroExtend", &InterpolatedSpectrum::zeroExtend);
 
+	void (Bitmap::*accumulate_1)(const Bitmap *bitmap, Point2i sourceOffset, Point2i targetOffset, Vector2i size) = &Bitmap::accumulate;
+	void (Bitmap::*accumulate_2)(const Bitmap *bitmap, Point2i targetOffset) = &Bitmap::accumulate;
+	const Properties &(Bitmap::*get_metadata)() const = &Bitmap::getMetadata;
+
 	BP_CLASS(Bitmap, Object, (bp::init<Bitmap::EPixelFormat, Bitmap::EComponentFormat, const Vector2i &>()))
 		.def(bp::init<Bitmap::EPixelFormat, Bitmap::EComponentFormat, const Vector2i &, int>())
 		.def(bp::init<Bitmap::EFileFormat, Stream *>())
 		.def("clone", &Bitmap::clone, BP_RETURN_VALUE)
+		.def("clear", &Bitmap::clear)
 		.def("separateChannel", &Bitmap::separateChannel, BP_RETURN_VALUE)
 		.def("expand", &Bitmap::expand, BP_RETURN_VALUE)
 		.def("flipVertically", &Bitmap::flipVertically)
 		.def("crop", &Bitmap::crop)
-		.def("accumulate", &Bitmap::accumulate)
-		.def("clear", &Bitmap::clear)
-		.def("write", &Bitmap::write)
-		.def("setString", &Bitmap::setString)
-		.def("getString", &Bitmap::getString, BP_RETURN_VALUE)
+		.def("applyMatrix", &bitmap_applyMatrix)
+		.def("colorBalance", &Bitmap::colorBalance)
+		.def("accumulate", accumulate_1)
+		.def("accumulate", accumulate_2)
+		.def("write", &bitmap_write)
+		.def("setMetadataString", &Bitmap::setMetadataString)
+		.def("getMetadataString", &Bitmap::getMetadataString, BP_RETURN_VALUE)
+		.def("setMetadata", &Bitmap::setMetadata)
+		.def("getMetadata", get_metadata, BP_RETURN_VALUE)
 		.def("setGamma", &Bitmap::setGamma)
 		.def("getGamma", &Bitmap::getGamma)
 		.def("getWidth", &Bitmap::getWidth)
@@ -732,9 +743,18 @@ void export_core() {
 		.def("getBitsPerComponent", &Bitmap::getBitsPerComponent)
 		.def("getBytesPerComponent", &Bitmap::getBytesPerComponent)
 		.def("getBytesPerPixel", &Bitmap::getBytesPerPixel)
+		.def("getBufferSize", &Bitmap::getBufferSize)
 		.def("getPixel", &Bitmap::getPixel, BP_RETURN_VALUE)
 		.def("setPixel", &Bitmap::setPixel)
-		.def("getSize", &Bitmap::getSize, BP_RETURN_VALUE);
+		.def("drawHLine", &Bitmap::drawHLine)
+		.def("drawVLine", &Bitmap::drawVLine)
+		.def("drawRect", &Bitmap::drawRect)
+		.def("fillRect", &Bitmap::fillRect)
+		.def("getSize", &Bitmap::getSize, BP_RETURN_VALUE)
+		.def("convert", &bitmap_convert_1, BP_RETURN_VALUE)
+		.def("convert", &bitmap_convert_2, BP_RETURN_VALUE)
+		.def("convert", &bitmap_convert_3, BP_RETURN_VALUE)
+		.def("convert", &bitmap_convert_4, BP_RETURN_VALUE);
 
 	BP_SETSCOPE(Bitmap_class);
 	bp::enum_<Bitmap::EPixelFormat>("EPixelFormat")
@@ -745,7 +765,8 @@ void export_core() {
 		.value("ESpectrum", Bitmap::ESpectrum)
 		.value("ESpectrumAlpha", Bitmap::ESpectrumAlpha)
 		.value("ESpectrumAlphaWeight", Bitmap::ESpectrumAlphaWeight)
-		.value("EMultiChannel", Bitmap::EMultiChannel);
+		.value("EMultiChannel", Bitmap::EMultiChannel)
+		.export_values();
 
 	bp::enum_<Bitmap::EComponentFormat>("EComponentFormat")
 		.value("EBitmask", Bitmap::EBitmask)
@@ -763,10 +784,13 @@ void export_core() {
 		.value("EPNG", Bitmap::EPNG)
 		.value("EOpenEXR", Bitmap::EOpenEXR)
 		.value("ETGA", Bitmap::ETGA)
+		.value("EPFM", Bitmap::EPFM)
+		.value("ERGBE", Bitmap::ERGBE)
 		.value("EBMP", Bitmap::EBMP)
 		.value("EJPEG", Bitmap::EJPEG)
 		.value("EAuto", Bitmap::EAuto)
 		.export_values();
+
 	BP_SETSCOPE(coreModule);
 
 	BP_CLASS(FileResolver, Object, bp::init<>())
@@ -882,6 +906,56 @@ void export_core() {
 		.def("isBusy", &Scheduler::isBusy)
 		.staticmethod("getInstance");
 
+	BP_CLASS(AbstractAnimationTrack, Object, bp::no_init)
+		.def("getType", &AbstractAnimationTrack::getType)
+		.def("setTime", &AbstractAnimationTrack::setTime)
+		.def("getTime", &AbstractAnimationTrack::getTime)
+		.def("getSize", &AbstractAnimationTrack::getSize)
+		.def("clone", &AbstractAnimationTrack::clone, BP_RETURN_VALUE);
+
+	IMPLEMENT_ANIMATION_TRACK(FloatTrack);
+	IMPLEMENT_ANIMATION_TRACK(VectorTrack);
+	IMPLEMENT_ANIMATION_TRACK(PointTrack);
+	IMPLEMENT_ANIMATION_TRACK(QuatTrack);
+
+	BP_SETSCOPE(AbstractAnimationTrack_class);
+	bp::enum_<AbstractAnimationTrack::EType>("EType")
+		.value("EInvalid", AbstractAnimationTrack::EInvalid)
+		.value("ETranslationX", AbstractAnimationTrack::ETranslationX)
+		.value("ETranslationY", AbstractAnimationTrack::ETranslationY)
+		.value("ETranslationZ", AbstractAnimationTrack::ETranslationZ)
+		.value("ETranslationXYZ", AbstractAnimationTrack::ETranslationXYZ)
+		.value("EScaleX", AbstractAnimationTrack::EScaleX)
+		.value("EScaleY", AbstractAnimationTrack::EScaleY)
+		.value("EScaleZ", AbstractAnimationTrack::EScaleZ)
+		.value("EScaleXYZ", AbstractAnimationTrack::EScaleXYZ)
+		.value("ERotationX", AbstractAnimationTrack::ERotationX)
+		.value("ERotationY", AbstractAnimationTrack::ERotationY)
+		.value("ERotationZ", AbstractAnimationTrack::ERotationZ)
+		.value("ERotationQuat", AbstractAnimationTrack::ERotationQuat)
+		.export_values();
+
+	BP_SETSCOPE(coreModule);
+
+	AbstractAnimationTrack *(AnimatedTransform::*animatedTransform_getTrack)(size_t) = &AnimatedTransform::getTrack;
+	AbstractAnimationTrack *(AnimatedTransform::*animatedTransform_findTrack)(AbstractAnimationTrack::EType) = &AnimatedTransform::findTrack;
+
+	BP_CLASS(AnimatedTransform, Object, (bp::init<Transform>()))
+		.def(bp::init<>())
+		.def(bp::init<Stream *>())
+		.def(bp::init<AnimatedTransform *>())
+		.def("getTrackCount", &AnimatedTransform::getTrackCount)
+		.def("findTrack", animatedTransform_findTrack, BP_RETURN_VALUE)
+		.def("getTrack", animatedTransform_getTrack, BP_RETURN_VALUE)
+		.def("addTrack", &AnimatedTransform::addTrack)
+		.def("appendTransform", &AnimatedTransform::appendTransform)
+		.def("isStatic", &AnimatedTransform::isStatic)
+		.def("sortAndSimplify", &AnimatedTransform::sortAndSimplify)
+		.def("serialize", &AnimatedTransform::serialize)
+		.def("getTranslationBounds", &AnimatedTransform::getTranslationBounds, BP_RETURN_VALUE)
+		.def("getSpatialBounds", &AnimatedTransform::getSpatialBounds, BP_RETURN_VALUE)
+		.def("eval", &AnimatedTransform::eval, BP_RETURN_VALUE);
+
 	BP_STRUCT(Spectrum, bp::init<>())
 		.def("__init__", bp::make_constructor(spectrum_array_constructor))
 		.def(bp::init<Float>())
@@ -915,6 +989,8 @@ void export_core() {
 		.def("getLuminance", &Spectrum::getLuminance)
 		.def("fromXYZ", &Spectrum::fromXYZ, fromXYZ_overloads())
 		.def("toXYZ", &spectrum_toXYZ)
+		.def("fromIPT", &Spectrum::fromIPT, fromIPT_overloads())
+		.def("toIPT", &spectrum_toIPT)
 		.def("fromLinearRGB", &Spectrum::fromLinearRGB, fromLinearRGB_overloads())
 		.def("toLinearRGB", &spectrum_toLinearRGB)
 		.def("fromSRGB", &Spectrum::fromSRGB)
@@ -1201,17 +1277,21 @@ void export_core() {
 		.def("toWorld", &Frame::toWorld, BP_RETURN_VALUE)
 		.def("__repr__", &Frame::toString)
 		.def("cosTheta", &Frame::cosTheta)
+		.def("cosTheta2", &Frame::cosTheta2)
 		.def("sinTheta", &Frame::sinTheta)
 		.def("sinTheta2", &Frame::sinTheta2)
 		.def("tanTheta", &Frame::tanTheta)
+		.def("tanTheta2", &Frame::tanTheta2)
 		.def("sinPhi", &Frame::sinPhi)
 		.def("cosPhi", &Frame::cosPhi)
 		.def("sinPhi2", &Frame::sinPhi2)
 		.def("cosPhi2", &Frame::cosPhi2)
 		.staticmethod("cosTheta")
+		.staticmethod("cosTheta2")
 		.staticmethod("sinTheta")
 		.staticmethod("sinTheta2")
 		.staticmethod("tanTheta")
+		.staticmethod("tanTheta2")
 		.staticmethod("sinPhi")
 		.staticmethod("cosPhi")
 		.staticmethod("sinPhi2")
@@ -1257,11 +1337,19 @@ void export_core() {
 		.staticmethod("glOrthographic")
 		.staticmethod("fromFrame");
 
+	Float (*fresnelConductorApprox1)(Float, Float, Float) = &fresnelConductorApprox;
+	Float (*fresnelConductorExact1)(Float, Float, Float) = &fresnelConductorExact;
+	Spectrum (*fresnelConductorApprox2)(Float, const Spectrum &, const Spectrum &) = &fresnelConductorApprox;
+	Spectrum (*fresnelConductorExact2)(Float, const Spectrum &, const Spectrum &) = &fresnelConductorExact;
+
 	/* Functions from utility.h */
 	bp::def("fresnelDielectric", &fresnelDielectric);
 	bp::def("fresnelDielectricExt", &fresnelDielectricExt1);
 	bp::def("fresnelDielectricExt", &fresnelDielectricExt2);
-	bp::def("fresnelConductor", &fresnelConductor, BP_RETURN_VALUE);
+	bp::def("fresnelConductorApprox", fresnelConductorApprox1, BP_RETURN_VALUE);
+	bp::def("fresnelConductorApprox", fresnelConductorApprox2, BP_RETURN_VALUE);
+	bp::def("fresnelConductorExact", fresnelConductorExact1, BP_RETURN_VALUE);
+	bp::def("fresnelConductorExact", fresnelConductorExact2, BP_RETURN_VALUE);
 	bp::def("fresnelDiffuseReflectance", &fresnelDiffuseReflectance);
 	bp::def("reflect", &reflect);
 	bp::def("refract", &refract1);

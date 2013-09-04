@@ -89,28 +89,31 @@ public:
 		const bool &stop);
 
 	/**
-	 * Handles particles emitted by a light source - if a connection to the
-	 * sensor is possible, compute the importance and accumulate in the proper
-	 * pixel of the accumulation buffer.
+	 * \brief Handles particles emitted by a light source
+	 *
+	 * If a connection to the sensor is possible, compute the importance
+	 * and accumulate in the proper pixel of the accumulation buffer.
 	 */
 	void handleEmission(const PositionSamplingRecord &pRec,
 			const Medium *medium, const Spectrum &weight);
 
 	/**
-	 * Handles particles interacting with a surface - if a connection to the
-	 * sensor is possible, compute the importance and accumulate in the proper
-	 * pixel of the accumulation buffer.
+	 * \brief Handles particles interacting with a surface
+	 *
+	 * If a connection to the sensor is possible, compute the importance
+	 * and accumulate in the proper pixel of the accumulation buffer.
 	 */
-	void handleSurfaceInteraction(int depth, bool caustic,
+	void handleSurfaceInteraction(int depth, int nullInteractions, bool caustic,
 		const Intersection &its, const Medium *medium,
 		const Spectrum &weight);
 
 	/**
-	 * Handles particles interacting with a medium - if a connection to the
-	 * sensor is possible, compute the importance and accumulate in the proper
-	 * pixel of the accumulation buffer.
+	 * \brief Handles particles interacting with a medium
+	 *
+	 * If a connection to the sensor is possible, compute the importance
+	 * and accumulate in the proper pixel of the accumulation buffer.
 	 */
-	void handleMediumInteraction(int depth, bool caustic,
+	void handleMediumInteraction(int depth, int nullInteractions, bool caustic,
 			const MediumSamplingRecord &mRec, const Medium *medium,
 			const Vector &wi, const Spectrum &weight);
 

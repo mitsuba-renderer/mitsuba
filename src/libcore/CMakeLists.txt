@@ -58,17 +58,18 @@ set(HDRS
   ${INCLUDE_DIR}/sfcurve.h
   ${INCLUDE_DIR}/shvector.h
   ${INCLUDE_DIR}/spectrum.h
+  ${INCLUDE_DIR}/spline.h
   ${INCLUDE_DIR}/sse.h
   ${INCLUDE_DIR}/ssemath.h
   ${INCLUDE_DIR}/ssevector.h
   ${INCLUDE_DIR}/sshstream.h
   ${INCLUDE_DIR}/sstream.h
   ${INCLUDE_DIR}/statistics.h
-  ${INCLUDE_DIR}/stl.h
   ${INCLUDE_DIR}/stream.h
   ${INCLUDE_DIR}/thread.h
   ${INCLUDE_DIR}/timer.h
   ${INCLUDE_DIR}/tls.h
+  ${INCLUDE_DIR}/track.h
   ${INCLUDE_DIR}/transform.h
   ${INCLUDE_DIR}/triangle.h
   ${INCLUDE_DIR}/util.h
@@ -108,6 +109,7 @@ set(SRCS
   serialization.cpp
   shvector.cpp
   spectrum.cpp
+  spline.cpp
   ssemath.cpp
   sshstream.cpp
   sstream.cpp
@@ -116,6 +118,7 @@ set(SRCS
   thread.cpp
   timer.cpp
   tls.cpp
+  track.cpp
   transform.cpp
   triangle.cpp
   util.cpp
@@ -141,7 +144,7 @@ set(LIBS ${ZLIB_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES}
   ${ILMBASE_LIBRARIES} ${OPENEXR_LIBRARIES}
   ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${CMAKE_DL_LIBS})
 if(WIN32)
-  list(APPEND LIBS ws2_32)
+  list(APPEND LIBS ws2_32 psapi)
 elseif (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
   list(APPEND LIBS rt)
 elseif (APPLE)

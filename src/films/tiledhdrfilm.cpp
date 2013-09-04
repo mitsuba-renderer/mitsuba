@@ -53,7 +53,7 @@ MTS_NAMESPACE_BEGIN
  *         the number of written channels depends on the value assigned to
  *         \code{SPECTRUM\_SAMPLES} during compilation (see Section~\ref{sec:compiling}
  *         section for details)
- *         \default{\code{rgba}}
+ *         \default{\code{rgb}}
  *     }
  *     \parameter{componentFormat}{\String}{Specifies the desired floating
  *         point component format used for the output. The options are
@@ -81,7 +81,7 @@ MTS_NAMESPACE_BEGIN
  * Based on the provided parameter values, the film will either write a luminance,
  * luminance/alpha, RGB(A), XYZ(A) tristimulus, or spectrum/spectrum-alpha-based
  * bitmap having a \code{float16}, \code{float32}, or \code{uint32}-based
- * internal representation. The default is RGBA and \code{float16}.
+ * internal representation. The default is RGB and \code{float16}.
  * Note that the spectral output options only make sense when using a
  * custom compiled Mitsuba distribution that has spectral rendering
  * enabled. This is not the case for the downloadable release builds.
@@ -102,7 +102,7 @@ class TiledHDRFilm : public Film {
 public:
 	TiledHDRFilm(const Properties &props) : Film(props), m_output(NULL), m_frameBuffer(NULL) {
 		std::string pixelFormat = boost::to_lower_copy(
-			props.getString("pixelFormat", "rgba"));
+			props.getString("pixelFormat", "rgb"));
 		std::string componentFormat = boost::to_lower_copy(
 			props.getString("componentFormat", "float16"));
 
@@ -156,7 +156,7 @@ public:
 	}
 
 	virtual ~TiledHDRFilm() {
-		develop();
+		develop(NULL, 0);
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
@@ -167,7 +167,7 @@ public:
 
 	void setDestinationFile(const fs::path &destFile, uint32_t blockSize) {
 		if (m_output)
-			develop();
+			develop(NULL, 0);
 
 		Bitmap::EPixelFormat pixelFormat = m_pixelFormat;
 		#if SPECTRUM_SAMPLES == 3
@@ -432,11 +432,11 @@ public:
 
 	bool develop(const Point2i &sourceOffset, const Vector2i &size,
 			const Point2i &targetOffset, Bitmap *target) const {
-		target->fill(targetOffset, size, Spectrum(0.0f));
+		target->fillRect(targetOffset, size, Spectrum(0.0f));
 		return false; /* Not supported by the tiled EXR film! */
 	}
 
-	void develop() {
+	void develop(const Scene *scene, Float renderTime) {
 		if (m_output) {
 			Log(EInfo, "Closing EXR file (%u tiles in total, peak memory usage: %u tiles)..",
 				m_blocksH * m_blocksV, m_peakUsage);
@@ -468,6 +468,14 @@ public:
 	}
 
 	void clear() { /* Do nothing */ }
+
+	bool hasAlpha() const {
+		return
+			m_pixelFormat == Bitmap::ELuminanceAlpha ||
+			m_pixelFormat == Bitmap::ERGBA ||
+			m_pixelFormat == Bitmap::EXYZA ||
+			m_pixelFormat == Bitmap::ESpectrumAlpha;
+	}
 
 	bool destinationExists(const fs::path &baseName) const {
 		fs::path filename = baseName;

@@ -20,6 +20,7 @@
 #include <mitsuba/render/bsdf.h>
 #include <mitsuba/hw/basicshader.h>
 #include "microfacet.h"
+#include "ior.h"
 
 MTS_NAMESPACE_BEGIN
 
@@ -32,15 +33,15 @@ MTS_NAMESPACE_BEGIN
  *          used to model the surface roughness.
  *       \begin{enumerate}[(i)]
  *           \item \code{beckmann}: Physically-based distribution derived from
- *               Gaussian random surfaces. This is the default.
+ *               Gaussian random surfaces. This is the default.\vspace{-1mm}
  *           \item \code{ggx}: New distribution proposed by
  *              Walter et al. \cite{Walter07Microfacet}, which is meant to better handle
  *              the long tails observed in measurements of ground surfaces.
- *              Renderings with this distribution may converge slowly.
+ *              Renderings with this distribution may converge slowly.\vspace{-1mm}
  *           \item \code{phong}: Classical $\cos^p\theta$ distribution.
  *              Due to the underlying microfacet theory,
  *              the use of this distribution here leads to more realistic
- *              behavior than the separately available \pluginref{phong} plugin.
+ *              behavior than the separately available \pluginref{phong} plugin.\vspace{-1mm}
  *           \item \code{as}: Anisotropic Phong-style microfacet distribution proposed by
  *              Ashikhmin and Shirley \cite{Ashikhmin2005Anisotropic}.\vspace{-3mm}
  *       \end{enumerate}
@@ -59,11 +60,12 @@ MTS_NAMESPACE_BEGIN
  *     }
  *     \parameter{material}{\String}{Name of a material preset, see
  *           \tblref{conductor-iors}.\!\default{\texttt{Cu} / copper}}
- *     \parameter{eta}{\Spectrum}{Real part of the material's index
- *           of refraction \default{based on the value of \texttt{material}}}
- *     \parameter{k}{\Spectrum}{Imaginary part of the material's index of
- *             refraction (the absorption coefficient).
- *             \default{based on \texttt{material}}}
+ *     \parameter{eta, k}{\Spectrum}{Real and imaginary components of the material's index of
+ *             refraction \default{based on the value of \texttt{material}}}
+ *     \parameter{extEta}{\Float\Or\String}{
+ *           Real-valued index of refraction of the surrounding dielectric,
+ *           or a material name of a dielectric \default{\code{air}}
+ *     }
  *     \parameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
  *         factor that can be used to modulate the specular reflection component. Note
  *         that for physical realism, this parameter should never be touched. \default{1.0}}
@@ -102,6 +104,9 @@ MTS_NAMESPACE_BEGIN
  * refraction information, this plugin can access a set of measured materials
  * for which visible-spectrum information was publicly available
  * (see \tblref{conductor-iors} for the full list).
+ * There is also a special material profile named \code{none}, which disables
+ * the computation of Fresnel reflectances and produces an idealized
+ * 100% reflecting mirror.
  *
  * When no parameters are given, the plugin activates the default settings,
  * which describe copper with a light amount of roughness modeled using a
@@ -155,15 +160,23 @@ public:
 		m_specularReflectance = new ConstantSpectrumTexture(
 			props.getSpectrum("specularReflectance", Spectrum(1.0f)));
 
-		std::string material = props.getString("material", "Cu");
-		Spectrum materialEta, materialK;
-		materialEta.fromContinuousSpectrum(InterpolatedSpectrum(
-			fResolver->resolve("data/ior/" + material + ".eta.spd")));
-		materialK.fromContinuousSpectrum(InterpolatedSpectrum(
-			fResolver->resolve("data/ior/" + material + ".k.spd")));
+		std::string materialName = props.getString("material", "Cu");
 
-		m_eta = props.getSpectrum("eta", materialEta);
-		m_k = props.getSpectrum("k", materialK);
+		Spectrum intEta, intK;
+		if (boost::to_lower_copy(materialName) == "none") {
+			intEta = Spectrum(0.0f);
+			intK = Spectrum(1.0f);
+		} else {
+			intEta.fromContinuousSpectrum(InterpolatedSpectrum(
+				fResolver->resolve("data/ior/" + materialName + ".eta.spd")));
+			intK.fromContinuousSpectrum(InterpolatedSpectrum(
+				fResolver->resolve("data/ior/" + materialName + ".k.spd")));
+		}
+
+		Float extEta = lookupIOR(props, "extEta", "air");
+
+		m_eta = props.getSpectrum("eta", intEta) / extEta;
+		m_k   = props.getSpectrum("k", intK) / extEta;
 
 		m_distribution = MicrofacetDistribution(
 			props.getString("distribution", "beckmann")
@@ -253,7 +266,7 @@ public:
 			return Spectrum(0.0f);
 
 		/* Fresnel factor */
-		const Spectrum F = fresnelConductor(dot(bRec.wi, H), m_eta, m_k);
+		const Spectrum F = fresnelConductorExact(dot(bRec.wi, H), m_eta, m_k);
 
 		/* Smith's shadow-masking function */
 		const Float G = m_distribution.G(bRec.wi, bRec.wo, H, alphaU, alphaV);
@@ -315,7 +328,7 @@ public:
 		if (Frame::cosTheta(bRec.wo) <= 0)
 			return Spectrum(0.0f);
 
-		const Spectrum F = fresnelConductor(dot(bRec.wi, m),
+		const Spectrum F = fresnelConductorExact(dot(bRec.wi, m),
 				m_eta, m_k);
 
 		Float numerator = m_distribution.eval(m, alphaU, alphaV)
@@ -358,7 +371,7 @@ public:
 		if (Frame::cosTheta(bRec.wo) <= 0)
 			return Spectrum(0.0f);
 
-		const Spectrum F = fresnelConductor(dot(bRec.wi, m),
+		const Spectrum F = fresnelConductorExact(dot(bRec.wi, m),
 				m_eta, m_k);
 
 		Float numerator = m_distribution.eval(m, alphaU, alphaV)
@@ -451,7 +464,7 @@ public:
 		m_alphaVShader = renderer->registerShaderForResource(m_alphaV.get());
 
 		/* Compute the reflectance at perpendicular incidence */
-		m_R0 = fresnelConductor(1.0f, eta, k);
+		m_R0 = fresnelConductorExact(1.0f, eta, k);
 	}
 
 	bool isComplete() const {

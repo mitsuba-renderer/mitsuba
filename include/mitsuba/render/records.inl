@@ -101,12 +101,22 @@ inline bool RadianceQueryRecord::rayIntersect(const RayDifferential &ray) {
 	if (type & EIntersection) {
 		scene->rayIntersect(ray, its);
 		if (type & EOpacity) {
-			if (its.isValid())
-				alpha = 1.0f;
-			else if (medium == NULL)
+			int unused = INT_MAX;
+
+			if (its.isValid()) {
+				if (EXPECT_TAKEN(!its.isMediumTransition()))
+					alpha = 1.0f;
+				else
+					alpha = 1-scene->evalTransmittance(its.p, true,
+						ray(scene->getBSphere().radius*2), false,
+						ray.time, its.getTargetMedium(ray.d), unused).average();
+			} else if (medium) {
+				alpha = 1-scene->evalTransmittance(ray.o, false,
+					ray(scene->getBSphere().radius*2), false,
+					ray.time, medium, unused).average();
+			} else {
 				alpha = 0.0f;
-			else
-				alpha = 1-medium->evalTransmittance(ray).average();
+			}
 		}
 		if (type & EDistance)
 			dist = its.t;
@@ -131,7 +141,7 @@ inline DirectionSamplingRecord::DirectionSamplingRecord(const Intersection &its,
 
 inline DirectSamplingRecord::DirectSamplingRecord(const Intersection &refIts)
 	: PositionSamplingRecord(refIts.time), ref(refIts.p), refN(0.0f) {
-	if ((refIts.shape->getBSDF()->getType() & BSDF::ETransmission) == 0)
+	if ((refIts.shape->getBSDF()->getType() & (BSDF::ETransmission | BSDF::EBackSide)) == 0)
 		refN = refIts.shFrame.n;
 }
 

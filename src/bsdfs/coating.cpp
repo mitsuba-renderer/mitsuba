@@ -35,8 +35,8 @@ MTS_NAMESPACE_BEGIN
  *      model absorption --- should be specified in inverse units of \code{sigmaA})\default{1}}
  *     \parameter{sigmaA}{\Spectrum\Or\Texture}{The absorption coefficient of the
  *      coating layer. \default{0, i.e. there is no absorption}}
- *     \parameter{specular\showbreak Transmittance}{\Spectrum\Or\Texture}{Optional
- *         factor that can be used to modulate the specular transmission component. Note
+ *     \parameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
+ *         factor that can be used to modulate the specular reflection component. Note
  *         that for physical realism, this parameter should never be touched. \default{1.0}}
  *     \parameter{\Unnamed}{\BSDF}{A nested BSDF model that should be coated.}
  * }
@@ -225,7 +225,7 @@ public:
 			&& (bRec.component == -1 || bRec.component < (int) m_components.size()-1);
 
 		if (measure == EDiscrete && sampleSpecular &&
-				absDot(reflect(bRec.wi), bRec.wo) > 1-DeltaEpsilon) {
+			    std::abs(dot(reflect(bRec.wi), bRec.wo)-1) < DeltaEpsilon) {
 			return m_specularReflectance->eval(bRec.its) *
 				fresnelDielectricExt(std::abs(Frame::cosTheta(bRec.wi)), m_eta);
 		} else if (sampleNested) {
@@ -274,7 +274,7 @@ public:
 			(1-R12) * (1-m_specularSamplingWeight));
 
 		if (measure == EDiscrete && sampleSpecular &&
-				absDot(reflect(bRec.wi), bRec.wo) > 1-DeltaEpsilon) {
+			    std::abs(dot(reflect(bRec.wi), bRec.wo)-1) < DeltaEpsilon) {
 			return sampleNested ? probSpecular : 1.0f;
 		} else if (sampleNested) {
 			Float R21;
@@ -318,11 +318,11 @@ public:
 
 		Point2 sample(_sample);
 		if (sampleSpecular && sampleNested) {
-			if (sample.x > probSpecular) {
+			if (sample.x < probSpecular) {
+				sample.x /= probSpecular;
+			} else {
 				sample.x = (sample.x - probSpecular) / (1 - probSpecular);
 				choseSpecular = false;
-			} else {
-				sample.x /= probSpecular;
 			}
 		}
 
@@ -419,7 +419,8 @@ protected:
 class SmoothCoatingShader : public Shader {
 public:
 	SmoothCoatingShader(Renderer *renderer, Float eta, const BSDF *nested,
-			const Texture *sigmaA) : Shader(renderer, EBSDFShader), m_nested(nested), m_sigmaA(sigmaA), m_eta(eta) {
+			const Texture *sigmaA) : Shader(renderer, EBSDFShader),
+			m_nested(nested), m_sigmaA(sigmaA), m_eta(eta) {
 		m_nestedShader = renderer->registerShaderForResource(m_nested.get());
 		m_sigmaAShader = renderer->registerShaderForResource(m_sigmaA.get());
 		m_R0 = fresnelDielectricExt(1.0f, eta);
@@ -467,15 +468,15 @@ public:
 			<< "vec3 " << evalName << "_refract(vec3 wi, out float T) {" << endl
 			<< "    float cosThetaI = cosTheta(wi);" << endl
 			<< "    bool entering = cosThetaI > 0.0;" << endl
-			<< "    float eta = " << evalName << "_eta;" << endl
-			<< "    float sinThetaTSqr =  eta * eta * sinTheta2(wi);" << endl
+			<< "    float invEta = 1.0 / " << evalName << "_eta;" << endl
+			<< "    float sinThetaTSqr =  invEta * invEta * sinTheta2(wi);" << endl
 			<< "    if (sinThetaTSqr >= 1.0) {" << endl
 			<< "        T = 0.0; /* Total internal reflection */" << endl
 			<< "        return vec3(0.0);" << endl
 			<< "    } else {" << endl
 			<< "        float cosThetaT = sqrt(1.0 - sinThetaTSqr);" << endl
 			<< "        T = 1.0 - " << evalName << "_schlick(1.0 - abs(cosThetaI));" << endl
-			<< "        return vec3(eta*wi.x, eta*wi.y, entering ? cosThetaT : -cosThetaT);" << endl
+			<< "        return vec3(invEta*wi.x, invEta*wi.y, entering ? cosThetaT : -cosThetaT);" << endl
 			<< "    }" << endl
 			<< "}" << endl
 			<< endl
@@ -512,10 +513,11 @@ public:
 			<< "                                 1/abs(cosTheta(woPrime))));" << endl
 			<< "    if (cosTheta(wi)*cosTheta(wo) > 0) {" << endl
 			<< "        vec3 H = normalize(wi + wo);" << endl
+			<< "        if (H.z < 0) H = -H;" << endl
 			<< "        float D = " << evalName << "_D(H)" << ";" << endl
 			<< "        float G = " << evalName << "_G(H, wi, wo);" << endl
-			<< "        float F = " << evalName << "_schlick(1-dot(wi, H));" << endl
-			<< "        result += vec3(F * D * G / (4*cosTheta(wi)));" << endl
+			<< "        float F = " << evalName << "_schlick(1-abs(dot(wi, H)));" << endl
+			<< "        result += vec3(abs(F * D * G) / abs(4*cosTheta(wi)));" << endl
 			<< "    }" << endl
 			<< "    return result;" << endl
 			<< "}" << endl

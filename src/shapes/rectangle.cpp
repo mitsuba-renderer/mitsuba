@@ -30,7 +30,7 @@ MTS_NAMESPACE_BEGIN
 /*!\plugin{rectangle}{Rectangle intersection primitive}
  * \order{3}
  * \parameters{
- *     \parameter{toWorld}{\Transform}{
+ *     \parameter{toWorld}{\Transform\Or\Animation}{
  *	      Specifies a linear object-to-world transformation.
  *        It is allowed to use non-uniform scaling, but no shear.
  *        \default{none (i.e. object space $=$ world space)}
@@ -127,7 +127,7 @@ public:
 		m_worldToObject.transformAffine(_ray, ray);
 		Float hit = -ray.o.z / ray.d.z;
 
-		if (hit < mint || hit > maxt)
+		if (!(hit >= mint && hit <= maxt))
 			return false;
 
 		Point local = ray(hit);
@@ -212,6 +212,7 @@ public:
 		pRec.n = m_frame.n;
 		pRec.pdf = m_invSurfaceArea;
 		pRec.measure = EArea;
+		pRec.uv = sample;
 	}
 
 	Float pdfPosition(const PositionSamplingRecord &pRec) const {
@@ -229,7 +230,7 @@ public:
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "Rectangle[" << endl
-			<< "  objectToWorld = " << indent(m_objectToWorld.toString()) << ", " << endl;
+			<< "  objectToWorld = " << indent(m_objectToWorld.toString()) << "," << endl;
 		if (isMediumTransition())
 			oss << "  interiorMedium = " << indent(m_interiorMedium.toString()) << "," << endl
 				<< "  exteriorMedium = " << indent(m_exteriorMedium.toString()) << "," << endl;

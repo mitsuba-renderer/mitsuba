@@ -212,7 +212,10 @@ public:
 			Float mean = 0, meanSqr = 0.0f;
 			sampleCount = 0;
 
-			while (!stop) {
+			while (true) {
+				if (stop)
+					return;
+
 				rRec.newQuery(RadianceQueryRecord::ESensorRay, sensor->getMedium());
 				rRec.extra = RadianceQueryRecord::EAdaptiveQuery;
 

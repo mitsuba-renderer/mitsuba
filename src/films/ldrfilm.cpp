@@ -22,6 +22,7 @@
 #include <mitsuba/core/statistics.h>
 #include <boost/algorithm/string.hpp>
 #include "banner.h"
+#include "annotations.h"
 
 MTS_NAMESPACE_BEGIN
 
@@ -90,8 +91,10 @@ MTS_NAMESPACE_BEGIN
  *     be used by the film. \default{\code{gaussian}, a windowed Gaussian filter}}
  * }
  * This plugin implements a low dynamic range film that can write out 8-bit PNG
- * and JPEG images. It also provides basic tonemapping techniques to map recorded
- * radiance values into a reasonable displayable range.
+ * and JPEG images in various configurations. It provides basic tonemapping techniques
+ * to map recorded radiance values into a reasonable displayable range. An alpha (opacity)
+ * channel can be written if desired. By default, the plugin writes gamma-corrected
+ * PNG files using the sRGB color space and no alpha channel.
  *
  * This film is a good choice when low dynamic range output is desired
  * and the rendering setup can be configured to capture the relevant portion
@@ -113,6 +116,9 @@ MTS_NAMESPACE_BEGIN
  * The RGB values exported by this plugin correspond to the ITU-R Rec. BT. 709-3
  * primaries with a D65 white point. When $\texttt{gamma}$ is set to $\code{-1}$ (the default),
  * the output is in the sRGB color space and will display as intended on compatible devices.
+ *
+ * Note that this plugin supports render-time \emph{annotations}, which
+ * are described on page~\pageref{sec:film-annotations}.
  */
 class LDRFilm : public Film {
 public:
@@ -128,7 +134,7 @@ public:
 		std::string fileFormat = boost::to_lower_copy(
 			props.getString("fileFormat", "png"));
 		std::string pixelFormat = boost::to_lower_copy(
-			props.getString("pixelFormat", "rgba"));
+			props.getString("pixelFormat", "rgb"));
 		std::string tonemapMethod = boost::to_lower_copy(
 			props.getString("tonemapMethod", "gamma"));
 
@@ -176,6 +182,16 @@ public:
 		m_reinhardKey = props.getFloat("key", 0.18f);
 		m_reinhardBurn = props.getFloat("burn", 0.0);
 
+		std::vector<std::string> keys = props.getPropertyNames();
+		for (size_t i=0; i<keys.size(); ++i) {
+			std::string key = boost::to_lower_copy(keys[i]);
+			key.erase(std::remove_if(key.begin(), key.end(), ::isspace), key.end());
+
+			if ((boost::starts_with(key, "metadata['") && boost::ends_with(key, "']")) ||
+			    (boost::starts_with(key, "label[") && boost::ends_with(key, "]")))
+				props.markQueried(keys[i]);
+		}
+
 		m_storage = new ImageBlock(Bitmap::ESpectrumAlphaWeight, m_cropSize);
 	}
 
@@ -194,8 +210,8 @@ public:
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		Film::serialize(stream, manager);
 		stream->writeBool(m_hasBanner);
-		stream->writeUInt(m_fileFormat);
 		stream->writeUInt(m_pixelFormat);
+		stream->writeUInt(m_fileFormat);
 		stream->writeFloat(m_gamma);
 		stream->writeUInt(m_tonemapMethod);
 		stream->writeFloat(m_exposure);
@@ -281,7 +297,7 @@ public:
 		m_destFile = destFile;
 	}
 
-	void develop() {
+	void develop(const Scene *scene, Float renderTime) {
 		Log(EDebug, "Developing film ..");
 
 		ref<Bitmap> bitmap = m_storage->getBitmap();
@@ -328,7 +344,15 @@ public:
 		Log(EInfo, "Writing image to \"%s\" ..", filename.string().c_str());
 		ref<FileStream> stream = new FileStream(filename, FileStream::ETruncWrite);
 
+		annotate(scene, m_properties, bitmap, renderTime, m_gamma);
+
 		bitmap->write(m_fileFormat, stream);
+	}
+
+	bool hasAlpha() const {
+		return
+			m_pixelFormat == Bitmap::ELuminanceAlpha ||
+			m_pixelFormat == Bitmap::ERGBA;
 	}
 
 	bool destinationExists(const fs::path &baseName) const {

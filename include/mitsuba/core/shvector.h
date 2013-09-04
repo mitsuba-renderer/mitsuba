@@ -21,6 +21,7 @@
 #define __MITSUBA_CORE_SHVECTOR_H_
 
 #include <mitsuba/mitsuba.h>
+#include <mitsuba/core/quad.h>
 #include <boost/numeric/ublas/matrix.hpp>
 #include <numeric>
 
@@ -273,12 +274,12 @@ public:
 
 				for (int l=0; l<m_bands; ++l) {
 					for (int m=1; m<=l; ++m) {
-						Float L = legendre(l, m, cosTheta) * normalization(l, m);
+						Float L = legendreP(l, m, cosTheta) * normalization(l, m);
 						operator()(l, -m) += value * SQRT_TWO * sinPhi[m-1] * L;
 						operator()(l, m) += value * SQRT_TWO * cosPhi[m-1] * L;
 					}
 
-					operator()(l, 0) += value * legendre(l, 0, cosTheta) * normalization(l, 0);
+					operator()(l, 0) += value * legendreP(l, 0, cosTheta) * normalization(l, 0);
 				}
 			}
 		}
@@ -320,9 +321,6 @@ public:
 
 		return error/denom;
 	}
-
-	/// Evaluate an associated Legendre polynomial using the usual recurrence formulae
-	static Float legendre(int l, int m, Float x);
 
 	/// Return a normalization coefficient
 	inline static Float normalization(int l, int m) {

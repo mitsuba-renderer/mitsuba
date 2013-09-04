@@ -60,11 +60,11 @@ public:
 	/// The medium's scattering coefficient at \ref p
 	Spectrum sigmaS;
 
-	/// Records the probability of sampling a medium interaction at p
+	/// Records the probability density of sampling a medium interaction at p
 	Float pdfSuccess;
 
 	/**
-	 * \brief Records the probability of sampling a medium
+	 * \brief Records the probability density of sampling a medium
 	 * interaction in the reverse direction
 	 *
 	 * This is essentially the density of obtained by calling \ref sampleDistance,

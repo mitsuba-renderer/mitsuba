@@ -206,8 +206,15 @@ public:
 	 */
 	void computeUVTangents();
 
-	/// Generate surface normals
-	void computeNormals();
+	/**
+	 * \brief Generate smooth vertex normals?
+	 *
+	 * \param force
+	 *   When this parameter is set to true, the function
+	 *   generates normals <em>even</em> when there are
+	 *   already existing ones.
+	 */
+	void computeNormals(bool force = false);
 
 	/**
 	 * \brief Rebuild the mesh so that adjacent faces
@@ -302,6 +309,32 @@ protected:
 
 	/// Load a Mitsuba compressed triangle mesh substream
 	void loadCompressed(Stream *stream, int idx = 0);
+
+	/**
+	 * \brief Reads the header information of a compressed file, returning
+	 * the version ID.
+	 *
+	 * This function assumes the stream is at the beginning of the compressed
+	 * file and leaves the stream located right after the header.
+	 */
+	static short readHeader(Stream *stream);
+
+	/**
+	 * \brief Read the idx-th entry from the offset diccionary at the end of
+	 * the stream, which has to be open already, given the file version tag.
+	 * This function modifies the position of the stream.
+	 */
+	static size_t readOffset(Stream *stream, short version, int idx);
+
+	/**
+	 * \brief Read the entirety of the end-of-file offset dictionary from the
+	 * already open stream, replacing the contents of the input vector.
+	 * If the file is not large enough the function returns -1
+	 * and does not modify the vector.
+	 * This function modifies the position of the stream.
+	 */
+	 static int readOffsetDictionary(Stream *stream, short version,
+		 std::vector<size_t>& outOffsets);
 
 	/// Prepare internal tables for sampling uniformly wrt. area
 	void prepareSamplingTable();

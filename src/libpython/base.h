@@ -31,6 +31,11 @@
 	bp::register_ptr_to_python<Name*>(); \
 	Name ##_struct
 
+#define BP_SUBSTRUCT(Name, Base, Init) \
+	bp::class_<Name, bp::bases<Base> > Name ##_struct(#Name, Init); \
+	bp::register_ptr_to_python<Name*>(); \
+	Name ##_struct
+
 #define BP_CLASS(Name, Base, Init) \
 	bp::class_<Name, ref<Name>, bp::bases<Base>, boost::noncopyable> Name ##_class(#Name, Init); \
 	bp::register_ptr_to_python<Name*>(); \
@@ -59,6 +64,8 @@
 		.def(bp::self / Scalar()) \
 		.def(bp::self /= Scalar()) \
 		.def("serialize", &Name::serialize) \
+		.def("length", &Name::length) \
+		.def("lengthSquared", &Name::lengthSquared) \
 		.def("__repr__", &Name::toString) \
 		.def("__len__", &FixedSizeSupport<Name, Scalar, Size>::len) \
 		.def("__getitem__", &FixedSizeSupport<Name, Scalar, Size>::get) \
@@ -150,6 +157,7 @@ public:
 
 namespace mitsuba {
 	class SerializableObject;
+	class ConfigurableObject;
 };
 
 typedef std::vector<std::string> StringVector;
@@ -158,6 +166,7 @@ typedef std::map<std::string, std::string> StringMap;
 
 extern void export_core();
 extern void export_render();
+extern bp::object cast(mitsuba::ConfigurableObject *obj);
 
 #endif /* __PYTHON_BASE_H */
 

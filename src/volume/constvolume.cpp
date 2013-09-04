@@ -58,7 +58,7 @@ public:
 
 		if (m_type == Properties::EFloat)
 			m_float = props.getFloat("value");
-		else if (m_type == Properties::EPoint)
+		else if (m_type == Properties::EVector)
 			m_vector = props.getVector("value");
 		else if (m_type == Properties::ESpectrum)
 			m_spectrum = props.getSpectrum("value");
@@ -72,7 +72,7 @@ public:
 		m_type = stream->readInt();
 		if (m_type == Properties::EFloat)
 			m_float = stream->readFloat();
-		else if (m_type == Properties::EPoint)
+		else if (m_type == Properties::EVector)
 			m_vector = Vector(stream);
 		else if (m_type == Properties::ESpectrum)
 			m_spectrum = Spectrum(stream);
@@ -90,7 +90,7 @@ public:
 			m_spectrum.serialize(stream);
 		else if (m_type == Properties::EFloat)
 			stream->writeFloat(m_float);
-		else if (m_type == Properties::EPoint)
+		else if (m_type == Properties::EVector)
 			m_vector.serialize(stream);
 		else
 			Log(EError, "Internal error - unknown data type");
@@ -117,7 +117,7 @@ public:
 	}
 
 	bool supportsVectorLookups() const {
-		return m_type == Properties::EPoint;
+		return m_type == Properties::EVector;
 	}
 
 	Float getStepSize() const {
@@ -133,7 +133,7 @@ public:
 		oss << "ConstantDataSource[value=";
 		if (m_type == Properties::EFloat)
 			oss << m_float;
-		else if (m_type == Properties::EPoint)
+		else if (m_type == Properties::EVector)
 			oss << m_vector.toString();
 		else if (m_type == Properties::ESpectrum)
 			oss << m_spectrum.toString();

@@ -3,9 +3,9 @@ Suppose you want to design a custom integrator to render scenes in Mitsuba.
 There are two general ways you can do this, and which one you should take
 mostly depends on the characteristics of your particular integrator.
 
-The framework distinguishes between \emph{sampling-based} integrators and 
-\emph{generic} ones. A sampling-based integrator is able to generate 
-(usually unbiased) estimates of the incident radiance along a specified rays, and this 
+The framework distinguishes between \emph{sampling-based} integrators and
+\emph{generic} ones. A sampling-based integrator is able to generate
+(usually unbiased) estimates of the incident radiance along a specified rays, and this
 is done a large number of times to render a scene. A generic integrator
 is more like a black box, where no assumptions are made on how the the image is
 created. For instance, the VPL renderer uses OpenGL to rasterize the scene
@@ -13,44 +13,44 @@ using hardware acceleration, which certainly doesn't fit into the sampling-based
 For that reason, it must be implemented as a generic integrator.
 
 Generally, if you can package up your code to fit into the
-\code{SampleIntegrator} interface, you should do it, because you'll get
+\code{SamplingIntegrator} interface, you should do it, because you'll get
 parallelization and network rendering essentially for free. This is done
 by transparently sending instances of your integrator class to all participating cores
 and assigning small image blocks for each one to work on. Also, sampling-based
 integrators can be nested within some other integrators, such as an
 irradiance cache or an adaptive integrator. This cannot be done with generic
-integrators due to their black-box nature. Note that it is often still 
-possible to parallelize generic integrators, but this involves significantly 
+integrators due to their black-box nature. Note that it is often still
+possible to parallelize generic integrators, but this involves significantly
 more work.
 
-In this section, we'll design a rather contrived sampling-based integrator, 
-which renders a monochromatic image of your scene, where the intensity 
-denotes the distance to the camera. But to get a feel for the overall 
-framework, we'll start with an even simpler one, that just renders a 
+In this section, we'll design a rather contrived sampling-based integrator,
+which renders a monochromatic image of your scene, where the intensity
+denotes the distance to the camera. But to get a feel for the overall
+framework, we'll start with an even simpler one, that just renders a
 solid-color image.
 
 \subsection{Basic implementation}
-In Mitsuba's \code{src/integrators} directory, create a file named 
-\code{myIntegrator.cpp}. 
+In Mitsuba's \code{src/integrators} directory, create a file named
+\code{myIntegrator.cpp}.
 
 \begin{cpp}
 #include <mitsuba/render/scene.h>
 
 MTS_NAMESPACE_BEGIN
 
-class MyIntegrator : public SampleIntegrator {
+class MyIntegrator : public SamplingIntegrator {
 public:
 	MTS_DECLARE_CLASS()
 };
 
-MTS_IMPLEMENT_CLASS_S(MyIntegrator, false, SampleIntegrator)
+MTS_IMPLEMENT_CLASS_S(MyIntegrator, false, SamplingIntegrator)
 MTS_EXPORT_PLUGIN(MyIntegrator, "A contrived integrator");
 MTS_NAMESPACE_END
 \end{cpp}
 The \code{scene.h} header file contains all of the dependencies we'll need
 for now.
 To avoid conflicts with other libraries, the whole framework is located in
-a separate namespace named \code{mitsuba}, and the lines starting with 
+a separate namespace named \code{mitsuba}, and the lines starting with
 \code{MTS\_NAMESPACE} ensure that our integrator is placed there
 as well.
 
@@ -61,17 +61,17 @@ and serialization/unserialization support. Let's take a look at the second of th
 lines, because it contains several important pieces of information:
 
 The suffix \code{S} in \code{MTS\_IMPLEMENT\_CLASS\_S} specifies that this is
-a serializable class, which means that it can be sent over the network or 
+a serializable class, which means that it can be sent over the network or
 written to disk and later restored. That also implies that certain methods
 need to be provided by the implementation --- we'll add those in a moment.
 
 The three following parameters specify the name of this class (\code{MyIntegrator}),
 the fact that it is \emph{not} an abstract class (\code{false}), and the name of its
-parent class (\code{SampleIntegrator}).
+parent class (\code{SamplingIntegrator}).
 
 Just below, you can see a line that starts with
 \code{MTS\_EXPORT\_PLUGIN}. As the name suggests, this line is only necessary
-for plugins, and it ensures that the specified class (\code{MyIntegrator}) is 
+for plugins, and it ensures that the specified class (\code{MyIntegrator}) is
 what you want to be instantiated when somebody loads this plugin. It is also
 possible to supply a short descriptive string.
 \vspace{3mm}
@@ -80,7 +80,7 @@ Let's add an instance variable and a constructor:
 \begin{cpp}
 public:
     /// Initialize the integrator with the specified properties
-    MyIntegrator(const Properties &props) : SampleIntegrator(props) {
+    MyIntegrator(const Properties &props) : SamplingIntegrator(props) {
         Spectrum defaultColor;
         defaultColor.fromLinearRGB(0.2f, 0.5f, 0.2f);
         m_color = props.getSpectrum("color", defaultColor);
@@ -106,41 +106,41 @@ Next, we need to add serialization and unserialization support:
 \begin{cpp}
     /// Unserialize from a binary data stream
     MyIntegrator(Stream *stream, InstanceManager *manager)
-     : SampleIntegrator(stream, manager) {
+     : SamplingIntegrator(stream, manager) {
         m_color = Spectrum(stream);
     }
 
     /// Serialize to a binary data stream
     void serialize(Stream *stream, InstanceManager *manager) const {
-        SampleIntegrator::serialize(stream, manager);
+        SamplingIntegrator::serialize(stream, manager);
         m_color.serialize(stream);
     }
 \end{cpp}
-This makes use of a \emph{stream} abstraction similar in style to Java. 
-A stream can represent various things, such as a file, a console session, or a 
+This makes use of a \emph{stream} abstraction similar in style to Java.
+A stream can represent various things, such as a file, a console session, or a
 network communication link. Especially when dealing with multiple machines,
 it is important to realize that the machines may use different binary representations
 related to their respective \emph{endianness}. To prevent issues from arising,
-the \code{Stream} interface provides many methods for writing and reading 
+the \code{Stream} interface provides many methods for writing and reading
 small chunks of data (e.g. \code{writeShort}, \code{readFloat}, ..),
 which automatically perform endianness translation. In our case, the
 \code{Spectrum} class already provides serialization/unserialization support,
 so we don't really have to do anything.
 
-Note that it is crucial that your code calls the serialization and unserialization 
+Note that it is crucial that your code calls the serialization and unserialization
 implementations of the superclass, since it will also read/write some
 information to the stream.
 
 We haven't used the \texttt{manager} parameter yet, so here is a quick overview
 of what it does: if many cases, we don't just want to serialize a single class,
 but a whole graph of objects. Some may be referenced many
-times from different places, and potentially there are even cycles. If we just 
-naively called the serialization and unserialization implementation of members 
-recursively within each class, we'd waste much bandwitdth and potentially 
+times from different places, and potentially there are even cycles. If we just
+naively called the serialization and unserialization implementation of members
+recursively within each class, we'd waste much bandwitdth and potentially
 end up stuck in an infinite recursion.
 
 This is where the instance manager comes in. Every time you want to serialize
-a heap-allocated object (suppose it is of type \code{SomeClass}), 
+a heap-allocated object (suppose it is of type \code{SomeClass}),
 instead of calling its serialize method, write
 
 \begin{cpp}
@@ -155,7 +155,7 @@ ref<SomeClass> myObject = static_cast<SomeClass *>(manager->getInstance(stream))
 
 Behind the scenes, the object manager adds annotations to the data stream,
 which ensure that you will end up with the exact same reference graph on the
-remote side, while only one copy of every object is transmitted and no 
+remote side, while only one copy of every object is transmitted and no
 infinite recursion can occur. But we digress -- let's go back to our integrator.
 \vspace{3mm}
 
@@ -168,10 +168,11 @@ radiance along a ray differential: here, we simply return the stored color
    }
 \end{cpp}
 
-Let's try building the plugin: edit the \code{SConstruct} file in the main
-directory, and add the following line after the comment ''\code{\# Integrators}'':
+Let's try building the plugin: edit the \code{SConscript} file in the
+\code{integrator} directory, and add the following line before the
+last line containing ''\code{Export('plugins')}'':
 \begin{cpp}
-plugins += env.SharedLibrary('plugins/myIntegrator', ['src/integrators/myIntegrator.cpp'])
+plugins += env.SharedLibrary('myIntegrator', ['myIntegrator.cpp'])
 \end{cpp}
 After calling, \texttt{scons}, you should be able to use your new integrator
 in parallel rendering jobs and you'll get something like this:
@@ -182,8 +183,8 @@ That is admittedly not very exciting --- so let's do some actual computation.
 \subsection{Visualizing depth}
 Add an instance variable \code{Float m\_maxDist;} to the implementation. This
 will store the maximum distance from the camera to any object, which is needed
-to map distances into the $[0,1]$ range. Note the upper-case \code{Float} --- 
-this means that either a single- or a double-precision variable is 
+to map distances into the $[0,1]$ range. Note the upper-case \code{Float} ---
+this means that either a single- or a double-precision variable is
 substituted based the compilation flags. This variable constitutes local
 state, thus it must not be forgotten in the serialization- and unserialization routines:
 append
@@ -202,18 +203,19 @@ To avoid having to do this every time \code{Li()} is called,
 we can override the \code{preprocess} function:
 \begin{cpp}
 	/// Preprocess function -- called on the initiating machine
-	bool preprocess(const Scene *scene, RenderQueue *queue, 
-			const RenderJob *job, int sceneResID, int cameraResID, 
+	bool preprocess(const Scene *scene, RenderQueue *queue,
+			const RenderJob *job, int sceneResID, int cameraResID,
 			int samplerResID) {
-		SampleIntegrator::preprocess(scene, queue, job, sceneResID, 
+		SamplingIntegrator::preprocess(scene, queue, job, sceneResID,
 			cameraResID, samplerResID);
 
 		const AABB &sceneAABB = scene->getAABB();
-		Point cameraPosition = scene->getCamera()->getPosition();
+    /* Find the camera position at t=0 seconds */
+		Point cameraPosition = scene->getSensor()->getWorldTransform()->eval(0).transformAffine(Point(0.0f));
 		m_maxDist = - std::numeric_limits<Float>::infinity();
 
 		for (int i=0; i<8; ++i)
-			m_maxDist = std::max(m_maxDist, 
+			m_maxDist = std::max(m_maxDist,
 				(cameraPosition - sceneAABB.getCorner(i)).length());
 
 		return true;
@@ -228,13 +230,13 @@ global resource identifiers. When a network render job runs, many associated
 pieces of information (the scene, the camera, etc.) are wrapped into global resource chunks
 shared amongst all nodes, and these can be referenced using such identifiers.
 
-One important aspect of the \code{preprocess} function is that it is executed 
-on the initiating node and before any of the parallel rendering begins. 
+One important aspect of the \code{preprocess} function is that it is executed
+on the initiating node and before any of the parallel rendering begins.
 This can be used to compute certain things only once. Any
 information updated here (such as \code{m\_maxDist}) will be forwarded to the
 other nodes before the rendering begins.
 
-Now, replace the body of the \code{Li} method with 
+Now, replace the body of the \code{Li} method with
 \begin{cpp}
 	if (rRec.rayIntersect(r)) {
 		Float distance = rRec.its.t;
@@ -255,36 +257,36 @@ to intersect a ray against the scene actually works like this:
 		/* Do something with the intersection stored in 'its' */
 	}
 \end{cpp}
-As you can see, we did something slightly different in the distance 
+As you can see, we did something slightly different in the distance
 renderer fragment above (we called \code{RadianceQueryRecord::rayIntersect()}
 on the supplied parameter \code{rRec}), and the reason for this is \emph{nesting}.
 \subsection{Nesting}
 The idea of of nesting is that sampling-based rendering techniques can be
-embedded within each other for added flexibility: for instance, one 
-might concoct a  1-bounce indirect rendering technique complete with 
-irradiance caching and adaptive integration simply by writing the following 
+embedded within each other for added flexibility: for instance, one
+might concoct a  1-bounce indirect rendering technique complete with
+irradiance caching and adaptive integration simply by writing the following
 into a scene XML file:
 \begin{xml}
 <!-- Adaptively integrate using the nested technique -->
-<integrator type="adaptive"> 
+<integrator type="adaptive">
 	<!-- Irradiance caching + final gathering with the nested technique -->
-	<integrator type="irrcache"> 
+	<integrator type="irrcache">
 		<!-- Simple direct illumination technique -->
-		<integrator type="direct"> 
+		<integrator type="direct">
 	</integrator>
 </integrator>
 \end{xml}
-To support this kind of complex interaction, some information needs to be passed between the 
+To support this kind of complex interaction, some information needs to be passed between the
 integrators, and the \code{RadianceQueryRecord} parameter of the function
-\code{SampleIntegrator::Li} is used for this.
+\code{SamplingIntegrator::Li} is used for this.
 
-This brings us back to the odd way of computing an intersection a moment ago: 
-the reason why we didn't just do this by calling  
+This brings us back to the odd way of computing an intersection a moment ago:
+the reason why we didn't just do this by calling
 \code{scene->rayIntersect()} is that our technique might actually be nested
 within a parent technique, which has already computed this intersection.
-To avoid wasting resources, the function \code{rRec.rayIntersect} first 
-determines whether an intersection record has already been provided. 
-If yes, it does nothing. Otherwise, it takes care of computing one. 
+To avoid wasting resources, the function \code{rRec.rayIntersect} first
+determines whether an intersection record has already been provided.
+If yes, it does nothing. Otherwise, it takes care of computing one.
 
 The radiance query record also lists the particular \emph{types} of radiance requested
 by the parent integrator -- your implementation should respect these as much

@@ -244,3 +244,23 @@ CMAKE_DEPENDENT_OPTION(BUILD_PYTHON "Build the Python bindings." ON
 if (PYTHONLIBS_FOUND AND mts_boost_PYTHON_FOUND)
   set (PYTHON_FOUND TRUE)
 endif ()
+
+
+# Includes for the common libraries
+include_directories(${Boost_INCLUDE_DIRS} ${Eigen_INCLUDE_DIR})
+
+# If we are using the system OpenEXR, add its headers which half.h requires
+if (OPENEXR_FOUND)
+  include_directories(${ILMBASE_INCLUDE_DIRS})
+endif()
+
+# Image format definitions
+if (PNG_FOUND)
+  add_definitions(-DMTS_HAS_LIBPNG=1)
+endif()
+if (JPEG_FOUND)
+  add_definitions(-DMTS_HAS_LIBJPEG=1)
+endif()
+if (OPENEXR_FOUND)
+  add_definitions(-DMTS_HAS_OPENEXR=1)
+endif()

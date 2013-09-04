@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <sys/param.h>
+#include <pwd.h>
 
 void installPython(const char *basedir, const char *version) {
 	char fname[MAXPATHLEN];
@@ -19,6 +20,22 @@ void installPython(const char *basedir, const char *version) {
 			"writing to \"%s\"!\n", fname);
 		exit(-1);
 	}
+
+	fclose(f);
+}
+
+void appendShellConfig(const char *basedir, const char *target, const char *fmt, const char *dir) {
+	char fname[MAXPATHLEN];
+	snprintf(fname, sizeof(fname), "%s/%s", basedir, target);
+
+	if (access(fname, R_OK) < 0)
+		return;
+
+	FILE *f = fopen(fname, "a");
+	if (!f)
+		return;
+
+	fprintf(f, fmt, dir);
 
 	fclose(f);
 }
@@ -51,11 +68,11 @@ void install(const char *basedir, const char *name) {
 }
 
 int main(int argc, char **argv) {
-	if (argc != 2) {
+	if (argc != 3) {
 		fprintf(stderr, "Incorrect number of arguments!\n");
 		return -1;
 	}
-		
+
 	if (setuid(0) != 0) {
 		fprintf(stderr, "setuid(): failed!\n");
 		return -1;
@@ -68,6 +85,12 @@ int main(int argc, char **argv) {
 	install(argv[1], "mtsimport");
 	installPython(argv[1], "2.6");
 	installPython(argv[1], "2.7");
+
+	/// this is not required anymore as of Mitsuba 0.4.3
+	//struct passwd *pw = getpwuid(atoi(argv[2]));
+	//appendShellConfig(pw->pw_dir, ".bashrc", "\nexport LD_LIBRARY_PATH=%s/Contents/Frameworks:$LD_LIBRARY_PATH\n", argv[1]);
+	//appendShellConfig(pw->pw_dir, ".zshrc", "\nexport LD_LIBRARY_PATH=%s/Contents/Frameworks:$LD_LIBRARY_PATH\n", argv[1]);
+	//appendShellConfig(pw->pw_dir, ".cshrc", "\nsetenv LD_LIBRARY_PATH %s/Contents/Frameworks:${LD_LIBRARY_PATH}\n", argv[1]);
 
 	return 0;
 }

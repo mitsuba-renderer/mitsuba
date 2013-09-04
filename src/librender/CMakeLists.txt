@@ -42,7 +42,6 @@ set(HDRS
   ${INCLUDE_DIR}/subsurface.h
   ${INCLUDE_DIR}/testcase.h
   ${INCLUDE_DIR}/texture.h
-  ${INCLUDE_DIR}/track.h
   ${INCLUDE_DIR}/triaccel.h
   ${INCLUDE_DIR}/triaccel_sse.h
   ${INCLUDE_DIR}/trimesh.h
@@ -82,7 +81,6 @@ set(SRCS
   subsurface.cpp
   testcase.cpp
   texture.cpp
-  track.cpp
   trimesh.cpp
   util.cpp
   volume.cpp

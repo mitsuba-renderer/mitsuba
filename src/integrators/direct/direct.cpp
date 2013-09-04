@@ -25,20 +25,29 @@ MTS_NAMESPACE_BEGIN
  * \parameters{
  *     \parameter{shadingSamples}{\Integer}{This convenience parameter can be
  *         used to set both \code{emitterSamples} and \code{bsdfSamples} at
- *         the same time.}
+ *         the same time.
+ *     }
  *     \parameter{emitterSamples}{\Integer}{Optional more fine-grained
  *        parameter: specifies the number of samples that should be generated
  *        using the direct illumination strategies implemented by the scene's
- *        emitters\default{set to the value of \code{shadingSamples}}}
+ *        emitters\default{set to the value of \code{shadingSamples}}
+ *     }
  *     \parameter{bsdfSamples}{\Integer}{Optional more fine-grained
  *        parameter: specifies the number of samples that should be generated
  *        using the BSDF sampling strategies implemented by the scene's
- *        surfaces\default{set to the value of \code{shadingSamples}}}
+ *        surfaces\default{set to the value of \code{shadingSamples}}
+ *     }
  *     \parameter{strictNormals}{\Boolean}{Be strict about potential
- *        inconsistencies involving shading normals? See \pluginref{path}
- *        for details.\default{no, i.e. \code{false}}}
+ *        inconsistencies involving shading normals? See
+ *        page~\pageref{sec:strictnormals} for details.
+ *        \default{no, i.e. \code{false}}
+ *     }
+ *     \parameter{hideEmitters}{\Boolean}{Hide directly visible emitters?
+ *        See page~\pageref{sec:hideemitters} for details.
+ *        \default{no, i.e. \code{false}}
+ *     }
  * }
- *
+ * \vspace{-1mm}
  * \renderings{
  *     \medrendering{Only BSDF sampling}{integrator_direct_bsdf}
  *     \medrendering{Only emitter sampling}{integrator_direct_lum}
@@ -92,6 +101,9 @@ public:
 		m_bsdfSamples = props.getSize("bsdfSamples", shadingSamples);
 		/* Be strict about potential inconsistencies involving shading normals? */
 		m_strictNormals = props.getBoolean("strictNormals", false);
+		/* When this flag is set to true, contributions from directly
+		 * visible emitters will not be included in the rendered image */
+		m_hideEmitters = props.getBoolean("hideEmitters", false);
 		Assert(m_emitterSamples + m_bsdfSamples > 0);
 	}
 
@@ -101,6 +113,7 @@ public:
 		m_emitterSamples = stream->readSize();
 		m_bsdfSamples = stream->readSize();
 		m_strictNormals = stream->readBool();
+		m_hideEmitters = stream->readBool();
 		configure();
 	}
 
@@ -109,6 +122,7 @@ public:
 		stream->writeSize(m_emitterSamples);
 		stream->writeSize(m_bsdfSamples);
 		stream->writeBool(m_strictNormals);
+		stream->writeBool(m_hideEmitters);
 	}
 
 	void configure() {
@@ -142,14 +156,14 @@ public:
 		if (!rRec.rayIntersect(ray)) {
 			/* If no intersection could be found, possibly return
 			   radiance from a background emitter */
-			if (rRec.type & RadianceQueryRecord::EEmittedRadiance)
+			if (rRec.type & RadianceQueryRecord::EEmittedRadiance && !m_hideEmitters)
 				return scene->evalEnvironment(ray);
 			else
 				return Spectrum(0.0f);
 		}
 
 		/* Possibly include emitted radiance if requested */
-		if (its.isEmitter() && (rRec.type & RadianceQueryRecord::EEmittedRadiance))
+		if (its.isEmitter() && (rRec.type & RadianceQueryRecord::EEmittedRadiance) && !m_hideEmitters)
 			Li += its.Le(-ray.d);
 
 		/* Include radiance from a subsurface scattering model if requested */
@@ -271,7 +285,7 @@ public:
 				/* Intersected nothing -- perhaps there is an environment map? */
 				const Emitter *env = scene->getEnvironmentEmitter();
 
-				if (!env)
+				if (!env || (m_hideEmitters && bRec.sampledType == BSDF::ENull))
 					continue;
 
 				value = env->evalEnvironment(RayDifferential(bsdfRay));
@@ -316,6 +330,7 @@ private:
 	Float m_fracBSDF, m_fracLum;
 	Float m_weightBSDF, m_weightLum;
 	bool m_strictNormals;
+	bool m_hideEmitters;
 };
 
 MTS_IMPLEMENT_CLASS_S(MIDirectIntegrator, false, SamplingIntegrator)

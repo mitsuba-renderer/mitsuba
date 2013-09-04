@@ -156,7 +156,6 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 				precomp[i] = convertScalar<DestFormat>(detail::safe_cast<SourceFormat>(i), sourceGamma, NULL, multiplier, invDestGamma);
 		}
 
-		const DestFormat zero = convertScalar<DestFormat>(0.0f);
 		const DestFormat one = convertScalar<DestFormat>(1.0f);
 
 		Spectrum spec;
@@ -192,15 +191,20 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 
 						case Bitmap::EXYZ:
 							for (size_t i=0; i<count; ++i) {
-								DestFormat value = convertScalar<DestFormat>(*source++, sourceGamma, precomp, multiplier, invDestGamma);
-								*dest++ = zero; *dest++ = value; *dest++ = zero;
+								Float value = convertScalar<Float>(*source++, sourceGamma);
+								*dest++ = convertScalar<DestFormat>(value * 0.950456f, 1.0f, NULL, multiplier, invDestGamma);
+								*dest++ = convertScalar<DestFormat>(value, 1.0f, NULL, multiplier, invDestGamma);
+								*dest++ = convertScalar<DestFormat>(value * 1.08875f, 1.0f, NULL, multiplier, invDestGamma);
 							}
 							break;
 
 						case Bitmap::EXYZA:
 							for (size_t i=0; i<count; ++i) {
-								DestFormat value = convertScalar<DestFormat>(*source++, sourceGamma, precomp, multiplier, invDestGamma);
-								*dest++ = zero; *dest++ = value; *dest++ = zero; *dest++ = one;
+								Float value = convertScalar<Float>(*source++, sourceGamma);
+								*dest++ = convertScalar<DestFormat>(value * 0.950456f, 1.0f, NULL, multiplier, invDestGamma);
+								*dest++ = convertScalar<DestFormat>(value, 1.0f, NULL, multiplier, invDestGamma);
+								*dest++ = convertScalar<DestFormat>(value * 1.08875f, 1.0f, NULL, multiplier, invDestGamma);
+								*dest++ = one;
 							}
 							break;
 
@@ -270,16 +274,20 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 
 						case Bitmap::EXYZ:
 							for (size_t i=0; i<count; ++i) {
-								DestFormat value = convertScalar<DestFormat>(*source++, sourceGamma, precomp, multiplier, invDestGamma);
-								*dest++ = zero; *dest++ = value; *dest++ = zero;
+								Float value = convertScalar<Float>(*source++, sourceGamma);
+								*dest++ = convertScalar<DestFormat>(value * 0.950456f, 1.0f, NULL, multiplier, invDestGamma);
+								*dest++ = convertScalar<DestFormat>(value, 1.0f, NULL, multiplier, invDestGamma);
+								*dest++ = convertScalar<DestFormat>(value * 1.08875f, 1.0f, NULL, multiplier, invDestGamma);
 								source++;
 							}
 							break;
 
 						case Bitmap::EXYZA:
 							for (size_t i=0; i<count; ++i) {
-								DestFormat value = convertScalar<DestFormat>(*source++, sourceGamma, precomp, multiplier, invDestGamma);
-								*dest++ = zero; *dest++ = value; *dest++ = zero;
+								Float value = convertScalar<Float>(*source++, sourceGamma);
+								*dest++ = convertScalar<DestFormat>(value * 0.950456f, 1.0f, NULL, multiplier, invDestGamma);
+								*dest++ = convertScalar<DestFormat>(value, 1.0f, NULL, multiplier, invDestGamma);
+								*dest++ = convertScalar<DestFormat>(value * 1.08875f, 1.0f, NULL, multiplier, invDestGamma);
 								*dest++ = convertScalar<DestFormat>(*source++);
 							}
 							break;

@@ -350,8 +350,9 @@ public:
 			int j = (i==0) ? axis1 : axis2;
 			Float alpha = ellipseAxes[0][j];
 			Float beta = ellipseAxes[1][j];
-			Float ratio = beta/alpha, tmp = std::sqrt(1+ratio*ratio);
-			Float cosTheta = 1/tmp, sinTheta = ratio/tmp;
+			Float tmp = 1 / std::sqrt(alpha*alpha + beta*beta);
+			Float cosTheta = alpha * tmp, sinTheta = beta*tmp;
+
 			Point p1 = ellipseCenter + cosTheta*ellipseAxes[0] + sinTheta*ellipseAxes[1];
 			Point p2 = ellipseCenter - cosTheta*ellipseAxes[0] - sinTheta*ellipseAxes[1];
 
@@ -504,7 +505,7 @@ public:
 		if (!solveQuadraticDouble(A, B, C, nearT, farT))
 			return false;
 
-		if (nearT > maxt || farT < mint)
+		if (!(nearT <= maxt && farT >= mint)) /* NaN-aware conditionals */
 			return false;
 
 		/* Next check the intersection points against the miter planes */
@@ -523,7 +524,7 @@ public:
 			p = Point(rayO + rayD * nearT);
 			t = (Float) nearT;
 		} else if (dot(pointFar - v1, n1) >= 0 &&
-				dot(pointFar - v2, n2) <= 0) {
+		           dot(pointFar - v2, n2) <= 0) {
 			if (farT > maxt)
 				return false;
 			p = Point(rayO + rayD * nearT);

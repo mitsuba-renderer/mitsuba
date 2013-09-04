@@ -177,6 +177,8 @@ public:
 		fs::path cacheFile;
 		ref<Bitmap> bitmap;
 
+		m_separateAlpha = props.getBoolean("separateAlpha", false);
+
 		if (props.hasProperty("bitmap")) {
 			/* Support initialization via raw data passed from another plugin */
 			bitmap = reinterpret_cast<Bitmap *>(props.getData("bitmap").ptr);
@@ -194,7 +196,12 @@ public:
 				Log(EError, "Could not determine modification time of \"%s\"!", m_filename.string().c_str());
 
 			cacheFile = m_filename;
-			cacheFile.replace_extension(".mip");
+
+			if (!m_separateAlpha)
+				cacheFile.replace_extension(".mip");
+			else
+				cacheFile.replace_extension(".alpha.mip");
+
 			tryReuseCache = fs::exists(cacheFile) && props.getBoolean("cache", true);
 		}
 
@@ -241,18 +248,27 @@ public:
 			}
 
 			Bitmap::EPixelFormat pixelFormat;
-			switch (bitmap->getPixelFormat()) {
-				case Bitmap::ELuminance:
-				case Bitmap::ELuminanceAlpha:
-					pixelFormat = Bitmap::ELuminance;
-					break;
-				case Bitmap::ERGB:
-				case Bitmap::ERGBA:
-					pixelFormat = Bitmap::ERGB;
-					break;
-				default:
-					Log(EError, "The input image has an unsupported pixel format!");
-					return;
+			if (m_separateAlpha) {
+				/* Create a texture from the alpha channel of an image */
+				if (!bitmap->hasAlpha())
+					Log(EError, "separateAlpha specified, but the image contains no alpha channel!");
+				pixelFormat = Bitmap::ELuminance;
+				bitmap = bitmap->separateChannel(bitmap->getChannelCount()-1);
+				bitmap->setGamma(1.0f);
+			} else {
+				switch (bitmap->getPixelFormat()) {
+					case Bitmap::ELuminance:
+					case Bitmap::ELuminanceAlpha:
+						pixelFormat = Bitmap::ELuminance;
+						break;
+					case Bitmap::ERGB:
+					case Bitmap::ERGBA:
+						pixelFormat = Bitmap::ERGB;
+						break;
+					default:
+						Log(EError, "The input image has an unsupported pixel format!");
+						return;
+				}
 			}
 
 			/* (Re)generate the MIP map hierarchy; downsample using a
@@ -305,6 +321,7 @@ public:
 		m_wrapModeV = (ReconstructionFilter::EBoundaryCondition) stream->readUInt();
 		m_gamma = stream->readFloat();
 		m_maxAnisotropy = stream->readFloat();
+		m_separateAlpha = stream->readBool();
 
 		size_t size = stream->readSize();
 		ref<MemoryStream> mStream = new MemoryStream(size);
@@ -323,18 +340,27 @@ public:
 		rfilter->configure();
 
 		Bitmap::EPixelFormat pixelFormat;
-		switch (bitmap->getPixelFormat()) {
-			case Bitmap::ELuminance:
-			case Bitmap::ELuminanceAlpha:
-				pixelFormat = Bitmap::ELuminance;
-				break;
-			case Bitmap::ERGB:
-			case Bitmap::ERGBA:
-				pixelFormat = Bitmap::ERGB;
-				break;
-			default:
-				Log(EError, "The input image has an unsupported pixel format!");
-				return;
+		if (m_separateAlpha) {
+			/* Create a texture from the alpha channel of an image */
+			if (!bitmap->hasAlpha())
+				Log(EError, "separateAlpha specified, but the image contains no alpha channel!");
+			pixelFormat = Bitmap::ELuminance;
+			bitmap = bitmap->separateChannel(bitmap->getChannelCount()-1);
+			bitmap->setGamma(1.0f);
+		} else {
+			switch (bitmap->getPixelFormat()) {
+				case Bitmap::ELuminance:
+				case Bitmap::ELuminanceAlpha:
+					pixelFormat = Bitmap::ELuminance;
+					break;
+				case Bitmap::ERGB:
+				case Bitmap::ERGBA:
+					pixelFormat = Bitmap::ERGB;
+					break;
+				default:
+					Log(EError, "The input image has an unsupported pixel format!");
+					return;
+			}
 		}
 
 		if (pixelFormat == Bitmap::ELuminance)
@@ -360,6 +386,7 @@ public:
 			/* We still have access to the original image -- use that, since
 			   it is probably much smaller than the in-memory representation */
 			ref<Stream> is = new FileStream(m_filename, FileStream::EReadOnly);
+			stream->writeBool(m_separateAlpha);
 			stream->writeSize(is->getSize());
 			is->copyTo(stream);
 		} else {
@@ -370,6 +397,7 @@ public:
 				m_mipmap1->toBitmap() : m_mipmap3->toBitmap();
 			bitmap->write(Bitmap::EOpenEXR, mStream);
 
+			stream->writeBool(false); /* separateAlpha */
 			stream->writeSize(mStream->getSize());
 			stream->write(mStream->getData(), mStream->getSize());
 		}
@@ -398,6 +426,10 @@ public:
 		stats::filteredLookups.incrementBase();
 
 		return result;
+	}
+
+	ref<Bitmap> getBitmap() const {
+		return m_mipmap1.get() ? m_mipmap1->toBitmap() : m_mipmap3->toBitmap();
 	}
 
 	Spectrum eval(const Point2 &uv, const Vector2 &d0, const Vector2 &d1) const {
@@ -499,6 +531,7 @@ protected:
 	ReconstructionFilter::EBoundaryCondition m_wrapModeU;
 	ReconstructionFilter::EBoundaryCondition m_wrapModeV;
 	Float m_gamma, m_maxAnisotropy;
+	bool m_separateAlpha;
 	fs::path m_filename;
 };
 

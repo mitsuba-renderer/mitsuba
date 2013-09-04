@@ -154,6 +154,11 @@ void SamplingIntegrator::renderBlock(const Scene *scene,
 
 	block->clear();
 
+	uint32_t queryType = RadianceQueryRecord::ESensorRay;
+
+	if (!sensor->getFilm()->hasAlpha()) /* Don't compute an alpha channel if we don't have to */
+		queryType &= ~RadianceQueryRecord::EOpacity;
+
 	for (size_t i = 0; i<points.size(); ++i) {
 		Point2i offset = Point2i(points[i]) + Vector2i(block->getOffset());
 		if (stop)
@@ -162,7 +167,7 @@ void SamplingIntegrator::renderBlock(const Scene *scene,
 		sampler->generate(offset);
 
 		for (size_t j = 0; j<sampler->getSampleCount(); j++) {
-			rRec.newQuery(RadianceQueryRecord::ESensorRay, sensor->getMedium());
+			rRec.newQuery(queryType, sensor->getMedium());
 			Point2 samplePos(Point2(offset) + Vector2(rRec.nextSample2D()));
 
 			if (needsApertureSample)
@@ -206,6 +211,12 @@ MonteCarloIntegrator::MonteCarloIntegrator(const Properties &props) : SamplingIn
 	 */
 	m_strictNormals = props.getBoolean("strictNormals", false);
 
+	/**
+	 * When this flag is set to true, contributions from directly
+	 * visible emitters will not be included in the rendered image
+	 */
+	m_hideEmitters = props.getBoolean("hideEmitters", false);
+
 	if (m_rrDepth <= 0)
 		Log(EError, "'rrDepth' must be set to a value greater than zero!");
 
@@ -218,6 +229,7 @@ MonteCarloIntegrator::MonteCarloIntegrator(Stream *stream, InstanceManager *mana
 	m_rrDepth = stream->readInt();
 	m_maxDepth = stream->readInt();
 	m_strictNormals = stream->readBool();
+	m_hideEmitters = stream->readBool();
 }
 
 void MonteCarloIntegrator::serialize(Stream *stream, InstanceManager *manager) const {
@@ -225,6 +237,7 @@ void MonteCarloIntegrator::serialize(Stream *stream, InstanceManager *manager) c
 	stream->writeInt(m_rrDepth);
 	stream->writeInt(m_maxDepth);
 	stream->writeBool(m_strictNormals);
+	stream->writeBool(m_hideEmitters);
 }
 
 std::string RadianceQueryRecord::toString() const {

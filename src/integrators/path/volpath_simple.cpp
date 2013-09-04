@@ -37,8 +37,14 @@ static StatsCounter avgPathLength("Volumetric path tracer", "Average path length
  *	      path termination criterion. \default{\code{5}}
  *	   }
  *     \parameter{strictNormals}{\Boolean}{Be strict about potential
- *        inconsistencies involving shading normals? See \pluginref{path}
- *        for details.\default{no, i.e. \code{false}}}
+ *        inconsistencies involving shading normals? See
+ *        page~\pageref{sec:strictnormals} for details.
+ *        \default{no, i.e. \code{false}}
+ *     }
+ *     \parameter{hideEmitters}{\Boolean}{Hide directly visible emitters?
+ *        See page~\pageref{sec:hideemitters} for details.
+ *        \default{no, i.e. \code{false}}
+ *     }
  * }
  *
  * This plugin provides a basic volumetric path tracer that can be used to
@@ -86,7 +92,7 @@ public:
 		MediumSamplingRecord mRec;
 		RayDifferential ray(r);
 		Spectrum Li(0.0f);
-		bool nullChain = true;
+		bool nullChain = true, scattered = false;
 		Float eta = 1.0f;
 
 		/* Perform the first ray intersection (or ignore if the
@@ -153,6 +159,7 @@ public:
 				ray.mint = 0;
 				scene->rayIntersect(ray, its);
 				nullChain = false;
+				scattered = true;
 			} else {
 				/* Sample
 					tau(x, y) * (Surface integral). This happens with probability mRec.pdfFailure
@@ -165,13 +172,19 @@ public:
 				if (!its.isValid()) {
 					/* If no intersection could be found, possibly return
 					   attenuated radiance from a background luminaire */
-					if (rRec.type & RadianceQueryRecord::EEmittedRadiance)
-						Li += throughput * scene->evalEnvironment(ray);
+					if ((rRec.type & RadianceQueryRecord::EEmittedRadiance)
+						&& (!m_hideEmitters || scattered)) {
+						Spectrum value = throughput * scene->evalEnvironment(ray);
+						if (rRec.medium)
+							value *= rRec.medium->evalTransmittance(ray);
+						Li += value;
+					}
 					break;
 				}
 
 				/* Possibly include emitted radiance if requested */
-				if (its.isEmitter() && (rRec.type & RadianceQueryRecord::EEmittedRadiance))
+				if (its.isEmitter() && (rRec.type & RadianceQueryRecord::EEmittedRadiance)
+					&& (!m_hideEmitters || scattered))
 					Li += throughput * its.Le(-ray.d);
 
 				/* Include radiance from a subsurface integrator if requested */
@@ -263,6 +276,7 @@ public:
 				/* In the next iteration, trace a ray in this direction */
 				ray = Ray(its.p, wo, ray.time);
 				scene->rayIntersect(ray, its);
+				scattered |= bRec.sampledType != BSDF::ENull;
 			}
 
 			if (rRec.depth++ >= m_rrDepth) {

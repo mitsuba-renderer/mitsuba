@@ -35,31 +35,26 @@ endif()
 
 # Load the required modules
 include (MitsubaUtil)
+include (MtsGetVersionInfo)
 include (CheckCXXSourceCompiles)
 include (CMakeDependentOption)
 
-# Read version (MTS_VERSION) from include/mitsuba/core/version.h
-file(STRINGS "include/mitsuba/core/version.h" MITSUBA_H REGEX "^#define MTS_VERSION \"[^\"]*\"$")
-string(REGEX REPLACE "^.*MTS_VERSION \"([0-9]+).*$" "\\1" MTS_VERSION_MAJOR "${MITSUBA_H}")
-string(REGEX REPLACE "^.*MTS_VERSION \"[0-9]+\\.([0-9]+).*$" "\\1" MTS_VERSION_MINOR  "${MITSUBA_H}")
-string(REGEX REPLACE "^.*MTS_VERSION \"[0-9]+\\.[0-9]+\\.([0-9]+).*$" "\\1" MTS_VERSION_PATCH "${MITSUBA_H}")
-set(MTS_VERSION "${MTS_VERSION_MAJOR}.${MTS_VERSION_MINOR}.${MTS_VERSION_PATCH}")
-set(MITSUBA_H)
-if("${MTS_VERSION_MAJOR}" MATCHES "[0-9]+" AND
-   "${MTS_VERSION_MINOR}" MATCHES "[0-9]+" AND
-   "${MTS_VERSION_PATCH}" MATCHES "[0-9]+")
-  message(STATUS "mitsuba ${MTS_VERSION}")
+# Read the version information
+MTS_GET_VERSION_INFO()
+if (MTS_HAS_VALID_REV)
+  message(STATUS "mitsuba ${MTS_VERSION}-hg${MTS_REV_ID} (${MTS_DATE})")
 else()
-  message(FATAL_ERROR "The mitsuba version could not be determined!")
+  message(STATUS "mitsuba ${MTS_VERSION} (${MTS_DATE})")
 endif()
 
+# Setup the build options
+include (MitsubaBuildOptions)
 
 # Find the external libraries and setup the paths
 include (MitsubaExternal)
 
-# Setup the build options, include paths and compile definitions
-include (MitsubaBuildOptions)
-
+# Main mitsuba include directory
+include_directories("include")
 
 # ===== Prerequisite resources =====
 
@@ -92,8 +87,13 @@ endif()
 # Additional files to add to main executables
 if(APPLE)
   set(MTS_DARWIN_STUB "${CMAKE_CURRENT_SOURCE_DIR}/src/mitsuba/darwin_stub.mm")
+  set(MTS_WINDOWS_STUB "")
+elseif(WIN32)
+  set(MTS_DARWIN_STUB "")
+  set(MTS_WINDOWS_STUB "${CMAKE_CURRENT_SOURCE_DIR}/data/windows/wmain_stub.cpp")
 else()
   set(MTS_DARWIN_STUB "")
+  set(MTS_WINDOWS_STUB "")
 endif()
 
 

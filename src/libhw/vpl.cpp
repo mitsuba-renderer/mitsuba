@@ -146,6 +146,7 @@ void VPLShaderManager::setScene(const Scene *scene) {
 	m_geometry.reserve(shapes.size());
 	m_opaqueGeometry.clear();
 	m_opaqueGeometry.reserve(shapes.size());
+	m_animatedGeometry.clear();
 
 	Matrix4x4 identityTrafo;
 	identityTrafo.setIdentity();
@@ -158,7 +159,8 @@ void VPLShaderManager::setScene(const Scene *scene) {
 			const Instance *instance = static_cast<const Instance *>(shape);
 			const std::vector<const Shape *> &instantiatedShapes =
 					instance->getShapeGroup()->getKDTree()->getShapes();
-			const Matrix4x4 &trafo = instance->getWorldTransform().getMatrix();
+			const AnimatedTransform *atrafo = instance->getWorldTransform();
+			const Matrix4x4 &trafo = atrafo->eval(0).getMatrix();
 
 			for (size_t j=0; j<instantiatedShapes.size(); ++j) {
 				shape = instantiatedShapes[j];
@@ -173,10 +175,18 @@ void VPLShaderManager::setScene(const Scene *scene) {
 				}
 
 				gpuGeo->setShader(shader);
+				ssize_t geometryIndex = (ssize_t) m_geometry.size(), opaqueGeometryIndex = -1;
 				m_geometry.push_back(std::make_pair(gpuGeo, trafo));
 
-				if (shader && !(shader->getFlags() & Shader::ETransparent))
+				if (shader && !(shader->getFlags() & Shader::ETransparent)) {
+					opaqueGeometryIndex = (ssize_t) m_opaqueGeometry.size();
 					m_opaqueGeometry.push_back(std::make_pair(gpuGeo, trafo));
+				}
+
+				if (!atrafo->isStatic()) {
+					m_animatedGeometry.push_back(AnimatedGeometryRecord(atrafo,
+						geometryIndex, opaqueGeometryIndex));
+				}
 			}
 		} else {
 			GPUGeometry *gpuGeo = m_renderer->registerGeometry(shape);
@@ -233,8 +243,40 @@ void VPLShaderManager::setScene(const Scene *scene) {
 		m_backgroundParam_emitterScale = prog->getParameterID("emitterScale", false);
 	}
 
+	std::vector<size_t> geometryPermutation(m_geometry.size()),
+	                    opaqueGeometryPermutation(m_opaqueGeometry.size());
+
+	for (size_t i=0; i<m_geometry.size(); ++i)
+		geometryPermutation[i] = i;
+	for (size_t i=0; i<m_opaqueGeometry.size(); ++i)
+		opaqueGeometryPermutation[i] = i;
+
 	/// Sort using the MaterialOrder to reduce material changes/pipeline flushes
-	std::sort(m_geometry.begin(), m_geometry.end(), MaterialOrder());
+	std::sort(geometryPermutation.begin(),
+	          geometryPermutation.end(), MaterialOrder(m_geometry));
+	std::sort(opaqueGeometryPermutation.begin(),
+	          opaqueGeometryPermutation.end(), MaterialOrder(m_opaqueGeometry));
+
+	if (!m_animatedGeometry.empty()) {
+		std::vector<size_t> geometryPermutationInv(m_geometry.size()),
+		                    opaqueGeometryPermutationInv(m_opaqueGeometry.size());
+
+		for (size_t i=0; i<m_geometry.size(); ++i)
+			geometryPermutationInv[geometryPermutation[i]] = i;
+		for (size_t i=0; i<m_opaqueGeometry.size(); ++i)
+			opaqueGeometryPermutationInv[opaqueGeometryPermutation[i]] = i;
+
+		for (size_t i=0; i<m_animatedGeometry.size(); ++i) {
+			AnimatedGeometryRecord &agRec = m_animatedGeometry[i];
+			if (agRec.geometryIndex >= 0)
+				agRec.geometryIndex = geometryPermutationInv[agRec.geometryIndex];
+			if (agRec.opaqueGeometryIndex >= 0)
+				agRec.opaqueGeometryIndex = opaqueGeometryPermutationInv[agRec.opaqueGeometryIndex];
+		}
+	}
+
+	permute_inplace(&m_geometry[0], geometryPermutation);
+	permute_inplace(&m_opaqueGeometry[0], opaqueGeometryPermutation);
 }
 
 void VPLShaderManager::setVPL(const VPL &vpl) {
@@ -243,6 +285,18 @@ void VPLShaderManager::setVPL(const VPL &vpl) {
 	/* Estimate good near and far plane locations by tracing some rays */
 	m_nearClip =  std::numeric_limits<Float>::infinity();
 	m_farClip  = -std::numeric_limits<Float>::infinity();
+
+	/* Update animations */
+	for (size_t i=0; i<m_animatedGeometry.size(); ++i) {
+		const AnimatedGeometryRecord &agRec = m_animatedGeometry[i];
+		const Matrix4x4 &matrix = agRec.trafo->eval(vpl.its.time).getMatrix();
+
+		if (agRec.geometryIndex >= 0)
+			m_geometry[agRec.geometryIndex].second = matrix;
+
+		if (agRec.opaqueGeometryIndex >= 0)
+			m_opaqueGeometry[agRec.opaqueGeometryIndex].second = matrix;
+	}
 
 	if (vpl.type != EDirectionalEmitterVPL) {
 		/* Trace a few rays from the VPL to estimate a suitable depth range */

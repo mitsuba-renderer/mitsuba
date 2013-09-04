@@ -23,6 +23,9 @@
 MTS_NAMESPACE_BEGIN
 
 struct AABB;
+class AbstractAnimationTrack;
+template <typename T> class AnimationTrack;
+class AnimatedTransform;
 class Appender;
 class Bitmap;
 class BlackBodySpectrum;
@@ -162,6 +165,11 @@ class WorkProcessor;
 class WorkResult;
 class WorkUnit;
 class ZStream;
+
+typedef AnimationTrack<Float> FloatTrack;
+typedef AnimationTrack<Quaternion> QuatTrack;
+typedef AnimationTrack<Vector> VectorTrack;
+typedef AnimationTrack<Point> PointTrack;
 
 MTS_NAMESPACE_END
 

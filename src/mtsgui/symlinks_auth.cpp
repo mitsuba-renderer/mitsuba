@@ -4,6 +4,7 @@
 #include <AuthorizationTags.h>
 #include <unistd.h>
 #include <iostream>
+#include <sstream>
 
 namespace mitsuba {
 	extern std::string __mts_bundlepath();
@@ -30,7 +31,10 @@ bool create_symlinks() {
 	}
 	std::string bundlePath = mitsuba::__mts_bundlepath();
 	std::string path = bundlePath + "/Contents/MacOS/symlinks_install";
-	char *args[] = { const_cast<char *>(bundlePath.c_str()), NULL };
+	std::ostringstream oss;
+	oss << getuid();
+	std::string uid = oss.str();
+	char *args[] = { const_cast<char *>(bundlePath.c_str()), const_cast<char *>(uid.c_str()), NULL };
 	FILE *pipe = NULL;
 	flags = kAuthorizationFlagDefaults;
 	status = AuthorizationExecuteWithPrivileges(ref, const_cast<char *>(path.c_str()), flags, args, &pipe);

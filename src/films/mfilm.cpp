@@ -53,7 +53,7 @@ MTS_NAMESPACE_BEGIN
  *         and \code{spectrumAlpha}. In the latter two cases,
  *         the number of written channels depends on the value assigned to
  *         \code{SPECTRUM\_SAMPLES} during compilation (see Section~\ref{sec:compiling}
- *         section for details) \default{\code{rgba}}
+ *         section for details) \default{\code{luminance}}
  *     }
  *     \parameter{highQualityEdges}{\Boolean}{
  *        If set to \code{true}, regions slightly outside of the film
@@ -238,7 +238,7 @@ public:
 		m_destFile = destFile;
 	}
 
-	void develop() {
+	void develop(const Scene *scene, Float renderTime) {
 		Log(EDebug, "Developing film ..");
 
 		fs::path filename = m_destFile;
@@ -321,6 +321,14 @@ public:
 		if (boost::to_lower_copy(filename.extension().string()) != ".m")
 			filename.replace_extension(".m");
 		return fs::exists(filename);
+	}
+
+	bool hasAlpha() const {
+		return
+			m_pixelFormat == Bitmap::ELuminanceAlpha ||
+			m_pixelFormat == Bitmap::ERGBA ||
+			m_pixelFormat == Bitmap::EXYZA ||
+			m_pixelFormat == Bitmap::ESpectrumAlpha;
 	}
 
 	std::string toString() const {

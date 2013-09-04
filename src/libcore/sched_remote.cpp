@@ -325,14 +325,7 @@ StreamBackend::StreamBackend(const std::string &thrName, Scheduler *scheduler,
 	m_memStream->setByteOrder(Stream::ENetworkByteOrder);
 }
 
-StreamBackend::~StreamBackend() {
-	if (m_stream->getClass()->derivesFrom(MTS_CLASS(SocketStream))) {
-		SocketStream *sstream = static_cast<SocketStream *>(m_stream.get());
-		Log(EInfo, "Closing connection to %s - received %i KB / sent %i KB",
-			sstream->getPeer().c_str(), (int) (sstream->getReceivedBytes() / 1024),
-			(int) (sstream->getSentBytes() / 1024));
-	}
-}
+StreamBackend::~StreamBackend() { }
 
 void StreamBackend::run() {
 	if (m_detach)
@@ -488,6 +481,13 @@ void StreamBackend::run() {
 
 		Log(EWarn, "Removing stray resource %i", (*it).first);
 		m_scheduler->unregisterResource((*it).second);
+	}
+
+	if (m_stream->getClass()->derivesFrom(MTS_CLASS(SocketStream))) {
+		SocketStream *sstream = static_cast<SocketStream *>(m_stream.get());
+		Log(EInfo, "Closing connection to %s - received %i KB / sent %i KB",
+			sstream->getPeer().c_str(), (int) (sstream->getReceivedBytes() / 1024),
+			(int) (sstream->getSentBytes() / 1024));
 	}
 }
 

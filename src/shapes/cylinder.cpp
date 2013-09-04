@@ -43,7 +43,7 @@ MTS_NAMESPACE_BEGIN
  *	      Is the cylinder inverted, i.e. should the normal vectors
  *		  be flipped? \default{\code{false}, i.e. the normals point outside}
  *	   }
- *     \parameter{toWorld}{\Transform}{
+ *     \parameter{toWorld}{\Transform\Or\Animation}{
  *	      Specifies an optional linear object-to-world transformation.
  *        Note that non-uniform scales are not permitted!
  *        \default{none (i.e. object space $=$ world space)}
@@ -145,11 +145,12 @@ public:
 		if (!solveQuadratic(A, B, C, nearT, farT))
 			return false;
 
-		if (nearT > maxt || farT < mint)
+		if (!(nearT <= maxt && farT >= mint)) /* NaN-aware conditionals */
 			return false;
 
 		const Float zPosNear = ray.o.z + ray.d.z * nearT;
 		const Float zPosFar = ray.o.z + ray.d.z * farT;
+
 		if (zPosNear >= 0 && zPosNear <= m_length && nearT >= mint) {
 			t = nearT;
 		} else if (zPosFar >= 0 && zPosFar <= m_length) {
@@ -210,12 +211,12 @@ public:
 
 		Vector dpdu = Vector(-local.y, local.x, 0) * (2*M_PI);
 		Vector dpdv = Vector(0, 0, m_length);
-		if (m_flipNormals)
-			dpdu *= -1;
 		its.shape = this;
 		its.dpdu = m_objectToWorld(dpdu);
 		its.dpdv = m_objectToWorld(dpdv);
 		its.geoFrame.n = Normal(normalize(cross(its.dpdu, its.dpdv)));
+		if (m_flipNormals)
+			its.geoFrame.n *= -1;
 		its.geoFrame.s = normalize(its.dpdu);
 		its.geoFrame.t = normalize(its.dpdv);
 		its.shFrame = its.geoFrame;
@@ -374,10 +375,10 @@ public:
 		/* Find the componentwise maxima of the ellipse */
 		for (int i=0; i<2; ++i) {
 			int j = (i==0) ? axis1 : axis2;
-			Float alpha = ellipseAxes[0][j];
-			Float beta = ellipseAxes[1][j];
-			Float ratio = beta/alpha, tmp = std::sqrt(1+ratio*ratio);
-			Float cosTheta = 1/tmp, sinTheta = ratio/tmp;
+			Float alpha = ellipseAxes[0][j], beta = ellipseAxes[1][j];
+			Float tmp = 1 / std::sqrt(alpha*alpha + beta*beta);
+			Float cosTheta = alpha * tmp, sinTheta = beta*tmp;
+			
 			Point p1 = ellipseCenter + cosTheta*ellipseAxes[0] + sinTheta*ellipseAxes[1];
 			Point p2 = ellipseCenter - cosTheta*ellipseAxes[0] - sinTheta*ellipseAxes[1];
 
@@ -495,7 +496,7 @@ public:
 
 	void getNormalDerivative(const Intersection &its,
 			Vector &dndu, Vector &dndv, bool shadingFrame) const {
-		dndu = its.dpdu / m_radius;
+		dndu = its.dpdu / (m_radius * (m_flipNormals ? -1 : 1));
 		dndv = Vector(0.0f);
 	}
 
@@ -510,8 +511,8 @@ public:
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "Cylinder[" << endl
-			<< "  radius = " << m_radius << ", " << endl
-			<< "  length = " << m_length << ", " << endl
+			<< "  radius = " << m_radius << "," << endl
+			<< "  length = " << m_length << "," << endl
 			<< "  objectToWorld = " << indent(m_objectToWorld.toString()) << "," << endl
 			<< "  bsdf = " << indent(m_bsdf.toString()) << "," << endl;
 		if (isMediumTransition())

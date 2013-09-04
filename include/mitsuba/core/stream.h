@@ -153,11 +153,23 @@ public:
 	/// Write an array of signed shorts (16 bit) to the stream
 	void writeShortArray(const short *values, size_t size);
 
+	/// Write an array of known size of signed shorts (16 bit) to the stream
+	template <size_t N>
+	inline void writeShortArray(const short (&values)[N]) {
+		writeShortArray(&values[0], N);
+	}
+
 	/// Write an unsigned short (16 bit) to the stream
 	void writeUShort(unsigned short value);
 
 	/// Write an array of unsigned shorts (16 bit) to the stream
 	void writeUShortArray(const unsigned short *values, size_t size);
+
+	/// Write an array of known size of unsigned shorts (16 bit) to the stream
+	template <size_t N>
+	inline void writeUShortArray(const unsigned short (&values)[N]) {
+		writeUShortArray(&values[0], N);
+	}
 
 	/// Write a signed int (32 bit) to the stream
 	void writeInt(int value);
@@ -165,17 +177,35 @@ public:
 	/// Write an array of signed ints (32 bit) to the stream
 	void writeIntArray(const int *values, size_t size);
 
+	/// Write an array of known size of signed ints (32 bit) to the stream
+	template <size_t N>
+	inline void writeIntArray(const int (&values)[N]) {
+		writeIntArray(&values[0], N);
+	}
+
 	/// Write an unsigned int (32 bit) to the stream
 	void writeUInt(unsigned int value);
 
 	/// Write an array of unsigned ints (32 bit) to the stream
 	void writeUIntArray(const unsigned int *values, size_t size);
 
-	/// Write a signed int (32 bit) to the stream
+	/// Write an array of known size of unsigned ints (32 bit) to the stream
+	template <size_t N>
+	inline void writeUIntArray(const unsigned int (&values)[N]) {
+		writeUIntArray(&values[0], N);
+	}
+
+	/// Write a signed int (64 bit) to the stream
 	void writeLong(int64_t value);
 
 	/// Write an array of signed ints (64 bit) to the stream
 	void writeLongArray(const int64_t *values, size_t size);
+
+	/// Write an array of known size of signed ints (64 bit) to the stream
+	template <size_t N>
+	inline void writeLongArray(const int64_t (&values)[N]) {
+		writeLongArray(&values[0], N);
+	}
 
 	/// Write an unsigned int (64 bit) to the stream
 	void writeULong(uint64_t value);
@@ -186,6 +216,12 @@ public:
 	/// Write an array of unsigned ints (64 bit) to the stream
 	void writeULongArray(const uint64_t *values, size_t size);
 
+	/// Write an array of known size of unsigned ints (64 bit) to the stream
+	template <size_t N>
+	inline void writeULongArray(const uint64_t (&values)[N]) {
+		writeULongArray(&values[0], N);
+	}
+
 	/// Write a signed character (8 bit) to the stream
 	void writeChar(char value);
 
@@ -195,11 +231,17 @@ public:
 	/// Write a boolean (8 bit) to the stream
 	inline void writeBool(bool value) { writeUChar(value); }
 
-	/// Write a half-precision halfing point number (16 bit) to the stream
+	/// Write a half-precision floating point number (16 bit) to the stream
 	void writeHalf(half value);
 
-	/// Write a half-precision halfing point array (16 bit) to the stream
+	/// Write a half-precision floating point array (16 bit) to the stream
 	void writeHalfArray(const half *data, size_t size);
+
+	/// Write a known size half-precision floating point array (16 bit) to the stream
+	template <size_t N>
+	inline void writeHalfArray(const half (&values)[N]) {
+		writeHalfArray(&values[0], N);
+	}
 
 	/// Write a single-precision floating point number (32 bit) to the stream
 	void writeSingle(float value);
@@ -207,11 +249,23 @@ public:
 	/// Write a single-precision floating point array (32 bit) to the stream
 	void writeSingleArray(const float *data, size_t size);
 
+	/// Write a known size single-precision floating point array (32 bit) to the stream
+	template <size_t N>
+	inline void writeSingleArray(const float (&values)[N]) {
+		writeSingleArray(&values[0], N);
+	}
+
 	/// Write a double-precision floating point number (64 bit) to the stream
 	void writeDouble(double value);
 
 	/// Write a double-precision floating point array (64 bit) to the stream
 	void writeDoubleArray(const double *data, size_t size);
+
+	/// Write a known size double-precision floating point array (64 bit) to the stream
+	template <size_t N>
+	inline void writeDoubleArray(const double (&values)[N]) {
+		writeDoubleArray(&values[0], N);
+	}
 
 	/// Write a floating point number (configured precision) to the stream
 	inline void writeFloat(Float value) {
@@ -231,6 +285,12 @@ public:
 #endif
 	}
 
+	/// Write a known size array of floating point values (configured precision) to the stream
+	template <size_t N>
+	inline void writeFloatArray(const Float (&values)[N]) {
+		writeFloatArray(&values[0], N);
+	}
+
 	/// Return whether we are at the end of the stream
 	bool isEOF() const;
 
@@ -246,11 +306,23 @@ public:
 	/// Read an array of signed shorts (16 bit) from the stream
 	void readShortArray(short *dest, size_t size);
 
+	/// Read an array of known size of signed shorts (16 bit) from the stream
+	template <size_t N>
+	inline void readShortArray(short (&values)[N]) {
+		readShortArray(&values[0], N);
+	}
+
 	/// Read an unsigned short (16 bit) from the stream
 	unsigned short readUShort();
 
 	/// Read an array of unsigned shorts (16 bit) from the stream
 	void readUShortArray(unsigned short *dest, size_t size);
+
+	/// Read an array of known size of unsigned shorts (16 bit) from the stream
+	template <size_t N>
+	inline void readUShortArray(short (&values)[N]) {
+		readUShortArray(&values[0], N);
+	}
 
 	/// Read a signed int (32 bit) from the stream
 	int readInt();
@@ -258,17 +330,35 @@ public:
 	/// Read an array of signed ints (32 bit) from the stream
 	void readIntArray(int *dst, size_t size);
 
+	/// Read an array of known size of signed ints (32 bit) from the stream
+	template <size_t N>
+	inline void readIntArray(int (&values)[N]) {
+		readIntArray(&values[0], N);
+	}
+
 	/// Read an unsigned int (32 bit) from the stream
 	unsigned int readUInt();
 
 	/// Read an array of unsigned ints (32 bit) from the stream
 	void readUIntArray(unsigned int *dest, size_t size);
 
+	/// Read an array of known size of unsigned ints (32 bit) from the stream
+	template <size_t N>
+	inline void readUIntArray(int (&values)[N]) {
+		readUIntArray(&values[0], N);
+	}
+
 	/// Read a signed int (64 bit) from the stream
 	int64_t readLong();
 
 	/// Read an array of signed ints (64 bit) from the stream
 	void readLongArray(int64_t *dst, size_t size);
+
+	/// Read an array of known size of signed ints (64 bit) from the stream
+	template <size_t N>
+	inline void readLongArray(int64_t (&values)[N]) {
+		readLongArray(&values[0], N);
+	}
 
 	/// Read an unsigned int (64 bit) from the stream
 	uint64_t readULong();
@@ -279,6 +369,12 @@ public:
 	/// Read an array of unsigned ints (64 bit) from the stream
 	void readULongArray(uint64_t *dst, size_t size);
 
+	/// Read an array of known size of unsigned ints (64 bit) from the stream
+	template <size_t N>
+	inline void readULongArray(uint64_t (&values)[N]) {
+		readULongArray(&values[0], N);
+	}
+
 	/// Read a signed character (8 bit) from the stream
 	char readChar();
 
@@ -288,11 +384,17 @@ public:
 	/// Read a boolean (8 bit) from the stream
 	inline bool readBool() { return static_cast<bool> (readUChar()); }
 
-	/// Read a half-precision halfing point number (16 bit) from the stream
+	/// Read a half-precision floating point number (16 bit) from the stream
 	half readHalf();
 
-	/// Read a half-precision halfing point array (16 bit) from the stream
+	/// Read a half-precision floating point array (16 bit) from the stream
 	void readHalfArray(half *data, size_t size);
+
+	/// Read a known-size half-precision floating point array (16 bit) from the stream
+	template <size_t N>
+	inline void readHalfArray(half (&values)[N]) {
+		readHalfArray(&values[0], N);
+	}
 
 	/// Read a single-precision floating point number (32 bit) from the stream
 	float readSingle();
@@ -300,11 +402,23 @@ public:
 	/// Read a single-precision floating point array (32 bit) from the stream
 	void readSingleArray(float *data, size_t size);
 
+	/// Read a known-size single-precision floating point array (32 bit) from the stream
+	template <size_t N>
+	inline void readSingleArray(float (&values)[N]) {
+		readSingleArray(&values[0], N);
+	}
+
 	/// Read a double-precision floating point number (64 bit) from the stream
 	double readDouble();
 
 	/// Read a double-precision floating point array (64 bit) from the stream
 	void readDoubleArray(double *data, size_t size);
+
+	/// Read a known-size double-precision floating point array (64 bit) from the stream
+	template <size_t N>
+	inline void readDoubleArray(double (&values)[N]) {
+		readDoubleArray(&values[0], N);
+	}
 
 	/// Write a floating point number (configured precision) to the stream
 	inline Float readFloat() {
@@ -322,6 +436,12 @@ public:
 #else
 		readDoubleArray(data, size);
 #endif
+	}
+
+	/// Read a known-size array of floating point values (configured precision) to the stream
+	template <size_t N>
+	inline void readFloatArray(Float (&values)[N]) {
+		readFloatArray(&values[0], N);
 	}
 
 	/**
@@ -352,10 +472,26 @@ public:
 	template <typename T> void readArray(T *array, size_t count);
 
 	/**
+	 * \brief Read a known-size array from the stream (uses partial template
+	 * specialization to select a method appropriate to the data type)
+	 */
+	template <typename T, size_t N> inline void readArray(T (&arr)[N]) {
+		readArray(&arr[0], N);
+	}
+
+	/**
 	 * \brief Write an array to the stream (uses partial template
 	 * specialization to select a method appropriate to the data type)
 	 */
 	template <typename T> void writeArray(const T *array, size_t count);
+
+	/**
+	 * \brief Write a known-size array to the stream (uses partial template
+	 * specialization to select a method appropriate to the data type)
+	 */
+	template <typename T, size_t N> inline void writeArray(const T (&arr)[N]) {
+		writeArray(&arr[0], N);
+	}
 
 	//! @}
 

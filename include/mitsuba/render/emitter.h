@@ -21,7 +21,7 @@
 #define __MITSUBA_RENDER_EMITTER_H_
 
 #include <mitsuba/render/common.h>
-#include <mitsuba/render/track.h>
+#include <mitsuba/core/track.h>
 #include <mitsuba/core/properties.h>
 #include <mitsuba/core/cobject.h>
 #include <mitsuba/render/shader.h>
@@ -425,7 +425,7 @@ protected:
 	/// Virtual destructor
 	virtual ~AbstractEmitter();
 protected:
-	ref<AnimatedTransform> m_worldTransform;
+	ref<const AnimatedTransform> m_worldTransform;
 	ref<Medium> m_medium;
 	Shape *m_shape;
 	uint32_t m_type;
