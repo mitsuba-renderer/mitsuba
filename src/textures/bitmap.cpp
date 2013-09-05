@@ -428,7 +428,7 @@ public:
 		return result;
 	}
 
-	ref<Bitmap> getBitmap() const {
+	ref<Bitmap> getBitmap(const Vector2i &/* unused */) {
 		return m_mipmap1.get() ? m_mipmap1->toBitmap() : m_mipmap3->toBitmap();
 	}
 

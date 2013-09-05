@@ -20,6 +20,7 @@
 
 MTS_NAMESPACE_BEGIN
 
+
 ConstantSpectrumTexture::ConstantSpectrumTexture(Stream *stream, InstanceManager *manager)
  : Texture(stream, manager) {
 	m_value = Spectrum(stream);
@@ -31,6 +32,12 @@ void ConstantSpectrumTexture::serialize(Stream *stream, InstanceManager *manager
 	m_value.serialize(stream);
 }
 
+ref<Bitmap> ConstantSpectrumTexture::getBitmap(const Vector2i &resolutionHint) const {
+	ref<Bitmap> result = new Bitmap(Bitmap::ESpectrum, Bitmap::EFloat, Vector2i(1, 1));
+	*((Spectrum *) result->getFloatData()) = m_value;
+	return result;
+}
+
 ConstantFloatTexture::ConstantFloatTexture(Stream *stream, InstanceManager *manager)
  : Texture(stream, manager) {
 	m_value = stream->readFloat();
@@ -39,6 +46,12 @@ ConstantFloatTexture::ConstantFloatTexture(Stream *stream, InstanceManager *mana
 void ConstantFloatTexture::serialize(Stream *stream, InstanceManager *manager) const {
 	Texture::serialize(stream, manager);
 	stream->writeFloat(m_value);
+}
+
+ref<Bitmap> ConstantFloatTexture::getBitmap(const Vector2i &resolutionHint) const {
+	ref<Bitmap> result = new Bitmap(Bitmap::ELuminance, Bitmap::EFloat, Vector2i(1, 1));
+	*result->getFloatData() = m_value;
+	return result;
 }
 
 SpectrumProductTexture::SpectrumProductTexture(Stream *stream, InstanceManager *manager)
@@ -53,6 +66,12 @@ void SpectrumProductTexture::serialize(Stream *stream, InstanceManager *manager)
 	manager->serialize(stream, m_b.get());
 }
 
+ref<Bitmap> SpectrumProductTexture::getBitmap(const Vector2i &resolutionHint) const {
+	ref<Bitmap> bitmap1 = m_a->getBitmap(resolutionHint);
+	ref<Bitmap> bitmap2 = m_b->getBitmap(resolutionHint);
+	return Bitmap::arithmeticOperation(Bitmap::EMultiplication, bitmap1.get(), bitmap2.get());
+}
+
 SpectrumAdditionTexture::SpectrumAdditionTexture(Stream *stream, InstanceManager *manager)
  : Texture(stream, manager) {
 	m_a = static_cast<Texture *>(manager->getInstance(stream));
@@ -65,6 +84,12 @@ void SpectrumAdditionTexture::serialize(Stream *stream, InstanceManager *manager
 	manager->serialize(stream, m_b.get());
 }
 
+ref<Bitmap> SpectrumAdditionTexture::getBitmap(const Vector2i &resolutionHint) const {
+	ref<Bitmap> bitmap1 = m_a->getBitmap(resolutionHint);
+	ref<Bitmap> bitmap2 = m_b->getBitmap(resolutionHint);
+	return Bitmap::arithmeticOperation(Bitmap::EAddition, bitmap1.get(), bitmap2.get());
+}
+
 SpectrumSubtractionTexture::SpectrumSubtractionTexture(Stream *stream, InstanceManager *manager)
  : Texture(stream, manager) {
 	m_a = static_cast<Texture *>(manager->getInstance(stream));
@@ -75,6 +100,12 @@ void SpectrumSubtractionTexture::serialize(Stream *stream, InstanceManager *mana
 	Texture::serialize(stream, manager);
 	manager->serialize(stream, m_a.get());
 	manager->serialize(stream, m_b.get());
+}
+
+ref<Bitmap> SpectrumSubtractionTexture::getBitmap(const Vector2i &resolutionHint) const {
+	ref<Bitmap> bitmap1 = m_a->getBitmap(resolutionHint);
+	ref<Bitmap> bitmap2 = m_b->getBitmap(resolutionHint);
+	return Bitmap::arithmeticOperation(Bitmap::ESubtraction, bitmap1.get(), bitmap2.get());
 }
 
 class ConstantSpectrumTextureShader : public Shader {

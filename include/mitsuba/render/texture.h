@@ -74,8 +74,17 @@ public:
 	/// Serialize to a binary data stream
 	virtual void serialize(Stream *stream, InstanceManager *manager) const;
 
-	/// Return the underlying bitmap representation (if any)
-	virtual ref<Bitmap> getBitmap() const;
+	/**
+	 * \brief Return a bitmap representation of the texture
+	 *
+	 * When the class implementing this interface is a bitmap-backed texture,
+	 * this function directly returns the underlying bitmap. When it is procedural,
+	 * a bitmap version must first be generated. In this case, the parameter
+	 * \ref resolutionHint is used to control the target resolution. The default
+	 * value <tt>-1, -1</tt> allows the implementation to choose a suitable
+	 * resolution by itself.
+	 */
+	virtual ref<Bitmap> getBitmap(const Vector2i &resolutionHint = Vector2i(-1, -1)) const;
 
 	MTS_DECLARE_CLASS()
 protected:
@@ -108,6 +117,18 @@ public:
 	/// Filtered texture lookup -- Texture2D subclasses must provide this function
 	virtual Spectrum eval(const Point2 &uv, const Vector2 &d0,
 			const Vector2 &d1) const = 0;
+
+	/**
+	 * \brief Return a bitmap representation of the texture
+	 *
+	 * When the class implementing this interface is a bitmap-backed texture,
+	 * this function directly returns the underlying bitmap. When it is procedural,
+	 * a bitmap version must first be generated. In this case, the parameter
+	 * \ref resolutionHint is used to control the target resolution. The default
+	 * value <tt>-1, -1</tt> allows the implementation to choose a suitable
+	 * resolution by itself.
+	 */
+	virtual ref<Bitmap> getBitmap(const Vector2i &resolutionHint = Vector2i(-1, -1)) const;
 
 	MTS_DECLARE_CLASS()
 protected:

@@ -47,7 +47,7 @@ Spectrum Texture::getMinimum() const { NotImplementedError("getMinimum"); }
 Spectrum Texture::getMaximum() const { NotImplementedError("getMaximum"); }
 bool Texture::isConstant() const { NotImplementedError("isConstant"); }
 bool Texture::usesRayDifferentials() const { NotImplementedError("usesRayDifferentials"); }
-ref<Bitmap> Texture::getBitmap() const { return NULL; }
+ref<Bitmap> Texture::getBitmap(const Vector2i &) const { NotImplementedError("getBitmap"); }
 
 ref<Texture> Texture::expand() {
 	return this;
@@ -100,6 +100,22 @@ Spectrum Texture2D::eval(const Intersection &its, bool filter) const {
 		return eval(uv);
 	}
 }
+
+ref<Bitmap> Texture2D::getBitmap(const Vector2i &resolutionHint) const {
+	Vector2i res(resolutionHint);
+	if (res.x <= 0 || res.y <= 0)
+		res = Vector2i(32);
+
+	Float invX = 1.0f / res.x, invY = 1.0f / res.y;
+
+	ref<Bitmap> bitmap = new Bitmap(Bitmap::ESpectrum, Bitmap::EFloat, res);
+	Spectrum *target = (Spectrum *) bitmap->getFloatData();
+	for (int y=0; y<res.y; ++y)
+		for (int x=0; x<res.x; ++x)
+			*target++ = eval(Point2((x + 0.5f) * invX, (y + 0.5f) * invY));
+	return bitmap;
+}
+
 MTS_IMPLEMENT_CLASS(Texture, true, ConfigurableObject)
 MTS_IMPLEMENT_CLASS(Texture2D, true, Texture)
 MTS_NAMESPACE_END
