@@ -251,8 +251,8 @@ extern "C" {
  * ========================== */
 
 Bitmap::Bitmap(EPixelFormat pFormat, EComponentFormat cFormat,
-		const Vector2i &size, int channelCount) : m_pixelFormat(pFormat),
-		m_componentFormat(cFormat), m_size(size), m_channelCount(channelCount) {
+		const Vector2i &size, uint8_t channelCount, uint8_t *data) : m_pixelFormat(pFormat),
+		m_componentFormat(cFormat), m_size(size), m_data(data), m_channelCount(channelCount), m_ownsData(false) {
 	AssertEx(size.x > 0 && size.y > 0, "Invalid bitmap size");
 
 	if (m_componentFormat == EUInt8)
@@ -262,10 +262,13 @@ Bitmap::Bitmap(EPixelFormat pFormat, EComponentFormat cFormat,
 
 	updateChannelCount();
 
-	m_data = static_cast<uint8_t *>(allocAligned(getBufferSize()));
+	if (!m_data) {
+		m_data = static_cast<uint8_t *>(allocAligned(getBufferSize()));
+		m_ownsData = true;
+	}
 }
 
-Bitmap::Bitmap(EFileFormat format, Stream *stream, const std::string &prefix) : m_data(NULL) {
+Bitmap::Bitmap(EFileFormat format, Stream *stream, const std::string &prefix) : m_data(NULL), m_ownsData(false) {
 	if (format == EAuto) {
 		/* Try to automatically detect the file format */
 		size_t pos = stream->getPos();
@@ -336,7 +339,7 @@ void Bitmap::write(EFileFormat format, Stream *stream, int compression,
 }
 
 size_t Bitmap::getBufferSize() const {
-	size_t bitsPerRow = m_size.x * m_channelCount * getBitsPerComponent();
+	size_t bitsPerRow = (size_t) m_size.x * m_channelCount * getBitsPerComponent();
 	size_t bytesPerRow = (bitsPerRow + 7) / 8; // round up to full bytes
 	return bytesPerRow * (size_t) m_size.y;
 }
@@ -392,7 +395,7 @@ int Bitmap::getBytesPerComponent() const {
 }
 
 Bitmap::~Bitmap() {
-	if (m_data)
+	if (m_data && m_ownsData)
 		freeAligned(m_data);
 }
 
@@ -502,7 +505,7 @@ void Bitmap::accumulate(const Bitmap *bitmap, Point2i sourceOffset,
 		return;
 
 	const size_t
-		columns      = size.x * m_channelCount,
+		columns      = (size_t) size.x * m_channelCount,
 		pixelStride  = getBytesPerPixel(),
 		sourceStride = bitmap->getWidth() * pixelStride,
 		targetStride = getWidth() * pixelStride;
@@ -567,7 +570,7 @@ void Bitmap::scale(Float value) {
 					uint8_t *data = (uint8_t *) m_data;
 					for (size_t i=0; i<nPixels; ++i) {
 						for (size_t j=0; j<nChannels-1; ++j) {
-							*data = (uint8_t) std::min((Float) std::numeric_limits<uint8_t>::max(),
+							*data = (uint8_t) std::min((Float) 0xFF,
 								std::max((Float) 0, *data * value + (Float) 0.5f));
 							++data;
 						}
@@ -580,7 +583,7 @@ void Bitmap::scale(Float value) {
 					uint16_t *data = (uint16_t *) m_data;
 					for (size_t i=0; i<nPixels; ++i) {
 						for (size_t j=0; j<nChannels-1; ++j) {
-							*data = (uint16_t) std::min((Float) std::numeric_limits<uint16_t>::max(),
+							*data = (uint16_t) std::min((Float) 0xFFFF,
 								std::max((Float) 0, *data * value + (Float) 0.5f));
 							++data;
 						}
@@ -593,7 +596,7 @@ void Bitmap::scale(Float value) {
 					uint32_t *data = (uint32_t *) m_data;
 					for (size_t i=0; i<nPixels; ++i) {
 						for (size_t j=0; j<nChannels-1; ++j) {
-							*data = (uint32_t) std::min((Float) std::numeric_limits<uint32_t>::max(),
+							*data = (uint32_t) std::min((Float) 0xFFFFFFFFUL,
 								std::max((Float) 0, *data * value + (Float) 0.5f));
 							++data;
 						}
@@ -646,7 +649,7 @@ void Bitmap::scale(Float value) {
 			case EUInt8: {
 					uint8_t *data = (uint8_t *) m_data;
 					for (size_t i=0; i<nEntries; ++i)
-						data[i] = (uint8_t) std::min((Float) std::numeric_limits<uint8_t>::max(),
+						data[i] = (uint8_t) std::min((Float) 0xFF,
 							std::max((Float) 0, data[i] * value + (Float) 0.5f));
 				}
 				break;
@@ -654,7 +657,7 @@ void Bitmap::scale(Float value) {
 			case EUInt16: {
 					uint16_t *data = (uint16_t *) m_data;
 					for (size_t i=0; i<nEntries; ++i)
-						data[i] = (uint16_t) std::min((Float) std::numeric_limits<uint16_t>::max(),
+						data[i] = (uint16_t) std::min((Float) 0xFFFF,
 							std::max((Float) 0, data[i] * value + (Float) 0.5f));
 				}
 				break;
@@ -662,7 +665,7 @@ void Bitmap::scale(Float value) {
 			case EUInt32: {
 					uint32_t *data = (uint32_t *) m_data;
 					for (size_t i=0; i<nEntries; ++i)
-						data[i] = (uint32_t) std::min((Float) std::numeric_limits<uint32_t>::max(),
+						data[i] = (uint32_t) std::min((Float) 0xFFFFFFFFUL,
 							std::max((Float) 0, data[i] * value + (Float) 0.5f));
 				}
 				break;
@@ -694,6 +697,109 @@ void Bitmap::scale(Float value) {
 	}
 }
 
+ref<Bitmap> Bitmap::arithmeticOperation(Bitmap::EArithmeticOperation operation, const Bitmap *_bitmap1, const Bitmap *_bitmap2) {
+	ref<const Bitmap> bitmap1(_bitmap1), bitmap2(_bitmap2);
+
+	/* Determine the 'fancier' pixel / component format by a maximum operation on the enum values */
+	EPixelFormat pxFmt = (EPixelFormat) std::max(bitmap1->getPixelFormat(), bitmap2->getPixelFormat());
+	EComponentFormat cFmt = (EComponentFormat) std::max(bitmap1->getComponentFormat(), bitmap2->getComponentFormat());
+
+	if (cFmt == EBitmask)
+		Log(EError, "Bitmap::arithmeticOperation(): bitmasks are not supported!");
+
+	/* Make sure that the images match in size (resample if necessary) */
+	Vector2i size(
+		std::max(bitmap1->getWidth(), bitmap2->getWidth()),
+		std::max(bitmap1->getHeight(), bitmap2->getHeight()));
+
+	if (bitmap1->getSize() != size) {
+		bitmap1 = bitmap1->resample(NULL,
+				ReconstructionFilter::EClamp,
+				ReconstructionFilter::EClamp, size,
+				-std::numeric_limits<Float>::infinity(),
+				std::numeric_limits<Float>::infinity());
+	}
+
+	if (bitmap2->getSize() != size) {
+		bitmap2 = bitmap2->resample(NULL,
+				ReconstructionFilter::EClamp,
+				ReconstructionFilter::EClamp, size,
+				-std::numeric_limits<Float>::infinity(),
+				std::numeric_limits<Float>::infinity());
+	}
+
+	/* Convert the image format appropriately (no-op, if the format already matches) */
+	bitmap1 = const_cast<Bitmap *>(bitmap1.get())->convert(pxFmt, cFmt);
+	bitmap2 = const_cast<Bitmap *>(bitmap2.get())->convert(pxFmt, cFmt);
+
+	ref<Bitmap> output = new Bitmap(pxFmt, cFmt, size);
+	size_t nValues = output->getPixelCount() * output->getChannelCount();
+
+	#define IMPLEMENT_OPS() \
+		switch (operation) { \
+			case EAddition:       for (size_t i=0; i<nValues; ++i) dst[i] = src1[i] + src2[i]; break; \
+			case ESubtraction:    for (size_t i=0; i<nValues; ++i) dst[i] = src1[i] - src2[i]; break; \
+			case EMultiplication: for (size_t i=0; i<nValues; ++i) dst[i] = src1[i] * src2[i]; break; \
+			case EDivision:       for (size_t i=0; i<nValues; ++i) dst[i] = src1[i] / src2[i]; break; \
+		}
+
+	switch (cFmt) {
+		case EUInt8: {
+				const uint8_t *src1 = bitmap1->getUInt8Data();
+				const uint8_t *src2 = bitmap2->getUInt8Data();
+				uint8_t *dst = output->getUInt8Data();
+				IMPLEMENT_OPS();
+			}
+			break;
+
+		case EUInt16: {
+				const uint16_t *src1 = bitmap1->getUInt16Data();
+				const uint16_t *src2 = bitmap2->getUInt16Data();
+				uint16_t *dst = output->getUInt16Data();
+				IMPLEMENT_OPS();
+			}
+			break;
+
+		case EUInt32: {
+				const uint32_t *src1 = bitmap1->getUInt32Data();
+				const uint32_t *src2 = bitmap2->getUInt32Data();
+				uint32_t *dst = output->getUInt32Data();
+				IMPLEMENT_OPS();
+			}
+			break;
+
+		case EFloat16: {
+				const half *src1 = bitmap1->getFloat16Data();
+				const half *src2 = bitmap2->getFloat16Data();
+				half *dst = output->getFloat16Data();
+				IMPLEMENT_OPS();
+			}
+			break;
+
+		case EFloat32: {
+				const float *src1 = bitmap1->getFloat32Data();
+				const float *src2 = bitmap2->getFloat32Data();
+				float *dst = output->getFloat32Data();
+				IMPLEMENT_OPS();
+			}
+			break;
+
+		case EFloat64: {
+				const double *src1 = bitmap1->getFloat64Data();
+				const double *src2 = bitmap2->getFloat64Data();
+				double *dst = output->getFloat64Data();
+				IMPLEMENT_OPS();
+			}
+			break;
+
+		default:
+			Log(EError, "Bitmap::arithmeticOperation(): unexpected data format!");
+	}
+
+	#undef IMPLEMENT_OPS
+
+	return output;
+}
 
 
 void Bitmap::colorBalance(Float r, Float g, Float b) {
@@ -1273,15 +1379,25 @@ void Bitmap::applyMatrix(Float matrix_[3][3]) {
 	}
 }
 
-
 /// Bitmap resampling utility function
-template <typename Scalar> static void resample(const ReconstructionFilter *rfilter,
+template <typename Scalar> static void resample(ref<const ReconstructionFilter> rfilter,
 	ReconstructionFilter::EBoundaryCondition bch,
 	ReconstructionFilter::EBoundaryCondition bcv,
 	const Bitmap *source, Bitmap *target, Float minValue, Float maxValue) {
 	ref<Bitmap> temp; // Pointer to a temporary bitmap
 
 	int channels = source->getChannelCount();
+
+	if (!rfilter) {
+		/* Resample using a 2-lobed Lanczos reconstruction filter */
+		Properties rfilterProps("lanczos");
+		rfilterProps.setInteger("lobes", 2);
+		ReconstructionFilter *instance = static_cast<ReconstructionFilter *> (
+			PluginManager::getInstance()->createObject(
+			MTS_CLASS(ReconstructionFilter), rfilterProps));
+		instance->configure();
+		rfilter = instance;
+	}
 
 	if (source->getWidth() != target->getWidth()) {
 		/* Re-sample along the X direction */
@@ -1490,6 +1606,7 @@ void Bitmap::readPNG(Stream *stream) {
 
 	size_t bufferSize = getBufferSize();
 	m_data = static_cast<uint8_t *>(allocAligned(bufferSize));
+	m_ownsData = true;
 	rows = new png_bytep[m_size.y];
 	size_t rowBytes = png_get_rowbytes(png_ptr, info_ptr);
 	Assert(rowBytes == getBufferSize() / m_size.y);
@@ -1646,6 +1763,7 @@ void Bitmap::readJPEG(Stream *stream) {
 		* (size_t) cinfo.output_components;
 
 	m_data = static_cast<uint8_t *>(allocAligned(getBufferSize()));
+	m_ownsData = true;
 
 	boost::scoped_array<uint8_t*> scanlines(new uint8_t*[m_size.y]);
 	for (int i=0; i<m_size.y; ++i)
@@ -1897,7 +2015,7 @@ void Bitmap::readOpenEXR(Stream *stream, const std::string &_prefix) {
 
 	updateChannelCount();
 	m_gamma = 1.0f;
-	Assert(m_channelCount == (int) sourceChannels.size());
+	Assert(m_channelCount == (uint8_t) sourceChannels.size());
 
 	Imf::PixelType pxType = channels[sourceChannels[0]].type;
 
@@ -1933,11 +2051,12 @@ void Bitmap::readOpenEXR(Stream *stream, const std::string &_prefix) {
 
 	/* Finally, allocate memory for it */
 	m_data = static_cast<uint8_t *>(allocAligned(getBufferSize()));
+	m_ownsData = true;
 	char *ptr = (char *) m_data;
 
 	ptr -= (dataWindow.min.x + dataWindow.min.y * m_size.x) * pixelStride;
 
-	ref_vector<Bitmap> resampleBuffers(m_channelCount);
+	ref_vector<Bitmap> resampleBuffers((size_t) m_channelCount);
 	ref<ReconstructionFilter> rfilter;
 
 	/* Tell OpenEXR where the image data should be put */
@@ -2310,6 +2429,7 @@ void Bitmap::readTGA(Stream *stream) {
 		   rowSize = bufferSize / height;
 
 	m_data = static_cast<uint8_t *>(allocAligned(bufferSize));
+	m_ownsData = true;
 	int channels = bpp/8;
 
 	if (!rle) {
@@ -2400,6 +2520,7 @@ void Bitmap::readBMP(Stream *stream) {
 
 	size_t bufferSize = getBufferSize();
 	m_data = static_cast<uint8_t *>(allocAligned(bufferSize));
+	m_ownsData = true;
 
 	Log(ETrace, "Loading a %ix%i BMP file", m_size.x, m_size.y);
 
@@ -2537,6 +2658,7 @@ void Bitmap::readRGBE(Stream *stream) {
 	m_channelCount = 3;
 	m_gamma = 1.0f;
 	m_data = static_cast<uint8_t *>(allocAligned(getBufferSize()));
+	m_ownsData = true;
 	float *data = (float *) m_data;
 
 	if (m_size.x < 8 || m_size.x > 0x7fff) {
@@ -2714,6 +2836,7 @@ void Bitmap::readPFM(Stream *stream) {
 		SLog(EError, "Could not parse scale/order information!");
 
 	m_data = static_cast<uint8_t *>(allocAligned(getBufferSize()));
+	m_ownsData = true;
 	float *data = (float *) m_data;
 
 	Stream::EByteOrder backup = stream->getByteOrder();
@@ -2767,7 +2890,7 @@ void Bitmap::writePFM(Stream *stream) const {
 			float *dest = temp;
 
 			for (int x=0; x<m_size.x; ++x) {
-				for (int j=0; j<m_channelCount-1; ++j)
+				for (uint8_t j=0; j<m_channelCount-1; ++j)
 					*dest++ = *source++;
 				source++;
 			}
