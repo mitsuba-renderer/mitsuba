@@ -80,11 +80,11 @@ public:
 	 * When the class implementing this interface is a bitmap-backed texture,
 	 * this function directly returns the underlying bitmap. When it is procedural,
 	 * a bitmap version must first be generated. In this case, the parameter
-	 * \ref resolutionHint is used to control the target resolution. The default
+	 * \ref sizeHint is used to control the target size. The default
 	 * value <tt>-1, -1</tt> allows the implementation to choose a suitable
-	 * resolution by itself.
+	 * size by itself.
 	 */
-	virtual ref<Bitmap> getBitmap(const Vector2i &resolutionHint = Vector2i(-1, -1)) const;
+	virtual ref<Bitmap> getBitmap(const Vector2i &sizeHint = Vector2i(-1, -1)) const;
 
 	MTS_DECLARE_CLASS()
 protected:
@@ -124,11 +124,11 @@ public:
 	 * When the class implementing this interface is a bitmap-backed texture,
 	 * this function directly returns the underlying bitmap. When it is procedural,
 	 * a bitmap version must first be generated. In this case, the parameter
-	 * \ref resolutionHint is used to control the target resolution. The default
+	 * \ref sizeHint is used to control the target size. The default
 	 * value <tt>-1, -1</tt> allows the implementation to choose a suitable
-	 * resolution by itself.
+	 * size by itself.
 	 */
-	virtual ref<Bitmap> getBitmap(const Vector2i &resolutionHint = Vector2i(-1, -1)) const;
+	virtual ref<Bitmap> getBitmap(const Vector2i &sizeHint = Vector2i(-1, -1)) const;
 
 	MTS_DECLARE_CLASS()
 protected:

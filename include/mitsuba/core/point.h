@@ -173,6 +173,9 @@ template <typename T> struct TPoint1 {
 		stream->writeElement<T>(x);
 	}
 
+	/// Implicit conversion to Scalar
+	operator Scalar() const { return x; }
+
 	/// Return a readable string representation of this point
 	std::string toString() const {
 		std::ostringstream oss;

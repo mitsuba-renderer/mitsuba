@@ -101,8 +101,8 @@ Spectrum Texture2D::eval(const Intersection &its, bool filter) const {
 	}
 }
 
-ref<Bitmap> Texture2D::getBitmap(const Vector2i &resolutionHint) const {
-	Vector2i res(resolutionHint);
+ref<Bitmap> Texture2D::getBitmap(const Vector2i &sizeHint) const {
+	Vector2i res(sizeHint);
 	if (res.x <= 0 || res.y <= 0)
 		res = Vector2i(32);
 
