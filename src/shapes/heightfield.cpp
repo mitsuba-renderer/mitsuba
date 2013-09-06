@@ -23,13 +23,24 @@
 #include <mitsuba/core/bitmap.h>
 #include <mitsuba/core/timer.h>
 
+
+#define MTS_QTREE_MAXDEPTH 24 /* Up to 16M x 16M */
+
+		/* TODO: special case for perpendicular rays */
 MTS_NAMESPACE_BEGIN
 
-/*!\plugin{heightfield}{Height field}
- * \order{12}
- *
- * Developed by Milo\^{s} Ha\^{s}an
- */
+namespace {
+	/// Find the smallest t >= 0 such that a*t + b is a multiple of c
+	inline Float nextMultiple(Float a, Float b, Float c) {
+		if (a == 0)
+			return std::numeric_limits<Float>::infinity();
+		else if (a > 0)
+			return (std::ceil(b/c)*c - b) / a;
+		else
+			return (std::floor(b/c)*c - b) / a;
+	}
+};
+
 class Heightfield : public Shape {
 public:
 	Heightfield(const Properties &props) : Shape(props), m_data(NULL) {
@@ -52,6 +63,7 @@ public:
 				freeAligned(m_minmax[i]);
 			delete[] m_minmax;
 			delete[] m_levelSize;
+			delete[] m_blockSizeF;
 		}
     }
 
@@ -60,14 +72,9 @@ public:
 	}
 
 	AABB getAABB() const {
-		AABB aabb(
-			Point3(0, 0, m_minmax[m_levelCount-1][0].min),
-			Point3(m_levelSize[0].x, m_levelSize[0].y, m_minmax[m_levelCount-1][0].max)
-		);
-
 		AABB result;
 		for (int i=0; i<8; ++i)
-			result.expandBy(m_objectToWorld(aabb.getCorner(i)));
+			result.expandBy(m_objectToWorld(m_dataAABB.getCorner(i)));
 
 		return result;
 	}
@@ -83,31 +90,58 @@ public:
 	size_t getEffectivePrimitiveCount() const {
 		return (size_t) m_levelSize[0].x * (size_t) m_levelSize[0].y;
 	}
-
 	struct StackEntry {
-		int level;
-		int x, y;
+		uint32_t level;
+		uint32_t x, y;
+
+		inline std::string toString() const {
+			std::ostringstream oss;
+			oss << "StackEntry[level=" << level << ", x=" << x << ", y=" << y << "]" << endl;
+			return oss.str();
+		}
 	};
 
-#if 0
 	bool rayIntersect(const Ray &_ray, Float mint, Float maxt, Float &t, void *tmp) const {
-		StackEntry stack[MTS_KD_MAXDEPTH];
+		StackEntry stack[MTS_QTREE_MAXDEPTH];
+
+		/* Transform ray into object space */
 		Ray ray;
-		m_objectToWorld(_ray, ray);
-		int idx = 0;
+		m_objectToWorld.inverse()(_ray, ray);
 
-		stack[idx].level = m_levelCount-1;
-		stack[idx].x = 0;
-		stack[idx].y = 0;
+		/* Clamp ray to the bounding box */
+	    Float nearT, farT;
+	    if (!m_dataAABB.rayIntersect(ray, nearT, farT))
+			return false;
+		if (nearT > mint) mint = nearT;
+		if (farT  < maxt) maxt = farT;
+		if (maxt <= mint) return false;
 
-		while (idx >= 0) {
-			const StackEntry &entry    = stack[idx];
-			const Vector2i &size       = m_levelSize[entry.level];
-			const Vector2i &blockSize  = m_levelBlockSize[entry.level];
-			const Interval &interval   = m_minmax[entry.level][entry.x + entry.y * m_levelSize[entry.level].x];
+		/* Rescale the ray so that it has unit length in 2D */
+//		Float length2D = hypot2(ray.d.x * (maxt-mint), ray.d.y * (maxt-mint));
+//		ray.d /= length2D; ray.dRcp *= length2D;
 
+		/* Ray length to cross a single cell along the X or Y axis */
+		Float tDeltaXSingle  = std::abs(ray.dRcp.x),
+		      tDeltaYSingle  = std::abs(ray.dRcp.y);
+
+		/* Cell coordinate increments for steps along the ray */
+		int iDeltaX = (int) signum(ray.d.x),
+			iDeltaY = (int) signum(ray.d.y);
+
+		int stackIdx = 0;
+		stack[stackIdx].level = m_levelCount-1;
+		stack[stackIdx].x = 0;
+		stack[stackIdx].y = 0;
+
+		while (stackIdx >= 0) {
+			StackEntry entry         = stack[stackIdx];
+			const Vector2i &size     = m_levelSize[entry.level];
+			const Interval &interval = m_minmax[entry.level][entry.x + entry.y * m_levelSize[entry.level].x];
+			const Vector2 &blockSize = m_blockSizeF[entry.level];
+
+			/* Intersect against the current min-max quadtree node */
 			AABB aabb(
-				Point3(entry.x * blockSize.x, entry.y * blockSize.y, interval.min),
+				Point3(entry.x       * blockSize.x, entry.y       * blockSize.y, interval.min),
 				Point3((entry.x + 1) * blockSize.x, (entry.y + 1) * blockSize.y, interval.max)
 			);
 
@@ -115,130 +149,61 @@ public:
 			bool match = aabb.rayIntersect(ray, nearT, farT);
 
 			if (!match || farT < mint || nearT > maxt) {
-				--idx;
+				/* Miss -> pop the stack */
+				--stackIdx;
 				continue;
 			}
 
-			if (level == 0) {
-				t = mint;
-				return true;
+			if (entry.level > 0) {
+				/* Inner node -- push child nodes in 2D DDA order */
+				const Vector2 &subBlockSize = m_blockSizeF[entry.level+1];
+				Point2 p(ray.o.x + ray.d.x * nearT,
+				         ray.o.y + ray.d.y * nearT);
+
+				int nextLevel = entry.level + 1;
+				int x = p.x - aabb.min.x >= subBlockSize.x ? 1 : 0;
+				int y = p.y - aabb.min.y >= subBlockSize.y ? 1 : 0;
+
+				floorToInt(p.x / subBlockSize.x); /// Uh oh, this can't work
+				int y = floorToInt(p.y / subBlockSize.y);
+
+				Float tDeltaX = tDeltaXSingle * subBlockSize.x,
+				      tDeltaY = tDeltaYSingle * subBlockSize.y,
+					  tNextX  = nextMultiple(ray.d.x, p.x, subBlockSize.x),
+					  tNextY  = nextMultiple(ray.d.y, p.y, subBlockSize.y);
+
+				Float t = 0;
+				while (t < maxt) {
+					if (tNextX < tNextY) {
+						tNextX += tDeltaX;
+						x += iDeltaX;
+					} else {
+						tNextY += tDeltaY;
+						y += iDeltaY;
+					}
+
+					
+
+					stack[stackIdx+1].level = entry.level + 1;
+					stack[stackIdx+1].x = x;
+					stack[stackIdx+1].y = y;
+					++stackIdx;
+				}
 			} else {
+				cout << "X(" << entry.x + 1 << ", " << entry.y+1 << ") = 1;" << endl;
+				--stackIdx;
 			}
 		}
 
 		return false;
 	}
-#endif
 
-	// =============================================================
-	//  Ray <-> Bilinear patch intersection computation
-	//  Based on the paper "Ray Bilinear Patch Intersections"
-    //  by Ramsey et al., JGT Volume 9, 3, 2004
-	// =============================================================
-
+#if 0
 	struct PatchRecord {
 		Point2 uv;
 		Point p;
 		int x, y;
 	};
-
-	inline Float computeU(Float v, Float A1, Float A2, Float B1, Float B2,
-			Float C1, Float C2, Float D1, Float D2) const {
-		Float a = v*A2+B2;
-		Float b = v*(A2-A1)+B2-B1;
-
-		if (std::abs(b) >= std::abs(a))
-			return (v*(C1-C2)+D1-D2)/b;
-		else
-			return -(v*C2+D2)/a;
-	}
-
-
-	bool rayIntersectPatch(const Ray &ray, int x, int y, Float mint, Float maxt, Float &t, void *tmp) const {
-		int width = m_levelSize[0].x;
-
-		const Float
-			f00 = m_data[x   + y     * width],
-			f01 = m_data[x   + (y+1) * width],
-			f10 = m_data[x+1 + y     * width],
-			f11 = m_data[x+1 + (y+1) * width];
-
-		/* Variables for substitution */
-		const Float
-			a  = f01 + f10 - f11 - f00,
-			b  = f00 - f10,
-			c  = f00 - f01,
-		    dx = x - ray.o.x,
-		    dy = y - ray.o.y,
-		    dz = f00 - ray.o.z,
-			A1 = a*ray.d.x,
-			A2 = a*ray.d.y,
-			B1 = ray.d.z + b*ray.d.x,
-			B2 = b*ray.d.y,
-			C1 = c*ray.d.x,
-			C2 = ray.d.z + c*ray.d.y,
-			D1 = dx*ray.d.z - dz*ray.d.x,
-			D2 = dy*ray.d.z - dz*ray.d.y;
-
-		/* Quadratic equation coefficients */
-		Float A = A2*C1 - A1*C2;
-		Float B = A2*D1 - A1*D2 + B2*C1 - B1*C2;
-		Float C = B2*D1 - B1*D2;
-
-		const Float inf = std::numeric_limits<Float>::infinity();
-		Float v0, v1;
-		if (!solveQuadratic(A, B, C, v0, v1))
-			return false;
-
-		Float u0=inf, u1=inf, t0=inf, t1=inf;
-		Point p0, p1;
-
-		/* Validate & find coordinates of first potential intersection */
-		if (v0 >= 0 && v0 <= 1) {
-			u0 = computeU(v0, A1, A2, B1, B2, C1, C2, D1, D2);
-			if (u0 >= 0 && u0 <= 1) {
-				p0 = Point(x+u0, y+v0, (1.0f - u0) * ((1.0f - v0) * f00 + v0 * f01)
-					+ u0 * ((1.0f - v0) * f10 + v0 * f11));
-				t0 = dot(p0-ray.o, ray.d);
-				if (t0 < mint || t0 > maxt)
-					t0 = inf;
-			}
-		}
-
-		/* Validate & find coordinates of second potential intersection */
-		if (v1 >= 0 && v1 <= 1 && v1 != v0) {
-			u1 = computeU(v1, A1, A2, B1, B2, C1, C2, D1, D2);
-			if (u1 >= 0 && u1 <= 1) {
-				p1 = Point(x+u1, y+v1, (1.0f - u1) * ((1.0f - v1) * f00 + v1 * f01)
-					+ u1 * ((1.0f - v1) * f10 + v1 * f11));
-				t1 = dot(p1-ray.o, ray.d);
-				if (t1 < mint || t1 > maxt)
-					t1 = inf;
-			}
-		}
-
-		if (t0 == inf && t1 == inf)
-			return false;
-
-		if (tmp) {
-			PatchRecord &temp = *((PatchRecord *) tmp);
-			if (t0 <= t1) {
-				t = t0;
-				temp.uv = Point2(u0, v0);
-				temp.p  = p0;
-				temp.x  = x;
-				temp.y  = y;
-			} else {
-				t = t1;
-				temp.uv = Point2(u1, v1);
-				temp.p  = p1;
-				temp.x  = x;
-				temp.y  = y;
-			}
-		}
-
-		return true;
-	}
 
 	void fillIntersectionRecord(const Ray &ray,
 			const void *tmp, Intersection &its) const {
@@ -268,16 +233,7 @@ public:
 		its.instance = NULL;
 		its.time = ray.time;
 	}
-
-	bool rayIntersect(const Ray &ray, Float mint, Float maxt, Float &t, void *tmp) const {
-		for (int y=0; y<m_levelSize[0].y-1; ++y) {
-			for (int x=0; x<m_levelSize[0].x-1; ++x) {
-				if (rayIntersectPatch(ray, x, y, mint, maxt, t, tmp))
-					return true;
-			}
-		}
-		return false;
-	}
+#endif
 
 	bool rayIntersect(const Ray &ray, Float mint, Float maxt) const {
 		Float t;
@@ -289,58 +245,50 @@ public:
 		if (cClass->derivesFrom(Texture::m_theClass)) {
 			ref<Bitmap> bitmap = static_cast<Texture *>(child)->getBitmap(m_sizeHint);
 
-			Vector2i size = bitmap->getSize();
-			if (size.x < 2) size.x = 2;
-			if (size.y < 2) size.y = 2;
-			if (!isPowerOfTwo(size.x)) size.x = (int) roundToPowerOfTwo((uint32_t) size.x);
-			if (!isPowerOfTwo(size.y)) size.y = (int) roundToPowerOfTwo((uint32_t) size.y);
-			m_sizeF = Vector2(size);
-			m_invSizeF = Vector2(1/size.x, 1/size.y);
+			m_dataSize = bitmap->getSize();
+			if (m_dataSize.x < 2) m_dataSize.x = 2;
+			if (m_dataSize.y < 2) m_dataSize.y = 2;
+			if (!isPowerOfTwo(m_dataSize.x - 1)) m_dataSize.x = (int) roundToPowerOfTwo((uint32_t) m_dataSize.x - 1) + 1;
+			if (!isPowerOfTwo(m_dataSize.y - 1)) m_dataSize.y = (int) roundToPowerOfTwo((uint32_t) m_dataSize.y - 1) + 1;
 
-			if (bitmap->getSize() != size) {
-				Log(EWarn, "Heightfield texture size should be at least 2x2 and "
-					"a power of two. Resampling from %ix%i to %ix%i..",
-					bitmap->getWidth(), bitmap->getHeight(), size.x, size.y);
+			if (bitmap->getSize() != m_dataSize) {
+				Log(EInfo, "Resampling heightfield texture from %ix%i to %ix%i..",
+					bitmap->getWidth(), bitmap->getHeight(), m_dataSize.x, m_dataSize.y);
 
 				bitmap = bitmap->resample(NULL, ReconstructionFilter::EClamp,
-					ReconstructionFilter::EClamp, size,
+					ReconstructionFilter::EClamp, m_dataSize,
 					-std::numeric_limits<Float>::infinity(),
 					std::numeric_limits<Float>::infinity());
 			}
 
-			m_data = (Float *) allocAligned((size_t) size.x * (size_t) size.y * sizeof(Float));
+			size_t size = (size_t) m_dataSize.x * (size_t) m_dataSize.y * sizeof(Float),
+			       storageSize = size;
+			m_data = (Float *) allocAligned(size);
 			bitmap->convert(m_data, Bitmap::ELuminance, Bitmap::EFloat);
 
-			Log(EInfo, "Building acceleration data structure for %ix%i height field ..", size.x, size.y);
+			Log(EInfo, "Building acceleration data structure for %ix%i height field ..", m_dataSize.x, m_dataSize.y);
 
 			ref<Timer> timer = new Timer();
-			m_levelCount = (int) std::max(log2i((uint32_t) size.x), log2i((uint32_t) size.y)) + 1;
+			m_levelCount = (int) std::max(log2i((uint32_t) m_dataSize.x-1), log2i((uint32_t) m_dataSize.y-1)) + 1;
 
 			m_levelSize = new Vector2i[m_levelCount];
+			m_blockSizeF = new Vector2[m_levelCount];
 			m_minmax = new Interval*[m_levelCount];
-			m_levelSize[0] = size;
-			m_minmax[0] = NULL;
-			size_t totalStorage = (size_t) size.x * (size_t) size.y * sizeof(float);
-			for (int i=0; m_levelSize[i].x > 1 || m_levelSize[i].y > 1; ++i) {
-				m_levelSize[i+1].x = m_levelSize[i].x > 1 ? (m_levelSize[i].x / 2) : 1;
-				m_levelSize[i+1].y = m_levelSize[i].y > 1 ? (m_levelSize[i].y / 2) : 1;
-				size_t size = (size_t) m_levelSize[i+1].x * (size_t) m_levelSize[i+1].y * sizeof(Interval);
-				m_minmax[i+1] = (Interval *) allocAligned(size);
-				totalStorage += size;
-			}
+
+			m_levelSize[0]  = Vector2i(m_dataSize.x - 1, m_dataSize.y - 1);
+			m_blockSizeF[0] = Vector2(1, 1);
+			size = (size_t) m_levelSize[0].x * (size_t) m_levelSize[0].y * sizeof(Interval);
+			m_minmax[0] = (Interval *) allocAligned(size);
+			storageSize += size;
 
 			/* Build the lowest MIP layer directly from the heightfield data */
-			Interval *bounds = m_minmax[1];
-			for (int y=0; y<m_levelSize[1].y; ++y) {
-				int y0 = std::min(2*y,   m_levelSize[0].y-1),
-					y1 = std::min(2*y+1, m_levelSize[0].y-1);
-				for (int x=0; x<m_levelSize[1].x; ++x) {
-					int x0 = std::min(2*x,   m_levelSize[0].x-1),
-						x1 = std::min(2*x+1, m_levelSize[0].x-1);
-					Float v00 = m_data[y0 * m_levelSize[0].x + x0];
-					Float v01 = m_data[y0 * m_levelSize[0].x + x1];
-					Float v10 = m_data[y1 * m_levelSize[0].x + x0];
-					Float v11 = m_data[y1 * m_levelSize[0].x + x1];
+			Interval *bounds = m_minmax[0];
+			for (int y=0; y<m_levelSize[0].y; ++y) {
+				for (int x=0; x<m_levelSize[0].x; ++x) {
+					Float v00 = m_data[y * m_levelSize[0].x + x];
+					Float v01 = m_data[y * m_levelSize[0].x + x + 1];
+					Float v10 = m_data[(y + 1) * m_levelSize[0].x + x];
+					Float v11 = m_data[(y + 1) * m_levelSize[0].x + x + 1];
 					Float vmin = std::min(std::min(v00, v01), std::min(v10, v11));
 					Float vmax = std::max(std::max(v00, v01), std::max(v10, v11));
 					*bounds++ = Interval(vmin, vmax);
@@ -348,11 +296,25 @@ public:
 			}
 
 			/* Propagate height bounds upwards to the other layers */
-			for (int level=2; level<m_levelCount; ++level) {
-				const Vector2i &cur  = m_levelSize[level],
-					           &prev = m_levelSize[level-1];
-				Interval *curBounds  = m_minmax[level];
-				Interval *prevBounds = m_minmax[level-1];
+			for (int level=1; level<m_levelCount; ++level) {
+				Vector2i &cur  = m_levelSize[level],
+				         &prev = m_levelSize[level-1];
+
+				/* Calculate size of this layer */
+				cur.x = prev.x > 1 ? (prev.x / 2) : 1;
+				cur.y = prev.y > 1 ? (prev.y / 2) : 1;
+				m_blockSizeF[level] = Vector2(
+					m_levelSize[0].x / cur.x,
+					m_levelSize[0].y / cur.y
+				);
+
+				/* Allocate memory for interval data */
+				Interval *prevBounds = m_minmax[level-1], *curBounds;
+				size_t size = (size_t) cur.x * (size_t) cur.y * sizeof(Interval);
+				m_minmax[level] = curBounds = (Interval *) allocAligned(size);
+				storageSize += size;
+
+				/* Build by querying the previous layer */
 				for (int y=0; y<cur.y; ++y) {
 					int y0 = std::min(2*y,   prev.y-1),
 						y1 = std::min(2*y+1, prev.y-1);
@@ -369,8 +331,13 @@ public:
 					}
 				}
 			}
-			Log(EInfo, "Done (took %i ms, %s)", timer->getMilliseconds(),
-					memString(totalStorage).c_str());
+			Log(EInfo, "Done (took %i ms, uses %s of memory)", timer->getMilliseconds(),
+					memString(storageSize).c_str());
+
+			m_dataAABB = AABB(
+				Point3(0, 0, m_minmax[m_levelCount-1][0].min),
+				Point3(m_levelSize[0].x, m_levelSize[0].y, m_minmax[m_levelCount-1][0].max)
+			);
 		} else {
 			Shape::addChild(name, child);
 		}
@@ -385,12 +352,19 @@ public:
 
 	MTS_DECLARE_CLASS()
 private:
-	Vector2i m_sizeHint, *m_levelSize, *m_levelBlockSize;
-	Vector2 m_sizeF, m_invSizeF;
-	int m_levelCount;
-	Float *m_data;
-	Interval **m_minmax;
 	Transform m_objectToWorld;
+	Vector2i m_sizeHint;
+	AABB m_dataAABB;
+
+	/* Height field data */
+	Float *m_data;
+	Vector2i m_dataSize;
+
+	/* Min-max quadtree data */
+	int m_levelCount;
+	Vector2i *m_levelSize;
+	Vector2 *m_blockSizeF;
+	Interval **m_minmax;
 };
 
 MTS_IMPLEMENT_CLASS_S(Heightfield, false, Shape)
