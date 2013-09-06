@@ -98,7 +98,7 @@ template <typename _PointType, typename _VectorType> struct TRay {
 	/// Set the origin
 	inline void setOrigin(const PointType &pos) { o = pos; }
 
-	/// Set the origin
+	/// Set the time
 	inline void setTime(Scalar tval) { time = tval; }
 
 	/// Set the direction and update the reciprocal
