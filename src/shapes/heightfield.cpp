@@ -23,10 +23,8 @@
 #include <mitsuba/core/bitmap.h>
 #include <mitsuba/core/timer.h>
 
-
 #define MTS_QTREE_MAXDEPTH 24 /* Up to 16M x 16M */
 
-		/* TODO: special case for perpendicular rays */
 MTS_NAMESPACE_BEGIN
 
 namespace {
@@ -63,6 +61,7 @@ public:
 				freeAligned(m_minmax[i]);
 			delete[] m_minmax;
 			delete[] m_levelSize;
+			delete[] m_numChildren;
 			delete[] m_blockSizeF;
 		}
     }
@@ -80,7 +79,7 @@ public:
 	}
 
 	Float getSurfaceArea() const {
-		return 0; /// XXX
+		return m_surfaceArea; /// XXX transformed surface area? ...
 	}
 
 	size_t getPrimitiveCount() const {
@@ -91,14 +90,20 @@ public:
 		return (size_t) m_levelSize[0].x * (size_t) m_levelSize[0].y;
 	}
 	struct StackEntry {
-		uint32_t level;
-		uint32_t x, y;
+		int level;
+		int x, y;
 
 		inline std::string toString() const {
 			std::ostringstream oss;
 			oss << "StackEntry[level=" << level << ", x=" << x << ", y=" << y << "]" << endl;
 			return oss.str();
 		}
+	};
+
+	struct PatchRecord {
+		Point2 uv;
+		Point p;
+		int x, y;
 	};
 
 	bool rayIntersect(const Ray &_ray, Float mint, Float maxt, Float &t, void *tmp) const {
@@ -108,13 +113,7 @@ public:
 		Ray ray;
 		m_objectToWorld.inverse()(_ray, ray);
 
-		/* Clamp ray to the bounding box */
-	    Float nearT, farT;
-	    if (!m_dataAABB.rayIntersect(ray, nearT, farT))
-			return false;
-		if (nearT > mint) mint = nearT;
-		if (farT  < maxt) maxt = farT;
-		if (maxt <= mint) return false;
+		cout << "Tracing ray " << ray.toString() << maxt << endl;
 
 		/* Rescale the ray so that it has unit length in 2D */
 //		Float length2D = hypot2(ray.d.x * (maxt-mint), ray.d.y * (maxt-mint));
@@ -128,16 +127,25 @@ public:
 		int iDeltaX = (int) signum(ray.d.x),
 			iDeltaY = (int) signum(ray.d.y);
 
+		if (iDeltaX == 0 && iDeltaY == 0) {
+			/* TODO: special case for perpendicular rays. Also, provide int version of signum */
+			return false;
+		}
+
+		cout << "tDeltaSingle=" << tDeltaXSingle << ", " << tDeltaYSingle << endl;
+		cout << "iDeltaX=" << iDeltaX << ", " << iDeltaY << endl;
+
 		int stackIdx = 0;
 		stack[stackIdx].level = m_levelCount-1;
 		stack[stackIdx].x = 0;
 		stack[stackIdx].y = 0;
 
 		while (stackIdx >= 0) {
-			StackEntry entry         = stack[stackIdx];
-			const Vector2i &size     = m_levelSize[entry.level];
+			StackEntry entry         = stack[stackIdx--];
 			const Interval &interval = m_minmax[entry.level][entry.x + entry.y * m_levelSize[entry.level].x];
 			const Vector2 &blockSize = m_blockSizeF[entry.level];
+
+			cout << endl << "Processing stack entry: " << entry.toString() << endl;
 
 			/* Intersect against the current min-max quadtree node */
 			AABB aabb(
@@ -147,51 +155,90 @@ public:
 
 			Float nearT, farT;
 			bool match = aabb.rayIntersect(ray, nearT, farT);
-
-			if (!match || farT < mint || nearT > maxt) {
-				/* Miss -> pop the stack */
-				--stackIdx;
+			if (!match) {
+				cout << "Miss (1)!" << endl;
 				continue;
 			}
 
+			nearT = std::max(nearT, mint); farT = std::min(farT, maxt);
+			if (nearT > farT) {
+				cout << "Miss (2), nearT=" << nearT << ", farT=" << farT << "!" << endl;
+				continue;
+			}
+
+			Point2 enter(ray.o.x + ray.d.x * nearT - aabb.min.x,
+				         ray.o.y + ray.d.y * nearT - aabb.min.y);
+			Float tMax = farT - nearT;
+
+			cout << "enter=" << enter.toString() << endl;
+
 			if (entry.level > 0) {
 				/* Inner node -- push child nodes in 2D DDA order */
-				const Vector2 &subBlockSize = m_blockSizeF[entry.level+1];
-				Point2 p(ray.o.x + ray.d.x * nearT,
-				         ray.o.y + ray.d.y * nearT);
+				const Vector2i &numChildren = m_numChildren[entry.level];
+				const Vector2 &subBlockSize = m_blockSizeF[--entry.level];
+				entry.x *= numChildren.x; entry.y *= numChildren.y;
 
-				int nextLevel = entry.level + 1;
-				int x = p.x - aabb.min.x >= subBlockSize.x ? 1 : 0;
-				int y = p.y - aabb.min.y >= subBlockSize.y ? 1 : 0;
-
-				floorToInt(p.x / subBlockSize.x); /// Uh oh, this can't work
-				int y = floorToInt(p.y / subBlockSize.y);
+				int x = (enter.x >= subBlockSize.x) ? numChildren.x-1 : 0; /// precompute, then use ceil?
+				int y = (enter.y >= subBlockSize.y) ? numChildren.y-1 : 0;
 
 				Float tDeltaX = tDeltaXSingle * subBlockSize.x,
 				      tDeltaY = tDeltaYSingle * subBlockSize.y,
 					  tNextX  = nextMultiple(ray.d.x, p.x, subBlockSize.x),
-					  tNextY  = nextMultiple(ray.d.y, p.y, subBlockSize.y);
+					  tNextY  = nextMultiple(ray.d.y, p.y, subBlockSize.y),
+					  t       = 0;
 
-				Float t = 0;
-				while (t < maxt) {
+				cout << "x,y=" << x << "," << y << endl;
+				cout << "tDelta=" << tDeltaX << ", " << tDeltaY << endl;
+				cout << "tNext=" << tNextX << ", " << tNextY << endl;
+
+				while ((uint32_t) x < (uint32_t) numChildren.x &&
+				       (uint32_t) y < (uint32_t) numChildren.y && t < tMax) {
+					stack[++stackIdx].level = entry.level;
+					stack[stackIdx].x = entry.x + x;
+					stack[stackIdx].y = entry.y + y;
+					cout << "Adding node" << stack[stackIdx].toString() << endl;
+
 					if (tNextX < tNextY) {
+						t = tNextX;
 						tNextX += tDeltaX;
 						x += iDeltaX;
 					} else {
+						t = tNextY;
 						tNextY += tDeltaY;
 						y += iDeltaY;
 					}
-
-					
-
-					stack[stackIdx+1].level = entry.level + 1;
-					stack[stackIdx+1].x = x;
-					stack[stackIdx+1].y = y;
-					++stackIdx;
 				}
 			} else {
-				cout << "X(" << entry.x + 1 << ", " << entry.y+1 << ") = 1;" << endl;
-				--stackIdx;
+				Float
+					f00 = m_data[entry.y * m_dataSize.x + entry.x],
+					f01 = m_data[(entry.y + 1) * m_dataSize.x + entry.x],
+					f10 = m_data[entry.y * m_dataSize.x + entry.x + 1],
+					f11 = m_data[(entry.y + 1) * m_dataSize.x + entry.x + 1];
+
+				Float A = ray.d.x * ray.d.y * (f00 - f01 - f10 + f11);
+				Float B = ray.d.y * (f01 - f00 + enter.x * (f00 - f01 - f10 + f11))
+				        + ray.d.x * (f10 - f00 + enter.y * (f00 - f01 - f10 + f11))
+						- ray.d.z;
+				Float C = (enter.x - 1) * (enter.y - 1) * f00
+				        + enter.y * f01 + enter.x * (f10 - enter.y * (f01 + f10 - f11))
+				        - ray.o.y - ray.d.y * nearT;
+
+				cout << "Leaf node. Quadratic polynomial: " << A << ", " << B << ", " << C << endl;
+
+				Float t0, t1;
+				if (!solveQuadratic(A, B, C, t0, t1)) {
+					cout << "No solution!" << endl;
+					continue;
+				}
+				cout << "Solved for t0=" << t0 << ", t1=" << t1 << "." << endl;
+				if (t0 < 0 || t1 > tMax) {
+					cout << "Solution is out of bounds!" << endl;
+					continue;
+				}
+				t = (t0 >= 0) ? t0 : t1;
+				cout << "Decided on t=" << t << endl;
+
+				return true;
 			}
 		}
 
@@ -199,12 +246,6 @@ public:
 	}
 
 #if 0
-	struct PatchRecord {
-		Point2 uv;
-		Point p;
-		int x, y;
-	};
-
 	void fillIntersectionRecord(const Ray &ray,
 			const void *tmp, Intersection &its) const {
 		PatchRecord &temp = *((PatchRecord *) tmp);
@@ -272,11 +313,13 @@ public:
 			m_levelCount = (int) std::max(log2i((uint32_t) m_dataSize.x-1), log2i((uint32_t) m_dataSize.y-1)) + 1;
 
 			m_levelSize = new Vector2i[m_levelCount];
+			m_numChildren = new Vector2i[m_levelCount];
 			m_blockSizeF = new Vector2[m_levelCount];
 			m_minmax = new Interval*[m_levelCount];
 
 			m_levelSize[0]  = Vector2i(m_dataSize.x - 1, m_dataSize.y - 1);
 			m_blockSizeF[0] = Vector2(1, 1);
+			m_surfaceArea = 0;
 			size = (size_t) m_levelSize[0].x * (size_t) m_levelSize[0].y * sizeof(Interval);
 			m_minmax[0] = (Interval *) allocAligned(size);
 			storageSize += size;
@@ -292,6 +335,10 @@ public:
 					Float vmin = std::min(std::min(v00, v01), std::min(v10, v11));
 					Float vmax = std::max(std::max(v00, v01), std::max(v10, v11));
 					*bounds++ = Interval(vmin, vmax);
+
+					/* Estimate the total surface area (this is approximate) */
+					Float diff0 = v01-v10, diff1 = v00-v11;
+					m_surfaceArea += std::sqrt(1.0f + .5f * (diff0*diff0 + diff1*diff1));
 				}
 			}
 
@@ -303,6 +350,9 @@ public:
 				/* Calculate size of this layer */
 				cur.x = prev.x > 1 ? (prev.x / 2) : 1;
 				cur.y = prev.y > 1 ? (prev.y / 2) : 1;
+
+				m_numChildren[level].x = prev.x > 1 ? 2 : 1;
+				m_numChildren[level].y = prev.y > 1 ? 2 : 1;
 				m_blockSizeF[level] = Vector2(
 					m_levelSize[0].x / cur.x,
 					m_levelSize[0].y / cur.y
@@ -331,6 +381,7 @@ public:
 					}
 				}
 			}
+
 			Log(EInfo, "Done (took %i ms, uses %s of memory)", timer->getMilliseconds(),
 					memString(storageSize).c_str());
 
@@ -359,10 +410,12 @@ private:
 	/* Height field data */
 	Float *m_data;
 	Vector2i m_dataSize;
+	Float m_surfaceArea;
 
 	/* Min-max quadtree data */
 	int m_levelCount;
 	Vector2i *m_levelSize;
+	Vector2i *m_numChildren;
 	Vector2 *m_blockSizeF;
 	Interval **m_minmax;
 };
