@@ -23,20 +23,28 @@
 #include <mitsuba/core/bitmap.h>
 #include <mitsuba/core/timer.h>
 
-#define MTS_QTREE_MAXDEPTH 24 /* Up to 16M x 16M */
+#define MTS_QTREE_MAXDEPTH 50
 
 MTS_NAMESPACE_BEGIN
 
 namespace {
 	/// Find the smallest t >= 0 such that a*t + b is a multiple of c
 	inline Float nextMultiple(Float a, Float b, Float c) {
-		if (a == 0)
-			return std::numeric_limits<Float>::infinity();
-		else if (a > 0)
-			return (std::ceil(b/c)*c - b) / a;
-		else
-			return (std::floor(b/c)*c - b) / a;
+		Float tmp     = b/c,
+			  rounded = (a > 0 ? std::ceil(tmp) : std::floor(tmp)) * c,
+			  diff    = rounded - b;
+
+		if (diff == 0)
+			diff = signum(a) * c;
+
+		return diff / a;
 	}
+
+	/// Temporary storage for patch-ray intersections
+	struct PatchIntersectionRecord {
+		Point p;   //< Intersection in local coordinates
+		int x, y;
+	};
 };
 
 class Heightfield : public Shape {
@@ -62,7 +70,7 @@ public:
 			delete[] m_minmax;
 			delete[] m_levelSize;
 			delete[] m_numChildren;
-			delete[] m_blockSizeF;
+			delete[] m_blockSize;
 		}
     }
 
@@ -89,22 +97,18 @@ public:
 	size_t getEffectivePrimitiveCount() const {
 		return (size_t) m_levelSize[0].x * (size_t) m_levelSize[0].y;
 	}
+
 	struct StackEntry {
 		int level;
 		int x, y;
 
 		inline std::string toString() const {
 			std::ostringstream oss;
-			oss << "StackEntry[level=" << level << ", x=" << x << ", y=" << y << "]" << endl;
+			oss << "StackEntry[level=" << level << ", x=" << x << ", y=" << y << "]";
 			return oss.str();
 		}
 	};
 
-	struct PatchRecord {
-		Point2 uv;
-		Point p;
-		int x, y;
-	};
 
 	bool rayIntersect(const Ray &_ray, Float mint, Float maxt, Float &t, void *tmp) const {
 		StackEntry stack[MTS_QTREE_MAXDEPTH];
@@ -113,27 +117,18 @@ public:
 		Ray ray;
 		m_objectToWorld.inverse()(_ray, ray);
 
-		cout << "Tracing ray " << ray.toString() << maxt << endl;
-
-		/* Rescale the ray so that it has unit length in 2D */
-//		Float length2D = hypot2(ray.d.x * (maxt-mint), ray.d.y * (maxt-mint));
-//		ray.d /= length2D; ray.dRcp *= length2D;
-
 		/* Ray length to cross a single cell along the X or Y axis */
-		Float tDeltaXSingle  = std::abs(ray.dRcp.x),
-		      tDeltaYSingle  = std::abs(ray.dRcp.y);
+		Float tDeltaXSingle = std::abs(ray.dRcp.x),
+		      tDeltaYSingle = std::abs(ray.dRcp.y);
 
 		/* Cell coordinate increments for steps along the ray */
-		int iDeltaX = (int) signum(ray.d.x),
-			iDeltaY = (int) signum(ray.d.y);
+		int iDeltaX = signumToInt(ray.d.x),
+			iDeltaY = signumToInt(ray.d.y);
 
 		if (iDeltaX == 0 && iDeltaY == 0) {
-			/* TODO: special case for perpendicular rays. Also, provide int version of signum */
+			/* TODO: special case for perpendicular rays */
 			return false;
 		}
-
-		cout << "tDeltaSingle=" << tDeltaXSingle << ", " << tDeltaYSingle << endl;
-		cout << "iDeltaX=" << iDeltaX << ", " << iDeltaY << endl;
 
 		int stackIdx = 0;
 		stack[stackIdx].level = m_levelCount-1;
@@ -143,69 +138,53 @@ public:
 		while (stackIdx >= 0) {
 			StackEntry entry         = stack[stackIdx--];
 			const Interval &interval = m_minmax[entry.level][entry.x + entry.y * m_levelSize[entry.level].x];
-			const Vector2 &blockSize = m_blockSizeF[entry.level];
-
-			cout << endl << "Processing stack entry: " << entry.toString() << endl;
+			const Vector2 &blockSize = m_blockSize[entry.level];
+			Ray localRay(Point(ray.o.x - entry.x*blockSize.x, ray.o.y - entry.y*blockSize.y, ray.o.z), ray.d, 0);
 
 			/* Intersect against the current min-max quadtree node */
 			AABB aabb(
-				Point3(entry.x       * blockSize.x, entry.y       * blockSize.y, interval.min),
-				Point3((entry.x + 1) * blockSize.x, (entry.y + 1) * blockSize.y, interval.max)
+				Point3(0, 0, interval.min),
+				Point3(blockSize.x, blockSize.y, interval.max)
 			);
 
-			Float nearT, farT;
-			bool match = aabb.rayIntersect(ray, nearT, farT);
-			if (!match) {
-				cout << "Miss (1)!" << endl;
-				continue;
-			}
+			Float nearT = mint, farT = maxt;
+			Point enterPt, exitPt;
 
-			nearT = std::max(nearT, mint); farT = std::min(farT, maxt);
-			if (nearT > farT) {
-				cout << "Miss (2), nearT=" << nearT << ", farT=" << farT << "!" << endl;
+			if (!aabb.rayIntersect(localRay, nearT, farT, enterPt, exitPt))
 				continue;
-			}
 
-			Point2 enter(ray.o.x + ray.d.x * nearT - aabb.min.x,
-				         ray.o.y + ray.d.y * nearT - aabb.min.y);
 			Float tMax = farT - nearT;
-
-			cout << "enter=" << enter.toString() << endl;
 
 			if (entry.level > 0) {
 				/* Inner node -- push child nodes in 2D DDA order */
 				const Vector2i &numChildren = m_numChildren[entry.level];
-				const Vector2 &subBlockSize = m_blockSizeF[--entry.level];
+				const Vector2 &subBlockSize = m_blockSize[--entry.level];
 				entry.x *= numChildren.x; entry.y *= numChildren.y;
 
-				int x = (enter.x >= subBlockSize.x) ? numChildren.x-1 : 0; /// precompute, then use ceil?
-				int y = (enter.y >= subBlockSize.y) ? numChildren.y-1 : 0;
+				int x = (exitPt.x >= subBlockSize.x) ? numChildren.x-1 : 0;
+				int y = (exitPt.y >= subBlockSize.y) ? numChildren.y-1 : 0;
 
 				Float tDeltaX = tDeltaXSingle * subBlockSize.x,
 				      tDeltaY = tDeltaYSingle * subBlockSize.y,
-					  tNextX  = nextMultiple(ray.d.x, p.x, subBlockSize.x),
-					  tNextY  = nextMultiple(ray.d.y, p.y, subBlockSize.y),
+					  tNextX  = nextMultiple(-ray.d.x, exitPt.x, subBlockSize.x),
+					  tNextY  = nextMultiple(-ray.d.y, exitPt.y, subBlockSize.y),
 					  t       = 0;
 
-				cout << "x,y=" << x << "," << y << endl;
-				cout << "tDelta=" << tDeltaX << ", " << tDeltaY << endl;
-				cout << "tNext=" << tNextX << ", " << tNextY << endl;
-
 				while ((uint32_t) x < (uint32_t) numChildren.x &&
-				       (uint32_t) y < (uint32_t) numChildren.y && t < tMax) {
+				       (uint32_t) y < (uint32_t) numChildren.y && t <= tMax) {
+					SAssert(stackIdx+1 < MTS_QTREE_MAXDEPTH);
 					stack[++stackIdx].level = entry.level;
 					stack[stackIdx].x = entry.x + x;
 					stack[stackIdx].y = entry.y + y;
-					cout << "Adding node" << stack[stackIdx].toString() << endl;
 
 					if (tNextX < tNextY) {
 						t = tNextX;
 						tNextX += tDeltaX;
-						x += iDeltaX;
+						x -= iDeltaX;
 					} else {
 						t = tNextY;
 						tNextY += tDeltaY;
-						y += iDeltaY;
+						y -= iDeltaY;
 					}
 				}
 			} else {
@@ -216,27 +195,32 @@ public:
 					f11 = m_data[(entry.y + 1) * m_dataSize.x + entry.x + 1];
 
 				Float A = ray.d.x * ray.d.y * (f00 - f01 - f10 + f11);
-				Float B = ray.d.y * (f01 - f00 + enter.x * (f00 - f01 - f10 + f11))
-				        + ray.d.x * (f10 - f00 + enter.y * (f00 - f01 - f10 + f11))
+				Float B = ray.d.y * (f01 - f00 + enterPt.x * (f00 - f01 - f10 + f11))
+				        + ray.d.x * (f10 - f00 + enterPt.y * (f00 - f01 - f10 + f11))
 						- ray.d.z;
-				Float C = (enter.x - 1) * (enter.y - 1) * f00
-				        + enter.y * f01 + enter.x * (f10 - enter.y * (f01 + f10 - f11))
-				        - ray.o.y - ray.d.y * nearT;
-
-				cout << "Leaf node. Quadratic polynomial: " << A << ", " << B << ", " << C << endl;
+				Float C = (enterPt.x - 1) * (enterPt.y - 1) * f00
+				        + enterPt.y * f01 + enterPt.x * (f10 - enterPt.y * (f01 + f10 - f11))
+				        - enterPt.z;
 
 				Float t0, t1;
-				if (!solveQuadratic(A, B, C, t0, t1)) {
-					cout << "No solution!" << endl;
+				if (!solveQuadratic(A, B, C, t0, t1))
 					continue;
-				}
-				cout << "Solved for t0=" << t0 << ", t1=" << t1 << "." << endl;
-				if (t0 < 0 || t1 > tMax) {
-					cout << "Solution is out of bounds!" << endl;
+
+				if (t0 >= -Epsilon && t0 <= tMax + Epsilon)
+					t = t0;
+				else if (t1 >= -Epsilon && t1 <= tMax + Epsilon)
+					t = t1;
+				else
 					continue;
+
+				if (tmp) {
+					PatchIntersectionRecord &temp = *((PatchIntersectionRecord *) tmp);
+					Point pLocal = enterPt + ray.d * t;
+					temp.x = entry.x;
+					temp.y = entry.y;
+					temp.p = pLocal;
+					t += nearT;
 				}
-				t = (t0 >= 0) ? t0 : t1;
-				cout << "Decided on t=" << t << endl;
 
 				return true;
 			}
@@ -245,26 +229,25 @@ public:
 		return false;
 	}
 
-#if 0
 	void fillIntersectionRecord(const Ray &ray,
 			const void *tmp, Intersection &its) const {
-		PatchRecord &temp = *((PatchRecord *) tmp);
+		PatchIntersectionRecord &temp = *((PatchIntersectionRecord *) tmp);
 
-		int x = temp.x, y = temp.y, width = m_levelSize[0].x;
+		int x = temp.x, y = temp.y, width = m_dataSize.x;
 		Float
-			f00 = m_data[x   + y     * width],
-			f01 = m_data[x   + (y+1) * width],
-			f10 = m_data[x+1 + y     * width],
-			f11 = m_data[x+1 + (y+1) * width];
+			f00 = m_data[y     * width + x],
+			f01 = m_data[(y+1) * width + x],
+			f10 = m_data[y     * width + x + 1],
+			f11 = m_data[(y+1) * width + x + 1];
 
-		its.uv = Point2((x+temp.uv.x) * m_invSize.x, (y+temp.uv.y) * m_invSize.y);
-		its.p  = temp.p;
+		its.p  = Point(temp.p.x + temp.x, temp.p.y + temp.y, temp.p.z);
 
-		its.dpdu = Vector(1, 0, (1.0f - its.uv.y) * (f10 - f00) + its.uv.y * (f11 - f01));
-		its.dpdv = Vector(0, 1, (1.0f - its.uv.x) * (f01 - f00) + its.uv.x * (f11 - f10));
-		its.geoFrame.n = cross(its.dpdu, its.dpdv);
+		its.uv = Point2(its.p.x / m_levelSize[0].x, its.p.y / m_levelSize[0].y);
+		its.dpdu = Vector(1, 0, (1.0f - temp.p.y) * (f10 - f00) + temp.p.y * (f11 - f01)) * m_levelSize[0].x;
+		its.dpdv = Vector(0, 1, (1.0f - temp.p.x) * (f01 - f00) + temp.p.x * (f11 - f10)) * m_levelSize[0].y;
 		its.geoFrame.s = normalize(its.dpdu);
-		its.geoFrame.t = normalize(its.dpdv);
+		its.geoFrame.t = normalize(its.dpdv - dot(its.dpdv, its.geoFrame.s) * its.geoFrame.s);
+		its.geoFrame.n = cross(its.geoFrame.s, its.geoFrame.t);
 
 		its.shFrame = its.geoFrame;
 		its.shape = this;
@@ -274,7 +257,6 @@ public:
 		its.instance = NULL;
 		its.time = ray.time;
 	}
-#endif
 
 	bool rayIntersect(const Ray &ray, Float mint, Float maxt) const {
 		Float t;
@@ -314,11 +296,11 @@ public:
 
 			m_levelSize = new Vector2i[m_levelCount];
 			m_numChildren = new Vector2i[m_levelCount];
-			m_blockSizeF = new Vector2[m_levelCount];
+			m_blockSize = new Vector2[m_levelCount];
 			m_minmax = new Interval*[m_levelCount];
 
 			m_levelSize[0]  = Vector2i(m_dataSize.x - 1, m_dataSize.y - 1);
-			m_blockSizeF[0] = Vector2(1, 1);
+			m_blockSize[0] = Vector2(1, 1);
 			m_surfaceArea = 0;
 			size = (size_t) m_levelSize[0].x * (size_t) m_levelSize[0].y * sizeof(Interval);
 			m_minmax[0] = (Interval *) allocAligned(size);
@@ -328,10 +310,10 @@ public:
 			Interval *bounds = m_minmax[0];
 			for (int y=0; y<m_levelSize[0].y; ++y) {
 				for (int x=0; x<m_levelSize[0].x; ++x) {
-					Float v00 = m_data[y * m_levelSize[0].x + x];
-					Float v01 = m_data[y * m_levelSize[0].x + x + 1];
-					Float v10 = m_data[(y + 1) * m_levelSize[0].x + x];
-					Float v11 = m_data[(y + 1) * m_levelSize[0].x + x + 1];
+					Float v00 = m_data[y * m_dataSize.x + x];
+					Float v01 = m_data[y * m_dataSize.x + x + 1];
+					Float v10 = m_data[(y + 1) * m_dataSize.x + x];
+					Float v11 = m_data[(y + 1) * m_dataSize.x + x + 1];
 					Float vmin = std::min(std::min(v00, v01), std::min(v10, v11));
 					Float vmax = std::max(std::max(v00, v01), std::max(v10, v11));
 					*bounds++ = Interval(vmin, vmax);
@@ -353,7 +335,7 @@ public:
 
 				m_numChildren[level].x = prev.x > 1 ? 2 : 1;
 				m_numChildren[level].y = prev.y > 1 ? 2 : 1;
-				m_blockSizeF[level] = Vector2(
+				m_blockSize[level] = Vector2(
 					m_levelSize[0].x / cur.x,
 					m_levelSize[0].y / cur.y
 				);
@@ -416,7 +398,7 @@ private:
 	int m_levelCount;
 	Vector2i *m_levelSize;
 	Vector2i *m_numChildren;
-	Vector2 *m_blockSizeF;
+	Vector2 *m_blockSize;
 	Interval **m_minmax;
 };
 
