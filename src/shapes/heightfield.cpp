@@ -42,24 +42,30 @@ namespace {
 
 	/// Temporary storage for patch-ray intersections
 	struct PatchIntersectionRecord {
-		Point p;   //< Intersection in local coordinates
+		Point p;
 		int x, y;
+	};
+
+	/// Stack entry for recursive quadtree traversal
+	struct StackEntry {
+		int level, x, y;
 	};
 };
 
 class Heightfield : public Shape {
 public:
-	Heightfield(const Properties &props) : Shape(props), m_data(NULL) {
+	Heightfield(const Properties &props) : Shape(props), m_data(NULL), m_normals(NULL) {
 		m_sizeHint = Vector2i(
 			props.getInteger("width", -1),
 			props.getInteger("height", -1)
 		);
 
 		m_objectToWorld = props.getTransform("toWorld", Transform());
+		m_shadingNormals = props.getBoolean("shadingNormals", true);
 	}
 
 	Heightfield(Stream *stream, InstanceManager *manager)
-		: Shape(stream, manager), m_data(NULL) {
+		: Shape(stream, manager), m_data(NULL), m_normals(NULL) {
 	}
 
 	~Heightfield() {
@@ -72,6 +78,8 @@ public:
 			delete[] m_numChildren;
 			delete[] m_blockSize;
 		}
+		if (m_normals)
+			freeAligned(m_normals);
     }
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
@@ -97,18 +105,6 @@ public:
 	size_t getEffectivePrimitiveCount() const {
 		return (size_t) m_levelSize[0].x * (size_t) m_levelSize[0].y;
 	}
-
-	struct StackEntry {
-		int level;
-		int x, y;
-
-		inline std::string toString() const {
-			std::ostringstream oss;
-			oss << "StackEntry[level=" << level << ", x=" << x << ", y=" << y << "]";
-			return oss.str();
-		}
-	};
-
 
 	bool rayIntersect(const Ray &_ray, Float mint, Float maxt, Float &t, void *tmp) const {
 		StackEntry stack[MTS_QTREE_MAXDEPTH];
@@ -172,7 +168,6 @@ public:
 
 				while ((uint32_t) x < (uint32_t) numChildren.x &&
 				       (uint32_t) y < (uint32_t) numChildren.y && t <= tMax) {
-					SAssert(stackIdx+1 < MTS_QTREE_MAXDEPTH);
 					stack[++stackIdx].level = entry.level;
 					stack[stackIdx].x = entry.x + x;
 					stack[stackIdx].y = entry.y + y;
@@ -245,11 +240,27 @@ public:
 		its.uv = Point2(its.p.x / m_levelSize[0].x, its.p.y / m_levelSize[0].y);
 		its.dpdu = Vector(1, 0, (1.0f - temp.p.y) * (f10 - f00) + temp.p.y * (f11 - f01)) * m_levelSize[0].x;
 		its.dpdv = Vector(0, 1, (1.0f - temp.p.x) * (f01 - f00) + temp.p.x * (f11 - f10)) * m_levelSize[0].y;
+
 		its.geoFrame.s = normalize(its.dpdu);
 		its.geoFrame.t = normalize(its.dpdv - dot(its.dpdv, its.geoFrame.s) * its.geoFrame.s);
 		its.geoFrame.n = cross(its.geoFrame.s, its.geoFrame.t);
 
-		its.shFrame = its.geoFrame;
+		if (m_shadingNormals) {
+			Normal
+				n00 = m_normals[y     * width + x],
+				n01 = m_normals[(y+1) * width + x],
+				n10 = m_normals[y     * width + x + 1],
+				n11 = m_normals[(y+1) * width + x + 1];
+
+			its.shFrame.n = normalize(
+				(1 - temp.p.x) * ((1-temp.p.y) * n00 + temp.p.y * n01)
+				   + temp.p.x  * ((1-temp.p.y) * n10 + temp.p.y * n11));
+
+			its.shFrame.s = normalize(its.geoFrame.s - dot(its.geoFrame.s, its.shFrame.n) * its.shFrame.n);
+			its.shFrame.t = cross(its.shFrame.n, its.shFrame.s);
+		} else {
+			its.shFrame = its.geoFrame;
+		}
 		its.shape = this;
 
  		its.wi = its.toLocal(-ray.d);
@@ -266,6 +277,9 @@ public:
 	void addChild(const std::string &name, ConfigurableObject *child) {
 		const Class *cClass = child->getClass();
 		if (cClass->derivesFrom(Texture::m_theClass)) {
+			if (m_data != NULL)
+				Log(EError, "Attempted to attach multiple textures to a height field shape!");
+
 			ref<Bitmap> bitmap = static_cast<Texture *>(child)->getBitmap(m_sizeHint);
 
 			m_dataSize = bitmap->getSize();
@@ -287,6 +301,14 @@ public:
 			size_t size = (size_t) m_dataSize.x * (size_t) m_dataSize.y * sizeof(Float),
 			       storageSize = size;
 			m_data = (Float *) allocAligned(size);
+
+			if (m_shadingNormals) {
+				size *= 3;
+				m_normals = (Normal *) allocAligned(size);
+				memset(m_normals, 0, size);
+				storageSize += size;
+			}
+
 			bitmap->convert(m_data, Bitmap::ELuminance, Bitmap::EFloat);
 
 			Log(EInfo, "Building acceleration data structure for %ix%i height field ..", m_dataSize.x, m_dataSize.y);
@@ -310,16 +332,16 @@ public:
 			Interval *bounds = m_minmax[0];
 			for (int y=0; y<m_levelSize[0].y; ++y) {
 				for (int x=0; x<m_levelSize[0].x; ++x) {
-					Float v00 = m_data[y * m_dataSize.x + x];
-					Float v01 = m_data[y * m_dataSize.x + x + 1];
-					Float v10 = m_data[(y + 1) * m_dataSize.x + x];
-					Float v11 = m_data[(y + 1) * m_dataSize.x + x + 1];
-					Float vmin = std::min(std::min(v00, v01), std::min(v10, v11));
-					Float vmax = std::max(std::max(v00, v01), std::max(v10, v11));
-					*bounds++ = Interval(vmin, vmax);
+					Float f00 = m_data[y * m_dataSize.x + x];
+					Float f10 = m_data[y * m_dataSize.x + x + 1];
+					Float f01 = m_data[(y + 1) * m_dataSize.x + x];
+					Float f11 = m_data[(y + 1) * m_dataSize.x + x + 1];
+					Float fmin = std::min(std::min(f00, f01), std::min(f10, f11));
+					Float fmax = std::max(std::max(f00, f01), std::max(f10, f11));
+					*bounds++ = Interval(fmin, fmax);
 
 					/* Estimate the total surface area (this is approximate) */
-					Float diff0 = v01-v10, diff1 = v00-v11;
+					Float diff0 = f01-f10, diff1 = f00-f11;
 					m_surfaceArea += std::sqrt(1.0f + .5f * (diff0*diff0 + diff1*diff1));
 				}
 			}
@@ -353,13 +375,38 @@ public:
 					for (int x=0; x<cur.x; ++x) {
 						int x0 = std::min(2*x,   prev.x-1),
 							x1 = std::min(2*x+1, prev.x-1);
-						const Interval &v00 = prevBounds[y0 * prev.x + x0], &v01 = prevBounds[y0 * prev.x + x1];
-						const Interval &v10 = prevBounds[y1 * prev.x + x0], &v11 = prevBounds[y1 * prev.x + x1];
-						Interval combined(v00);
-						combined.expandBy(v01);
-						combined.expandBy(v10);
-						combined.expandBy(v11);
+						const Interval &f00 = prevBounds[y0 * prev.x + x0], &f01 = prevBounds[y0 * prev.x + x1];
+						const Interval &f10 = prevBounds[y1 * prev.x + x0], &f11 = prevBounds[y1 * prev.x + x1];
+						Interval combined(f00);
+						combined.expandBy(f01);
+						combined.expandBy(f10);
+						combined.expandBy(f11);
 						*curBounds++ = combined;
+					}
+				}
+			}
+
+			if (m_shadingNormals) {
+				Log(EInfo, "Precomputing shading normals ..");
+
+				for (int y=0; y<m_levelSize[0].y; ++y) {
+					for (int x=0; x<m_levelSize[0].x; ++x) {
+						Float f00 = m_data[y * m_dataSize.x + x];
+						Float f10 = m_data[y * m_dataSize.x + x + 1];
+						Float f01 = m_data[(y + 1) * m_dataSize.x + x];
+						Float f11 = m_data[(y + 1) * m_dataSize.x + x + 1];
+
+						m_normals[y       * m_dataSize.x + x]     += normalize(Normal(f00 - f10, f00 - f01, 1));
+						m_normals[y       * m_dataSize.x + x + 1] += normalize(Normal(f00 - f10, f10 - f11, 1));
+						m_normals[(y + 1) * m_dataSize.x + x]     += normalize(Normal(f01 - f11, f00 - f01, 1));
+						m_normals[(y + 1) * m_dataSize.x + x + 1] += normalize(Normal(f01 - f11, f10 - f11, 1));
+					}
+				}
+
+				for (int y=0; y<m_dataSize.y; ++y) {
+					for (int x=0; x<m_dataSize.x; ++x) {
+						Normal &normal = m_normals[x + y * m_dataSize.x];
+						normal /= normal.length();
 					}
 				}
 			}
@@ -388,9 +435,11 @@ private:
 	Transform m_objectToWorld;
 	Vector2i m_sizeHint;
 	AABB m_dataAABB;
+	bool m_shadingNormals;
 
 	/* Height field data */
 	Float *m_data;
+	Normal *m_normals;
 	Vector2i m_dataSize;
 	Float m_surfaceArea;
 
