@@ -292,6 +292,11 @@ template <typename T> struct TAABB {
 	/** \brief Calculate the near and far ray-AABB intersection
 	 * points (if they exist).
 	 *
+	 * The parameters \c nearT and \c farT are used to return the
+	 * ray distances to the intersections (including negative distances).
+	 * Any previously contained value is overwritten, even if there was
+	 * no intersection.
+	 *
 	 * \remark In the Python bindings, this function returns the
 	 * \c nearT and \c farT values as a tuple (or \c None, when no
 	 * intersection was found)
@@ -302,11 +307,10 @@ template <typename T> struct TAABB {
 
 		/* For each pair of AABB planes */
 		for (int i=0; i<PointType::dim; i++) {
-			const Float direction = ray.d[i];
 			const Float origin = ray.o[i];
 			const Float minVal = min[i], maxVal = max[i];
 
-			if (direction == 0) {
+			if (ray.d[i] == 0) {
 				/* The ray is parallel to the planes */
 				if (origin < minVal || origin > maxVal)
 					return false;
@@ -325,6 +329,68 @@ template <typename T> struct TAABB {
 					return false;
 			}
 		}
+
+		return true;
+	}
+
+	/** \brief Calculate the overlap between an axis-aligned bounding box
+	 * and a ray segment
+	 *
+	 * This function is an extended version of the simpler \ref rayIntersect command
+	 * provided above. The first change is that input values passed via
+	 * the \c nearT and \c farT parameters are considered to specify a query interval.
+	 *
+	 * This interval is intersected against the bounding box, returning the remaining
+	 * interval using the \c nearT and \c farT parameters. Furthermore, the
+	 * interval endpoints are also returned as 3D positions via the \c near and
+	 * \c far parameters. Special care is taken to reduce round-off errors.
+	 *
+	 * \remark Not currently exposed via the Python bindings
+	 */
+	FINLINE bool rayIntersect(const Ray &ray, Float &nearT, Float &farT, Point &near, Point &far) const {
+		int nearAxis = -1, farAxis = -1;
+
+		/* For each pair of AABB planes */
+		for (int i=0; i<PointType::dim; i++) {
+			const Float origin = ray.o[i];
+			const Float minVal = min[i], maxVal = max[i];
+
+			if (ray.d[i] == 0) {
+				/* The ray is parallel to the planes */
+				if (origin < minVal || origin > maxVal)
+					return false;
+			} else {
+				/* Calculate intersection distances */
+				Float t1 = (minVal - origin) * ray.dRcp[i];
+				Float t2 = (maxVal - origin) * ray.dRcp[i];
+
+				bool flip = t1 > t2;
+				if (flip)
+					std::swap(t1, t2);
+
+				if (t1 > nearT) {
+					nearT = t1;
+					nearAxis = flip ? (i + PointType::dim) : i;
+				}
+
+				if (t2 < farT) {
+					farT = t2;
+					farAxis = flip ? i : (i + PointType::dim);
+				}
+			}
+		}
+
+		if (!(nearT <= farT))
+			return false;
+
+		near = ray(nearT); far = ray(farT);
+
+		/* Avoid roundoff errors on the component where the intersection took place */
+		if (nearAxis >= 0)
+			near[nearAxis % PointType::dim] = ((Float *) this)[nearAxis];
+
+		if (farAxis >= 0)
+			far[farAxis % PointType::dim]   = ((Float *) this)[farAxis];
 
 		return true;
 	}
