@@ -144,11 +144,6 @@ public:
 		int iDeltaX = signumToInt(ray.d.x),
 			iDeltaY = signumToInt(ray.d.y);
 
-		if (iDeltaX == 0 && iDeltaY == 0) {
-			/* TODO: special case for perpendicular rays */
-			return false;
-		}
-
 		int stackIdx = 0;
 		stack[stackIdx].level = m_levelCount-1;
 		stack[stackIdx].x = 0;
@@ -228,9 +223,12 @@ public:
 				if (!solveQuadratic(A, B, C, t0, t1))
 					continue;
 
-				if (t0 >= -Epsilon && t0 <= tMax + Epsilon)
+				Float min = std::max(-Epsilon, mint - nearT);
+				Float max = std::min(tMax + Epsilon, maxt - nearT);
+
+				if (t0 >= min && t0 <= max)
 					t = t0;
-				else if (t1 >= -Epsilon && t1 <= tMax + Epsilon)
+				else if (t1 >= min && t1 <= max)
 					t = t1;
 				else
 					continue;
@@ -244,7 +242,6 @@ public:
 					t += nearT;
 				}
 				numTraversals += nTraversals;
-
 				return true;
 			}
 		}
@@ -264,11 +261,12 @@ public:
 			f10 = m_data[y     * width + x + 1],
 			f11 = m_data[(y+1) * width + x + 1];
 
-		its.p  = Point(temp.p.x + temp.x, temp.p.y + temp.y, temp.p.z);
+		Point pLocal(temp.p.x + temp.x, temp.p.y + temp.y, temp.p.z);
 
-		its.uv = Point2(its.p.x / m_levelSize[0].x, its.p.y / m_levelSize[0].y);
-		its.dpdu = Vector(1, 0, (1.0f - temp.p.y) * (f10 - f00) + temp.p.y * (f11 - f01)) * m_levelSize[0].x;
-		its.dpdv = Vector(0, 1, (1.0f - temp.p.x) * (f01 - f00) + temp.p.x * (f11 - f10)) * m_levelSize[0].y;
+		its.p  = m_objectToWorld(pLocal);
+		its.uv = Point2(pLocal.x / m_levelSize[0].x, pLocal.y / m_levelSize[0].y);
+		its.dpdu = m_objectToWorld(Vector(1, 0, (1.0f - temp.p.y) * (f10 - f00) + temp.p.y * (f11 - f01)) * m_levelSize[0].x);
+		its.dpdv = m_objectToWorld(Vector(0, 1, (1.0f - temp.p.x) * (f01 - f00) + temp.p.x * (f11 - f10)) * m_levelSize[0].y);
 
 		its.geoFrame.s = normalize(its.dpdu);
 		its.geoFrame.t = normalize(its.dpdv - dot(its.dpdv, its.geoFrame.s) * its.geoFrame.s);
@@ -281,17 +279,22 @@ public:
 				n10 = m_normals[y     * width + x + 1],
 				n11 = m_normals[(y+1) * width + x + 1];
 
-			its.shFrame.n = normalize(
+			its.shFrame.n = normalize(m_objectToWorld(Normal(
 				(1 - temp.p.x) * ((1-temp.p.y) * n00 + temp.p.y * n01)
-				   + temp.p.x  * ((1-temp.p.y) * n10 + temp.p.y * n11));
+				   + temp.p.x  * ((1-temp.p.y) * n10 + temp.p.y * n11))));
 
 			its.shFrame.s = normalize(its.geoFrame.s - dot(its.geoFrame.s, its.shFrame.n) * its.shFrame.n);
 			its.shFrame.t = cross(its.shFrame.n, its.shFrame.s);
 		} else {
 			its.shFrame = its.geoFrame;
 		}
-		its.shape = this;
 
+		if (m_flipNormals) {
+			its.shFrame.n *= -1;
+			its.geoFrame.n *= -1;
+		}
+
+		its.shape = this;
  		its.wi = its.toLocal(-ray.d);
  		its.hasUVPartials = false;
 		its.instance = NULL;
@@ -330,6 +333,10 @@ public:
 			size_t size = (size_t) m_dataSize.x * (size_t) m_dataSize.y * sizeof(Float);
 			m_data = (Float *) allocAligned(size);
 			bitmap->convert(m_data, Bitmap::ELuminance, Bitmap::EFloat);
+
+			m_objectToWorld = m_objectToWorld * Transform::translate(Vector(-1, -1, 0)) * Transform::scale(Vector(
+				(Float) 2 / (m_dataSize.x-1),
+				(Float) 2 / (m_dataSize.y-1), 1));
 
 			buildInternal();
 		} else {
@@ -457,7 +464,9 @@ public:
 		oss << "HeightField[" << endl
 			<< "  size = " << m_dataSize.toString() << "," << endl
 			<< "  shadingNormals = " << m_shadingNormals << "," << endl
+			<< "  flipNormals = " << m_flipNormals << "," << endl
 			<< "  objectToWorld = " << indent(m_objectToWorld.toString()) << "," << endl
+			<< "  aabb = " << indent(getAABB().toString()) << "," << endl
 			<< "  bsdf = " << indent(m_bsdf.toString()) << "," << endl;
 		if (isMediumTransition())
 			oss << "  interiorMedium = " << indent(m_interiorMedium.toString()) << "," << endl
