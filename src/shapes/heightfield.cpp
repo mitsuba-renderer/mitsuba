@@ -28,7 +28,8 @@
 #include <mitsuba/core/statistics.h>
 #include <mitsuba/core/timer.h>
 
-#define MTS_QTREE_MAXDEPTH 50
+#define MTS_QTREE_MAXDEPTH  50
+#define MTS_QTREE_FASTSTART 1
 
 MTS_NAMESPACE_BEGIN
 
@@ -38,11 +39,11 @@ namespace {
 	/// Find the smallest t >= 0 such that a*t + b is a multiple of c
 	inline Float nextMultiple(Float a, Float b, Float c) {
 		Float tmp     = b/c,
-			  rounded = (a > 0 ? std::ceil(tmp) : std::floor(tmp)) * c,
-			  diff    = rounded - b;
+		      rounded = (a > 0 ? std::ceil(tmp) : std::floor(tmp)) * c,
+		      diff    = rounded - b;
 
 		if (diff == 0)
-			diff = signum(a) * c;
+			diff = math::signum(a) * c;
 
 		return diff / a;
 	}
@@ -95,6 +96,7 @@ public:
 			delete[] m_levelSize;
 			delete[] m_numChildren;
 			delete[] m_blockSize;
+			delete[] m_blockSizeF;
 		}
 		if (m_normals)
 			freeAligned(m_normals);
@@ -145,38 +147,78 @@ public:
 			iDeltaY = signumToInt(ray.d.y);
 
 		int stackIdx = 0;
-		stack[stackIdx].level = m_levelCount-1;
-		stack[stackIdx].x = 0;
-		stack[stackIdx].y = 0;
 
-		numTraversals.incrementBase();
+		#if MTS_QTREE_FASTSTART
+			/* If the entire ray is restricted to a subtree of the quadtree,
+			   directly start the traversal from the there instead of the root
+			   node. This can save some unnecessary work. */
+			{
+				Point enterPt, exitPt;
+				Float nearT = mint, farT = maxt;
+				if (!m_dataAABB.rayIntersect(ray, nearT, farT, enterPt, exitPt))
+					return false;
 
-		size_t nTraversals = 0;
+				/* Determine minima and maxima in integer coordinates (round down!) */
+				int minX = (int) std::min(enterPt.x, exitPt.x),
+				    maxX = (int) std::max(enterPt.x, exitPt.x),
+				    minY = (int) std::min(enterPt.y, exitPt.y),
+				    maxY = (int) std::max(enterPt.y, exitPt.y);
+
+				/* Determine quadtree level */
+				int level = clamp(1 + log2i(
+					std::max((uint32_t) (minX ^ maxX), (uint32_t) (minY ^ maxY))),
+					0, m_levelCount-1);
+
+				/* Compute X and Y coordinates at that level */
+				const Vector2i &blockSize = m_blockSize[level];
+				int x = clamp(minX / blockSize.x, 0, m_levelSize[level].x-1),
+				    y = clamp(minY / blockSize.y, 0, m_levelSize[level].y-1);
+
+				stack[stackIdx].level = level;
+				stack[stackIdx].x = x;
+				stack[stackIdx].y = y;
+			}
+		#else
+			/* Start traversal from the root node of the quadtree */
+			stack[stackIdx].level = m_levelCount-1;
+			stack[stackIdx].x = 0;
+			stack[stackIdx].y = 0;
+		#endif
+
+
+		//numTraversals.incrementBase();
+
+		//size_t nTraversals = 0;
 		while (stackIdx >= 0) {
-			StackEntry entry         = stack[stackIdx--];
-			const Interval &interval = m_minmax[entry.level][entry.x + entry.y * m_levelSize[entry.level].x];
-			const Vector2 &blockSize = m_blockSize[entry.level];
-			Ray localRay(Point(ray.o.x - entry.x*blockSize.x, ray.o.y - entry.y*blockSize.y, ray.o.z), ray.d, 0);
+			//++nTraversals;
 
-			/* Intersect against the current min-max quadtree node */
+			/* Pop a node from the stack and compute its bounding box */
+			StackEntry entry         = stack[stackIdx--];
+			const Interval &interval = m_minmax[entry.level][
+				entry.x + entry.y * m_levelSize[entry.level].x];
+			const Vector2 &blockSize = m_blockSizeF[entry.level];
 			AABB aabb(
 				Point3(0, 0, interval.min),
 				Point3(blockSize.x, blockSize.y, interval.max)
 			);
 
+			/* Intersect the ray against the bounding box, in local coordinates */
+			Ray localRay(Point(ray.o.x - entry.x*blockSize.x,
+			                   ray.o.y - entry.y*blockSize.y, ray.o.z), ray.d, 0);
 			Float nearT = mint, farT = maxt;
 			Point enterPt, exitPt;
 
-			++nTraversals;
-			if (!aabb.rayIntersect(localRay, nearT, farT, enterPt, exitPt))
+			if (!aabb.rayIntersect(localRay, nearT, farT, enterPt, exitPt)) {
+				/* The bounding box was not intersected -- skip */
 				continue;
+			}
 
 			Float tMax = farT - nearT;
 
 			if (entry.level > 0) {
 				/* Inner node -- push child nodes in 2D DDA order */
 				const Vector2i &numChildren = m_numChildren[entry.level];
-				const Vector2 &subBlockSize = m_blockSize[--entry.level];
+				const Vector2 &subBlockSize = m_blockSizeF[--entry.level];
 				entry.x *= numChildren.x; entry.y *= numChildren.y;
 
 				int x = (exitPt.x >= subBlockSize.x) ? numChildren.x-1 : 0;
@@ -184,9 +226,9 @@ public:
 
 				Float tDeltaX = tDeltaXSingle * subBlockSize.x,
 				      tDeltaY = tDeltaYSingle * subBlockSize.y,
-					  tNextX  = nextMultiple(-ray.d.x, exitPt.x, subBlockSize.x),
-					  tNextY  = nextMultiple(-ray.d.y, exitPt.y, subBlockSize.y),
-					  t       = 0;
+				      tNextX  = nextMultiple(-ray.d.x, exitPt.x, subBlockSize.x),
+				      tNextY  = nextMultiple(-ray.d.y, exitPt.y, subBlockSize.y),
+				      t       = 0;
 
 				while ((uint32_t) x < (uint32_t) numChildren.x &&
 				       (uint32_t) y < (uint32_t) numChildren.y && t <= tMax) {
@@ -205,6 +247,7 @@ public:
 					}
 				}
 			} else {
+				/* Intersect the ray against a bilinear patch */
 				Float
 					f00 = m_data[entry.y * m_dataSize.x + entry.x],
 					f01 = m_data[(entry.y + 1) * m_dataSize.x + entry.x],
@@ -241,12 +284,12 @@ public:
 					temp.p = pLocal;
 					t += nearT;
 				}
-				numTraversals += nTraversals;
+				//numTraversals += nTraversals;
 				return true;
 			}
 		}
 
-		numTraversals += nTraversals;
+		//numTraversals += nTraversals;
 		return false;
 	}
 
@@ -264,9 +307,11 @@ public:
 		Point pLocal(temp.p.x + temp.x, temp.p.y + temp.y, temp.p.z);
 
 		its.p  = m_objectToWorld(pLocal);
-		its.uv = Point2(pLocal.x / m_levelSize[0].x, pLocal.y / m_levelSize[0].y);
-		its.dpdu = m_objectToWorld(Vector(1, 0, (1.0f - temp.p.y) * (f10 - f00) + temp.p.y * (f11 - f01)) * m_levelSize[0].x);
-		its.dpdv = m_objectToWorld(Vector(0, 1, (1.0f - temp.p.x) * (f01 - f00) + temp.p.x * (f11 - f10)) * m_levelSize[0].y);
+		its.uv = Point2(pLocal.x * m_invSize.x, pLocal.y / m_invSize.y);
+		its.dpdu = m_objectToWorld(Vector(1, 0,
+			(1.0f - temp.p.y) * (f10 - f00) + temp.p.y * (f11 - f01)) * m_levelSize[0].x);
+		its.dpdv = m_objectToWorld(Vector(0, 1,
+			(1.0f - temp.p.x) * (f01 - f00) + temp.p.x * (f11 - f10)) * m_levelSize[0].y);
 
 		its.geoFrame.s = normalize(its.dpdu);
 		its.geoFrame.t = normalize(its.dpdv - dot(its.dpdv, its.geoFrame.s) * its.geoFrame.s);
@@ -353,11 +398,14 @@ public:
 
 		m_levelSize = new Vector2i[m_levelCount];
 		m_numChildren = new Vector2i[m_levelCount];
-		m_blockSize = new Vector2[m_levelCount];
+		m_blockSize = new Vector2i[m_levelCount];
+		m_blockSizeF = new Vector2[m_levelCount];
 		m_minmax = new Interval*[m_levelCount];
 
 		m_levelSize[0]  = Vector2i(m_dataSize.x - 1, m_dataSize.y - 1);
-		m_blockSize[0] = Vector2(1, 1);
+		m_blockSize[0] = Vector2i(1, 1);
+		m_blockSizeF[0] = Vector2(1, 1);
+		m_invSize = Vector2((Float) 1 / m_levelSize[0].x, (Float) 1 / m_levelSize[0].y);
 		m_surfaceArea = 0;
 		size_t size = (size_t) m_levelSize[0].x * (size_t) m_levelSize[0].y * sizeof(Interval);
 		m_minmax[0] = (Interval *) allocAligned(size);
@@ -392,10 +440,11 @@ public:
 
 			m_numChildren[level].x = prev.x > 1 ? 2 : 1;
 			m_numChildren[level].y = prev.y > 1 ? 2 : 1;
-			m_blockSize[level] = Vector2(
+			m_blockSize[level] = Vector2i(
 				m_levelSize[0].x / cur.x,
 				m_levelSize[0].y / cur.y
 			);
+			m_blockSizeF[level] = Vector2f(m_blockSize[level]);
 
 			/* Allocate memory for interval data */
 			Interval *prevBounds = m_minmax[level-1], *curBounds;
@@ -490,13 +539,15 @@ private:
 	Float *m_data;
 	Normal *m_normals;
 	Vector2i m_dataSize;
+	Vector2 m_invSize;
 	Float m_surfaceArea;
 
 	/* Min-max quadtree data */
 	int m_levelCount;
 	Vector2i *m_levelSize;
 	Vector2i *m_numChildren;
-	Vector2 *m_blockSize;
+	Vector2i *m_blockSize;
+	Vector2 *m_blockSizeF;
 	Interval **m_minmax;
 };
 
