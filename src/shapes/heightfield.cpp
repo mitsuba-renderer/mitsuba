@@ -18,14 +18,21 @@
 
 #include <mitsuba/render/shape.h>
 #include <mitsuba/render/bsdf.h>
+#include <mitsuba/render/emitter.h>
+#include <mitsuba/render/medium.h>
+#include <mitsuba/render/sensor.h>
+#include <mitsuba/render/subsurface.h>
 #include <mitsuba/render/trimesh.h>
 #include <mitsuba/render/texture.h>
 #include <mitsuba/core/bitmap.h>
+#include <mitsuba/core/statistics.h>
 #include <mitsuba/core/timer.h>
 
 #define MTS_QTREE_MAXDEPTH 50
 
 MTS_NAMESPACE_BEGIN
+
+static StatsCounter numTraversals("Height field", "Traversal operations per query", EAverage);
 
 namespace {
 	/// Find the smallest t >= 0 such that a*t + b is a multiple of c
@@ -54,7 +61,7 @@ namespace {
 
 class Heightfield : public Shape {
 public:
-	Heightfield(const Properties &props) : Shape(props), m_data(NULL), m_normals(NULL) {
+	Heightfield(const Properties &props) : Shape(props), m_data(NULL), m_normals(NULL), m_minmax(NULL) {
 		m_sizeHint = Vector2i(
 			props.getInteger("width", -1),
 			props.getInteger("height", -1)
@@ -62,15 +69,26 @@ public:
 
 		m_objectToWorld = props.getTransform("toWorld", Transform());
 		m_shadingNormals = props.getBoolean("shadingNormals", true);
+		m_flipNormals = props.getBoolean("flipNormals", false);
 	}
 
 	Heightfield(Stream *stream, InstanceManager *manager)
-		: Shape(stream, manager), m_data(NULL), m_normals(NULL) {
+		: Shape(stream, manager), m_data(NULL), m_normals(NULL), m_minmax(NULL) {
+
+		m_objectToWorld = Transform(stream);
+		m_shadingNormals = stream->readBool();
+		m_flipNormals = stream->readBool();
+		m_dataSize = Vector2i(stream);
+		size_t size = (size_t) m_dataSize.x * (size_t) m_dataSize.y;
+		m_data = (Float *) allocAligned(size * sizeof(Float));
+		stream->readFloatArray(m_data, size);
+		buildInternal();
 	}
 
 	~Heightfield() {
-		if (m_data) {
+		if (m_data)
 			freeAligned(m_data);
+		if (m_minmax) {
 			for (int i=0; i<m_levelCount; ++i)
 				freeAligned(m_minmax[i]);
 			delete[] m_minmax;
@@ -84,6 +102,11 @@ public:
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		Shape::serialize(stream, manager);
+		m_objectToWorld.serialize(stream);
+		stream->writeBool(m_shadingNormals);
+		stream->writeBool(m_flipNormals);
+		m_dataSize.serialize(stream);
+		stream->writeFloatArray(m_data, (size_t) m_dataSize.x * (size_t) m_dataSize.y);
 	}
 
 	AABB getAABB() const {
@@ -131,6 +154,9 @@ public:
 		stack[stackIdx].x = 0;
 		stack[stackIdx].y = 0;
 
+		numTraversals.incrementBase();
+
+		size_t nTraversals = 0;
 		while (stackIdx >= 0) {
 			StackEntry entry         = stack[stackIdx--];
 			const Interval &interval = m_minmax[entry.level][entry.x + entry.y * m_levelSize[entry.level].x];
@@ -146,6 +172,7 @@ public:
 			Float nearT = mint, farT = maxt;
 			Point enterPt, exitPt;
 
+			++nTraversals;
 			if (!aabb.rayIntersect(localRay, nearT, farT, enterPt, exitPt))
 				continue;
 
@@ -216,11 +243,13 @@ public:
 					temp.p = pLocal;
 					t += nearT;
 				}
+				numTraversals += nTraversals;
 
 				return true;
 			}
 		}
 
+		numTraversals += nTraversals;
 		return false;
 	}
 
@@ -298,134 +327,144 @@ public:
 					std::numeric_limits<Float>::infinity());
 			}
 
-			size_t size = (size_t) m_dataSize.x * (size_t) m_dataSize.y * sizeof(Float),
-			       storageSize = size;
+			size_t size = (size_t) m_dataSize.x * (size_t) m_dataSize.y * sizeof(Float);
 			m_data = (Float *) allocAligned(size);
-
-			if (m_shadingNormals) {
-				size *= 3;
-				m_normals = (Normal *) allocAligned(size);
-				memset(m_normals, 0, size);
-				storageSize += size;
-			}
-
 			bitmap->convert(m_data, Bitmap::ELuminance, Bitmap::EFloat);
 
-			Log(EInfo, "Building acceleration data structure for %ix%i height field ..", m_dataSize.x, m_dataSize.y);
+			buildInternal();
+		} else {
+			Shape::addChild(name, child);
+		}
+	}
 
-			ref<Timer> timer = new Timer();
-			m_levelCount = (int) std::max(log2i((uint32_t) m_dataSize.x-1), log2i((uint32_t) m_dataSize.y-1)) + 1;
+	void buildInternal() {
+		size_t storageSize = (size_t) m_dataSize.x * (size_t) m_dataSize.y * sizeof(Float);
+		Log(EInfo, "Building acceleration data structure for %ix%i height field ..", m_dataSize.x, m_dataSize.y);
 
-			m_levelSize = new Vector2i[m_levelCount];
-			m_numChildren = new Vector2i[m_levelCount];
-			m_blockSize = new Vector2[m_levelCount];
-			m_minmax = new Interval*[m_levelCount];
+		ref<Timer> timer = new Timer();
+		m_levelCount = (int) std::max(log2i((uint32_t) m_dataSize.x-1), log2i((uint32_t) m_dataSize.y-1)) + 1;
 
-			m_levelSize[0]  = Vector2i(m_dataSize.x - 1, m_dataSize.y - 1);
-			m_blockSize[0] = Vector2(1, 1);
-			m_surfaceArea = 0;
-			size = (size_t) m_levelSize[0].x * (size_t) m_levelSize[0].y * sizeof(Interval);
-			m_minmax[0] = (Interval *) allocAligned(size);
+		m_levelSize = new Vector2i[m_levelCount];
+		m_numChildren = new Vector2i[m_levelCount];
+		m_blockSize = new Vector2[m_levelCount];
+		m_minmax = new Interval*[m_levelCount];
+
+		m_levelSize[0]  = Vector2i(m_dataSize.x - 1, m_dataSize.y - 1);
+		m_blockSize[0] = Vector2(1, 1);
+		m_surfaceArea = 0;
+		size_t size = (size_t) m_levelSize[0].x * (size_t) m_levelSize[0].y * sizeof(Interval);
+		m_minmax[0] = (Interval *) allocAligned(size);
+		storageSize += size;
+
+		/* Build the lowest MIP layer directly from the heightfield data */
+		Interval *bounds = m_minmax[0];
+		for (int y=0; y<m_levelSize[0].y; ++y) {
+			for (int x=0; x<m_levelSize[0].x; ++x) {
+				Float f00 = m_data[y * m_dataSize.x + x];
+				Float f10 = m_data[y * m_dataSize.x + x + 1];
+				Float f01 = m_data[(y + 1) * m_dataSize.x + x];
+				Float f11 = m_data[(y + 1) * m_dataSize.x + x + 1];
+				Float fmin = std::min(std::min(f00, f01), std::min(f10, f11));
+				Float fmax = std::max(std::max(f00, f01), std::max(f10, f11));
+				*bounds++ = Interval(fmin, fmax);
+
+				/* Estimate the total surface area (this is approximate) */
+				Float diff0 = f01-f10, diff1 = f00-f11;
+				m_surfaceArea += std::sqrt(1.0f + .5f * (diff0*diff0 + diff1*diff1));
+			}
+		}
+
+		/* Propagate height bounds upwards to the other layers */
+		for (int level=1; level<m_levelCount; ++level) {
+			Vector2i &cur  = m_levelSize[level],
+			         &prev = m_levelSize[level-1];
+
+			/* Calculate size of this layer */
+			cur.x = prev.x > 1 ? (prev.x / 2) : 1;
+			cur.y = prev.y > 1 ? (prev.y / 2) : 1;
+
+			m_numChildren[level].x = prev.x > 1 ? 2 : 1;
+			m_numChildren[level].y = prev.y > 1 ? 2 : 1;
+			m_blockSize[level] = Vector2(
+				m_levelSize[0].x / cur.x,
+				m_levelSize[0].y / cur.y
+			);
+
+			/* Allocate memory for interval data */
+			Interval *prevBounds = m_minmax[level-1], *curBounds;
+			size_t size = (size_t) cur.x * (size_t) cur.y * sizeof(Interval);
+			m_minmax[level] = curBounds = (Interval *) allocAligned(size);
 			storageSize += size;
 
-			/* Build the lowest MIP layer directly from the heightfield data */
-			Interval *bounds = m_minmax[0];
+			/* Build by querying the previous layer */
+			for (int y=0; y<cur.y; ++y) {
+				int y0 = std::min(2*y,   prev.y-1),
+					y1 = std::min(2*y+1, prev.y-1);
+				for (int x=0; x<cur.x; ++x) {
+					int x0 = std::min(2*x,   prev.x-1),
+						x1 = std::min(2*x+1, prev.x-1);
+					const Interval &f00 = prevBounds[y0 * prev.x + x0], &f01 = prevBounds[y0 * prev.x + x1];
+					const Interval &f10 = prevBounds[y1 * prev.x + x0], &f11 = prevBounds[y1 * prev.x + x1];
+					Interval combined(f00);
+					combined.expandBy(f01);
+					combined.expandBy(f10);
+					combined.expandBy(f11);
+					*curBounds++ = combined;
+				}
+			}
+		}
+
+		if (m_shadingNormals) {
+			Log(EInfo, "Precomputing shading normals ..");
+			size_t size = (size_t) m_dataSize.x * (size_t) m_dataSize.y * sizeof(Normal);
+			m_normals = (Normal *) allocAligned(size);
+			memset(m_normals, 0, size);
+			storageSize += size;
+
 			for (int y=0; y<m_levelSize[0].y; ++y) {
 				for (int x=0; x<m_levelSize[0].x; ++x) {
 					Float f00 = m_data[y * m_dataSize.x + x];
 					Float f10 = m_data[y * m_dataSize.x + x + 1];
 					Float f01 = m_data[(y + 1) * m_dataSize.x + x];
 					Float f11 = m_data[(y + 1) * m_dataSize.x + x + 1];
-					Float fmin = std::min(std::min(f00, f01), std::min(f10, f11));
-					Float fmax = std::max(std::max(f00, f01), std::max(f10, f11));
-					*bounds++ = Interval(fmin, fmax);
 
-					/* Estimate the total surface area (this is approximate) */
-					Float diff0 = f01-f10, diff1 = f00-f11;
-					m_surfaceArea += std::sqrt(1.0f + .5f * (diff0*diff0 + diff1*diff1));
+					m_normals[y       * m_dataSize.x + x]     += normalize(Normal(f00 - f10, f00 - f01, 1));
+					m_normals[y       * m_dataSize.x + x + 1] += normalize(Normal(f00 - f10, f10 - f11, 1));
+					m_normals[(y + 1) * m_dataSize.x + x]     += normalize(Normal(f01 - f11, f00 - f01, 1));
+					m_normals[(y + 1) * m_dataSize.x + x + 1] += normalize(Normal(f01 - f11, f10 - f11, 1));
 				}
 			}
 
-			/* Propagate height bounds upwards to the other layers */
-			for (int level=1; level<m_levelCount; ++level) {
-				Vector2i &cur  = m_levelSize[level],
-				         &prev = m_levelSize[level-1];
-
-				/* Calculate size of this layer */
-				cur.x = prev.x > 1 ? (prev.x / 2) : 1;
-				cur.y = prev.y > 1 ? (prev.y / 2) : 1;
-
-				m_numChildren[level].x = prev.x > 1 ? 2 : 1;
-				m_numChildren[level].y = prev.y > 1 ? 2 : 1;
-				m_blockSize[level] = Vector2(
-					m_levelSize[0].x / cur.x,
-					m_levelSize[0].y / cur.y
-				);
-
-				/* Allocate memory for interval data */
-				Interval *prevBounds = m_minmax[level-1], *curBounds;
-				size_t size = (size_t) cur.x * (size_t) cur.y * sizeof(Interval);
-				m_minmax[level] = curBounds = (Interval *) allocAligned(size);
-				storageSize += size;
-
-				/* Build by querying the previous layer */
-				for (int y=0; y<cur.y; ++y) {
-					int y0 = std::min(2*y,   prev.y-1),
-						y1 = std::min(2*y+1, prev.y-1);
-					for (int x=0; x<cur.x; ++x) {
-						int x0 = std::min(2*x,   prev.x-1),
-							x1 = std::min(2*x+1, prev.x-1);
-						const Interval &f00 = prevBounds[y0 * prev.x + x0], &f01 = prevBounds[y0 * prev.x + x1];
-						const Interval &f10 = prevBounds[y1 * prev.x + x0], &f11 = prevBounds[y1 * prev.x + x1];
-						Interval combined(f00);
-						combined.expandBy(f01);
-						combined.expandBy(f10);
-						combined.expandBy(f11);
-						*curBounds++ = combined;
-					}
+			for (int y=0; y<m_dataSize.y; ++y) {
+				for (int x=0; x<m_dataSize.x; ++x) {
+					Normal &normal = m_normals[x + y * m_dataSize.x];
+					normal /= normal.length();
 				}
 			}
-
-			if (m_shadingNormals) {
-				Log(EInfo, "Precomputing shading normals ..");
-
-				for (int y=0; y<m_levelSize[0].y; ++y) {
-					for (int x=0; x<m_levelSize[0].x; ++x) {
-						Float f00 = m_data[y * m_dataSize.x + x];
-						Float f10 = m_data[y * m_dataSize.x + x + 1];
-						Float f01 = m_data[(y + 1) * m_dataSize.x + x];
-						Float f11 = m_data[(y + 1) * m_dataSize.x + x + 1];
-
-						m_normals[y       * m_dataSize.x + x]     += normalize(Normal(f00 - f10, f00 - f01, 1));
-						m_normals[y       * m_dataSize.x + x + 1] += normalize(Normal(f00 - f10, f10 - f11, 1));
-						m_normals[(y + 1) * m_dataSize.x + x]     += normalize(Normal(f01 - f11, f00 - f01, 1));
-						m_normals[(y + 1) * m_dataSize.x + x + 1] += normalize(Normal(f01 - f11, f10 - f11, 1));
-					}
-				}
-
-				for (int y=0; y<m_dataSize.y; ++y) {
-					for (int x=0; x<m_dataSize.x; ++x) {
-						Normal &normal = m_normals[x + y * m_dataSize.x];
-						normal /= normal.length();
-					}
-				}
-			}
-
-			Log(EInfo, "Done (took %i ms, uses %s of memory)", timer->getMilliseconds(),
-					memString(storageSize).c_str());
-
-			m_dataAABB = AABB(
-				Point3(0, 0, m_minmax[m_levelCount-1][0].min),
-				Point3(m_levelSize[0].x, m_levelSize[0].y, m_minmax[m_levelCount-1][0].max)
-			);
-		} else {
-			Shape::addChild(name, child);
 		}
+
+		Log(EInfo, "Done (took %i ms, uses %s of memory)", timer->getMilliseconds(),
+				memString(storageSize).c_str());
+
+		m_dataAABB = AABB(
+			Point3(0, 0, m_minmax[m_levelCount-1][0].min),
+			Point3(m_levelSize[0].x, m_levelSize[0].y, m_minmax[m_levelCount-1][0].max)
+		);
 	}
 
 	std::string toString() const {
 		std::ostringstream oss;
-		oss << "Heightfield[" << endl
+		oss << "HeightField[" << endl
+			<< "  size = " << m_dataSize.toString() << "," << endl
+			<< "  shadingNormals = " << m_shadingNormals << "," << endl
+			<< "  objectToWorld = " << indent(m_objectToWorld.toString()) << "," << endl
+			<< "  bsdf = " << indent(m_bsdf.toString()) << "," << endl;
+		if (isMediumTransition())
+			oss << "  interiorMedium = " << indent(m_interiorMedium.toString()) << "," << endl
+				<< "  exteriorMedium = " << indent(m_exteriorMedium.toString()) << "," << endl;
+		oss << "  emitter = " << indent(m_emitter.toString()) << "," << endl
+			<< "  sensor = " << indent(m_sensor.toString()) << "," << endl
+			<< "  subsurface = " << indent(m_subsurface.toString()) << endl
 			<< "]";
 		return oss.str();
 	}
@@ -436,6 +475,7 @@ private:
 	Vector2i m_sizeHint;
 	AABB m_dataAABB;
 	bool m_shadingNormals;
+	bool m_flipNormals;
 
 	/* Height field data */
 	Float *m_data;
