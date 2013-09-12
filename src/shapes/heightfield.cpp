@@ -185,12 +185,11 @@ public:
 			stack[stackIdx].y = 0;
 		#endif
 
+		numTraversals.incrementBase();
 
-		//numTraversals.incrementBase();
-
-		//size_t nTraversals = 0;
+		size_t nTraversals = 0;
 		while (stackIdx >= 0) {
-			//++nTraversals;
+			++nTraversals;
 
 			/* Pop a node from the stack and compute its bounding box */
 			StackEntry entry         = stack[stackIdx--];
@@ -284,12 +283,12 @@ public:
 					temp.p = pLocal;
 					t += nearT;
 				}
-				//numTraversals += nTraversals;
+				numTraversals += nTraversals;
 				return true;
 			}
 		}
 
-		//numTraversals += nTraversals;
+		numTraversals += nTraversals;
 		return false;
 	}
 
@@ -366,7 +365,7 @@ public:
 			if (!isPowerOfTwo(m_dataSize.y - 1)) m_dataSize.y = (int) roundToPowerOfTwo((uint32_t) m_dataSize.y - 1) + 1;
 
 			if (bitmap->getSize() != m_dataSize) {
-				Log(EInfo, "Resampling heightfield texture from %ix%i to %ix%i..",
+				Log(EInfo, "Resampling heightfield texture from %ix%i to %ix%i ..",
 					bitmap->getWidth(), bitmap->getHeight(), m_dataSize.x, m_dataSize.y);
 
 				bitmap = bitmap->resample(NULL, ReconstructionFilter::EClamp,
