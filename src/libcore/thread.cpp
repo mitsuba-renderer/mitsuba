@@ -27,6 +27,7 @@
 // Required for native thread functions
 #if defined(__LINUX__)
 # include <sys/prctl.h>
+# include <sys/syscall.h>
 #elif defined(__OSX__)
 # include <pthread.h>
 #elif defined(__WINDOWS__)
@@ -34,7 +35,6 @@
 #endif
 
 MTS_NAMESPACE_BEGIN
-
 
 #if defined(_MSC_VER)
 namespace {
@@ -69,6 +69,10 @@ void SetThreadName(const char* threadName, DWORD dwThreadID = -1) {
 } // namespace
 #endif // _MSC_VER
 
+#if defined(__LINUX__)
+static pthread_key_t __thread_id;
+#endif
+
 /**
  * Internal Thread members
  */
@@ -80,13 +84,15 @@ struct Thread::ThreadPrivate {
 	std::string name;
 	bool running, joined;
 	Thread::EThreadPriority priority;
+	int coreAffinity;
 	static ThreadLocal<Thread> *self;
 	bool critical;
 	boost::thread thread;
 
 	ThreadPrivate(const std::string & name_) :
 		name(name_), running(false), joined(false),
-		priority(Thread::ENormalPriority), critical(false) { }
+		priority(Thread::ENormalPriority), coreAffinity(-1),
+	    critical(false) { }
 };
 
 /**
@@ -143,7 +149,10 @@ int Thread::getID() {
 #elif defined(__OSX__)
 	return static_cast<int>(pthread_mach_thread_np(pthread_self()));
 #else
-	return (int) pthread_self();
+	/* pthread_self() doesn't provide nice increasing IDs, and syscall(SYS_gettid)
+	   causes a context switch. Use a thread-local variable that caches the
+	   result of syscall(SYS_gettid) */
+	return static_cast<int>(reinterpret_cast<intptr_t>(pthread_getspecific(__thread_id)));
 #endif
 }
 
@@ -297,8 +306,44 @@ bool Thread::setPriority(EThreadPriority priority) {
 	return true;
 }
 
+void Thread::setCoreAffinity(int coreID) {
+	d->coreAffinity = coreID;
+	if (!d->running)
+		return;
+
+	int nCores = getCoreCount();
+#if defined(__LINUX__) || defined(__OSX__)
+	cpu_set_t *cpuset = CPU_ALLOC(nCores);
+	if (cpuset == NULL)
+		Log(EError, "Thread::setCoreAffinity: could not allocate cpu_set_t");
+
+	size_t size = CPU_ALLOC_SIZE(nCores);
+	CPU_ZERO_S(size, cpuset);
+	if (coreID != -1 && coreID < nCores) {
+		CPU_SET_S(coreID, size, cpuset);
+	} else {
+		for (int i=0; i<nCores; ++i)
+			CPU_SET_S(i, size, cpuset);
+	}
+
+	const pthread_t threadID = d->thread.native_handle();
+	if (pthread_setaffinity_np(threadID, size, cpuset) != 0)
+		Log(EWarn, "pthread_setaffinity_np: failed");
+	CPU_FREE(cpuset);
+#endif
+}
+
+int Thread::getCoreAffinity() const {
+	return d->coreAffinity;
+}
+
+
 void Thread::dispatch(Thread *thread) {
 	detail::initializeLocalTLS();
+
+#if defined(__LINUX__)
+	pthread_setspecific(__thread_id, reinterpret_cast<void *>(syscall(SYS_gettid)));
+#endif
 
 	Thread::ThreadPrivate::self->set(thread);
 
@@ -318,6 +363,9 @@ void Thread::dispatch(Thread *thread) {
 		SetThreadName(threadName.c_str());
 #endif
 	}
+
+	if (thread->getCoreAffinity() != -1)
+		thread->setCoreAffinity(thread->getCoreAffinity());
 
 	try {
 		thread->run();
@@ -418,6 +466,7 @@ void Thread::staticInitialization() {
 #endif
 	detail::initializeGlobalTLS();
 	detail::initializeLocalTLS();
+	pthread_key_create(&__thread_id, NULL);
 
 	ThreadPrivate::self = new ThreadLocal<Thread>();
 	Thread *mainThread = new MainThread();
@@ -499,6 +548,7 @@ void Thread::initializeOpenMP(size_t threadCount) {
 
 			#if defined(__LINUX__)
 				prctl(PR_SET_NAME, threadName.c_str());
+				pthread_setspecific(__thread_id, reinterpret_cast<void *>(syscall(SYS_gettid)));
 			#elif defined(__OSX__)
 				pthread_setname_np(threadName.c_str());
 			#elif defined(__WINDOWS__)

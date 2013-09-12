@@ -234,7 +234,7 @@ int mtsutil(int argc, char **argv) {
 		/* Configure the scheduling subsystem */
 		Scheduler *scheduler = Scheduler::getInstance();
 		for (int i=0; i<nprocs; ++i)
-			scheduler->registerWorker(new LocalWorker(formatString("wrk%i", i)));
+			scheduler->registerWorker(new LocalWorker(i, formatString("wrk%i", i)));
 		std::vector<std::string> hosts = tokenize(networkHosts, ";");
 
 		/* Establish network connections to nested servers */
