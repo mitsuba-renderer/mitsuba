@@ -311,11 +311,13 @@ void Thread::setCoreAffinity(int coreID) {
 	if (!d->running)
 		return;
 
+#if defined(__OSX__)
+	/* CPU affinity not supported on OSX */
+#elif defined(__LINUX__)
 	int nCores = getCoreCount();
-#if defined(__LINUX__) || defined(__OSX__)
 	cpu_set_t *cpuset = CPU_ALLOC(nCores);
 	if (cpuset == NULL)
-		Log(EError, "Thread::setCoreAffinity: could not allocate cpu_set_t");
+		Log(EError, "Thread::setCoreAffinity(): could not allocate cpu_set_t");
 
 	size_t size = CPU_ALLOC_SIZE(nCores);
 	CPU_ZERO_S(size, cpuset);
@@ -328,8 +330,21 @@ void Thread::setCoreAffinity(int coreID) {
 
 	const pthread_t threadID = d->thread.native_handle();
 	if (pthread_setaffinity_np(threadID, size, cpuset) != 0)
-		Log(EWarn, "pthread_setaffinity_np: failed");
+		Log(EWarn, "Thread::setCoreAffinity(): pthread_setaffinity_np: failed");
 	CPU_FREE(cpuset);
+#elif defined(__WINDOWS__)
+	int nCores = getCoreCount();
+	const HANDLE handle = d->thread.native_handle();
+
+	DWORD_PTR mask;
+
+	if (coreID != -1 && coreID < nCores)
+		mask = (DWORD_PTR) 1 << coreID;
+	else
+		mask = (1 << nCores) - 1;
+
+	if (!SetThreadAffinityMask(handle, mask))
+		Log(EWarn, "Thread::setCoreAffinity(): SetThreadAffinityMask : failed");
 #endif
 }
 
@@ -458,15 +473,16 @@ int mts_omp_get_thread_num() {
 #endif
 
 void Thread::staticInitialization() {
-#if defined(__OSX__)
-	__mts_autorelease_init();
-#if defined(MTS_OPENMP)
-	__omp_threadCount = omp_get_max_threads();
-#endif
-#endif
+	#if defined(__OSX__)
+		__mts_autorelease_init();
+		#if defined(MTS_OPENMP)
+			__omp_threadCount = omp_get_max_threads();
+		#endif
+	#elif defined(__LINUX__)
+		pthread_key_create(&__thread_id, NULL);
+	#endif
 	detail::initializeGlobalTLS();
 	detail::initializeLocalTLS();
-	pthread_key_create(&__thread_id, NULL);
 
 	ThreadPrivate::self = new ThreadLocal<Thread>();
 	Thread *mainThread = new MainThread();
@@ -500,6 +516,9 @@ void Thread::staticShutdown() {
 	delete ThreadPrivate::self;
 	ThreadPrivate::self = NULL;
 	detail::destroyGlobalTLS();
+#if defined(__LINUX__)
+	pthread_key_delete(__thread_id);
+#endif
 #if defined(__OSX__)
 	#if defined(MTS_OPENMP)
 		if (__omp_key_created)
