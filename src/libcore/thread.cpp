@@ -18,6 +18,7 @@
 
 #include <mitsuba/core/lock.h>
 #include <mitsuba/core/fresolver.h>
+#include <mitsuba/core/atomic.h>
 #if defined(MTS_OPENMP)
 # include <omp.h>
 #endif
@@ -27,7 +28,6 @@
 // Required for native thread functions
 #if defined(__LINUX__)
 # include <sys/prctl.h>
-# include <sys/syscall.h>
 #elif defined(__OSX__)
 # include <pthread.h>
 #elif defined(__WINDOWS__)
@@ -69,8 +69,9 @@ void SetThreadName(const char* threadName, DWORD dwThreadID = -1) {
 } // namespace
 #endif // _MSC_VER
 
-#if defined(__LINUX__)
+#if defined(__LINUX__) || defined(__OSX__)
 static pthread_key_t __thread_id;
+static int __thread_id_ctr = 0;
 #endif
 
 /**
@@ -146,12 +147,10 @@ bool Thread::getCritical() const {
 int Thread::getID() {
 #if defined(__WINDOWS__)
 	return static_cast<int>(GetCurrentThreadId());
-#elif defined(__OSX__)
-	return static_cast<int>(pthread_mach_thread_np(pthread_self()));
-#else
+#elif defined(__OSX__) || defined(__LINUX__)
 	/* pthread_self() doesn't provide nice increasing IDs, and syscall(SYS_gettid)
-	   causes a context switch. Use a thread-local variable that caches the
-	   result of syscall(SYS_gettid) */
+	   causes a context switch. Thus, this function uses a thread-local variable
+	   to provide a nice linearly increasing sequence of thread IDs */
 	return static_cast<int>(reinterpret_cast<intptr_t>(pthread_getspecific(__thread_id)));
 #endif
 }
@@ -356,9 +355,18 @@ int Thread::getCoreAffinity() const {
 void Thread::dispatch(Thread *thread) {
 	detail::initializeLocalTLS();
 
-#if defined(__LINUX__)
-	pthread_setspecific(__thread_id, reinterpret_cast<void *>(syscall(SYS_gettid)));
-#endif
+	#if 0
+		#if defined(__LINUX__)
+			pthread_setspecific(__thread_id, reinterpret_cast<void *>(syscall(SYS_gettid)));
+		#elif defined(__OSX__)
+			pthread_setspecific(__thread_id, reinterpret_cast<void *>(pthread_mach_thread_np(pthread_self())));
+		#endif
+	#endif
+
+	#if defined(__LINUX__) || defined(__OSX__)
+		int id = atomicAdd(&__thread_id_ctr, 1);
+		pthread_setspecific(__thread_id, reinterpret_cast<void *>(id));
+	#endif
 
 	Thread::ThreadPrivate::self->set(thread);
 
@@ -478,7 +486,8 @@ void Thread::staticInitialization() {
 		#if defined(MTS_OPENMP)
 			__omp_threadCount = omp_get_max_threads();
 		#endif
-	#elif defined(__LINUX__)
+	#endif
+	#if defined(__LINUX__) || defined(__OSX__)
 		pthread_key_create(&__thread_id, NULL);
 	#endif
 	detail::initializeGlobalTLS();
@@ -516,7 +525,7 @@ void Thread::staticShutdown() {
 	delete ThreadPrivate::self;
 	ThreadPrivate::self = NULL;
 	detail::destroyGlobalTLS();
-#if defined(__LINUX__)
+#if defined(__LINUX__) || defined(__OSX__)
 	pthread_key_delete(__thread_id);
 #endif
 #if defined(__OSX__)
@@ -567,11 +576,15 @@ void Thread::initializeOpenMP(size_t threadCount) {
 
 			#if defined(__LINUX__)
 				prctl(PR_SET_NAME, threadName.c_str());
-				pthread_setspecific(__thread_id, reinterpret_cast<void *>(syscall(SYS_gettid)));
 			#elif defined(__OSX__)
 				pthread_setname_np(threadName.c_str());
 			#elif defined(__WINDOWS__)
 				SetThreadName(threadName.c_str());
+			#endif
+
+			#if defined(__LINUX__) || defined(__OSX__)
+				int id = atomicAdd(&__thread_id_ctr, 1);
+				pthread_setspecific(__thread_id, reinterpret_cast<void *>(id));
 			#endif
 
 			thread->d->running = false;
