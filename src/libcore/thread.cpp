@@ -71,8 +71,10 @@ void SetThreadName(const char* threadName, DWORD dwThreadID = -1) {
 
 #if defined(__LINUX__) || defined(__OSX__)
 static pthread_key_t __thread_id;
-static int __thread_id_ctr = 0;
+#elif defined(__WINDOWS__)
+__declspec(thread) int __thread_id;
 #endif
+static int __thread_id_ctr = -1;
 
 /**
  * Internal Thread members
@@ -146,7 +148,7 @@ bool Thread::getCritical() const {
 
 int Thread::getID() {
 #if defined(__WINDOWS__)
-	return static_cast<int>(GetCurrentThreadId());
+	return __thread_id;
 #elif defined(__OSX__) || defined(__LINUX__)
 	/* pthread_self() doesn't provide nice increasing IDs, and syscall(SYS_gettid)
 	   causes a context switch. Thus, this function uses a thread-local variable
@@ -363,9 +365,11 @@ void Thread::dispatch(Thread *thread) {
 		#endif
 	#endif
 
+	int id = atomicAdd(&__thread_id_ctr, 1);
 	#if defined(__LINUX__) || defined(__OSX__)
-		int id = atomicAdd(&__thread_id_ctr, 1);
 		pthread_setspecific(__thread_id, reinterpret_cast<void *>(id));
+	#elif defined(__WINDOWS__)
+		__thread_id = id;
 	#endif
 
 	Thread::ThreadPrivate::self->set(thread);
@@ -582,9 +586,11 @@ void Thread::initializeOpenMP(size_t threadCount) {
 				SetThreadName(threadName.c_str());
 			#endif
 
+			int id = atomicAdd(&__thread_id_ctr, 1);
 			#if defined(__LINUX__) || defined(__OSX__)
-				int id = atomicAdd(&__thread_id_ctr, 1);
 				pthread_setspecific(__thread_id, reinterpret_cast<void *>(id));
+			#elif defined(__WINDOWS__)
+				__thread_id = id;
 			#endif
 
 			thread->d->running = false;
