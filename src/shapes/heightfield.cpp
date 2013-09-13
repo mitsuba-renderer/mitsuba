@@ -304,9 +304,8 @@ public:
 			f11 = m_data[(y+1) * width + x + 1];
 
 		Point pLocal(temp.p.x + temp.x, temp.p.y + temp.y, temp.p.z);
-
+		its.uv = Point2(pLocal.x * m_invSize.x, pLocal.y * m_invSize.y);
 		its.p  = m_objectToWorld(pLocal);
-		its.uv = Point2(pLocal.x * m_invSize.x, pLocal.y / m_invSize.y);
 		its.dpdu = m_objectToWorld(Vector(1, 0,
 			(1.0f - temp.p.y) * (f10 - f00) + temp.p.y * (f11 - f01)) * m_levelSize[0].x);
 		its.dpdv = m_objectToWorld(Vector(0, 1,
@@ -317,11 +316,11 @@ public:
 		its.geoFrame.n = cross(its.geoFrame.s, its.geoFrame.t);
 
 		if (m_shadingNormals) {
-			Normal
-				n00 = m_normals[y     * width + x],
-				n01 = m_normals[(y+1) * width + x],
-				n10 = m_normals[y     * width + x + 1],
-				n11 = m_normals[(y+1) * width + x + 1];
+			const Normal
+				&n00 = m_normals[y     * width + x],
+				&n01 = m_normals[(y+1) * width + x],
+				&n10 = m_normals[y     * width + x + 1],
+				&n11 = m_normals[(y+1) * width + x + 1];
 
 			its.shFrame.n = normalize(m_objectToWorld(Normal(
 				(1 - temp.p.x) * ((1-temp.p.y) * n00 + temp.p.y * n01)
@@ -343,11 +342,63 @@ public:
  		its.hasUVPartials = false;
 		its.instance = NULL;
 		its.time = ray.time;
+		its.primIndex = x + y*width;
 	}
 
 	bool rayIntersect(const Ray &ray, Float mint, Float maxt) const {
 		Float t;
 		return rayIntersect(ray, mint, maxt, t, NULL);
+	}
+
+	void getNormalDerivative(const Intersection &its,
+			Vector &dndu, Vector &dndv, bool shadingFrame) const {
+		int width = m_dataSize.x,
+		    x = its.primIndex % width,
+		    y = its.primIndex / width;
+
+		Float u = its.uv.x * m_levelSize[0].x - x;
+		Float v = its.uv.y * m_levelSize[0].y - y;
+
+		Normal normal;
+		if (shadingFrame && m_shadingNormals) {
+			/* Derivatives for bilinear patch with interpolated shading normals */
+			const Normal
+				&n00 = m_normals[y     * width + x],
+				&n01 = m_normals[(y+1) * width + x],
+				&n10 = m_normals[y     * width + x + 1],
+				&n11 = m_normals[(y+1) * width + x + 1];
+
+			normal = m_objectToWorld(Normal(
+				(1 - u) * ((1-v) * n00 + v * n01)
+				   + u  * ((1-v) * n10 + v * n11)));
+
+			dndu = m_objectToWorld(Normal((1.0f - v) * (n10 - n00) + v * (n11 - n01))) * m_levelSize[0].x;
+			dndv = m_objectToWorld(Normal((1.0f - u) * (n01 - n00) + u * (n11 - n10))) * m_levelSize[0].y;
+		} else {
+			/* Derivatives for bilinear patch with geometric normals */
+			Float
+				f00 = m_data[y     * width + x],
+				f01 = m_data[(y+1) * width + x],
+				f10 = m_data[y     * width + x + 1],
+				f11 = m_data[(y+1) * width + x + 1];
+
+			normal = m_objectToWorld(
+				Normal(f00 - f10 + (f01 + f10 - f00 - f11)*v,
+					   f00 - f01 + (f01 + f10 - f00 - f11)*u, 1));
+
+			dndu = m_objectToWorld(Normal(0, f01 + f10 - f00 - f11, 0)) * m_levelSize[0].x;
+			dndv = m_objectToWorld(Normal(f01 + f10 - f00 - f11, 0, 0)) * m_levelSize[0].y;
+		}
+
+		/* Account for normalization */
+		Float invLength = 1/normal.length();
+
+		normal *= invLength;
+		dndu *= invLength;
+		dndv *= invLength;
+
+		dndu -= dot(normal, dndu) * normal;
+		dndv -= dot(normal, dndv) * normal;
 	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
@@ -505,6 +556,68 @@ public:
 			Point3(0, 0, m_minmax[m_levelCount-1][0].min),
 			Point3(m_levelSize[0].x, m_levelSize[0].y, m_minmax[m_levelCount-1][0].max)
 		);
+	}
+
+	ref<TriMesh> createTriMesh() {
+		Vector2i size = m_dataSize;
+
+		/* Limit the size of the mesh */
+		while (size.x > 256 && size.y > 256) {
+			size.x = std::max(size.x / 2, 2);
+			size.y = std::max(size.y / 2, 2);
+		}
+
+		size_t numTris = 2 * (size_t) (size.x-1) * (size_t) (size.y-1);
+		size_t numVertices = (size_t) size.x * (size_t) size.y;
+
+		ref<TriMesh> mesh = new TriMesh("Height field approximation",
+			numTris, numVertices, false, true, false, false, !m_shadingNormals);
+
+		Point *vertices = mesh->getVertexPositions();
+		Point2 *texcoords = mesh->getVertexTexcoords();
+		Triangle *triangles = mesh->getTriangles();
+
+		Float dx = (Float) 1 / (size.x - 1);
+		Float dy = (Float) 1 / (size.y - 1);
+		Float scaleX = (Float) m_dataSize.x / size.x;
+		Float scaleY = (Float) m_dataSize.y / size.y;
+
+		uint32_t vertexIdx = 0;
+		for (int y=0; y<size.y; ++y) {
+			int py = std::min((int) (scaleY * y), m_dataSize.y-1);
+			for (int x=0; x<size.x; ++x) {
+				int px = std::min((int) (scaleX * x), m_dataSize.x-1);
+				texcoords[vertexIdx] = Point2(x*dx, y*dy);
+				vertices[vertexIdx++] = m_objectToWorld(Point(px, py,
+					m_data[px + py*m_dataSize.x]));
+			}
+		}
+		Assert(vertexIdx == numVertices);
+
+		uint32_t triangleIdx = 0;
+		for (int y=1; y<size.y; ++y) {
+			for (int x=0; x<size.x-1; ++x) {
+				uint32_t nextx = x + 1;
+				uint32_t idx0 = size.x*y + x;
+				uint32_t idx1 = size.x*y + nextx;
+				uint32_t idx2 = size.x*(y-1) + x;
+				uint32_t idx3 = size.x*(y-1) + nextx;
+
+				triangles[triangleIdx].idx[0] = idx0;
+				triangles[triangleIdx].idx[1] = idx2;
+				triangles[triangleIdx].idx[2] = idx1;
+				triangleIdx++;
+				triangles[triangleIdx].idx[0] = idx1;
+				triangles[triangleIdx].idx[1] = idx2;
+				triangles[triangleIdx].idx[2] = idx3;
+				triangleIdx++;
+			}
+		}
+		Assert(triangleIdx == numTris);
+		mesh->copyAttachments(this);
+		mesh->configure();
+
+		return mesh.get();
 	}
 
 	std::string toString() const {
