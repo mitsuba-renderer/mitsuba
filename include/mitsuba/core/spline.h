@@ -156,7 +156,7 @@ extern MTS_EXPORT_CORE Float integrateCubicInterp1DN(size_t idx,
  * \return
  *      The sampled position
  */
-extern MTS_EXPORT_CORE Float sampleCubicInterp1D(size_t idx, Float *values,
+extern MTS_EXPORT_CORE Float sampleCubicInterp1D(size_t idx, const Float *values,
 		size_t size, Float min, Float max, Float sample, Float *fval = NULL);
 
 /**
@@ -182,8 +182,8 @@ extern MTS_EXPORT_CORE Float sampleCubicInterp1D(size_t idx, Float *values,
  * \return
  *      The sampled position
  */
-extern MTS_EXPORT_CORE Float sampleCubicInterp1DN(size_t idx, Float *nodes,
-		Float *values, size_t size, Float sample, Float *fval = NULL);
+extern MTS_EXPORT_CORE Float sampleCubicInterp1DN(size_t idx, const Float *nodes,
+		const Float *values, size_t size, Float sample, Float *fval = NULL);
 
 /**
  * \brief Evaluate a cubic spline interpolant of a uniformly sampled 2D function

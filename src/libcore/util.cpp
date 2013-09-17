@@ -834,7 +834,6 @@ std::string memString(size_t size, bool precise) {
 	return os.str();
 }
 
-
 Float hypot2(Float a, Float b) {
 	Float r;
 	if (std::abs(a) > std::abs(b)) {
