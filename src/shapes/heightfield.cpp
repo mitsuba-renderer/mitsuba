@@ -494,7 +494,7 @@ public:
 				m_levelSize[0].x / cur.x,
 				m_levelSize[0].y / cur.y
 			);
-			m_blockSizeF[level] = Vector2f(m_blockSize[level]);
+			m_blockSizeF[level] = Vector2(m_blockSize[level]);
 
 			/* Allocate memory for interval data */
 			Interval *prevBounds = m_minmax[level-1], *curBounds;
