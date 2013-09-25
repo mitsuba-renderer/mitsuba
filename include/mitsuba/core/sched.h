@@ -758,7 +758,7 @@ protected:
  */
 class MTS_EXPORT_CORE LocalWorker : public Worker {
 public:
-	LocalWorker(const std::string &name,
+	LocalWorker(int coreID, const std::string &name,
 		Thread::EThreadPriority priority = Thread::ENormalPriority);
 
 	MTS_DECLARE_CLASS()

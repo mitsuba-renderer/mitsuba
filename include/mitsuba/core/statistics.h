@@ -23,6 +23,8 @@
 #include <mitsuba/core/timer.h>
 #include <mitsuba/core/atomic.h>
 
+//#define MTS_NO_STATISTICS 1
+
 #if defined(_MSC_VER)
 # include <intrin.h>
 #endif
@@ -110,6 +112,7 @@ public:
 	inline uint64_t operator++() {
 #if defined(MTS_NO_STATISTICS)
 		// do nothing
+		return 0;
 #elif defined(_MSC_VER) && defined(_WIN64)
 		const int offset = Thread::getID() & NUM_COUNTERS_MASK;
 		_InterlockedExchangeAdd64(reinterpret_cast<__int64 volatile *>(&m_value[offset].value), 1);

@@ -270,6 +270,14 @@ public:
 		ERotate90FlipY      = ERotate270FlipX
 	};
 
+	/// The four basic arithmetic operations for use with \ref arithmeticOperation()
+	enum EArithmeticOperation {
+		EAddition = 0,
+		ESubtraction,
+		EMultiplication,
+		EDivision
+	};
+
 	/**
 	 * \brief Create a bitmap of the specified type and allocate
 	 * the necessary amount of memory
@@ -287,9 +295,13 @@ public:
 	 * \param channelCount
 	 *    Channel count of the image. This parameter is only required when
 	 *    \c pFmt = \ref EMultiChannel
+	 *
+	 * \param data
+	 *    External pointer to the image data. If set to \c NULL, the
+	 *    implementation will allocate memory itself.
 	 */
 	Bitmap(EPixelFormat pFmt, EComponentFormat cFmt, const Vector2i &size,
-		int channelCount = -1);
+		uint8_t channelCount = 0, uint8_t *data = NULL);
 
 	/**
 	 * \brief Load a bitmap from an arbitrary stream data source
@@ -335,7 +347,7 @@ public:
 	inline int getHeight() const { return m_size.y; }
 
 	/// Return the number of channels used by this bitmap
-	inline int getChannelCount() const { return m_channelCount; }
+	inline int getChannelCount() const { return (int) m_channelCount; }
 
 	/// Return whether this image has matching width and height
 	inline bool isSquare() const { return m_size.x == m_size.y; }
@@ -712,18 +724,13 @@ public:
 	ref<Bitmap> rotateFlip(ERotateFlipType type) const;
 
 	/**
-	 * \brief Accumulate the contents of another bitmap into the
-	 * region of the specified offset
+	 * \brief Scale the entire image by a certain value
 	 *
-	 * Out-of-bounds regions are ignored. It is assumed that
-	 * <tt>bitmap != this</tt>.
-	 *
-	 * \remark This function throws an exception when the bitmaps
-	 * use different component formats or channels, or when the
-	 * component format is \ref EBitmask.
+	 * Skips the image's alpha channel, if it has one. When the image uses
+	 * a fixed point representation and a pixel value overflows during the
+	 * scale operation, it is clamped to the representable range.
 	 */
-	void accumulate(const Bitmap *bitmap, Point2i sourceOffset,
-			Point2i targetOffset, Vector2i size);
+	void scale(Float value);
 
 	/**
 	 * \brief Color balancing: apply the given scale factors to the
@@ -747,6 +754,19 @@ public:
 	 * \brief Accumulate the contents of another bitmap into the
 	 * region of the specified offset
 	 *
+	 * Out-of-bounds regions are ignored. It is assumed that
+	 * <tt>bitmap != this</tt>.
+	 *
+	 * \remark This function throws an exception when the bitmaps
+	 * use different component formats or channels, or when the
+	 * component format is \ref EBitmask.
+	 */
+	void accumulate(const Bitmap *bitmap, Point2i sourceOffset,
+			Point2i targetOffset, Vector2i size);
+	/**
+	 * \brief Accumulate the contents of another bitmap into the
+	 * region of the specified offset
+	 *
 	 * This convenience function calls the main <tt>accumulate()</tt>
 	 * implementation with <tt>size</tt> set to <tt>bitmap->getSize()</tt>
 	 * and <tt>sourceOffset</tt> set to zero. Out-of-bounds regions are
@@ -759,6 +779,41 @@ public:
 	inline void accumulate(const Bitmap *bitmap, Point2i targetOffset) {
 		accumulate(bitmap, Point2i(0), targetOffset, bitmap->getSize());
 	}
+
+	/**
+	 * \brief Accumulate the contents of another bitmap into the
+	 * region of the specified offset
+	 *
+	 * This convenience function calls the main <tt>accumulate()</tt>
+	 * implementation with <tt>size</tt> set to <tt>bitmap->getSize()</tt>
+	 * and <tt>sourceOffset</tt> and <tt>targetOffset</tt>tt> set to zero.
+	 * Out-of-bounds regions are ignored. It is assumed
+	 * that <tt>bitmap != this</tt>.
+	 *
+	 * \remark This function throws an exception when the bitmaps
+	 * use different component formats or channels, or when the
+	 * component format is \ref EBitmask.
+	 */
+	inline void accumulate(const Bitmap *bitmap) {
+		accumulate(bitmap, Point2i(0), Point2i(0), bitmap->getSize());
+	}
+
+	/**
+	 * \brief Perform an arithmetic operation using two images
+	 *
+	 * This function can add, subtract, multiply, or divide arbitrary
+	 * images. If the input images have different sizes or component
+	 * and pixel formats, the implementation first resamples and
+	 * converts them into the most "expressive" format that subsumes
+	 * both input images (at the cost of some temporary dynamic
+	 * memory allocations).
+	 *
+	 * To keep the implementation simple, there is currently no
+	 * special treatment of integer over/underflows if the component
+	 * format is \ref EUInt8, \ref EUInt16, or \ref EUInt32.
+	 */
+	static ref<Bitmap> arithmeticOperation(EArithmeticOperation operation,
+			const Bitmap *bitmap1, const Bitmap *bitmap2);
 
 	/**
 	 * \brief Up- or down-sample this image to a different resolution
@@ -941,7 +996,8 @@ protected:
 	Vector2i m_size;
 	uint8_t *m_data;
 	Float m_gamma;
-	int m_channelCount;
+	uint8_t m_channelCount;
+	bool m_ownsData;
 	Properties m_metadata;
 };
 

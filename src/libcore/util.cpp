@@ -829,11 +829,10 @@ std::string memString(size_t size, bool precise) {
 
 	std::ostringstream os;
 	os << std::setprecision(suffix == 0 ? 0 : (precise ? 4 : 1))
-	   << std::fixed << value << suffixes[suffix];
+	   << std::fixed << value << " " << suffixes[suffix];
 
 	return os.str();
 }
-
 
 Float hypot2(Float a, Float b) {
 	Float r;

@@ -333,7 +333,7 @@ void Scene::initialize() {
 		}
 		if (primitiveCount != effPrimitiveCount) {
 			Log(EDebug, "Scene contains " SIZE_T_FMT " primitives. Due to "
-				"instancing, the effective number of primitives is "
+				"instancing or other kinds of procedural geometry, the effective number of primitives is "
 				SIZE_T_FMT ".", primitiveCount, effPrimitiveCount);
 		}
 

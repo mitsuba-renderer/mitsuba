@@ -18,6 +18,7 @@
 
 #include <mitsuba/core/lock.h>
 #include <mitsuba/core/fresolver.h>
+#include <mitsuba/core/atomic.h>
 #if defined(MTS_OPENMP)
 # include <omp.h>
 #endif
@@ -34,7 +35,6 @@
 #endif
 
 MTS_NAMESPACE_BEGIN
-
 
 #if defined(_MSC_VER)
 namespace {
@@ -69,6 +69,13 @@ void SetThreadName(const char* threadName, DWORD dwThreadID = -1) {
 } // namespace
 #endif // _MSC_VER
 
+#if defined(__LINUX__) || defined(__OSX__)
+static pthread_key_t __thread_id;
+#elif defined(__WINDOWS__)
+__declspec(thread) int __thread_id;
+#endif
+static int __thread_id_ctr = -1;
+
 /**
  * Internal Thread members
  */
@@ -80,13 +87,15 @@ struct Thread::ThreadPrivate {
 	std::string name;
 	bool running, joined;
 	Thread::EThreadPriority priority;
+	int coreAffinity;
 	static ThreadLocal<Thread> *self;
 	bool critical;
 	boost::thread thread;
 
 	ThreadPrivate(const std::string & name_) :
 		name(name_), running(false), joined(false),
-		priority(Thread::ENormalPriority), critical(false) { }
+		priority(Thread::ENormalPriority), coreAffinity(-1),
+	    critical(false) { }
 };
 
 /**
@@ -139,11 +148,12 @@ bool Thread::getCritical() const {
 
 int Thread::getID() {
 #if defined(__WINDOWS__)
-	return static_cast<int>(GetCurrentThreadId());
-#elif defined(__OSX__)
-	return static_cast<int>(pthread_mach_thread_np(pthread_self()));
-#else
-	return (int) pthread_self();
+	return __thread_id;
+#elif defined(__OSX__) || defined(__LINUX__)
+	/* pthread_self() doesn't provide nice increasing IDs, and syscall(SYS_gettid)
+	   causes a context switch. Thus, this function uses a thread-local variable
+	   to provide a nice linearly increasing sequence of thread IDs */
+	return static_cast<int>(reinterpret_cast<intptr_t>(pthread_getspecific(__thread_id)));
 #endif
 }
 
@@ -297,8 +307,70 @@ bool Thread::setPriority(EThreadPriority priority) {
 	return true;
 }
 
+void Thread::setCoreAffinity(int coreID) {
+	d->coreAffinity = coreID;
+	if (!d->running)
+		return;
+
+#if defined(__OSX__)
+	/* CPU affinity not supported on OSX */
+#elif defined(__LINUX__)
+	int nCores = getCoreCount();
+	cpu_set_t *cpuset = CPU_ALLOC(nCores);
+	if (cpuset == NULL)
+		Log(EError, "Thread::setCoreAffinity(): could not allocate cpu_set_t");
+
+	size_t size = CPU_ALLOC_SIZE(nCores);
+	CPU_ZERO_S(size, cpuset);
+	if (coreID != -1 && coreID < nCores) {
+		CPU_SET_S(coreID, size, cpuset);
+	} else {
+		for (int i=0; i<nCores; ++i)
+			CPU_SET_S(i, size, cpuset);
+	}
+
+	const pthread_t threadID = d->thread.native_handle();
+	if (pthread_setaffinity_np(threadID, size, cpuset) != 0)
+		Log(EWarn, "Thread::setCoreAffinity(): pthread_setaffinity_np: failed");
+	CPU_FREE(cpuset);
+#elif defined(__WINDOWS__)
+	int nCores = getCoreCount();
+	const HANDLE handle = d->thread.native_handle();
+
+	DWORD_PTR mask;
+
+	if (coreID != -1 && coreID < nCores)
+		mask = (DWORD_PTR) 1 << coreID;
+	else
+		mask = (1 << nCores) - 1;
+
+	if (!SetThreadAffinityMask(handle, mask))
+		Log(EWarn, "Thread::setCoreAffinity(): SetThreadAffinityMask : failed");
+#endif
+}
+
+int Thread::getCoreAffinity() const {
+	return d->coreAffinity;
+}
+
+
 void Thread::dispatch(Thread *thread) {
 	detail::initializeLocalTLS();
+
+	#if 0
+		#if defined(__LINUX__)
+			pthread_setspecific(__thread_id, reinterpret_cast<void *>(syscall(SYS_gettid)));
+		#elif defined(__OSX__)
+			pthread_setspecific(__thread_id, reinterpret_cast<void *>(pthread_mach_thread_np(pthread_self())));
+		#endif
+	#endif
+
+	int id = atomicAdd(&__thread_id_ctr, 1);
+	#if defined(__LINUX__) || defined(__OSX__)
+		pthread_setspecific(__thread_id, reinterpret_cast<void *>(id));
+	#elif defined(__WINDOWS__)
+		__thread_id = id;
+	#endif
 
 	Thread::ThreadPrivate::self->set(thread);
 
@@ -318,6 +390,9 @@ void Thread::dispatch(Thread *thread) {
 		SetThreadName(threadName.c_str());
 #endif
 	}
+
+	if (thread->getCoreAffinity() != -1)
+		thread->setCoreAffinity(thread->getCoreAffinity());
 
 	try {
 		thread->run();
@@ -410,12 +485,15 @@ int mts_omp_get_thread_num() {
 #endif
 
 void Thread::staticInitialization() {
-#if defined(__OSX__)
-	__mts_autorelease_init();
-#if defined(MTS_OPENMP)
-	__omp_threadCount = omp_get_max_threads();
-#endif
-#endif
+	#if defined(__OSX__)
+		__mts_autorelease_init();
+		#if defined(MTS_OPENMP)
+			__omp_threadCount = omp_get_max_threads();
+		#endif
+	#endif
+	#if defined(__LINUX__) || defined(__OSX__)
+		pthread_key_create(&__thread_id, NULL);
+	#endif
 	detail::initializeGlobalTLS();
 	detail::initializeLocalTLS();
 
@@ -451,6 +529,9 @@ void Thread::staticShutdown() {
 	delete ThreadPrivate::self;
 	ThreadPrivate::self = NULL;
 	detail::destroyGlobalTLS();
+#if defined(__LINUX__) || defined(__OSX__)
+	pthread_key_delete(__thread_id);
+#endif
 #if defined(__OSX__)
 	#if defined(MTS_OPENMP)
 		if (__omp_key_created)
@@ -503,6 +584,13 @@ void Thread::initializeOpenMP(size_t threadCount) {
 				pthread_setname_np(threadName.c_str());
 			#elif defined(__WINDOWS__)
 				SetThreadName(threadName.c_str());
+			#endif
+
+			int id = atomicAdd(&__thread_id_ctr, 1);
+			#if defined(__LINUX__) || defined(__OSX__)
+				pthread_setspecific(__thread_id, reinterpret_cast<void *>(id));
+			#elif defined(__WINDOWS__)
+				__thread_id = id;
 			#endif
 
 			thread->d->running = false;
