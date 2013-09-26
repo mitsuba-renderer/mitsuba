@@ -445,7 +445,7 @@ public:
 		/* Exhaustively recurse into all specular lobes? */
 		bool exhaustiveSpecular = rRec.depth < m_maxSpecularDepth && !cacheQuery;
 
-		if (isDiffuse) {
+		if (isDiffuse && (dot(its.shFrame.n, ray.d) < 0 || (bsdf->getType() & BSDF::EBackSide))) {
 			/* 1. Diffuse indirect */
 			int maxDepth = m_maxDepth == -1 ? INT_MAX : (m_maxDepth-rRec.depth);
 			if (rRec.type & RadianceQueryRecord::EIndirectSurfaceRadiance && m_globalPhotonMap.get())
