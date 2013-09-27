@@ -351,7 +351,45 @@ void export_render() {
 		.def("serialize", triMesh_serialize2)
 		.def("writeOBJ", &TriMesh::writeOBJ);
 
-	BP_CLASS(Sensor, ConfigurableObject, bp::no_init) // incomplete
+	Shape *(AbstractEmitter::*abstractemitter_getShape)(void) = &AbstractEmitter::getShape;
+	Medium *(AbstractEmitter::*abstractemitter_getMedium)(void) = &AbstractEmitter::getMedium;
+
+	BP_CLASS(AbstractEmitter, ConfigurableObject, bp::no_init)
+		.def("getType", &AbstractEmitter::getType)
+		.def("setWorldTransform", &AbstractEmitter::setWorldTransform)
+		.def("getWorldTransform", &AbstractEmitter::getWorldTransform, BP_RETURN_VALUE)
+		.def("isOnSurface", &AbstractEmitter::isOnSurface)
+		.def("needsPositionSample", &AbstractEmitter::needsPositionSample)
+		.def("needsDirectionSample", &AbstractEmitter::needsDirectionSample)
+		.def("needsDirectSample", &AbstractEmitter::needsDirectSample)
+		.def("getDirectMeasure", &AbstractEmitter::getDirectMeasure)
+		.def("isDegenerate", &AbstractEmitter::isDegenerate)
+		.def("getShape", abstractemitter_getShape, BP_RETURN_VALUE)
+		.def("getMedium", abstractemitter_getMedium, BP_RETURN_VALUE)
+		.def("createShape", &AbstractEmitter::createShape, BP_RETURN_VALUE)
+		.def("getAABB", &AbstractEmitter::getAABB, BP_RETURN_VALUE);
+
+	BP_SETSCOPE(AbstractEmitter_class);
+	bp::enum_<AbstractEmitter::EEmitterType>("EEmitterType")
+		.value("EDeltaDirection,", AbstractEmitter::EDeltaDirection)
+		.value("EDeltaPosition,", AbstractEmitter::EDeltaPosition)
+		.value("EOnSurface,", AbstractEmitter::EOnSurface)
+		.export_values();
+	BP_SETSCOPE(renderModule);
+
+	BP_CLASS(Emitter, AbstractEmitter, bp::no_init) // incomplete
+		.def("eval", &Emitter::eval, BP_RETURN_VALUE)
+		.def("getSamplingWeight", &Emitter::getSamplingWeight)
+		.def("isEnvironmentEmitter", &Emitter::isEnvironmentEmitter)
+		.def("evalEnvironment", &Emitter::evalEnvironment, BP_RETURN_VALUE);
+
+	BP_SETSCOPE(Emitter_class);
+	bp::enum_<Emitter::EEmitterFlags>("EEmitterFlags")
+		.value("EEnvironmentEmitter,", Emitter::EEnvironmentEmitter)
+		.export_values();
+	BP_SETSCOPE(renderModule);
+
+	BP_CLASS(Sensor, AbstractEmitter, bp::no_init) // incomplete
 		.def("getShutterOpen", &Sensor::getShutterOpen)
 		.def("setShutterOpen", &Sensor::setShutterOpen)
 		.def("getShutterOpenTime", &Sensor::getShutterOpenTime)
