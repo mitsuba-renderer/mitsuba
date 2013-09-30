@@ -232,6 +232,16 @@ void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile) {
 		ctx->scene->getFilm()->getReconstructionFilter()->getProperties());
 
 	// ====================================================================
+	//   Serialize medium references of the sensor
+	// ====================================================================
+
+	QList<QDomElement> oldSensorReferences = findAllChildren(oldSensor, "ref");
+	oldSensorReferences.append(findAllChildren(oldSensor, "medium"));
+
+	for (int i=0; i<oldSensorReferences.size(); ++i)
+		sensor.appendChild(ctx->doc.importNode(oldSensorReferences[i], true));
+
+	// ====================================================================
 	//   Serialize the integrator configuration
 	// ====================================================================
 
