@@ -395,6 +395,26 @@ void export_render() {
 		.def("getShutterOpenTime", &Sensor::getShutterOpenTime)
 		.def("setShutterOpenTime", &Sensor::setShutterOpenTime);
 
+	void (Film::*film_develop1)(const Scene *scene, Float renderTime) = &Film::develop;
+	bool (Film::*film_develop2)(const Point2i &offset, const Vector2i &size,
+		const Point2i &targetOffset, Bitmap *target) const = &Film::develop;
+	ReconstructionFilter *(Film::*film_getreconstructionfilter)() = &Film::getReconstructionFilter;
+
+	BP_CLASS(Film, ConfigurableObject, bp::no_init)
+		.def("getSize", &Film::getSize, BP_RETURN_VALUE)
+		.def("getCropSize", &Film::getCropSize, BP_RETURN_VALUE)
+		.def("getCropOffset", &Film::getCropOffset, BP_RETURN_VALUE)
+		.def("clear", &Film::clear)
+		.def("setBitmap", &Film::setBitmap)
+		.def("addBitmap", &Film::addBitmap)
+		.def("setDestinationFile", &Film::setDestinationFile)
+		.def("develop", film_develop1)
+		.def("develop", film_develop2)
+		.def("destinationExists", &Film::destinationExists)
+		.def("hasHighQualityEdges", &Film::hasHighQualityEdges)
+		.def("hasAlpha", &Film::hasAlpha)
+		.def("getReconstructionFilter", film_getreconstructionfilter, BP_RETURN_VALUE);
+
 	void (ProjectiveCamera::*projectiveCamera_setWorldTransform1)(const Transform &) = &ProjectiveCamera::setWorldTransform;
 	void (ProjectiveCamera::*projectiveCamera_setWorldTransform2)(AnimatedTransform *) = &ProjectiveCamera::setWorldTransform;
 	const Transform (ProjectiveCamera::*projectiveCamera_getWorldTransform1)(Float t) const = &ProjectiveCamera::getWorldTransform;
