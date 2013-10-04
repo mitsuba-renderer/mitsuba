@@ -126,5 +126,8 @@ set (libpaths "@MTS_LIBPATHS@")
 # Use our custom version of fixup_bundle, which supports @rpath on OS X
 list(APPEND CMAKE_MODULE_PATH "@CMAKE_MODULE_PATH@")
 include("MtsBundleUtilities")
+if(APPLE)
+  set(BU_CHMOD_BUNDLE_ITEMS ON)
+endif()
 mts_fixup_bundle("${APP}" "${MTSPLUGINS};${QTPLUGINS};${PYBINDINGS}" "${libpaths}")
 
