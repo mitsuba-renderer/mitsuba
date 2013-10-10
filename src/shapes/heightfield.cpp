@@ -527,20 +527,28 @@ public:
 			memset(m_normals, 0, size);
 			storageSize += size;
 
-			for (int y=0; y<m_levelSize[0].y; ++y) {
-				for (int x=0; x<m_levelSize[0].x; ++x) {
-					Float f00 = m_data[y * m_dataSize.x + x];
-					Float f10 = m_data[y * m_dataSize.x + x + 1];
-					Float f01 = m_data[(y + 1) * m_dataSize.x + x];
-					Float f11 = m_data[(y + 1) * m_dataSize.x + x + 1];
+			for (int offset=0; offset<1; ++offset) {
+				#if defined(MTS_OPENMP)
+					#pragma omp parallel for
+				#endif
+				for (int y=offset; y<m_levelSize[0].y; y+=2) {
+					for (int x=0; x<m_levelSize[0].x; ++x) {
+							Float f00 = m_data[y * m_dataSize.x + x];
+						Float f10 = m_data[y * m_dataSize.x + x + 1];
+						Float f01 = m_data[(y + 1) * m_dataSize.x + x];
+						Float f11 = m_data[(y + 1) * m_dataSize.x + x + 1];
 
-					m_normals[y       * m_dataSize.x + x]     += normalize(Normal(f00 - f10, f00 - f01, 1));
-					m_normals[y       * m_dataSize.x + x + 1] += normalize(Normal(f00 - f10, f10 - f11, 1));
-					m_normals[(y + 1) * m_dataSize.x + x]     += normalize(Normal(f01 - f11, f00 - f01, 1));
-					m_normals[(y + 1) * m_dataSize.x + x + 1] += normalize(Normal(f01 - f11, f10 - f11, 1));
+						m_normals[y       * m_dataSize.x + x]     += normalize(Normal(f00 - f10, f00 - f01, 1));
+						m_normals[y       * m_dataSize.x + x + 1] += normalize(Normal(f00 - f10, f10 - f11, 1));
+						m_normals[(y + 1) * m_dataSize.x + x]     += normalize(Normal(f01 - f11, f00 - f01, 1));
+						m_normals[(y + 1) * m_dataSize.x + x + 1] += normalize(Normal(f01 - f11, f10 - f11, 1));
+					}
 				}
 			}
 
+			#if defined(MTS_OPENMP)
+				#pragma omp parallel for
+			#endif
 			for (int y=0; y<m_dataSize.y; ++y) {
 				for (int x=0; x<m_dataSize.x; ++x) {
 					Normal &normal = m_normals[x + y * m_dataSize.x];
