@@ -527,7 +527,7 @@ public:
 			memset(m_normals, 0, size);
 			storageSize += size;
 
-			for (int offset=0; offset<1; ++offset) {
+			for (int offset=0; offset<2; ++offset) {
 				#if defined(MTS_OPENMP)
 					#pragma omp parallel for
 				#endif
