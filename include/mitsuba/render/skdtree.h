@@ -31,7 +31,7 @@
 #endif
 
 #if defined(SINGLE_PRECISION)
-/// 32 byte temporary storage for intersection computations
+/// 64 byte temporary storage for intersection computations
 #define MTS_KD_INTERSECTION_TEMP 64
 #else
 #define MTS_KD_INTERSECTION_TEMP 128

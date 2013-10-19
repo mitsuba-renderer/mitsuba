@@ -75,6 +75,8 @@ public:
 
 	Shader *createShader(Renderer *renderer) const;
 
+	ref<Bitmap> getBitmap(const Vector2i &resolutionHint) const;
+
 	void serialize(Stream *stream, InstanceManager *manager) const;
 
 	MTS_DECLARE_CLASS()
@@ -127,6 +129,8 @@ public:
 	}
 
 	Shader *createShader(Renderer *renderer) const;
+
+	ref<Bitmap> getBitmap(const Vector2i &resolutionHint) const;
 
 	void serialize(Stream *stream, InstanceManager *manager) const;
 
@@ -185,6 +189,8 @@ public:
 
 	Shader *createShader(Renderer *renderer) const;
 
+	ref<Bitmap> getBitmap(const Vector2i &resolutionHint) const;
+
 	void serialize(Stream *stream, InstanceManager *manager) const;
 
 	MTS_DECLARE_CLASS()
@@ -241,6 +247,8 @@ public:
 	}
 
 	Shader *createShader(Renderer *renderer) const;
+
+	ref<Bitmap> getBitmap(const Vector2i &resolutionHint) const;
 
 	void serialize(Stream *stream, InstanceManager *manager) const;
 
@@ -301,6 +309,8 @@ public:
 	Shader *createShader(Renderer *renderer) const;
 
 	void serialize(Stream *stream, InstanceManager *manager) const;
+
+	ref<Bitmap> getBitmap(const Vector2i &resolutionHint) const;
 
 	MTS_DECLARE_CLASS()
 protected:

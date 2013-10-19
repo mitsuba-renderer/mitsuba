@@ -48,6 +48,9 @@ bool PathEdge::sampleNext(const Scene *scene, Sampler *sampler,
 		return false;
 	}
 
+	if (length == 0)
+		return false;
+
 	if (!medium) {
 		weight[ERadiance] = weight[EImportance] = Spectrum(1.0f);
 		pdf[ERadiance] = pdf[EImportance] = 1.0f;
@@ -102,6 +105,9 @@ bool PathEdge::perturbDirection(const Scene *scene,
 		return false;
 	}
 	d = ray.d;
+
+	if (length == 0)
+		return false;
 
 	if (!medium) {
 		weight[ERadiance] = weight[EImportance] = Spectrum(1.0f);

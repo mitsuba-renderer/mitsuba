@@ -149,6 +149,7 @@ typedef TVector2<size_t>      Size2;
 typedef TVector3<size_t>      Size3;
 typedef TVector4<size_t>      Size4;
 typedef TAABB<Point1>         AABB1;
+typedef AABB1                 Interval;
 typedef TAABB<Point2>         AABB2;
 typedef TAABB<Point4>         AABB4;
 /// \ingroup libpython

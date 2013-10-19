@@ -105,7 +105,7 @@ public:
 		Vector dpdu = trafo(Vector(1, 0, 0));
 		Vector dpdv = trafo(Vector(0, 1, 0));
 
-		if (std::abs(dot(dpdu, dpdv)) > 1e-3f)
+		if (std::abs(dot(normalize(dpdu), normalize(dpdv))) > 1e-3f)
 			Log(EError, "Error: 'toWorld' transformation contains shear!");
 
 		if (std::abs(dpdu.length() / dpdv.length() - 1) > 1e-3f)

@@ -638,6 +638,8 @@ void export_core() {
 		.def("getID", &Thread::getID)
 		.def("setPriority", &Thread::setPriority)
 		.def("getPriority", &Thread::getPriority)
+		.def("setCoreAffinity", &Thread::setCoreAffinity)
+		.def("getCoreAffinity", &Thread::getCoreAffinity)
 		.def("setCritical", &Thread::setCritical)
 		.def("getCritical", &Thread::getCritical)
 		.def("setName", &Thread::setName)
@@ -871,8 +873,8 @@ void export_core() {
 		.def("getCoreCount", &Worker::getCoreCount)
 		.def("isRemoteWorker", &Worker::isRemoteWorker);
 
-	BP_CLASS(LocalWorker, Worker, bp::init<const std::string>())
-		.def(bp::init<const std::string, Thread::EThreadPriority>());
+	BP_CLASS(LocalWorker, Worker, (bp::init<int, const std::string>()))
+		.def(bp::init<int, const std::string, Thread::EThreadPriority>());
 
 	BP_CLASS(RemoteWorker, Worker, (bp::init<const std::string, Stream *>()))
 		.def("getNodeName", &RemoteWorker::getNodeName, BP_RETURN_VALUE);

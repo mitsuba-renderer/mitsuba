@@ -153,7 +153,7 @@ scheduler = Scheduler.getInstance()
 
 # Start up the scheduling system with one worker per local core
 for i in range(0, multiprocessing.cpu_count()):
-	scheduler.registerWorker(LocalWorker('wrk%i' % i))
+	scheduler.registerWorker(LocalWorker(i, 'wrk%i' % i))
 scheduler.start()
 
 # Create a queue for tracking render jobs

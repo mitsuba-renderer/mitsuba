@@ -37,6 +37,7 @@ MTS_NAMESPACE_BEGIN
  * contents by a user-specified value. This can be quite useful when a
  * texture is too dark or too bright. The plugin can also be used to adjust
  * the height of a bump map when using the \pluginref{bump} plugin.
+ *
  * \begin{xml}[caption=Scaling the contents of a bitmap texture]
  * <texture type="scale">
  *     <float name="scale" value="0.5"/>
@@ -46,7 +47,6 @@ MTS_NAMESPACE_BEGIN
  *     </texture>
  * </texture>
  * \end{xml}
-
  */
 
 class ScalingTexture : public Texture {
@@ -100,6 +100,23 @@ public:
 
 	bool isConstant() const {
 		return m_nested->isConstant();
+	}
+
+	ref<Bitmap> getBitmap(const Vector2i &sizeHint) const {
+		ref<Bitmap> result = m_nested->getBitmap(sizeHint);
+
+		if (m_scale == Spectrum(m_scale[0])) {
+			result->scale(m_scale[0]);
+		} else {
+			result = result->convert(Bitmap::ESpectrum, Bitmap::EFloat);
+
+			Spectrum *data = (Spectrum *) result->getFloatData();
+			size_t pixelCount = result->getPixelCount();
+			for (size_t i=0; i<pixelCount; ++i)
+				*data++ *= m_scale;
+		}
+
+		return result;
 	}
 
 	std::string toString() const {

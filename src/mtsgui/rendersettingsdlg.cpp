@@ -385,7 +385,7 @@ void RenderSettingsDialog::apply(SceneContext *ctx) {
 	filmProps.setInteger("width", size.x, false);
 	filmProps.setInteger("height", size.y, false);
 
-	if (size.x != cropSize.x || size.y != cropSize.y) {
+	if (size.x != cropSize.x || size.y != cropSize.y || cropOffset.x != 0 || cropOffset.y != 0) {
 		filmProps.setInteger("cropWidth", cropSize.x, false);
 		filmProps.setInteger("cropHeight", cropSize.y, false);
 		filmProps.setInteger("cropOffsetX", cropOffset.x, false);

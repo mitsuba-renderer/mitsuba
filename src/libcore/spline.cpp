@@ -130,7 +130,7 @@ Float integrateCubicInterp1DN(size_t idx, const Float *nodes, const Float *value
 	return ((d0-d1) * (Float) (1.0 / 12.0) + (f0+f1) * 0.5f) * width;
 }
 
-Float sampleCubicInterp1D(size_t idx, Float *values, size_t size, Float min,
+Float sampleCubicInterp1D(size_t idx, const Float *values, size_t size, Float min,
 		Float max, Float sample, Float *fval) {
 	Float f0 = values[idx], f1 = values[idx+1], d0, d1;
 
@@ -180,7 +180,7 @@ Float sampleCubicInterp1D(size_t idx, Float *values, size_t size, Float min,
 	}
 }
 
-Float sampleCubicInterp1DN(size_t idx, Float *nodes, Float *values,
+Float sampleCubicInterp1DN(size_t idx, const Float *nodes, const Float *values,
 		size_t size, Float sample, Float *fval) {
 	Float f0       = values[idx],
 	      f1       = values[idx+1],

@@ -291,7 +291,18 @@ inline Float signum(Float value) {
 		return -1;
 	else if (value > 0)
 		return 1;
-	else return 0;
+	else
+		return 0;
+}
+
+/// Compute the signum (a.k.a. "sign") function, and return an integer value
+inline int signumToInt(Float value) {
+	if (value < 0)
+		return -1;
+	else if (value > 0)
+		return 1;
+	else
+		return 0;
 }
 
 /// Integer floor function

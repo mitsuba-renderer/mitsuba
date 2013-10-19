@@ -67,6 +67,19 @@ public:
 	EThreadPriority getPriority() const;
 
 	/**
+	 * \brief Set the core affinity
+	 *
+	 * This function provides a hint to the operating system
+	 * scheduler that the thread should preferably run
+	 * on the specified processor core. By default, the parameter
+	 * is set to -1, which means that there is no affinity.
+	 */
+	void setCoreAffinity(int core);
+
+	/// Return the core affinity
+	int getCoreAffinity() const;
+
+	/**
 	 * \brief Specify whether or not this thread is critical
 	 *
 	 * When an thread marked critical crashes from an uncaught

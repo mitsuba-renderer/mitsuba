@@ -266,7 +266,7 @@ void MainWindow::initWorkers() {
 	m_workerPriority = (Thread::EThreadPriority)
 		settings.value("workerPriority", (int) Thread::ELowPriority).toInt();
 	for (int i=0; i<localWorkerCount; ++i)
-		scheduler->registerWorker(new LocalWorker(formatString("wrk%i", localWorkerCtr++), m_workerPriority));
+		scheduler->registerWorker(new LocalWorker(i, formatString("wrk%i", localWorkerCtr++), m_workerPriority));
 
 	int networkConnections = 0;
 	QList<QVariant> connectionData = settings.value("connections").toList();
@@ -314,7 +314,7 @@ void MainWindow::initWorkers() {
 		QMessageBox::warning(this, tr("Scheduler warning"),
 			tr("There must be at least one worker thread -- forcing creation of one."),
 			QMessageBox::Ok);
-		scheduler->registerWorker(new LocalWorker(formatString("wrk%i", localWorkerCtr++), m_workerPriority));
+		scheduler->registerWorker(new LocalWorker(0, formatString("wrk%i", localWorkerCtr++), m_workerPriority));
 	}
 
 	QStringList args = qApp->arguments();
@@ -1312,7 +1312,8 @@ void MainWindow::on_actionSettings_triggered() {
 			ref<Scheduler> sched = Scheduler::getInstance();
 			sched->pause();
 			while (d.getLocalWorkerCount() > (int) localWorkers.size()) {
-				LocalWorker *worker = new LocalWorker(formatString("wrk%i", localWorkerCtr++), m_workerPriority);
+				LocalWorker *worker = new LocalWorker(localWorkerCtr, formatString("wrk%i", localWorkerCtr), m_workerPriority);
+				localWorkerCtr++;
 				sched->registerWorker(worker);
 				localWorkers.push_back(worker);
 			}
@@ -1726,6 +1727,9 @@ void MainWindow::onWorkBegin(const RenderJob *job, const RectangularWorkUnit *wu
 void MainWindow::drawVisualWorkUnit(SceneContext *context, const VisualWorkUnit &vwu) {
 	int ox = vwu.offset.x, oy = vwu.offset.y,
 		ex = ox + vwu.size.x, ey = oy + vwu.size.y;
+	if (vwu.size.x < 3 || vwu.size.y < 3)
+		return;
+
 	const float *color = NULL;
 
 	/* Use desaturated colors to highlight the host
@@ -1753,17 +1757,22 @@ void MainWindow::drawVisualWorkUnit(SceneContext *context, const VisualWorkUnit 
 			break;
 	}
 
-	if (vwu.size.x < 3 || vwu.size.y < 3)
-		return;
+	float scale = .7f * (color[0] * 0.212671f + color[1] * 0.715160f + color[2] * 0.072169f);
 
-	drawHLine(context, ox, oy, ox + 3, color);
-	drawHLine(context, ex - 4, oy, ex - 1, color);
-	drawHLine(context, ox, ey - 1, ox + 3, color);
-	drawHLine(context, ex - 4, ey - 1, ex - 1, color);
-	drawVLine(context, ox, oy, oy + 3, color);
-	drawVLine(context, ex - 1, oy, oy + 3, color);
-	drawVLine(context, ex - 1, ey - 4, ey - 1, color);
-	drawVLine(context, ox, ey - 4, ey - 1, color);
+	float ncol[3] = {
+		color[0]*scale,
+		color[1]*scale,
+		color[2]*scale
+	};
+
+	drawHLine(context, ox, oy, ox + 3, ncol);
+	drawHLine(context, ex - 4, oy, ex - 1, ncol);
+	drawHLine(context, ox, ey - 1, ox + 3, ncol);
+	drawHLine(context, ex - 4, ey - 1, ex - 1, ncol);
+	drawVLine(context, ox, oy, oy + 3, ncol);
+	drawVLine(context, ex - 1, oy, oy + 3, ncol);
+	drawVLine(context, ex - 1, ey - 4, ey - 1, ncol);
+	drawVLine(context, ox, ey - 4, ey - 1, ncol);
 }
 
 void MainWindow::onWorkCanceled(const RenderJob *job, const Point2i &offset, const Vector2i &size) {
