@@ -307,9 +307,9 @@ public:
 		its.uv = Point2(pLocal.x * m_invSize.x, pLocal.y * m_invSize.y);
 		its.p  = m_objectToWorld(pLocal);
 		its.dpdu = m_objectToWorld(Vector(1, 0,
-			(1.0f - temp.p.y) * (f10 - f00) + temp.p.y * (f11 - f01)) * m_levelSize[0].x);
+			(1.0f - temp.p.y) * (f10 - f00) + temp.p.y * (f11 - f01)) * m_levelSize0f.x);
 		its.dpdv = m_objectToWorld(Vector(0, 1,
-			(1.0f - temp.p.x) * (f01 - f00) + temp.p.x * (f11 - f10)) * m_levelSize[0].y);
+			(1.0f - temp.p.x) * (f01 - f00) + temp.p.x * (f11 - f10)) * m_levelSize0f.y);
 
 		its.geoFrame.s = normalize(its.dpdu);
 		its.geoFrame.t = normalize(its.dpdv - dot(its.dpdv, its.geoFrame.s) * its.geoFrame.s);
@@ -356,8 +356,8 @@ public:
 		    x = its.primIndex % width,
 		    y = its.primIndex / width;
 
-		Float u = its.uv.x * m_levelSize[0].x - x;
-		Float v = its.uv.y * m_levelSize[0].y - y;
+		Float u = its.uv.x * m_levelSize0f.x - x;
+		Float v = its.uv.y * m_levelSize0f.y - y;
 
 		Normal normal;
 		if (shadingFrame && m_shadingNormals) {
@@ -372,8 +372,8 @@ public:
 				(1 - u) * ((1-v) * n00 + v * n01)
 				   + u  * ((1-v) * n10 + v * n11)));
 
-			dndu = m_objectToWorld(Normal((1.0f - v) * (n10 - n00) + v * (n11 - n01))) * m_levelSize[0].x;
-			dndv = m_objectToWorld(Normal((1.0f - u) * (n01 - n00) + u * (n11 - n10))) * m_levelSize[0].y;
+			dndu = m_objectToWorld(Normal((1.0f - v) * (n10 - n00) + v * (n11 - n01))) * m_levelSize0f.x;
+			dndv = m_objectToWorld(Normal((1.0f - u) * (n01 - n00) + u * (n11 - n10))) * m_levelSize0f.y;
 		} else {
 			/* Derivatives for bilinear patch with geometric normals */
 			Float
@@ -386,8 +386,8 @@ public:
 				Normal(f00 - f10 + (f01 + f10 - f00 - f11)*v,
 					   f00 - f01 + (f01 + f10 - f00 - f11)*u, 1));
 
-			dndu = m_objectToWorld(Normal(0, f01 + f10 - f00 - f11, 0)) * m_levelSize[0].x;
-			dndv = m_objectToWorld(Normal(f01 + f10 - f00 - f11, 0, 0)) * m_levelSize[0].y;
+			dndu = m_objectToWorld(Normal(0, f01 + f10 - f00 - f11, 0)) * m_levelSize0f.x;
+			dndv = m_objectToWorld(Normal(f01 + f10 - f00 - f11, 0, 0)) * m_levelSize0f.y;
 		}
 
 		/* Account for normalization */
@@ -453,6 +453,7 @@ public:
 		m_minmax = new Interval*[m_levelCount];
 
 		m_levelSize[0]  = Vector2i(m_dataSize.x - 1, m_dataSize.y - 1);
+		m_levelSize0f  = Vector2(m_levelSize[0]);
 		m_blockSize[0] = Vector2i(1, 1);
 		m_blockSizeF[0] = Vector2(1, 1);
 		m_invSize = Vector2((Float) 1 / m_levelSize[0].x, (Float) 1 / m_levelSize[0].y);
@@ -562,7 +563,7 @@ public:
 
 		m_dataAABB = AABB(
 			Point3(0, 0, m_minmax[m_levelCount-1][0].min),
-			Point3(m_levelSize[0].x, m_levelSize[0].y, m_minmax[m_levelCount-1][0].max)
+			Point3(m_levelSize0f.x, m_levelSize0f.y, m_minmax[m_levelCount-1][0].max)
 		);
 	}
 
@@ -596,7 +597,7 @@ public:
 			for (int x=0; x<size.x; ++x) {
 				int px = std::min((int) (scaleX * x), m_dataSize.x-1);
 				texcoords[vertexIdx] = Point2(x*dx, y*dy);
-				vertices[vertexIdx++] = m_objectToWorld(Point(px, py,
+				vertices[vertexIdx++] = m_objectToWorld(Point((Float) px, (Float) py,
 					m_data[px + py*m_dataSize.x]));
 			}
 		}
@@ -665,6 +666,7 @@ private:
 	/* Min-max quadtree data */
 	int m_levelCount;
 	Vector2i *m_levelSize;
+	Vector2   m_levelSize0f;
 	Vector2i *m_numChildren;
 	Vector2i *m_blockSize;
 	Vector2 *m_blockSizeF;
