@@ -38,6 +38,10 @@ MTS_NAMESPACE_BEGIN
  * metadata, and the gamma setting can be stored as well. Please see
  * the class methods and enumerations for further detail.
  *
+ * The Python version of this API adds two member functions
+ * <tt>fromByteArray</tt> and <tt>toByteArray</tt> that copy image data
+ * between the Bitmap instance and a Python <tt>bytearray</tt>.
+ *
  * \ingroup libcore
  * \ingroup libpython
  */
