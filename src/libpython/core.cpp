@@ -463,6 +463,35 @@ ref<Bitmap> bitmap_convert_4(Bitmap *bitmap, Bitmap::EPixelFormat pixelFormat, B
 	return bitmap->convert(pixelFormat, componentFormat);
 }
 
+void bitmap_fromByteArray(Bitmap *bitmap, bp::object obj) {
+	if (PyByteArray_Check(obj.ptr())) {
+		uint8_t *ptr = (uint8_t *) PyByteArray_AsString(obj.ptr());
+		size_t size = PyByteArray_Size(obj.ptr());
+		SAssertEx(size == bitmap->getBufferSize(), "Bitmap::fromByteArray(): buffer sizes don't match!");
+
+		memcpy(bitmap->getData(), ptr, size);
+	} else {
+		SLog(EError, "Bitmap::fromByteArray(): Invalid argument!");
+	}
+}
+
+void bitmap_toByteArray_1(const Bitmap *bitmap, bp::object obj) {
+	if (PyByteArray_Check(obj.ptr())) {
+		uint8_t *ptr = (uint8_t *) PyByteArray_AsString(obj.ptr());
+		size_t size = PyByteArray_Size(obj.ptr());
+		SAssertEx(size == bitmap->getBufferSize(), "Bitmap::fromByteArray(): buffer sizes don't match!");
+
+		memcpy(ptr, bitmap->getData(), size);
+	} else {
+		SLog(EError, "Bitmap::toByteArray(): Invalid argument!");
+	}
+}
+
+bp::object bitmap_toByteArray_2(const Bitmap *bitmap) {
+	return bp::object(bp::handle<>(PyByteArray_FromStringAndSize(
+			(char *) bitmap->getUInt8Data(), bitmap->getBufferSize())));
+}
+
 Transform transform_glOrthographic1(Float clipNear, Float clipFar) {
 	return Transform::glOrthographic(clipNear, clipFar);
 }
@@ -756,7 +785,10 @@ void export_core() {
 		.def("convert", &bitmap_convert_1, BP_RETURN_VALUE)
 		.def("convert", &bitmap_convert_2, BP_RETURN_VALUE)
 		.def("convert", &bitmap_convert_3, BP_RETURN_VALUE)
-		.def("convert", &bitmap_convert_4, BP_RETURN_VALUE);
+		.def("convert", &bitmap_convert_4, BP_RETURN_VALUE)
+		.def("fromByteArray", &bitmap_fromByteArray)
+		.def("toByteArray", &bitmap_toByteArray_1)
+		.def("toByteArray", &bitmap_toByteArray_2);
 
 	BP_SETSCOPE(Bitmap_class);
 	bp::enum_<Bitmap::EPixelFormat>("EPixelFormat")
