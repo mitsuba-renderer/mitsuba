@@ -44,7 +44,8 @@ if hasQt:
 			'BWToolkitFramework', '-framework', 'Security', '-framework', 'CoreFoundation'])
 		if hasBreakpad:
 			qtEnv.Append(LINKFLAGS=['-framework', 'Breakpad'])
-		qtEnv.Append(CPPFLAGS=['-I', '/System/Library/Frameworks/Security.framework/Headers'])
+        # Qt 4 headers cause a lot of warnings on clang/OSX -- turn them off
+		qtEnv.Append(CPPFLAGS=['-Wno-unused-private-field', '-Wno-uninitialized'])
 		qtEnv.Append(LINKFLAGS=['-Xlinker', '-rpath', '-Xlinker', '@executable_path/../Frameworks'])
 
 	bpath = env.GetBuildPath('#src/mtsgui')
