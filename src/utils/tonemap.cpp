@@ -51,20 +51,63 @@ public:
 		cout << "   -f fmt         Request a certain output format (png/jpg, default:png)" << endl << endl;
 		cout << "   -a             Require the output image to have an alpha channel" << endl << endl;
 		cout << "   -p key,burn    Run Reinhard et al.'s photographic tonemapping operator. 'key'" << endl;
-		cout << "                  between [0, 1] chooses between low and high-key images and" << endl
-			 << "                  'burn' (also [0, 1]) controls how much highlights may burn out" << endl << endl;
-		cout << "   -x             Temporal coherence mode: activate this flag when tonemapping " << endl
-			 << "                  frames of an animation using the '-p' option to avoid flicker" << endl << endl;
+		cout << "                  between [0, 1] chooses between low and high-key images and" << endl;
+		cout << "                  'burn' (also [0, 1]) controls how much highlights may burn out" << endl << endl;
+		cout << "   -B fov         Apply a bloom filter that simulates scattering in the human" << endl;
+		cout << "                  eye. Requires the approx. field of view of the images to be" << endl;
+		cout << "                  processed in order to compute a point spread function." << endl << endl;
+		cout << "   -x             Temporal coherence mode: activate this flag when tonemapping " << endl;
+		cout << "                  frames of an animation using the '-p' option to avoid flicker" << endl << endl;
 		cout << "   -o file        Save the output with a given filename" << endl << endl;
 		cout << "   -t             Multithreaded: process several files in parallel" << endl << endl;
-		cout << " The operations are ordered as follows: 1. crop, 2. resize, 3. color-balance, " << endl;
-		cout << " 4. tonemap, 5. annotate. To simply process a directory full of EXRs in " << endl;
-		cout << " parallel, run the following: 'mtsutil tonemap -t path-to-directory/*.exr'" << endl;
+		cout << " The operations are ordered as follows: 1. crop, 2. bloom, 3. resize, 4. color" << endl;
+		cout << " balance, 5. tonemap, 6. annotate. To simply process a directory full of EXRs" << endl;
+		cout << " in parallel, run the following: 'mtsutil tonemap -t path-to-directory/*.exr'" << endl;
 	}
 
 	typedef struct {
 		int r[5];
 	} Rect;
+
+	/**
+	 * Computes a bloom filter based on
+	 *
+	 * "Physically-Based Glare Effects for Digital Images" by
+	 * Greg Spencer, Peter Shirley, Kurt Zimmerman and Donald P. Greenberg
+	 * SIGGRAPH 1995
+	 */
+	ref<Bitmap> computeBloomFilter(int size, Float fov) {
+		ref<Bitmap> bitmap = new Bitmap(Bitmap::ELuminance, Bitmap::EFloat, Vector2i(size));
+
+		Float scale       = 2.f / (size - 1),
+		      halfLength  = std::tan(.5f * degToRad(fov));
+
+		Float *ptr = bitmap->getFloatData();
+		double sum = 0;
+
+		for (int y=0; y<size; ++y) {
+			for (int x=0; x<size; ++x) {
+				Float xf = x*scale - 1,
+					  yf = y*scale - 1,
+					  r = std::sqrt(xf*xf+yf*yf),
+					  angle = radToDeg(std::atan(r * halfLength)),
+					  tmp   = angle + 0.02f,
+				      f0 = 2.61e6f * math::fastexp(-2500*angle*angle),
+				      f1 = 20.91 / (tmp*tmp*tmp),
+				      f2 = 72.37 / (tmp*tmp),
+				      f  = 0.384f*f0 + 0.478*f1 + 0.138*f2;
+
+				*ptr++ = f;
+				sum += f;
+			}
+		}
+		ptr = bitmap->getFloatData();
+		Float normalization = (Float) (1/sum);
+		for (int i=0; i<size*size; ++i)
+			*ptr++ *= normalization;
+
+		return bitmap;
+	}
 
 	int run(int argc, char **argv) {
 		ref<FileResolver> fileResolver = Thread::getThread()->getFileResolver();
@@ -84,9 +127,10 @@ public:
 		Float logAvgLuminance = 0, maxLuminance = 0;
 		bool runParallel = false;
 		ReconstructionFilter *rfilter = NULL;
+		Float bloomFov = 0;
 
 		/* Parse command-line arguments */
-		while ((optchar = getopt(argc, argv, "htxag:m:f:r:b:c:o:p:s:")) != -1) {
+		while ((optchar = getopt(argc, argv, "htxag:m:f:r:b:c:o:p:s:B:")) != -1) {
 			switch (optchar) {
 				case 'h': {
 						help();
@@ -114,6 +158,17 @@ public:
 						  SLog(EError, "Unknown format! (must be png/jpg)");
 					}
 					break;
+
+				case 'B':
+					bloomFov = (Float) strtod(optarg, &end_ptr);
+					#if !defined(MTS_HAS_FFTW)
+						Log(EWarn, "Applying a bloom filter without FFTW support compiled into "
+							"Mitsuba is likely going to be very, very slow!");
+					#endif
+					if (*end_ptr != '\0')
+						SLog(EError, "Could not parse the bloom field of view!");
+					break;
+
 
 				case 'm':
 					multiplier = (Float) strtod(optarg, &end_ptr);
@@ -199,6 +254,9 @@ public:
 			}
 		}
 
+		if (bloomFov != 0 && (bloomFov <= 0 || bloomFov >= 180))
+			Log(EError, "Bloom field of view value must be between 0 and 180!");
+
 		if (runParallel) {
 			if (outputFilename != "" || temporalCoherence) {
 				Log(EWarn, "Requested multithreaded tonemapping along with incompatible options, disabling threading..");
@@ -244,6 +302,20 @@ public:
 				if (crop[2] != -1 && crop[3] != -1)
 					input = input->crop(Point2i(crop[0], crop[1]), Vector2i(crop[2], crop[3]));
 
+				if (bloomFov != 0) {
+					int maxDim = std::max(input->getWidth(), input->getHeight());
+					if (maxDim % 1 == 0)
+						++maxDim;
+
+					ref<Bitmap> bloomFilter = computeBloomFilter(maxDim, bloomFov);
+
+					if (input->getComponentFormat() != Bitmap::EFloat)
+						input = input->convert(input->getPixelFormat(), Bitmap::EFloat);
+
+					Log(EInfo, "Convolving image with bloom filter ..");
+					input->convolve(bloomFilter);
+				}
+
 				if (resize[0] != -1)
 					input = input->resample(rfilter, ReconstructionFilter::EClamp,
 							ReconstructionFilter::EClamp, Vector2i(resize[0], resize[1]));
@@ -278,8 +350,8 @@ public:
 				ref<FileStream> os = new FileStream(outputFile, FileStream::ETruncReadWrite);
 				output->write(format, os);
 			}
-
 		} else {
+			ref<Bitmap> bloomFilter;
 			for (int i=optind; i<argc; ++i) {
 				fs::path inputFile = fileResolver->resolve(argv[i]);
 				Log(EInfo, "Loading image \"%s\" ..", inputFile.string().c_str());
@@ -289,9 +361,24 @@ public:
 				if (crop[2] != -1 && crop[3] != -1)
 					input = input->crop(Point2i(crop[0], crop[1]), Vector2i(crop[2], crop[3]));
 
+				if (bloomFov != 0) {
+					int maxDim = std::max(input->getWidth(), input->getHeight());
+					if (maxDim % 1 == 0)
+						++maxDim;
+
+					if (bloomFilter == NULL || bloomFilter->getWidth() != maxDim)
+						bloomFilter = computeBloomFilter(maxDim, bloomFov);
+
+					if (input->getComponentFormat() != Bitmap::EFloat)
+						input = input->convert(input->getPixelFormat(), Bitmap::EFloat);
+
+					Log(EInfo, "Convolving image with bloom filter ..");
+					input->convolve(bloomFilter);
+				}
+
 				if (resize[0] != -1)
 					input = input->resample(rfilter, ReconstructionFilter::EClamp,
-					ReconstructionFilter::EClamp, Vector2i(resize[0], resize[1]));
+						ReconstructionFilter::EClamp, Vector2i(resize[0], resize[1]));
 
 				if (cbal[0] != 1 || cbal[1] != 1 || cbal[2] != 1)
 					input->colorBalance(cbal[0], cbal[1], cbal[2]);
