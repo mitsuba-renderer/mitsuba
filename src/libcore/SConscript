@@ -22,6 +22,12 @@ if coreEnv.has_key('JPEGINCLUDE'):
 	coreEnv.Prepend(CPPPATH=env['JPEGINCLUDE'])
 if coreEnv.has_key('JPEGLIB'):
 	coreEnv.Prepend(LIBS=env['JPEGLIB'])
+if coreEnv.has_key('FFTWLIBDIR'):
+	coreEnv.Prepend(LIBPATH=env['FFTWLIBDIR'])
+if coreEnv.has_key('FFTWINCLUDE'):
+	coreEnv.Prepend(CPPPATH=env['FFTWINCLUDE'])
+if coreEnv.has_key('FFTWLIB'):
+	coreEnv.Prepend(LIBS=env['FFTWLIB'])
 
 coreEnv.Prepend(CPPDEFINES = [['MTS_BUILD_MODULE', 'MTS_MODULE_CORE']])
 

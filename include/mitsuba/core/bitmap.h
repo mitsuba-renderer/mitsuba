@@ -785,6 +785,24 @@ public:
 	}
 
 	/**
+	 * \brief Convolve the image with a (centered) convolution kernel
+	 *
+	 * When compiled with FFTW, Mitsuba will do the convolution
+	 * in frequency space using three FFT operations. Otherwise,
+	 * it falls back to a brute force method with quadratic
+	 * complexity.
+	 *
+	 * The image can have any resolution; the kernel should be
+	 * square and of odd resolution. Both images must be \ref EFloat32
+	 * or \ref EFloat64 valued and of the same pixel format. Each
+	 * channel is processed separately.
+	 *
+	 * The convolution is always performed in double precision.
+	 * irrespective of the precision of the underlying data.
+	 */
+	void convolve(const Bitmap *kernel);
+
+	/**
 	 * \brief Accumulate the contents of another bitmap into the
 	 * region of the specified offset
 	 *

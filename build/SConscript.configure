@@ -71,6 +71,9 @@ vars.Add('JPEGLIBDIR',      'libjpeg library path')
 vars.Add('COLLADAINCLUDE',  'COLLADA DOM include path')
 vars.Add('COLLADALIB',      'COLLADA DOM libraries')
 vars.Add('COLLADALIBDIR',   'COLLADA DOM library path')
+vars.Add('FFTWINCLUDE',     'FFTW include path')
+vars.Add('FFTWLIB',         'FFTW libraries')
+vars.Add('FFTWLIBDIR',      'FFTW library path')
 vars.Add('SHLIBPREFIX',     'Prefix for shared libraries')
 vars.Add('SHLIBSUFFIX',     'Suffix for shared libraries')
 vars.Add('LIBPREFIX',       'Prefix for windows library files')
@@ -163,6 +166,10 @@ if env.has_key('COLLADAINCLUDE'):
 	env.Prepend(CPPPATH=env['COLLADAINCLUDE'])
 if env.has_key('COLLADALIBDIR'):
 	env.Prepend(LIBPATH=env['COLLADALIBDIR'])
+if env.has_key('FFTWINCLUDE'):
+	env.Prepend(CPPPATH=env['FFTWINCLUDE'])
+if env.has_key('FFTWLIBDIR'):
+	env.Prepend(LIBPATH=env['FFTWLIBDIR'])
 
 if not conf.CheckCXX():
 	print 'Could not compile a simple C++ fragment, verify that ' + \
@@ -216,6 +223,10 @@ if not conf.TryCompile("#include <boost/version.hpp>\n#if BOOST_VERSION < 104400
 if not conf.CheckCXXHeader('Eigen/Core'):
 	print 'Eigen 3.x is missing (install libeigen3-dev)!'
 	Exit(1)
+if not conf.CheckCXXHeader('fftw3.h'):
+    print 'FFTW3 not found (install for fast image convolution support)'
+else:
+	env.Append(CPPDEFINES = [['MTS_HAS_FFTW', 1]] )
 if sys.platform == 'win32':
 	if not (conf.CheckCHeader(['windows.h', 'GL/gl.h']) \
 			and conf.CheckCHeader(['windows.h', 'GL/glu.h']) \

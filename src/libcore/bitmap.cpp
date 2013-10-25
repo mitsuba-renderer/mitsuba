@@ -59,6 +59,11 @@ extern "C" {
 };
 #endif
 
+#if defined(MTS_HAS_FFTW)
+#include <complex>
+#include <fftw3.h>
+#endif
+
 MTS_NAMESPACE_BEGIN
 
 #if defined(MTS_HAS_OPENEXR)
@@ -558,6 +563,156 @@ void Bitmap::accumulate(const Bitmap *bitmap, Point2i sourceOffset,
 	}
 }
 
+void Bitmap::convolve(const Bitmap *_kernel) {
+	if (_kernel->getWidth() != _kernel->getHeight())
+		Log(EError, "Bitmap::convolve(): convolution kernel must be square!");
+	if (_kernel->getWidth() % 2 != 1)
+		Log(EError, "Bitmap::convolve(): convolution kernel size must be odd!");
+	if (_kernel->getChannelCount() != getChannelCount())
+		Log(EError, "Bitmap::convolve(): kernel and bitmap have different channel counts!");
+	if (_kernel->getPixelFormat() != getPixelFormat())
+		Log(EError, "Bitmap::convolve(): kernel and bitmap have different pixel formats!");
+	if (_kernel->getComponentFormat() != getComponentFormat())
+		Log(EError, "Bitmap::convolve(): kernel and bitmap have different component formats!");
+	if (m_componentFormat != EFloat32 && m_componentFormat != EFloat64)
+		Log(EError, "Bitmap::convolve(): unsupported component format! (must be float32/float64)");
+
+	size_t kernelSize   = (size_t) _kernel->getWidth(),
+		   hKernelSize  = kernelSize / 2,
+		   width        = (size_t) m_size.x,
+		   height       = (size_t) m_size.y;
+
+#if defined(MTS_HAS_FFTW)
+	typedef std::complex<double> complex;
+
+	size_t paddedWidth  = width + hKernelSize,
+		   paddedHeight = height + hKernelSize,
+		   paddedSize   = paddedWidth*paddedHeight;
+
+	complex *kernel  = (complex *) fftw_malloc(sizeof(complex) * paddedSize),
+	        *kernelS = (complex *) fftw_malloc(sizeof(complex) * paddedSize),
+	        *data    = (complex *) fftw_malloc(sizeof(complex) * paddedSize),
+	        *dataS   = (complex *) fftw_malloc(sizeof(complex) * paddedSize);
+
+	if (!kernel || !kernelS || !data || !dataS)
+		SLog(EError, "Bitmap::convolve(): Unable to allocate temporary memory!");
+
+	/* Create a FFTW plan for a 2D DFT of this size */
+	fftw_plan p = fftw_plan_dft_2d(paddedHeight, paddedWidth,
+		(fftw_complex *) kernel, (fftw_complex *) kernelS, FFTW_FORWARD, FFTW_ESTIMATE);
+
+	memset(kernel, 0, sizeof(complex)*paddedSize);
+
+	for (int ch=0; ch<m_channelCount; ++ch) {
+		memset(data, 0, sizeof(complex)*paddedSize);
+		if (m_componentFormat == EFloat32) {
+			/* Copy and zero-pad the convolution kernel in a wraparound fashion */
+			for (size_t y=0; y<kernelSize; ++y) {
+				ssize_t wrappedY = modulo(hKernelSize - (ssize_t) y, (ssize_t) paddedHeight);
+				for (size_t x=0; x<kernelSize; ++x) {
+					ssize_t wrappedX = modulo(hKernelSize - (ssize_t) x, (ssize_t) paddedWidth);
+					kernel[wrappedX+wrappedY*paddedWidth] = _kernel->getFloat32Data()[(x+y*kernelSize)*m_channelCount+ch];
+				}
+			}
+
+			/* Copy and zero-pad the input data */
+			for (size_t y=0; y<height; ++y)
+				for (size_t x=0; x<width; ++x)
+					data[x+y*paddedWidth] = getFloat32Data()[(x+y*width)*m_channelCount + ch];
+		} else {
+			/* Copy and zero-pad the convolution kernel in a wraparound fashion */
+			for (size_t y=0; y<kernelSize; ++y) {
+				ssize_t wrappedY = modulo(hKernelSize - (ssize_t) y, (ssize_t) paddedHeight);
+				for (size_t x=0; x<kernelSize; ++x) {
+					ssize_t wrappedX = modulo(hKernelSize - (ssize_t) x, (ssize_t) paddedWidth);
+					kernel[wrappedX+wrappedY*paddedWidth] = _kernel->getFloat64Data()[(x+y*kernelSize)*m_channelCount+ch];
+				}
+			}
+
+			/* Copy and zero-pad the input data */
+			for (size_t y=0; y<height; ++y)
+				for (size_t x=0; x<width; ++x)
+					data[x+y*paddedWidth] = getFloat64Data()[(x+y*width)*m_channelCount + ch];
+		}
+
+		/* FFT the kernel and data */
+		fftw_execute(p);
+		fftw_execute_dft(p, (fftw_complex *) data, (fftw_complex *) dataS);
+
+		/* Multiply in frequency space -- also conjugate and scale to use the computed FFT plan backwards */
+		double factor = (double) 1 / (paddedWidth*paddedHeight);
+		for (size_t i=0; i<paddedSize; ++i)
+			dataS[i] = factor * std::conj(dataS[i] * kernelS[i]);
+
+		/* "IFFT" */
+		fftw_execute_dft(p, (fftw_complex *) dataS, (fftw_complex *) data);
+
+		if (m_componentFormat == EFloat32) {
+			for (size_t y=0; y<height; ++y)
+				for (size_t x=0; x<width; ++x)
+					getFloat32Data()[(x+y*width)*m_channelCount+ch] = (float) std::real(data[x+y*paddedWidth]);
+		} else {
+			for (size_t y=0; y<height; ++y)
+				for (size_t x=0; x<width; ++x)
+					getFloat64Data()[(x+y*width)*m_channelCount+ch] = std::real(data[x+y*paddedWidth]);
+		}
+	}
+	fftw_destroy_plan(p);
+	fftw_free(kernel);
+	fftw_free(kernelS);
+	fftw_free(data);
+	fftw_free(dataS);
+#else
+	/* Brute force fallback version */
+	float *output = static_cast<float *>(allocAligned(getBufferSize()));
+	for (int ch=0; ch<m_channelCount; ++ch) {
+		if (m_componentFormat == EFloat32) {
+			const float *input = getFloat32Data();
+			const float *kernel = _kernel->getFloat32Data();
+
+			for (size_t y=0; y<height; ++y) {
+				for (size_t x=0; x<width; ++x) {
+					double result = 0;
+					for (size_t ky=0; ky<kernelSize; ++ky) {
+						for (size_t kx=0; kx<kernelSize; ++kx) {
+							ssize_t xs = x + kx - (ssize_t) hKernelSize,
+									ys = y + ky - (ssize_t) hKernelSize;
+							if (xs >= 0 && ys >= 0 && xs < (ssize_t) width && ys < (ssize_t) height)
+								result += kernel[(kx+ky*kernelSize)*m_channelCount+ch]
+									* input[(xs+ys*width)*m_channelCount+ch];
+						}
+					}
+					output[(x+y*width)*m_channelCount+ch] = (float) result;
+				}
+			}
+		} else {
+			const double *input = getFloat64Data();
+			const double *kernel = _kernel->getFloat64Data();
+
+			for (size_t y=0; y<height; ++y) {
+				for (size_t x=0; x<width; ++x) {
+					double result = 0;
+					for (size_t ky=0; ky<kernelSize; ++ky) {
+						for (size_t kx=0; kx<kernelSize; ++kx) {
+							ssize_t xs = x + kx - (ssize_t) hKernelSize,
+									ys = y + ky - (ssize_t) hKernelSize;
+							if (xs >= 0 && ys >= 0 && xs < (ssize_t) width && ys < (ssize_t) height)
+								result += kernel[(kx+ky*kernelSize)*m_channelCount+ch]
+									* input[(xs+ys*width)*m_channelCount+ch];
+						}
+					}
+					output[(x+y*width)*m_channelCount+ch] = result;
+				}
+			}
+		}
+	}
+	if (m_ownsData)
+		freeAligned(m_data);
+	m_data = (uint8_t *) output;
+	m_ownsData = true;
+#endif
+}
+
 void Bitmap::scale(Float value) {
 	if (m_componentFormat == EBitmask)
 		Log(EError, "Bitmap::scale(): bitmasks are not supported!");
@@ -800,7 +955,6 @@ ref<Bitmap> Bitmap::arithmeticOperation(Bitmap::EArithmeticOperation operation, 
 
 	return output;
 }
-
 
 void Bitmap::colorBalance(Float r, Float g, Float b) {
 	if (m_pixelFormat != ERGB && m_pixelFormat != ERGBA)
