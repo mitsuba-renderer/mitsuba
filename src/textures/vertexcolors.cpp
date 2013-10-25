@@ -110,7 +110,6 @@ public:
 private:
 	Spectrum m_brightReflectance;
 	Spectrum m_darkReflectance;
-	Float m_width;
 };
 
 Shader *VertexColors::createShader(Renderer *renderer) const {
