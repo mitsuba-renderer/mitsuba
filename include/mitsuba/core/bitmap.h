@@ -793,9 +793,10 @@ public:
 	 * complexity.
 	 *
 	 * The image can have any resolution; the kernel should be
-	 * square and of odd resolution. Both images must be \ref EFloat32
-	 * or \ref EFloat64 valued and of the same pixel format. Each
-	 * channel is processed separately.
+	 * square and of odd resolution. Both images must be of the
+	 * same floating point-valued component format. The kernel can
+	 * either have one color channel or as many color channels as
+	 * the image to be convolved.
 	 *
 	 * The convolution is always performed in double precision.
 	 * irrespective of the precision of the underlying data.

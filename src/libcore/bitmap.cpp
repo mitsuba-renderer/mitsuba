@@ -568,14 +568,14 @@ void Bitmap::convolve(const Bitmap *_kernel) {
 		Log(EError, "Bitmap::convolve(): convolution kernel must be square!");
 	if (_kernel->getWidth() % 2 != 1)
 		Log(EError, "Bitmap::convolve(): convolution kernel size must be odd!");
-	if (_kernel->getChannelCount() != getChannelCount())
+	if (_kernel->getChannelCount() != getChannelCount() && _kernel->getChannelCount() != 1)
 		Log(EError, "Bitmap::convolve(): kernel and bitmap have different channel counts!");
-	if (_kernel->getPixelFormat() != getPixelFormat())
-		Log(EError, "Bitmap::convolve(): kernel and bitmap have different pixel formats!");
 	if (_kernel->getComponentFormat() != getComponentFormat())
 		Log(EError, "Bitmap::convolve(): kernel and bitmap have different component formats!");
-	if (m_componentFormat != EFloat32 && m_componentFormat != EFloat64)
-		Log(EError, "Bitmap::convolve(): unsupported component format! (must be float32/float64)");
+	if (m_componentFormat != EFloat16 && m_componentFormat != EFloat32 && m_componentFormat != EFloat64)
+		Log(EError, "Bitmap::convolve(): unsupported component format! (must be float16/float32/float64)");
+
+	int channelCountKernel = _kernel->getChannelCount();
 
 	size_t kernelSize   = (size_t) _kernel->getWidth(),
 		   hKernelSize  = kernelSize / 2,
@@ -605,38 +605,70 @@ void Bitmap::convolve(const Bitmap *_kernel) {
 
 	for (int ch=0; ch<m_channelCount; ++ch) {
 		memset(data, 0, sizeof(complex)*paddedSize);
-		if (m_componentFormat == EFloat32) {
-			/* Copy and zero-pad the convolution kernel in a wraparound fashion */
-			for (size_t y=0; y<kernelSize; ++y) {
-				ssize_t wrappedY = modulo(hKernelSize - (ssize_t) y, (ssize_t) paddedHeight);
-				for (size_t x=0; x<kernelSize; ++x) {
-					ssize_t wrappedX = modulo(hKernelSize - (ssize_t) x, (ssize_t) paddedWidth);
-					kernel[wrappedX+wrappedY*paddedWidth] = _kernel->getFloat32Data()[(x+y*kernelSize)*m_channelCount+ch];
+		switch (m_componentFormat) {
+			case EFloat16:
+				/* Copy and zero-pad the convolution kernel in a wraparound fashion */
+				if (ch < channelCountKernel) {
+					for (size_t y=0; y<kernelSize; ++y) {
+						ssize_t wrappedY = modulo(hKernelSize - (ssize_t) y, (ssize_t) paddedHeight);
+						for (size_t x=0; x<kernelSize; ++x) {
+							ssize_t wrappedX = modulo(hKernelSize - (ssize_t) x, (ssize_t) paddedWidth);
+							kernel[wrappedX+wrappedY*paddedWidth] = _kernel->getFloat16Data()[(x+y*kernelSize)*channelCountKernel+ch];
+						}
+					}
 				}
-			}
 
-			/* Copy and zero-pad the input data */
-			for (size_t y=0; y<height; ++y)
-				for (size_t x=0; x<width; ++x)
-					data[x+y*paddedWidth] = getFloat32Data()[(x+y*width)*m_channelCount + ch];
-		} else {
-			/* Copy and zero-pad the convolution kernel in a wraparound fashion */
-			for (size_t y=0; y<kernelSize; ++y) {
-				ssize_t wrappedY = modulo(hKernelSize - (ssize_t) y, (ssize_t) paddedHeight);
-				for (size_t x=0; x<kernelSize; ++x) {
-					ssize_t wrappedX = modulo(hKernelSize - (ssize_t) x, (ssize_t) paddedWidth);
-					kernel[wrappedX+wrappedY*paddedWidth] = _kernel->getFloat64Data()[(x+y*kernelSize)*m_channelCount+ch];
+				/* Copy and zero-pad the input data */
+				for (size_t y=0; y<height; ++y)
+					for (size_t x=0; x<width; ++x)
+						data[x+y*paddedWidth] = getFloat16Data()[(x+y*width)*m_channelCount + ch];
+				break;
+
+			case EFloat32:
+				/* Copy and zero-pad the convolution kernel in a wraparound fashion */
+				if (ch < channelCountKernel) {
+					for (size_t y=0; y<kernelSize; ++y) {
+						ssize_t wrappedY = modulo(hKernelSize - (ssize_t) y, (ssize_t) paddedHeight);
+						for (size_t x=0; x<kernelSize; ++x) {
+							ssize_t wrappedX = modulo(hKernelSize - (ssize_t) x, (ssize_t) paddedWidth);
+							kernel[wrappedX+wrappedY*paddedWidth] = _kernel->getFloat32Data()[(x+y*kernelSize)*channelCountKernel+ch];
+						}
+					}
 				}
-			}
 
-			/* Copy and zero-pad the input data */
-			for (size_t y=0; y<height; ++y)
-				for (size_t x=0; x<width; ++x)
-					data[x+y*paddedWidth] = getFloat64Data()[(x+y*width)*m_channelCount + ch];
+				/* Copy and zero-pad the input data */
+				for (size_t y=0; y<height; ++y)
+					for (size_t x=0; x<width; ++x)
+						data[x+y*paddedWidth] = getFloat32Data()[(x+y*width)*m_channelCount + ch];
+				break;
+
+			case EFloat64:
+				/* Copy and zero-pad the convolution kernel in a wraparound fashion */
+				if (ch < channelCountKernel) {
+					for (size_t y=0; y<kernelSize; ++y) {
+						ssize_t wrappedY = modulo(hKernelSize - (ssize_t) y, (ssize_t) paddedHeight);
+						for (size_t x=0; x<kernelSize; ++x) {
+							ssize_t wrappedX = modulo(hKernelSize - (ssize_t) x, (ssize_t) paddedWidth);
+							kernel[wrappedX+wrappedY*paddedWidth] = _kernel->getFloat64Data()[(x+y*kernelSize)*channelCountKernel+ch];
+						}
+					}
+				}
+
+				/* Copy and zero-pad the input data */
+				for (size_t y=0; y<height; ++y)
+					for (size_t x=0; x<width; ++x)
+						data[x+y*paddedWidth] = getFloat64Data()[(x+y*width)*m_channelCount + ch];
+				break;
+
+			default:
+				Log(EError, "Unsupported component format!");
 		}
 
-		/* FFT the kernel and data */
-		fftw_execute(p);
+		/* FFT the kernel */
+		if (ch < channelCountKernel)
+			fftw_execute(p);
+
+		/* FFT the image */
 		fftw_execute_dft(p, (fftw_complex *) data, (fftw_complex *) dataS);
 
 		/* Multiply in frequency space -- also conjugate and scale to use the computed FFT plan backwards */
@@ -647,14 +679,27 @@ void Bitmap::convolve(const Bitmap *_kernel) {
 		/* "IFFT" */
 		fftw_execute_dft(p, (fftw_complex *) dataS, (fftw_complex *) data);
 
-		if (m_componentFormat == EFloat32) {
-			for (size_t y=0; y<height; ++y)
-				for (size_t x=0; x<width; ++x)
-					getFloat32Data()[(x+y*width)*m_channelCount+ch] = (float) std::real(data[x+y*paddedWidth]);
-		} else {
-			for (size_t y=0; y<height; ++y)
-				for (size_t x=0; x<width; ++x)
-					getFloat64Data()[(x+y*width)*m_channelCount+ch] = std::real(data[x+y*paddedWidth]);
+		switch (m_componentFormat) {
+			case EFloat16:
+				for (size_t y=0; y<height; ++y)
+					for (size_t x=0; x<width; ++x)
+						getFloat16Data()[(x+y*width)*m_channelCount+ch] = (half) std::real(data[x+y*paddedWidth]);
+				break;
+
+			case EFloat32:
+				for (size_t y=0; y<height; ++y)
+					for (size_t x=0; x<width; ++x)
+						getFloat32Data()[(x+y*width)*m_channelCount+ch] = (float) std::real(data[x+y*paddedWidth]);
+				break;
+
+			case EFloat64:
+				for (size_t y=0; y<height; ++y)
+					for (size_t x=0; x<width; ++x)
+						getFloat64Data()[(x+y*width)*m_channelCount+ch] = (double) std::real(data[x+y*paddedWidth]);
+				break;
+
+			default:
+				Log(EError, "Unsupported component format!");
 		}
 	}
 	fftw_destroy_plan(p);
@@ -664,51 +709,86 @@ void Bitmap::convolve(const Bitmap *_kernel) {
 	fftw_free(dataS);
 #else
 	/* Brute force fallback version */
-	float *output = static_cast<float *>(allocAligned(getBufferSize()));
+	uint8_t *output_ = static_cast<uint8_t *>(allocAligned(getBufferSize()));
 	for (int ch=0; ch<m_channelCount; ++ch) {
-		if (m_componentFormat == EFloat32) {
-			const float *input = getFloat32Data();
-			const float *kernel = _kernel->getFloat32Data();
+		int chKernel = channelCountKernel > 1 ? ch : 0;
 
-			for (size_t y=0; y<height; ++y) {
-				for (size_t x=0; x<width; ++x) {
-					double result = 0;
-					for (size_t ky=0; ky<kernelSize; ++ky) {
-						for (size_t kx=0; kx<kernelSize; ++kx) {
-							ssize_t xs = x + kx - (ssize_t) hKernelSize,
-									ys = y + ky - (ssize_t) hKernelSize;
-							if (xs >= 0 && ys >= 0 && xs < (ssize_t) width && ys < (ssize_t) height)
-								result += kernel[(kx+ky*kernelSize)*m_channelCount+ch]
-									* input[(xs+ys*width)*m_channelCount+ch];
+		switch (m_componentFormat) {
+			case EFloat16: {
+					const half *input = getFloat16Data();
+					const half *kernel = _kernel->getFloat16Data();
+					half *output = (half *) output_;
+
+					for (size_t y=0; y<height; ++y) {
+						for (size_t x=0; x<width; ++x) {
+							double result = 0;
+							for (size_t ky=0; ky<kernelSize; ++ky) {
+								for (size_t kx=0; kx<kernelSize; ++kx) {
+									ssize_t xs = x + kx - (ssize_t) hKernelSize,
+											ys = y + ky - (ssize_t) hKernelSize;
+									if (xs >= 0 && ys >= 0 && xs < (ssize_t) width && ys < (ssize_t) height)
+										result += (double) kernel[(kx+ky*kernelSize)*channelCountKernel+chKernel]
+											* (double) input[(xs+ys*width)*m_channelCount+ch];
+								}
+							}
+							output[(x+y*width)*m_channelCount+ch] = (half) result;
 						}
 					}
-					output[(x+y*width)*m_channelCount+ch] = (float) result;
 				}
-			}
-		} else {
-			const double *input = getFloat64Data();
-			const double *kernel = _kernel->getFloat64Data();
+				break;
 
-			for (size_t y=0; y<height; ++y) {
-				for (size_t x=0; x<width; ++x) {
-					double result = 0;
-					for (size_t ky=0; ky<kernelSize; ++ky) {
-						for (size_t kx=0; kx<kernelSize; ++kx) {
-							ssize_t xs = x + kx - (ssize_t) hKernelSize,
-									ys = y + ky - (ssize_t) hKernelSize;
-							if (xs >= 0 && ys >= 0 && xs < (ssize_t) width && ys < (ssize_t) height)
-								result += kernel[(kx+ky*kernelSize)*m_channelCount+ch]
-									* input[(xs+ys*width)*m_channelCount+ch];
+			case EFloat32: {
+					const float *input = getFloat32Data();
+					const float *kernel = _kernel->getFloat32Data();
+					float *output = (float *) output_;
+
+					for (size_t y=0; y<height; ++y) {
+						for (size_t x=0; x<width; ++x) {
+							double result = 0;
+							for (size_t ky=0; ky<kernelSize; ++ky) {
+								for (size_t kx=0; kx<kernelSize; ++kx) {
+									ssize_t xs = x + kx - (ssize_t) hKernelSize,
+											ys = y + ky - (ssize_t) hKernelSize;
+									if (xs >= 0 && ys >= 0 && xs < (ssize_t) width && ys < (ssize_t) height)
+										result += kernel[(kx+ky*kernelSize)*channelCountKernel+chKernel]
+											* input[(xs+ys*width)*m_channelCount+ch];
+								}
+							}
+							output[(x+y*width)*m_channelCount+ch] = (float) result;
 						}
 					}
-					output[(x+y*width)*m_channelCount+ch] = result;
 				}
-			}
+				break;
+
+			case EFloat64: {
+					const double *input = getFloat64Data();
+					const double *kernel = _kernel->getFloat64Data();
+					double *output = (double *) output_;
+
+					for (size_t y=0; y<height; ++y) {
+						for (size_t x=0; x<width; ++x) {
+							double result = 0;
+							for (size_t ky=0; ky<kernelSize; ++ky) {
+								for (size_t kx=0; kx<kernelSize; ++kx) {
+									ssize_t xs = x + kx - (ssize_t) hKernelSize,
+											ys = y + ky - (ssize_t) hKernelSize;
+									if (xs >= 0 && ys >= 0 && xs < (ssize_t) width && ys < (ssize_t) height)
+										result += kernel[(kx+ky*kernelSize)*channelCountKernel+chKernel]
+											* input[(xs+ys*width)*m_channelCount+ch];
+								}
+							}
+							output[(x+y*width)*m_channelCount+ch] = result;
+						}
+					}
+				}
+				break;
+			default:
+				Log(EError, "Unsupported component format!");
 		}
 	}
 	if (m_ownsData)
 		freeAligned(m_data);
-	m_data = (uint8_t *) output;
+	m_data = output_;
 	m_ownsData = true;
 #endif
 }
