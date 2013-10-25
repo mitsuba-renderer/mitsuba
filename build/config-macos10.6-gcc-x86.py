@@ -25,3 +25,4 @@ PYTHON27LIB    = ['boost_python27', 'boost_system', 'python2.7']
 COLLADAINCLUDE = ['#dependencies/include/collada-dom', '#dependencies/include/collada-dom/1.4']
 COLLADALIB     = ['collada14dom23']
 QTDIR          = '#dependencies'
+FFTWLIB        = ['fftw3.3']
