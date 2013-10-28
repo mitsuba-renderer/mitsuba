@@ -21,7 +21,7 @@ GLFLAGS        = ['-DGLEW_MX']
 BOOSTLIB       = ['boost_system', 'boost_filesystem', 'boost_thread']
 COLLADAINCLUDE = ['/usr/include/collada-dom', '/usr/include/collada-dom/1.4']
 COLLADALIB     = ['collada14dom', 'xml2']
-FFTWLIB        = ['fftw3']
+FFTWLIB        = ['fftw3_threads']
 
 # The following assumes that the Mitsuba bindings should be built for the
 # "default" Python version. It is also possible to build bindings for multiple

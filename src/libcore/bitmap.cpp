@@ -1903,7 +1903,8 @@ void Bitmap::writePNG(Stream *stream, int compression) const {
 	png_text *text = NULL;
 
 	Properties metadata(m_metadata);
-	metadata.setString("generatedBy", "Mitsuba version " MTS_VERSION);
+	if (!metadata.hasProperty("generatedBy"))
+		metadata.setString("generatedBy", "Mitsuba version " MTS_VERSION);
 
 	std::vector<std::string> keys = metadata.getPropertyNames();
 	std::vector<std::string> values(keys.size());
@@ -2473,7 +2474,8 @@ void Bitmap::writeOpenEXR(Stream *stream,
 	#endif
 
 	Properties metadata(m_metadata);
-	metadata.setString("generatedBy", "Mitsuba version " MTS_VERSION);
+	if (!metadata.hasProperty("generatedBy"))
+		metadata.setString("generatedBy", "Mitsuba version " MTS_VERSION);
 
 	std::vector<std::string> keys = metadata.getPropertyNames();
 
@@ -3145,6 +3147,12 @@ void Bitmap::staticInitialization() {
 
 	/* Initialize the Bitmap format conversion */
 	FormatConverter::staticInitialization();
+
+#if defined(MTS_HAS_FFTW)
+	/* Initialize FFTW if enabled */
+	fftw_init_threads();
+	fftw_plan_with_nthreads(getCoreCount());
+#endif
 }
 
 void Bitmap::staticShutdown() {
