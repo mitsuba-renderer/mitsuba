@@ -304,7 +304,7 @@ public:
 
 				if (bloomFov != 0) {
 					int maxDim = std::max(input->getWidth(), input->getHeight());
-					if (maxDim % 1 == 0)
+					if (maxDim % 2 == 0)
 						++maxDim;
 
 					ref<Bitmap> bloomFilter = computeBloomFilter(maxDim, bloomFov);
@@ -363,7 +363,7 @@ public:
 
 				if (bloomFov != 0) {
 					int maxDim = std::max(input->getWidth(), input->getHeight());
-					if (maxDim % 1 == 0)
+					if (maxDim % 2 == 0)
 						++maxDim;
 
 					if (bloomFilter == NULL || bloomFilter->getWidth() != maxDim)
