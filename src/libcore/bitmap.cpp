@@ -3157,6 +3157,10 @@ void Bitmap::staticInitialization() {
 
 void Bitmap::staticShutdown() {
 	FormatConverter::staticShutdown();
+
+#if defined(MTS_HAS_FFTW)
+	fftw_cleanup_threads();
+#endif
 }
 
 ref<Bitmap> Bitmap::expand() {
