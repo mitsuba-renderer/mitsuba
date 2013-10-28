@@ -89,7 +89,7 @@ if sys.platform == 'win32':
 	for ver in hasPython:
 		installAs(os.path.join(distDir, 'python/'+ver+'/mitsuba.pyd'), 'libpython/mitsuba_python' + ver + '.dll')
 	install(distDir, ['Iex.dll', 'Half.dll','IlmThread.dll', 'Imath.dll','IlmImf.dll','zlib1.dll',
-		'libpng15.dll',	'jpeg62.dll', 'xerces-c_3_1.dll', 'glew32mx.dll'],
+		'libpng15.dll',	'jpeg62.dll', 'xerces-c_3_1.dll', 'glew32mx.dll', 'libfftw-3.3.dll'],
 		prefix=dllprefix)
 	install(distDir, ['libcollada14dom23.dll', 
 		'boost_python-vc100-mt-1_50.dll', 'boost_python3-vc100-mt-1_50.dll',

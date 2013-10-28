@@ -598,7 +598,7 @@ void Bitmap::convolve(const Bitmap *_kernel) {
 		SLog(EError, "Bitmap::convolve(): Unable to allocate temporary memory!");
 
 	/* Create a FFTW plan for a 2D DFT of this size */
-	fftw_plan p = fftw_plan_dft_2d(paddedHeight, paddedWidth,
+	fftw_plan p = fftw_plan_dft_2d((int) paddedHeight, (int) paddedWidth,
 		(fftw_complex *) kernel, (fftw_complex *) kernelS, FFTW_FORWARD, FFTW_ESTIMATE);
 
 	memset(kernel, 0, sizeof(complex)*paddedSize);
@@ -683,7 +683,7 @@ void Bitmap::convolve(const Bitmap *_kernel) {
 			case EFloat16:
 				for (size_t y=0; y<height; ++y)
 					for (size_t x=0; x<width; ++x)
-						getFloat16Data()[(x+y*width)*m_channelCount+ch] = (half) std::real(data[x+y*paddedWidth]);
+						getFloat16Data()[(x+y*width)*m_channelCount+ch] = half((float) std::real(data[x+y*paddedWidth]));
 				break;
 
 			case EFloat32:

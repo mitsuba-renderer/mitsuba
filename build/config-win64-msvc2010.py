@@ -33,3 +33,4 @@ PYTHON32LIB     = ['boost_python3-vc100-mt-1_50', 'python32']
 PYTHON32INCLUDE = ['#dependencies/include/python32']
 QTINCLUDE       = ['#dependencies/qt/include']
 QTDIR           = '#dependencies/qt/x64'
+FFTWLIB         = ['libfftw-3.3']
