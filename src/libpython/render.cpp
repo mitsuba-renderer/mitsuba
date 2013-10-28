@@ -434,6 +434,14 @@ void export_render() {
 		.def("setFarClip", &ProjectiveCamera::setFarClip)
 		.def("setFocusDistance", &ProjectiveCamera::setFocusDistance);
 
+	BP_CLASS(Integrator, ConfigurableObject, bp::no_init)
+		.def("preprocess", &Integrator::preprocess)
+		.def("render", &Integrator::render)
+		.def("cancel", &Integrator::cancel)
+		.def("postprocess", &Integrator::postprocess)
+		.def("configureSampler", &Integrator::configureSampler)
+		.def("getSubIntegrator", &Integrator::getSubIntegrator, BP_RETURN_VALUE);
+
 	BP_STRUCT(BSDFSamplingRecord, (bp::init<const Intersection &, Sampler *, ETransportMode>()))
 		.def(bp::init<const Intersection &, const Vector &, ETransportMode>())
 		.def(bp::init<const Intersection &, const Vector &, const Vector &, ETransportMode>())
