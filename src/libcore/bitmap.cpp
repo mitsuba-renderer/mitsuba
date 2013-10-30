@@ -349,6 +349,33 @@ size_t Bitmap::getBufferSize() const {
 	return bytesPerRow * (size_t) m_size.y;
 }
 
+std::string Bitmap::getChannelName(int idx) const {
+	Assert(idx < m_channelCount);
+	char name = '\0';
+
+	switch (m_pixelFormat) {
+		case ELuminance: name = 'L'; break;
+		case ELuminanceAlpha: name = "YA"[idx]; break;
+		case ERGBA:
+		case ERGB: name = "RGBA"[idx]; break;
+		case EXYZA:
+		case EXYZ: name = "XYZA"[idx]; break;
+		case ESpectrumAlphaWeight:
+		case ESpectrumAlpha:
+			if (idx == m_channelCount-1)
+				return m_pixelFormat == ESpectrumAlpha ? "A" : "W";
+			else if (idx == m_channelCount-2 && m_pixelFormat == ESpectrumAlphaWeight)
+				return "A";
+		case ESpectrum:
+			std::pair<Float, Float> coverage = Spectrum::getBinCoverage(idx);
+			return formatString("%.2f-%.2fnm", coverage.first, coverage.second);
+		default:
+			Log(EError, "Unknown pixel format!");
+	}
+
+	return std::string(1, name);
+}
+
 void Bitmap::updateChannelCount() {
 	switch (m_pixelFormat) {
 		case ELuminance: m_channelCount = 1; break;

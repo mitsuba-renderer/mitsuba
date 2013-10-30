@@ -356,6 +356,9 @@ public:
 	/// Return whether this image has matching width and height
 	inline bool isSquare() const { return m_size.x == m_size.y; }
 
+	/// Return a string representation of the name of a channel
+	std::string getChannelName(int channelIndex) const;
+
 	/// Return whether this image has an alpha channel
 	inline bool hasAlpha() const {
 		return
