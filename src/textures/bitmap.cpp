@@ -76,10 +76,15 @@ MTS_NAMESPACE_BEGIN
  *        \default{automatic---use caching for textures larger than 1M pixels.}
  *     }
  *     \parameter{uoffset, voffset}{\Float}{
- *       Numerical offset that should be applied to UV values before a lookup
+ *       Numerical offset that should be applied to UV lookups
  *     }
  *     \parameter{uscale, vscale}{\Float}{
- *       Multiplicative factors that should be applied to UV values before a lookup
+ *       Multiplicative factors that should be applied to UV lookups
+ *     }
+ *     \parameter{channel}{\String}{
+ *       Create a monochromatic texture based on one of the image channels
+ *       (e.g. \texttt{r}, \texttt{g}, \texttt{b}, \texttt{a}, \texttt{x},
+ *       \texttt{y}, \texttt{z} etc.). \default{use all channels}
  *     }
  * }
  * This plugin provides a bitmap-backed texture source that supports \emph{filtered}
@@ -177,7 +182,7 @@ public:
 		fs::path cacheFile;
 		ref<Bitmap> bitmap;
 
-		m_separateAlpha = props.getBoolean("separateAlpha", false);
+		m_channel = boost::to_lower_copy(props.getString("channel", ""));
 
 		if (props.hasProperty("bitmap")) {
 			/* Support initialization via raw data passed from another plugin */
@@ -197,10 +202,10 @@ public:
 
 			cacheFile = m_filename;
 
-			if (!m_separateAlpha)
+			if (m_channel.empty())
 				cacheFile.replace_extension(".mip");
 			else
-				cacheFile.replace_extension(".alpha.mip");
+				cacheFile.replace_extension(formatString(".%s.mip", m_channel.c_str()));
 
 			tryReuseCache = fs::exists(cacheFile) && props.getBoolean("cache", true);
 		}
@@ -248,13 +253,12 @@ public:
 			}
 
 			Bitmap::EPixelFormat pixelFormat;
-			if (m_separateAlpha) {
-				/* Create a texture from the alpha channel of an image */
-				if (!bitmap->hasAlpha())
-					Log(EError, "separateAlpha specified, but the image contains no alpha channel!");
+			if (!m_channel.empty()) {
+				/* Create a texture from a certain channel of an image */
 				pixelFormat = Bitmap::ELuminance;
-				bitmap = bitmap->separateChannel(bitmap->getChannelCount()-1);
-				bitmap->setGamma(1.0f);
+				bitmap = bitmap->separateChannel(findChannel(bitmap, m_channel));
+				if (m_channel == "a")
+					bitmap->setGamma(1.0f);
 			} else {
 				switch (bitmap->getPixelFormat()) {
 					case Bitmap::ELuminance:
@@ -295,6 +299,26 @@ public:
 		}
 	}
 
+	static int findChannel(const Bitmap *bitmap, const std::string channel) {
+		int found = -1;
+		std::string channelNames;
+		for (int i=0; i<bitmap->getChannelCount(); ++i) {
+			std::string name = boost::to_lower_copy(bitmap->getChannelName(i));
+			if (name == channel)
+				found = i;
+			channelNames += name;
+			if (i + 1 < bitmap->getChannelCount())
+				channelNames += std::string(", ");
+		}
+
+		if (found == -1) {
+			Log(EError, "Channel \"%s\" not found! Must be one of: [%s]",
+				channel.c_str(), channelNames.c_str());
+		}
+
+		return found;
+	}
+
 	inline ReconstructionFilter::EBoundaryCondition parseWrapMode(const std::string &wrapMode) {
 		if (wrapMode == "repeat")
 			return ReconstructionFilter::ERepeat;
@@ -321,7 +345,7 @@ public:
 		m_wrapModeV = (ReconstructionFilter::EBoundaryCondition) stream->readUInt();
 		m_gamma = stream->readFloat();
 		m_maxAnisotropy = stream->readFloat();
-		m_separateAlpha = stream->readBool();
+		m_channel = stream->readString();
 
 		size_t size = stream->readSize();
 		ref<MemoryStream> mStream = new MemoryStream(size);
@@ -340,13 +364,12 @@ public:
 		rfilter->configure();
 
 		Bitmap::EPixelFormat pixelFormat;
-		if (m_separateAlpha) {
-			/* Create a texture from the alpha channel of an image */
-			if (!bitmap->hasAlpha())
-				Log(EError, "separateAlpha specified, but the image contains no alpha channel!");
+		if (!m_channel.empty()) {
+			/* Create a texture from a certain channel of an image */
 			pixelFormat = Bitmap::ELuminance;
-			bitmap = bitmap->separateChannel(bitmap->getChannelCount()-1);
-			bitmap->setGamma(1.0f);
+			bitmap = bitmap->separateChannel(findChannel(bitmap, m_channel));
+			if (m_channel == "a")
+				bitmap->setGamma(1.0f);
 		} else {
 			switch (bitmap->getPixelFormat()) {
 				case Bitmap::ELuminance:
@@ -386,7 +409,7 @@ public:
 			/* We still have access to the original image -- use that, since
 			   it is probably much smaller than the in-memory representation */
 			ref<Stream> is = new FileStream(m_filename, FileStream::EReadOnly);
-			stream->writeBool(m_separateAlpha);
+			stream->writeString(m_channel);
 			stream->writeSize(is->getSize());
 			is->copyTo(stream);
 		} else {
@@ -397,7 +420,7 @@ public:
 				m_mipmap1->toBitmap() : m_mipmap3->toBitmap();
 			bitmap->write(Bitmap::EOpenEXR, mStream);
 
-			stream->writeBool(false); /* separateAlpha */
+			stream->writeString("");
 			stream->writeSize(mStream->getSize());
 			stream->write(mStream->getData(), mStream->getSize());
 		}
@@ -531,7 +554,7 @@ protected:
 	ReconstructionFilter::EBoundaryCondition m_wrapModeU;
 	ReconstructionFilter::EBoundaryCondition m_wrapModeV;
 	Float m_gamma, m_maxAnisotropy;
-	bool m_separateAlpha;
+	std::string m_channel;
 	fs::path m_filename;
 };
 

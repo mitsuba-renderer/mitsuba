@@ -366,9 +366,10 @@ std::string Bitmap::getChannelName(int idx) const {
 				return m_pixelFormat == ESpectrumAlpha ? "A" : "W";
 			else if (idx == m_channelCount-2 && m_pixelFormat == ESpectrumAlphaWeight)
 				return "A";
-		case ESpectrum:
-			std::pair<Float, Float> coverage = Spectrum::getBinCoverage(idx);
-			return formatString("%.2f-%.2fnm", coverage.first, coverage.second);
+		case ESpectrum: {
+				std::pair<Float, Float> coverage = Spectrum::getBinCoverage(idx);
+				return formatString("%.2f-%.2fnm", coverage.first, coverage.second);
+			}
 		default:
 			Log(EError, "Unknown pixel format!");
 	}
