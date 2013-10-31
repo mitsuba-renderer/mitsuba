@@ -164,6 +164,11 @@ private:
 	typedef std::pair<ETag, const Class *> TagEntry;
 	typedef boost::unordered_map<std::string, TagEntry> TagMap;
 
+	#if defined(__clang__)
+		#pragma clang diagnostic push
+		#pragma clang diagnostic ignored "-Wunused-private-field"
+	#endif
+
 	const xercesc::SAXParser *m_parser;
 	xercesc::XMLTranscoder* m_transcoder;
 	ref<Scene> m_scene;
@@ -175,6 +180,10 @@ private:
 	Transform m_transform;
 	ref<AnimatedTransform> m_animatedTransform;
 	bool m_isIncludedFile;
+
+	#if defined(__clang__)
+		#pragma clang diagnostic pop
+	#endif
 };
 
 MTS_NAMESPACE_END
