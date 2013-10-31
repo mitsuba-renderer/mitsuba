@@ -145,7 +145,6 @@ struct path_to_python_str {
 	}
 };
 
-
 struct TSpectrum_to_Spectrum {
 	static PyObject* convert(const TSpectrum<Float, SPECTRUM_SAMPLES> &spectrum) {
 		return bp::incref(bp::object(Spectrum(spectrum)).ptr());
@@ -777,6 +776,7 @@ void export_core() {
 		.def("getBytesPerComponent", &Bitmap::getBytesPerComponent)
 		.def("getBytesPerPixel", &Bitmap::getBytesPerPixel)
 		.def("getBufferSize", &Bitmap::getBufferSize)
+		.def("getChannelName", &Bitmap::getChannelName)
 		.def("getPixel", &Bitmap::getPixel, BP_RETURN_VALUE)
 		.def("setPixel", &Bitmap::setPixel)
 		.def("drawHLine", &Bitmap::drawHLine)
@@ -788,6 +788,7 @@ void export_core() {
 		.def("convert", &bitmap_convert_2, BP_RETURN_VALUE)
 		.def("convert", &bitmap_convert_3, BP_RETURN_VALUE)
 		.def("convert", &bitmap_convert_4, BP_RETURN_VALUE)
+		.def("rotateFlip", &Bitmap::rotateFlip, BP_RETURN_VALUE)
 		.def("fromByteArray", &bitmap_fromByteArray)
 		.def("toByteArray", &bitmap_toByteArray_1)
 		.def("toByteArray", &bitmap_toByteArray_2);
@@ -825,6 +826,25 @@ void export_core() {
 		.value("EBMP", Bitmap::EBMP)
 		.value("EJPEG", Bitmap::EJPEG)
 		.value("EAuto", Bitmap::EAuto)
+		.export_values();
+
+	bp::enum_<Bitmap::ERotateFlipType>("ERotateFlipType")
+		.value("ERotateNoneFlipNone", Bitmap::ERotateNoneFlipNone)
+		.value("ERotate180FlipXY", Bitmap::ERotate180FlipXY)
+		.value("ERotate90FlipNone", Bitmap::ERotate90FlipNone)
+		.value("ERotate270FlipXY", Bitmap::ERotate270FlipXY)
+		.value("ERotate180FlipNone", Bitmap::ERotate180FlipNone)
+		.value("ERotateNoneFlipXY", Bitmap::ERotateNoneFlipXY)
+		.value("ERotate270FlipNone", Bitmap::ERotate270FlipNone)
+		.value("ERotate90FlipXY", Bitmap::ERotate90FlipXY)
+		.value("ERotateNoneFlipX", Bitmap::ERotateNoneFlipX)
+		.value("ERotate180FlipY", Bitmap::ERotate180FlipY)
+		.value("ERotate90FlipX", Bitmap::ERotate90FlipX)
+		.value("ERotate270FlipY", Bitmap::ERotate270FlipY)
+		.value("ERotate180FlipX", Bitmap::ERotate180FlipX)
+		.value("ERotateNoneFlipY", Bitmap::ERotateNoneFlipY)
+		.value("ERotate270FlipX", Bitmap::ERotate270FlipX)
+		.value("ERotate90FlipY", Bitmap::ERotate90FlipY)
 		.export_values();
 
 	BP_SETSCOPE(coreModule);

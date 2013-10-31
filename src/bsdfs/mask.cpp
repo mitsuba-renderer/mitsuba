@@ -55,15 +55,15 @@ MTS_NAMESPACE_BEGIN
  *     <bsdf type="twosided">
  *         <bsdf type="diffuse">
  *             <texture name="reflectance" type="bitmap">
- *                 <string name="filename" value="leaf.jpg"/>
+ *                 <string name="filename" value="leaf.png"/>
  *             </texture>
  *         </bsdf>
  *     </bsdf>
  *
- *     <!-- Fetch the opacity mask from a bitmap -->
+ *     <!-- Fetch the opacity mask from the alpha channel -->
  *     <texture name="opacity" type="bitmap">
- *         <string name="filename" value="leaf_opacity.jpg"/>
- *         <float name="gamma" value="1"/>
+ *         <string name="filename" value="leaf.png"/>
+ *         <string name="channel" value="a"/>
  *     </texture>
  * </bsdf>
  * \end{xml}
