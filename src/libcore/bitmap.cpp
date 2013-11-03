@@ -1496,7 +1496,10 @@ ref<Bitmap> Bitmap::separateChannel(int channelIndex) {
 
 ref<Bitmap> Bitmap::join(EPixelFormat fmt,
 			const std::vector<Bitmap *> &sourceBitmaps) {
-	const Bitmap *ch0 = sourceBitmaps.at(0);
+	if (sourceBitmaps.size() == 0)
+		Log(EError, "Bitmap::join(): Need at least one bitmap!");
+
+	const Bitmap *ch0 = sourceBitmaps[0];
 	if (ch0->getComponentFormat() == EBitmask)
 		Log(EError, "Conversions involving bitmasks are currently not supported!");
 

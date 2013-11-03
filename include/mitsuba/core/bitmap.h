@@ -685,6 +685,9 @@ public:
 	 * pixel format, that <tt>gamma=1</tt>, and that it uses a EFloat16/EFloat32/EFloat64
 	 * component format. The conversion process is destructive in the sense that it overwrites
 	 * the original image.
+	 *
+	 * \remark In the Python bindings, the signature of this function is:
+	 * <tt>(logAvgLuminance, maxLuminance) = tonemapReinhard(logAvgLuminance, maxLuminance, key, burn)</tt>
 	 */
 	void tonemapReinhard(Float &logAvgLuminance, Float &maxLuminance,
 			Float key, Float burn);
@@ -788,6 +791,24 @@ public:
 	}
 
 	/**
+	 * \brief Accumulate the contents of another bitmap into the
+	 * region of the specified offset
+	 *
+	 * This convenience function calls the main <tt>accumulate()</tt>
+	 * implementation with <tt>size</tt> set to <tt>bitmap->getSize()</tt>
+	 * and <tt>sourceOffset</tt> and <tt>targetOffset</tt>tt> set to zero.
+	 * Out-of-bounds regions are ignored. It is assumed
+	 * that <tt>bitmap != this</tt>.
+	 *
+	 * \remark This function throws an exception when the bitmaps
+	 * use different component formats or channels, or when the
+	 * component format is \ref EBitmask.
+	 */
+	inline void accumulate(const Bitmap *bitmap) {
+		accumulate(bitmap, Point2i(0), Point2i(0), bitmap->getSize());
+	}
+
+	/**
 	 * \brief Convolve the image with a (centered) convolution kernel
 	 *
 	 * When compiled with FFTW, Mitsuba will do the convolution
@@ -805,24 +826,6 @@ public:
 	 * irrespective of the precision of the underlying data.
 	 */
 	void convolve(const Bitmap *kernel);
-
-	/**
-	 * \brief Accumulate the contents of another bitmap into the
-	 * region of the specified offset
-	 *
-	 * This convenience function calls the main <tt>accumulate()</tt>
-	 * implementation with <tt>size</tt> set to <tt>bitmap->getSize()</tt>
-	 * and <tt>sourceOffset</tt> and <tt>targetOffset</tt>tt> set to zero.
-	 * Out-of-bounds regions are ignored. It is assumed
-	 * that <tt>bitmap != this</tt>.
-	 *
-	 * \remark This function throws an exception when the bitmaps
-	 * use different component formats or channels, or when the
-	 * component format is \ref EBitmask.
-	 */
-	inline void accumulate(const Bitmap *bitmap) {
-		accumulate(bitmap, Point2i(0), Point2i(0), bitmap->getSize());
-	}
 
 	/**
 	 * \brief Perform an arithmetic operation using two images

@@ -69,6 +69,10 @@ template <typename T> struct TAABB {
 #endif
 	}
 
+	/// Copy constructor
+	inline TAABB(const TAABB &aabb)
+		: min(aabb.min), max(aabb.max) { }
+
 	/// Equality test
 	inline bool operator==(const TAABB &aabb) const {
 		return min == aabb.min && max == aabb.max;
@@ -141,7 +145,7 @@ template <typename T> struct TAABB {
 		return result;
 	}
 
-	/// Return a child bounding box in a interval-, quad-, octtree, etc.
+	/// Return a child bounding box in a interval-, quad-, octree, etc.
 	inline TAABB getChild(int index) const {
 		TAABB result(getCenter());
 
@@ -156,9 +160,9 @@ template <typename T> struct TAABB {
 	}
 
 	/// Check whether a point lies on or inside the bounding box
-	inline bool contains(const PointType &vec) const {
+	inline bool contains(const PointType &p) const {
 		for (int i=0; i<PointType::dim; ++i)
-			if (vec[i] < min[i] || vec[i] > max[i])
+			if (p[i] < min[i] || p[i] > max[i])
 				return false;
 		return true;
 	}
@@ -345,9 +349,11 @@ template <typename T> struct TAABB {
 	 * interval endpoints are also returned as 3D positions via the \c near and
 	 * \c far parameters. Special care is taken to reduce round-off errors.
 	 *
-	 * \remark Not currently exposed via the Python bindings
+	 * \remark In the Python bindings, this function has the signature
+	 * <tt>(nearT, farT, near, far) = rayIntersect(ray, nearT, farT)</tt>.
+	 * It returns \c None when no intersection was found.
 	 */
-	FINLINE bool rayIntersect(const Ray &ray, Float &nearT, Float &farT, Point &near, Point &far) const {
+	FINLINE bool rayIntersect(const RayType &ray, Float &nearT, Float &farT, PointType &near, PointType &far) const {
 		int nearAxis = -1, farAxis = -1;
 
 		/* For each pair of AABB planes */
@@ -404,7 +410,7 @@ template <typename T> struct TAABB {
 	/// Return a string representation of the bounding box
 	std::string toString() const {
 		std::ostringstream oss;
-		oss << "AABB[";
+		oss << "AABB" << PointType::dim << "[";
 		if (!isValid()) {
 			oss << "invalid";
 		} else {
@@ -418,7 +424,6 @@ template <typename T> struct TAABB {
 	PointType min; ///< Component-wise minimum
 	PointType max; ///< Component-wise maximum
 };
-
 
 /**
  * \brief Axis-aligned bounding box data structure in three dimensions

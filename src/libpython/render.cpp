@@ -215,6 +215,16 @@ void export_render() {
 		.def("getRadius", &ReconstructionFilter::getRadius)
 		.def("getBorderSize", &ReconstructionFilter::getBorderSize);
 
+	BP_SETSCOPE(ReconstructionFilter_class);
+	bp::enum_<ReconstructionFilter::EBoundaryCondition>("EBoundaryCondition")
+		.value("EClamp", ReconstructionFilter::EClamp)
+		.value("ERepeat", ReconstructionFilter::ERepeat)
+		.value("EMirror", ReconstructionFilter::EMirror)
+		.value("EZero", ReconstructionFilter::EZero)
+		.value("EOne", ReconstructionFilter::EOne)
+		.export_values();
+	BP_SETSCOPE(renderModule);
+
 	bp::class_<SceneHandler, boost::noncopyable>("SceneHandler", bp::no_init)
 		.def("loadScene", &loadScene, BP_RETURN_VALUE)
 		.staticmethod("loadScene");
@@ -371,9 +381,9 @@ void export_render() {
 
 	BP_SETSCOPE(AbstractEmitter_class);
 	bp::enum_<AbstractEmitter::EEmitterType>("EEmitterType")
-		.value("EDeltaDirection,", AbstractEmitter::EDeltaDirection)
-		.value("EDeltaPosition,", AbstractEmitter::EDeltaPosition)
-		.value("EOnSurface,", AbstractEmitter::EOnSurface)
+		.value("EDeltaDirection", AbstractEmitter::EDeltaDirection)
+		.value("EDeltaPosition", AbstractEmitter::EDeltaPosition)
+		.value("EOnSurface", AbstractEmitter::EOnSurface)
 		.export_values();
 	BP_SETSCOPE(renderModule);
 
@@ -385,7 +395,7 @@ void export_render() {
 
 	BP_SETSCOPE(Emitter_class);
 	bp::enum_<Emitter::EEmitterFlags>("EEmitterFlags")
-		.value("EEnvironmentEmitter,", Emitter::EEnvironmentEmitter)
+		.value("EEnvironmentEmitter", Emitter::EEnvironmentEmitter)
 		.export_values();
 	BP_SETSCOPE(renderModule);
 
@@ -472,15 +482,15 @@ void export_render() {
 
 	BP_SETSCOPE(BSDF_class);
 	bp::enum_<BSDF::EBSDFType>("EBSDFType")
-		.value("ENull,", BSDF::ENull)
-		.value("EDiffuseReflection,", BSDF::EDiffuseReflection)
-		.value("EDiffuseTransmission,", BSDF::EDiffuseTransmission)
+		.value("ENull", BSDF::ENull)
+		.value("EDiffuseReflection", BSDF::EDiffuseReflection)
+		.value("EDiffuseTransmission", BSDF::EDiffuseTransmission)
 		.value("EGlossyReflection", BSDF::EGlossyReflection)
-		.value("EGlossyTransmission,", BSDF::EGlossyTransmission)
-		.value("EDeltaReflection,", BSDF::EDeltaReflection)
-		.value("EDeltaTransmission,", BSDF::EDeltaTransmission)
-		.value("EDelta1DReflection,", BSDF::EDelta1DReflection)
-		.value("EDelta1DTransmission,", BSDF::EDelta1DTransmission)
+		.value("EGlossyTransmission", BSDF::EGlossyTransmission)
+		.value("EDeltaReflection", BSDF::EDeltaReflection)
+		.value("EDeltaTransmission", BSDF::EDeltaTransmission)
+		.value("EDelta1DReflection", BSDF::EDelta1DReflection)
+		.value("EDelta1DTransmission", BSDF::EDelta1DTransmission)
 		.value("EAnisotropic", BSDF::EAnisotropic)
 		.value("ESpatiallyVarying", BSDF::ESpatiallyVarying)
 		.value("ENonSymmetric", BSDF::ENonSymmetric)
