@@ -15,6 +15,7 @@
 #include <mitsuba/core/sched_remote.h>
 #include <mitsuba/core/netobject.h>
 #include <mitsuba/core/sstream.h>
+#include <mitsuba/core/cstream.h>
 #include <mitsuba/core/qmc.h>
 #include <mitsuba/core/sshstream.h>
 #include <mitsuba/render/scenehandler.h>
@@ -311,6 +312,14 @@ bp::object aabb_rayIntersect(AABB *aabb, const Ray &ray) {
 
 }
 
+bp::object logger_readLog(Logger *logger) {
+	std::string string;
+	if (logger->readLog(string))
+		return bp::object(string);
+	else
+		return bp::object();
+}
+
 bp::object aabb_rayIntersect2(AABB *aabb, const Ray &ray, Float nearT, Float farT) {
 	Point nearP, farP;
 	if (aabb->rayIntersect(ray, nearT, farT, nearP, farP))
@@ -515,6 +524,16 @@ Transform transform_glOrthographic2(Float clipLeft, Float clipRight,
 		clipBottom, clipTop, clipNear, clipFar);
 }
 
+bp::list fileresolver_resolveAll(const FileResolver *fres, const fs::path &path) {
+	bp::list result;
+	std::vector<fs::path> paths = fres->resolveAll(path);
+
+	for (size_t i=0; i<paths.size(); ++i)
+		result.append(paths[i]);
+
+	return result;
+}
+
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(fromLinearRGB_overloads, fromLinearRGB, 3, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(fromXYZ_overloads, fromXYZ, 3, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(fromIPT_overloads, fromIPT, 3, 4)
@@ -548,6 +567,7 @@ void export_core() {
 	bp::class_<StringMap>("StringMap")
 		.def(bp::map_indexing_suite<StringMap>());
 
+	/* Logging */
 	bp::enum_<ELogLevel>("ELogLevel")
 		.value("ETrace", ETrace)
 		.value("EDebug", EDebug)
@@ -557,6 +577,11 @@ void export_core() {
 		.export_values();
 
 	bp::def("Log", &mts_log);
+
+	/* Basic constants */
+	boost::python::scope().attr("Epsilon") = Epsilon;
+	boost::python::scope().attr("ShadowEpsilon") = ShadowEpsilon;
+	boost::python::scope().attr("DeltaEpsilon") = DeltaEpsilon;
 
 	bp::class_<Class, boost::noncopyable>("Class", bp::no_init)
 		.def("getName", &Class::getName, BP_RETURN_CONSTREF)
@@ -637,6 +662,8 @@ void export_core() {
 		.def("getPeer", &SocketStream::getPeer, BP_RETURN_CONSTREF)
 		.def("getReceivedBytes", &SocketStream::getReceivedBytes)
 		.def("getSentBytes", &SocketStream::getSentBytes);
+
+	BP_CLASS(ConsoleStream, Stream, bp::init<>());
 
 	BP_CLASS(SSHStream, Stream, (bp::init<std::string, std::string, const StringVector &>()))
 		.def(bp::init<std::string, std::string, const StringVector &, int>())
@@ -725,6 +752,12 @@ void export_core() {
 	BP_WRAPPED_CLASS(Formatter, FormatterWrapper, Object, bp::init<>())
 		.def("format", &Formatter::format);
 
+	BP_CLASS(DefaultFormatter, Formatter, bp::init<>())
+		.def("setHaveDate", &DefaultFormatter::setHaveDate)
+		.def("setHaveThread", &DefaultFormatter::setHaveThread)
+		.def("setHaveLogLevel", &DefaultFormatter::setHaveLogLevel)
+		.def("setHaveClass", &DefaultFormatter::setHaveClass);
+
 	Appender *(Logger::*logger_get_appender)(size_t) = &Logger::getAppender;
 	BP_CLASS(Logger, Object, bp::init<ELogLevel>())
 		.def("logProgress", logger_logProgress)
@@ -739,6 +772,7 @@ void export_core() {
 		.def("getAppender", logger_get_appender, BP_RETURN_VALUE)
 		.def("getFormatter", &Logger::getFormatter, BP_RETURN_VALUE)
 		.def("setFormatter", &Logger::setFormatter)
+		.def("readLog", &logger_readLog)
 		.def("getWarningCount", &Logger::getWarningCount);
 
 	BP_CLASS(InstanceManager, Object, bp::init<>())
@@ -896,6 +930,7 @@ void export_core() {
 
 	BP_CLASS(FileResolver, Object, bp::init<>())
 		.def("resolve", &FileResolver::resolve, BP_RETURN_VALUE)
+		.def("resolveAll", &fileresolver_resolveAll)
 		.def("resolveAbsolute", &FileResolver::resolveAbsolute, BP_RETURN_VALUE)
 		.def("clone", &FileResolver::clone, BP_RETURN_VALUE)
 		.def("appendPath", &FileResolver::appendPath)
@@ -1380,7 +1415,7 @@ void export_core() {
 	bp::class_<Frame>("Frame", bp::init<>())
 		.def(bp::init<Vector, Vector, Normal>())
 		.def(bp::init<Vector, Vector, Vector>())
-		.def(bp::init<Normal>())
+		.def(bp::init<Vector>())
 		.def(bp::init<Stream *>())
 		.def_readwrite("s", &Frame::s)
 		.def_readwrite("t", &Frame::t)
@@ -1388,7 +1423,6 @@ void export_core() {
 		.def("serialize", &Frame::serialize)
 		.def("toLocal", &Frame::toLocal, BP_RETURN_VALUE)
 		.def("toWorld", &Frame::toWorld, BP_RETURN_VALUE)
-		.def("__repr__", &Frame::toString)
 		.def("cosTheta", &Frame::cosTheta)
 		.def("cosTheta2", &Frame::cosTheta2)
 		.def("sinTheta", &Frame::sinTheta)
@@ -1399,6 +1433,9 @@ void export_core() {
 		.def("cosPhi", &Frame::cosPhi)
 		.def("sinPhi2", &Frame::sinPhi2)
 		.def("cosPhi2", &Frame::cosPhi2)
+		.def(bp::self != bp::self)
+		.def(bp::self == bp::self)
+		.def("__repr__", &Frame::toString)
 		.staticmethod("cosTheta")
 		.staticmethod("cosTheta2")
 		.staticmethod("sinTheta")

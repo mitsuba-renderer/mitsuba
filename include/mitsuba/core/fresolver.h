@@ -62,8 +62,6 @@ public:
 	 *
 	 * In comparison to \ref resolve(), this funtion returns all
 	 * matches instead of only the first one.
-	 *
-	 * \remark This function is not exposed in the Python bindings
 	 */
 	std::vector<fs::path> resolveAll(const fs::path &path) const;
 
