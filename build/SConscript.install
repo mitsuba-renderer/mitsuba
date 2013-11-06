@@ -60,17 +60,9 @@ if sys.platform == 'win32':
 		if '.dll' in plugin.__str__():
 			installTargets += env.Install(os.path.join(distDir, 'plugins'), plugin)
 
-	if 'WIN64' in env['CXXFLAGS']:
-		dllprefix='#dependencies/lib/x64'
-	else:
-		dllprefix='#dependencies/lib/i386'
-
-	if env['MSVC_VERSION'] == '9.0':
-		compilerType = 'vc90'
-	elif env['MSVC_VERSION'] == '10.0':
-		compilerType = 'vc100'
-	else:
-		raise Exception('Unknown compiler version!')
+	compilerType = 'vc' + env['MSVC_VERSION'].replace('.', '')
+	archType = 'x64' if 'WIN64' in env['CXXFLAGS'] else 'i386'
+	dllprefix = '#dependencies/lib/%s_%s' % (archType, compilerType[:-1])
 
 	if hasCollada:
 		install(distDir, ['converter/mtsimport.exe'])
@@ -88,10 +80,10 @@ if sys.platform == 'win32':
 			[ ('#' + os.path.join(includeDir, fname)) for fname in entry[2] ])
 	for ver in hasPython:
 		installAs(os.path.join(distDir, 'python/'+ver+'/mitsuba.pyd'), 'libpython/mitsuba_python' + ver + '.dll')
-	install(distDir, ['Iex.dll', 'Half.dll','IlmThread.dll', 'Imath.dll','IlmImf.dll','zlib1.dll',
-		'libpng15.dll',	'jpeg62.dll', 'xerces-c_3_1.dll', 'glew32mx.dll', 'libfftw-3.3.dll'],
+	install(distDir, ['Iex.dll', 'Half.dll','IlmThread.dll', 'Imath.dll','IlmImf.dll','zlib.dll',
+		'libpng16.dll',	'jpeg62.dll', 'xerces-c_3_1.dll', 'glew32mx.dll', 'libfftw-3.3.dll'],
 		prefix=dllprefix)
-	install(distDir, ['libcollada14dom23.dll', 
+	install(distDir, ['libcollada14dom24.dll', 
 		'boost_python27-vc100-mt-1_53.dll', 'boost_python32-vc100-mt-1_53.dll',
 		'boost_python33-vc100-mt-1_53.dll', 'boost_system-vc100-mt-1_53.dll',
 		'boost_filesystem-vc100-mt-1_53.dll', 'boost_chrono-vc100-mt-1_53.dll',
