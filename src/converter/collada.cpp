@@ -16,8 +16,8 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-/* Use the new version of COLLADA DOM */
-#define COLLADA_DOM_SUPPORT141 1
+#define COLLADA_DOM_SUPPORT141
+#define COLLADA_DOM_USING_141
 
 #include <mitsuba/mitsuba.h>
 #include <mitsuba/render/trimesh.h>
@@ -49,10 +49,6 @@
 #endif
 
 #include "converter.h"
-
-#ifdef COLLADA_DOM_SUPPORT141
-using namespace ColladaDOM141;
-#endif
 
 typedef std::map<std::string, std::string> StringMap;
 typedef std::map<std::string, int> RefCountMap;
@@ -1595,9 +1591,9 @@ void GeometryConverter::convertCollada(const fs::path &inputFile,
 	CustomErrorHandler errorHandler;
 	daeErrorHandler::setErrorHandler(&errorHandler);
 	SLog(EInfo, "Loading \"%s\" ..", inputFile.filename().string().c_str());
-#if COLLADA_DOM_SUPPORT141
+#ifdef COLLADA_DOM_USING_141 1
 	DAE *dae = new DAE(NULL, NULL, "1.4.1");
-	domCOLLADA *document = dae->open141(inputFile.string());
+	ColladaDOM141::domCOLLADA *document = dae->open141(inputFile.string());
 	if (document == NULL)
 		SLog(EError, "Could not load \"%s\"!", inputFile.string().c_str());
 #else
