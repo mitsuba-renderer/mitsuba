@@ -26,9 +26,12 @@
 #pragma warning(disable : 4267) // 'return' : conversion from 'size_t' to 'long', possible loss of data
 #endif
 
-#define BP_STRUCT(Name, Init) \
+#define BP_STRUCT_DECL(Name, Init) \
 	bp::class_<Name> Name ##_struct(#Name, Init); \
-	bp::register_ptr_to_python<Name*>(); \
+	bp::register_ptr_to_python<Name*>();
+
+#define BP_STRUCT(Name, Init) \
+	BP_STRUCT_DECL(Name, Init) \
 	Name ##_struct
 
 #define BP_SUBSTRUCT(Name, Base, Init) \
@@ -36,9 +39,12 @@
 	bp::register_ptr_to_python<Name*>(); \
 	Name ##_struct
 
-#define BP_CLASS(Name, Base, Init) \
+#define BP_CLASS_DECL(Name, Base, Init) \
 	bp::class_<Name, ref<Name>, bp::bases<Base>, boost::noncopyable> Name ##_class(#Name, Init); \
-	bp::register_ptr_to_python<Name*>(); \
+	bp::register_ptr_to_python<Name*>();
+
+#define BP_CLASS(Name, Base, Init) \
+	BP_CLASS_DECL(Name, Base, Init) \
 	Name ##_class
 
 #define BP_WRAPPED_CLASS(Name, Wrapper, Base, Init) \
