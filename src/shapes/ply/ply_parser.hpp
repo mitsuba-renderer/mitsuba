@@ -18,6 +18,7 @@
 #      define MTS_USE_BOOST_TR1 1
 #    else
 #      define MTS_USE_BOOST_TR1 0
+#      define ADT_WORKAROUND 1
 #    endif
 #  elif defined(__INTEL_COMPILER) && !defined(__OSX__)
 #    define MTS_USE_BOOST_TR1 1
@@ -26,7 +27,7 @@
 #  endif
 #endif
 
-#if defined(__INTEL_COMPILER) || defined(__INTELLISENSE__)
+#if !defined(ADT_WORKAROUND) && (defined(__INTEL_COMPILER) || defined(__INTELLISENSE__))
 #define ADT_WORKAROUND 1
 #endif
 

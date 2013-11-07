@@ -132,7 +132,7 @@ namespace math {
 
 MTS_NAMESPACE_END
 
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) && _MSC_VER < 1800
 extern "C" {
 	extern MTS_EXPORT_CORE float nextafterf(float x, float y);
 	extern MTS_EXPORT_CORE double nextafter(double x, double y);

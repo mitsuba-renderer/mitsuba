@@ -15,6 +15,8 @@
 
 #include <mitsuba/mitsuba.h>
 
+#if defined(_MSC_VER) && _MSC_VER < 1800
+
 /* Use strict IEEE 754 floating point computations
    for the following code */
 #pragma float_control(precise, on)
@@ -172,3 +174,4 @@ double nextafter(double x, double y) {
 
 	return x;
 }
+#endif

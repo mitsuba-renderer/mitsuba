@@ -83,16 +83,18 @@ if sys.platform == 'win32':
 	install(distDir, ['Iex.dll', 'Half.dll','IlmThread.dll', 'Imath.dll','IlmImf.dll','zlib.dll',
 		'libpng16.dll',	'jpeg62.dll', 'xerces-c_3_1.dll', 'glew32mx.dll', 'libfftw-3.3.dll'],
 		prefix=dllprefix)
-	install(distDir, ['libcollada14dom24.dll', 
-		'boost_python27-vc100-mt-1_53.dll', 'boost_python32-vc100-mt-1_53.dll',
-		'boost_python33-vc100-mt-1_53.dll', 'boost_system-vc100-mt-1_53.dll',
-		'boost_filesystem-vc100-mt-1_53.dll', 'boost_chrono-vc100-mt-1_53.dll',
-		'boost_thread-vc100-mt-1_53.dll'], dllprefix)
+	install(distDir, ['libcollada14dom24.dll'], dllprefix)
+	for boostlib in ['python27', 'python32', 'python33', 'system', 'filesystem', 'chrono', 'thread']:
+		install(distDir, ['boost_%s-%s-mt-1_53.dll' % (boostlib, compilerType)], dllprefix)
 
 	if 'WIN64' in env['CXXFLAGS']:
-		installTargets += env.Install(distDir, '#dependencies/bin/vcredist_2010_sp1_x64.exe')
+		if compilerType == 'vc120':
+			installTargets += env.Install(distDir, '#dependencies/bin/vcredist_2013_x64.exe')
+		else:
+			installTargets += env.Install(distDir, '#dependencies/bin/vcredist_2010_sp1_x64.exe')
 	else:
 		installTargets += env.Install(distDir, '#dependencies/bin/vcredist_2010_sp1_x86.exe')
+
 	installTargets += env.Install(distDir, '#data/windows/README.txt')
 
 	if 'REDIST_PATH' in env:
