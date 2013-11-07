@@ -289,14 +289,18 @@ Options/Arguments:
                   between [0, 1] chooses between low and high-key images and
                   'burn' (also [0, 1]) controls how much highlights may burn out
 
-   -x             Temporal coherence mode: activate this flag when tonemapping
+   -B fov         Apply a bloom filter that simulates scattering in the human
+                  eye. Requires the approx. field of view of the images to be
+                  processed in order to compute a point spread function.
+
+   -x             Temporal coherence mode: activate this flag when tonemapping 
                   frames of an animation using the '-p' option to avoid flicker
 
    -o file        Save the output with a given filename
 
    -t             Multithreaded: process several files in parallel
 
- The operations are ordered as follows: 1. crop, 2. resize, 3. color-balance,
- 4. tonemap, 5. annotate. To simply process a directory full of EXRs in
- parallel, run the following: 'mtsutil tonemap -t path-to-directory/*.exr'
+ The operations are ordered as follows: 1. crop, 2. bloom, 3. resize, 4. color
+ balance, 5. tonemap, 6. annotate. To simply process a directory full of EXRs
+ in parallel, run the following: 'mtsutil tonemap -t path-to-directory/*.exr'
 \end{console}

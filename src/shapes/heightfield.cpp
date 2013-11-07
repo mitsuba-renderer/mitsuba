@@ -60,6 +60,61 @@ namespace {
 	};
 };
 
+/*!\plugin{heightfield}{Height field intersection shape}
+ * \order{11}
+ * \parameters{
+ *     \parameter{shadingNormals}{\Boolean}{
+ *       Use linearly interpolated shading normals over the height
+ *       field as opposed to discontinuous normals from the underlying
+ *       bilinear patches? \default{\code{true}, i.e. interpolate smoothly varying normals}
+ *	   }
+ *     \parameter{flipNormals}{\Boolean}{
+ *       Optional flag to flip all normals. \default{\code{false}, i.e.
+ *       the normals are left unchanged}.
+ *	   }
+ *     \parameter{toWorld}{\Transform}{
+ *	      Specifies an optional linear object-to-world transformation.
+ *        \default{none, i.e. object space $=$ world space}
+ *     }
+ *     \parameter{width, height}{\Integer}{
+ *       When the nexted texture is procedural (see below),
+ *       this parameter specifies the resolution at which it should
+ *       be rasterized to create a height field made of bilinear patches.
+ *	   }
+ *     \parameter{\Unnamed}{\Texture}{
+ *	     A nested texture that specifies the height field values. This
+ *	     could be a bitmap-backed texture or one that is procedurally defined.
+ *	     In the latter case, it will be rasterized using the resolution specified
+ *	     by the \code{width} and \code{height} arguments.
+ *	   }
+ * }
+ *\vspace{-2mm}
+ * \renderings{
+ *     \rendering{Heigh field rendering of a mountain, see \lstref{heightfield-bitmap}}
+ *         {shape_heightfield}
+ * }
+ * This plugin implements an efficient height field intersection shape, i.e.
+ * a two-dimensional plane that is vertically displaced using height values
+ * loaded from a texture.
+ * Internally, the height field is represented as a min-max mipmap
+ * \cite{Tevs2008Maximum}, allowing cheap storage and efficient ray
+ * intersection queries. It is generally preferable to represent
+ * height fields using this specialized plugin rather than converting
+ * them into triangle meshes.
+ *
+ * \begin{xml}[caption={Declaring a height field from a monochromatic scaled bitmap texture}, label=lst:heightfield-bitmap]
+ * <shape type="heightfield">
+ *     <texture type="scale">
+ *         <float name="scale" value="0.5"/>
+ *         <texture type="bitmap">
+ *             <float name="gamma" value="1"/>
+ *             <string name="filename" value="mountain_profile.png"/>
+ *         </texture>
+ *     </texture>
+ * </shape>
+ * \end{xml}
+ */
+
 class Heightfield : public Shape {
 public:
 	Heightfield(const Properties &props) : Shape(props), m_data(NULL), m_normals(NULL), m_minmax(NULL) {
@@ -674,6 +729,6 @@ private:
 };
 
 MTS_IMPLEMENT_CLASS_S(Heightfield, false, Shape)
-MTS_EXPORT_PLUGIN(Heightfield, "Height field intersection primitive");
+MTS_EXPORT_PLUGIN(Heightfield, "Height field intersection shape");
 MTS_NAMESPACE_END
 

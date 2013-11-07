@@ -37,6 +37,7 @@ enum ELogLevel {
  * a human-readable format
  *
  * \ingroup libcore
+ * \ingroup libpython
  */
 class MTS_EXPORT_CORE Formatter : public Object {
 public:
@@ -62,6 +63,8 @@ protected:
 
 /** \brief The default formatter used to turn log messages into
  * a human-readable form
+ * \ingroup libcore
+ * \ingroup libpython
  */
 class MTS_EXPORT_CORE DefaultFormatter : public Formatter {
 public:

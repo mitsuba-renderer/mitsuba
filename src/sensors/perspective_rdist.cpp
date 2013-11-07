@@ -87,7 +87,7 @@ MTS_NAMESPACE_BEGIN
  * camera whose distortion is known. When \code{kc=0, 0}, the model
  * turns into a standard pinhole camera. The reason for creating a separate
  * plugin for this feature is that distortion involves extra overheads per ray that
- * users may not be willing to pay for if their scene doesn't use distortion.
+ * users may not be willing to pay for if their scene doesn't use it.
  * The MATLAB Camera Calibration Toolbox by Jean-Yves Bouguet
  * (\url{http://www.vision.caltech.edu/bouguetj/calib_doc/}) can be used to
  * obtain a distortion model, and the first entries of the \code{kc} variable
