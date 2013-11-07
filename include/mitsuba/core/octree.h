@@ -175,7 +175,7 @@ protected:
 			uint32_t *temp, uint32_t *start, uint32_t *end) {
 		if (start == end) {
 			return NULL;
-		} else if (end-start < m_maxItems || depth > m_maxDepth) {
+		} else if ((uint32_t) (end-start) < m_maxItems || depth > m_maxDepth) {
 			OctreeNode *result = new OctreeNode();
 			result->count = (uint32_t) (end-start);
 			result->offset = (uint32_t) (start-base);

@@ -93,9 +93,9 @@ public:
 					  angle = radToDeg(std::atan(r * halfLength)),
 					  tmp   = angle + 0.02f,
 				      f0 = 2.61e6f * math::fastexp(-2500*angle*angle),
-				      f1 = 20.91 / (tmp*tmp*tmp),
-				      f2 = 72.37 / (tmp*tmp),
-				      f  = 0.384f*f0 + 0.478*f1 + 0.138*f2;
+				      f1 = 20.91f / (tmp*tmp*tmp),
+				      f2 = 72.37f / (tmp*tmp),
+				      f  = 0.384f*f0 + 0.478f*f1 + 0.138f*f2;
 
 				*ptr++ = f;
 				sum += f;
