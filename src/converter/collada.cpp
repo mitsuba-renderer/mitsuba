@@ -1591,7 +1591,7 @@ void GeometryConverter::convertCollada(const fs::path &inputFile,
 	CustomErrorHandler errorHandler;
 	daeErrorHandler::setErrorHandler(&errorHandler);
 	SLog(EInfo, "Loading \"%s\" ..", inputFile.filename().string().c_str());
-#ifdef COLLADA_DOM_USING_141 1
+#ifdef COLLADA_DOM_USING_141
 	DAE *dae = new DAE(NULL, NULL, "1.4.1");
 	if (dae->load(inputFile.string().c_str()) != DAE_OK)
 		SLog(EError, "Could not load \"%s\"!", inputFile.string().c_str());
