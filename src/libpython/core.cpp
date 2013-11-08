@@ -663,7 +663,7 @@ void export_core() {
 		.def("getReceivedBytes", &SocketStream::getReceivedBytes)
 		.def("getSentBytes", &SocketStream::getSentBytes);
 
-	BP_CLASS(ConsoleStream, Stream, bp::init<>());
+	BP_CLASS_DECL(ConsoleStream, Stream, bp::init<>());
 
 	BP_CLASS(SSHStream, Stream, (bp::init<std::string, std::string, const StringVector &>()))
 		.def(bp::init<std::string, std::string, const StringVector &, int>())
@@ -1389,14 +1389,14 @@ void export_core() {
 		.def("serialize", &BSphere::serialize)
 		.def("__repr__", &BSphere::toString);
 
-	BP_STRUCT(AABB1, bp::init<>());
+	BP_STRUCT_DECL(AABB1, bp::init<>());
 	BP_IMPLEMENT_AABB_OPS(AABB1, Point1);
 
-	BP_STRUCT(AABB2, bp::init<>());
+	BP_STRUCT_DECL(AABB2, bp::init<>());
 	BP_IMPLEMENT_AABB_OPS(AABB2, Point2);
 
 	typedef TAABB<Point3> AABB3;
-	BP_STRUCT(AABB3, bp::init<>());
+	BP_STRUCT_DECL(AABB3, bp::init<>());
 	BP_IMPLEMENT_AABB_OPS(AABB3, Point3);
 
 	BP_SUBSTRUCT(AABB, AABB3, bp::init<>())
@@ -1409,7 +1409,7 @@ void export_core() {
 		.def("rayIntersect", &aabb_rayIntersect2)
 		.def("getBSphere", &AABB::getBSphere, BP_RETURN_VALUE);
 
-	BP_STRUCT(AABB4, bp::init<>());
+	BP_STRUCT_DECL(AABB4, bp::init<>());
 	BP_IMPLEMENT_AABB_OPS(AABB4, Point4);
 
 	bp::class_<Frame>("Frame", bp::init<>())
