@@ -1,5 +1,5 @@
 Name:		mitsuba
-Version:	0.4.4
+Version:	0.4.5
 Release:	1%{?dist}
 Summary:	Mitsuba renderer
 Group:		Applications/Graphics
@@ -62,6 +62,9 @@ rm -rf $RPM_BUILD_ROOT
 %files devel
 /usr/include/*
 %changelog
+
+* Sun Nov 10 2013 Wenzel Jakob <wenzel@cs.cornell.edu> 0.4.5%{?dist}
+- Upgrade to version 0.4.5
 
 * Thu Feb 28 2013 Wenzel Jakob <wenzel@cs.cornell.edu> 0.4.4%{?dist}
 - Upgrade to version 0.4.4
