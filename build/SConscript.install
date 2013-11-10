@@ -1,6 +1,6 @@
 import fnmatch
 
-Import('env', 'os', 'sys', 'plugins', 'dist', 
+Import('env', 'os', 'sys', 'plugins', 'dist',
 	'MTS_VERSION', 'hasQt', 'hasCollada', 'hasPython', 'hasBreakpad')
 
 installTargets = []
@@ -73,7 +73,7 @@ if sys.platform == 'win32':
 	install(distDir, ['libcore/libmitsuba-core.dll', 'libhw/libmitsuba-hw.dll',
 			'librender/libmitsuba-render.dll', 'libbidir/libmitsuba-bidir.dll'])
 	install(sdkLibDir, ['libcore/mitsuba-core.lib', 'libhw/mitsuba-hw.lib',
-			'librender/mitsuba-render.lib', 'libbidir/mitsuba-bidir.lib']) 
+			'librender/mitsuba-render.lib', 'libbidir/mitsuba-bidir.lib'])
 	for entry in os.walk(os.path.join(basePath, "include")):
 		includeDir = entry[0][len(basePath)+1:]
 		installTargets += env.Install(os.path.join(sdkDir, includeDir),
