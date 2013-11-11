@@ -30,7 +30,6 @@ scons
 rm -rf $RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT%{_libdir}
 mkdir -p $RPM_BUILD_ROOT%{_bindir}
-mkdir -p $RPM_BUILD_ROOT%{_libdir}/python2.7/lib-dynload
 mkdir -p $RPM_BUILD_ROOT/usr/share/mitsuba/plugins
 mkdir -p $RPM_BUILD_ROOT/usr/share/pixmaps
 mkdir -p $RPM_BUILD_ROOT/usr/share/applications
@@ -43,7 +42,11 @@ cp dist/mitsuba $RPM_BUILD_ROOT%{_bindir}
 cp dist/mtssrv $RPM_BUILD_ROOT%{_bindir}
 cp dist/mtsutil $RPM_BUILD_ROOT%{_bindir}
 cp dist/mtsimport $RPM_BUILD_ROOT%{_bindir}
-cp dist/python/2.7/mitsuba.so $RPM_BUILD_ROOT%{_libdir}/python2.7/lib-dynload
+for pyver in `ls dist/python`
+do
+	mkdir -p $RPM_BUILD_ROOT%{_libdir}/python$pyver/lib-dynload
+	cp -a dist/python/$pyver/mitsuba.so $RPM_BUILD_ROOT%{_libdir}/python$pyver/lib-dynload
+done
 cp dist/plugins/* $RPM_BUILD_ROOT/usr/share/mitsuba/plugins
 cp -Rdp dist/data $RPM_BUILD_ROOT/usr/share/mitsuba/data
 cp src/mtsgui/resources/mitsuba48.png $RPM_BUILD_ROOT/usr/share/pixmaps
@@ -54,7 +57,7 @@ rm -rf $RPM_BUILD_ROOT
 %files
 %defattr(-,root,root,-)
 %{_libdir}/libmitsuba-*.so
-%{_libdir}/python2.7/lib-dynload/mitsuba.so
+%{_libdir}/python*
 %{_bindir}/*
 /usr/share/pixmaps/mitsuba48.png
 /usr/share/applications/mitsuba.desktop
