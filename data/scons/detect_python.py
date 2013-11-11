@@ -1,8 +1,12 @@
 # Detect present Python & Boost-python libraries on Linux
-import os
+import os, struct
 
 class PkgConfig(dict):
-    _paths = ['/usr/lib/pkgconfig', '/usr/lib/x86_64-linux-gnu/pkgconfig']
+    _paths = [
+        '/usr/lib/pkgconfig',
+        '/usr/lib/%s-linux-gnu/pkgconfig' % (os.uname()[4]),
+        '/usr/lib%i/pkgconfig' % (struct.calcsize('P')*8)
+    ]
 
     def __init__(self, name):
         for path in self._paths:
@@ -40,7 +44,11 @@ def find_boost_python(version):
         'boost_python-py%s' % version,
         'boost_python' + ('3' if version.startswith('3') else '')
     ]
-    basepaths = ['/lib', '/usr/lib']
+    basepaths = [
+        '/usr/lib',
+        '/usr/lib/%s-linux-gnu' % (os.uname()[4]),
+        '/usr/lib%i' % (struct.calcsize('P')*8)
+    ]
 
     for basepath in basepaths:
         for libname in libnames:
@@ -76,3 +84,7 @@ def detect_python():
             elif flag.startswith('-l'):
                 pyenv['PYTHON' + version + 'LIB'] += [flag[2:]]
     return pyenv
+
+if __name__ == '__main__':
+    import pprint
+    pprint.pprint(detect_python())
