@@ -9,8 +9,6 @@
 # Uncomment this to turn on verbose mode.
 export DH_VERBOSE=1
 
-PYTHONVERSION = `python-config --includes | sed -e 's/^.*python\([0-9\.]*\).*/\1/'`
-
 clean:
 	dh_testdir
 	dh_testroot
@@ -30,8 +28,12 @@ binary-arch:
 	scons -j 2
 	dh_installdirs
 	dh_auto_install
-	cat debian/mitsuba.install.template | sed -e s/PYTHONVERSION/$(PYTHONVERSION)/g > debian/mitsuba.install
 	dh_install
+	for pyver in `ls dist/python`; \
+	do \
+		mkdir -p debian/mitsuba/usr/lib/python$$pyver/dist-packages; \
+		cp -a dist/python/$$pyver/mitsuba.so debian/mitsuba/usr/lib/python$$pyver/dist-packages; \
+	done
 	dh_installmenu
 	dh_compress
 	dh_fixperms
