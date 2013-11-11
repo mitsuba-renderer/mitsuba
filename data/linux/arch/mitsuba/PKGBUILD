@@ -8,7 +8,7 @@ pkgdesc="Mitsuba physically based renderer"
 url="http://mitsuba-renderer.org/"
 license=("GPL3")
 arch=("i686" "x86_64")
-depends=("xerces-c" "glew" "openexr" "boost" "libpng" "libjpeg" "qt4" "collada-dom", "fftw")
+depends=("xerces-c" "glew" "openexr" "boost" "libpng" "libjpeg" "qt4" "collada-dom" "fftw")
 makedepends=("mercurial" "scons")
 provides=("mitsuba")
 
@@ -33,6 +33,7 @@ package() {
 		${pkgdir}/usr/share/applications \
 		${pkgdir}/usr/share/pixmaps \
 		${pkgdir}/usr/include/mitsuba/{core,hw,render,bidir} \
+		${pkgdir}/usr/lib/python2.7/lib-dynload \
 		${pkgdir}/usr/lib/python3.3/lib-dynload
 
 	cd ${_hgrepo}
@@ -46,6 +47,7 @@ package() {
 	install -m644 dist/data/schema/* ${pkgdir}/usr/share/mitsuba/data/schema
 	install -m644 dist/data/ior/* ${pkgdir}/usr/share/mitsuba/data/ior
 	install -m644 dist/data/microfacet/* ${pkgdir}/usr/share/mitsuba/data/microfacet
+	install -m644 dist/python/2.7/mitsuba.so ${pkgdir}/usr/lib/python2.7/lib-dynload
 	install -m644 dist/python/3.3/mitsuba.so ${pkgdir}/usr/lib/python3.3/lib-dynload
 	install -m644 data/linux/mitsuba.desktop ${pkgdir}/usr/share/applications
 	install -m644 src/mtsgui/resources/mitsuba48.png ${pkgdir}/usr/share/pixmaps
