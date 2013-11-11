@@ -7,7 +7,7 @@ License:	GPL-3
 URL:		http://www.mitsuba-renderer.org
 Source:		%{name}-%{version}.tar.gz
 BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
-BuildRequires:	gcc-c++ scons boost-devel qt4-devel OpenEXR-devel xerces-c-devel python-devel glew-devel collada-dom-devel eigen3-devel
+BuildRequires:	gcc-c++ scons boost-devel qt4-devel OpenEXR-devel xerces-c-devel python-devel glew-devel collada-dom-devel eigen3-devel fftw-devel
 Requires:	boost qt4 OpenEXR-libs xerces-c python libGLEWmx collada-dom
 %description
 Mitsuba is an extensible rendering framework written in portable C++. It implements unbiased as well as biased techniques and contains heavy optimizations targeted towards current CPU architectures.
