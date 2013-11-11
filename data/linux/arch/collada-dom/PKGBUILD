@@ -2,20 +2,28 @@
 # Contributer: Wenzel Jakob <wenzel@mitsuba-renderer.org>
 
 pkgname="collada-dom"
-pkgver=2.3.1
+pkgver=2.4.0
 pkgrel=1
 pkgdesc="An API that provides a C++ object representation of a COLLADA XML instance document."
 url="http://collada-dom.sourceforge.net/"
 license=("MIT")
 arch=("i686" "x86_64")
-depends=("libxml2" "boost" "pcre") #"libminizip"
+depends=("libxml2" "boost" "pcre")
 # makedepends=()
-source=("http://downloads.sourceforge.net/${pkgname}/collada_dom-${pkgver}-src.tgz")
-md5sums=("a74d19c1187806a713cec90c2f0f692c")
+source=("http://downloads.sourceforge.net/${pkgname}/collada-dom-${pkgver}.tgz")
+md5sums=("20399de4206eab850c32e65c04e907cb")
 
 build() {
 	cd ${pkgname}-${pkgver}/dom
-	make project=dom
+	sed -i.bak "s/domMinorVersion := 2/domMinorVersion := 4/g" Makefile
+	cd external-libs
+	rm -Rf minizip
+	mv minizip-1.1 minizip
+	ln -s . minizip/src
+	ln -s . minizip/include
+	cd ..
+	make project=minizip libOpts="-Wl,-soname -Wl,libminizip.so.1.2.3" ccFlags="-fPIC"
+	make project=dom libOpts="-Wl,-soname -Wl,libcollada14dom.so.2.4"  ccFlags="-DCOLLADA_DOM_SUPPORT141 -fPIC"
 }
 
 package() {
