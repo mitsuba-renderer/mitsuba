@@ -7,7 +7,7 @@ License:	GPL-3
 URL:		http://www.mitsuba-renderer.org
 Source:		%{name}-%{version}.tar.gz
 BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
-BuildRequires:	gcc-c++ scons boost-devel qt4-devel OpenEXR-devel xerces-c-devel python-devel glew-devel collada-dom-devel eigen3-devel
+BuildRequires:	gcc-c++ scons boost-devel qt4-devel OpenEXR-devel xerces-c-devel python-devel glew-devel collada-dom-devel eigen3-devel fftw-devel
 Requires:	boost qt4 OpenEXR-libs xerces-c python libGLEWmx collada-dom
 %description
 Mitsuba is an extensible rendering framework written in portable C++. It implements unbiased as well as biased techniques and contains heavy optimizations targeted towards current CPU architectures.
@@ -44,6 +44,7 @@ cp dist/mtssrv $RPM_BUILD_ROOT%{_bindir}
 cp dist/mtsutil $RPM_BUILD_ROOT%{_bindir}
 cp dist/mtsimport $RPM_BUILD_ROOT%{_bindir}
 cp dist/python/2.7/mitsuba.so $RPM_BUILD_ROOT%{_libdir}/python2.7/lib-dynload
+cp dist/python/3.3/mitsuba.so $RPM_BUILD_ROOT%{_libdir}/python3.3/lib-dynload
 cp dist/plugins/* $RPM_BUILD_ROOT/usr/share/mitsuba/plugins
 cp -Rdp dist/data $RPM_BUILD_ROOT/usr/share/mitsuba/data
 cp src/mtsgui/resources/mitsuba48.png $RPM_BUILD_ROOT/usr/share/pixmaps
@@ -55,6 +56,7 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(-,root,root,-)
 %{_libdir}/libmitsuba-*.so
 %{_libdir}/python2.7/lib-dynload/mitsuba.so
+%{_libdir}/python3.3/lib-dynload/mitsuba.so
 %{_bindir}/*
 /usr/share/pixmaps/mitsuba48.png
 /usr/share/applications/mitsuba.desktop
