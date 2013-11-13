@@ -22,6 +22,7 @@
 #include <mitsuba/core/fstream.h>
 #include <boost/algorithm/string.hpp>
 #include <boost/scoped_array.hpp>
+#include <boost/thread/mutex.hpp>
 
 #if defined(__WINDOWS__)
 #undef _CRT_SECURE_NO_WARNINGS
@@ -591,6 +592,10 @@ void Bitmap::accumulate(const Bitmap *bitmap, Point2i sourceOffset,
 	}
 }
 
+#if defined(MTS_HAS_FFTW)
+static boost::mutex __fftw_lock;
+#endif
+
 void Bitmap::convolve(const Bitmap *_kernel) {
 	if (_kernel->getWidth() != _kernel->getHeight())
 		Log(EError, "Bitmap::convolve(): convolution kernel must be square!");
@@ -617,17 +622,21 @@ void Bitmap::convolve(const Bitmap *_kernel) {
 		   paddedHeight = height + hKernelSize,
 		   paddedSize   = paddedWidth*paddedHeight;
 
+	__fftw_lock.lock();
 	complex *kernel  = (complex *) fftw_malloc(sizeof(complex) * paddedSize),
 	        *kernelS = (complex *) fftw_malloc(sizeof(complex) * paddedSize),
 	        *data    = (complex *) fftw_malloc(sizeof(complex) * paddedSize),
 	        *dataS   = (complex *) fftw_malloc(sizeof(complex) * paddedSize);
 
-	if (!kernel || !kernelS || !data || !dataS)
+	if (!kernel || !kernelS || !data || !dataS) {
+		__fftw_lock.unlock();
 		SLog(EError, "Bitmap::convolve(): Unable to allocate temporary memory!");
+	}
 
 	/* Create a FFTW plan for a 2D DFT of this size */
 	fftw_plan p = fftw_plan_dft_2d((int) paddedHeight, (int) paddedWidth,
 		(fftw_complex *) kernel, (fftw_complex *) kernelS, FFTW_FORWARD, FFTW_ESTIMATE);
+	__fftw_lock.unlock();
 
 	memset(kernel, 0, sizeof(complex)*paddedSize);
 
@@ -730,11 +739,13 @@ void Bitmap::convolve(const Bitmap *_kernel) {
 				Log(EError, "Unsupported component format!");
 		}
 	}
+	__fftw_lock.lock();
 	fftw_destroy_plan(p);
 	fftw_free(kernel);
 	fftw_free(kernelS);
 	fftw_free(data);
 	fftw_free(dataS);
+	__fftw_lock.unlock();
 #else
 	/* Brute force fallback version */
 	uint8_t *output_ = static_cast<uint8_t *>(allocAligned(getBufferSize()));
