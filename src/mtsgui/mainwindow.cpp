@@ -570,6 +570,7 @@ void MainWindow::on_actionOpen_triggered() {
 	dialog->setAttribute(Qt::WA_DeleteOnClose);
 	dialog->setAcceptMode(QFileDialog::AcceptOpen);
 	dialog->setViewMode(QFileDialog::Detail);
+	dialog->setFileMode(QFileDialog::ExistingFiles);
 	dialog->setWindowModality(Qt::WindowModal);
 	QSettings settings;
 	dialog->restoreState(settings.value("fileDialogState").toByteArray());
