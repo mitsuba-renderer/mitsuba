@@ -736,7 +736,7 @@ public:
 	 * red-green color opponency, and \c T (tritan) encodes
 	 * blue-red color opponency. For normalized input, the
 	 * range of attainable values is given by
-	 * \f I\in $[0,1], P,T\in [-1,1]\f$.
+	 * \f$ I\in $[0,1], P,T\in [-1,1]\f$.
 	 *
 	 * In the Python API, this function returns a 3-tuple
 	 * with the result of the operation.

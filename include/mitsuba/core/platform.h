@@ -246,5 +246,6 @@ namespace std {
 	}
 };
 #endif
+/// \endcond
 
 #endif /* __MITSUBA_CORE_PLATFORM_H_ */

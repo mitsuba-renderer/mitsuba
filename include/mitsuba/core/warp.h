@@ -40,19 +40,19 @@ public:
 	/// Uniformly sample a vector on the unit sphere with respect to solid angles
 	static Vector squareToUniformSphere(const Point2 &sample);
 
-	/// Density of \ref squareToSphere with respect to solid angles
+	/// Density of \ref squareToUniformSphere() with respect to solid angles
 	static inline Float squareToUniformSpherePdf() { return INV_FOURPI; }
 
 	/// Uniformly sample a vector on the unit hemisphere with respect to solid angles
 	static Vector squareToUniformHemisphere(const Point2 &sample);
 
-	/// Density of \ref squareToHemiphere with respect to solid angles
+	/// Density of \ref squareToUniformHemisphere() with respect to solid angles
 	static inline Float squareToUniformHemispherePdf() { return INV_TWOPI; }
 
 	/// Sample a cosine-weighted vector on the unit hemisphere with respect to solid angles
 	static Vector squareToCosineHemisphere(const Point2 &sample);
 
-	/// Density of \ref squareToCosineHemiphere with respect to solid angles
+	/// Density of \ref squareToCosineHemisphere() with respect to solid angles
 	static inline Float squareToCosineHemispherePdf(const Vector &d)
 		{ return INV_PI * Frame::cosTheta(d); }
 

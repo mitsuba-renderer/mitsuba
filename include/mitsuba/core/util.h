@@ -24,8 +24,9 @@
 
 MTS_NAMESPACE_BEGIN
 
-/*! \addtogroup libcore */
-/*! @{ */
+/*! \addtogroup libcore
+ *  @{
+ */
 
 // -----------------------------------------------------------------------
 //! @{ \name String-related utility functions
@@ -559,6 +560,8 @@ extern MTS_EXPORT_CORE Float fresnelDielectricExt(Float cosThetaI,
  *
  * \param cosThetaI
  * 		Cosine of the angle between the normal and the incident ray
+ * \param eta
+ * 		Relative refractive index
  */
 inline Float fresnelDielectricExt(Float cosThetaI, Float eta) { Float cosThetaT;
 	return fresnelDielectricExt(cosThetaI, cosThetaT, eta); }
