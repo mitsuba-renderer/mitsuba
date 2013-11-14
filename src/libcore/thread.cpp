@@ -315,6 +315,10 @@ void Thread::setCoreAffinity(int coreID) {
 #if defined(__OSX__)
 	/* CPU affinity not supported on OSX */
 #elif defined(__LINUX__)
+	/* Don't try to set CPU affinity if running inside Valgrind */
+	if (getenv("VALGRIND_OPTS") != NULL)
+		return;
+
 	int nCores = getCoreCount();
 	cpu_set_t *cpuset = CPU_ALLOC(nCores);
 	if (cpuset == NULL)
