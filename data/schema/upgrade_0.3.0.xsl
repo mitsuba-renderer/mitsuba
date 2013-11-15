@@ -48,7 +48,7 @@
 			<xsl:apply-templates select="@*|node()"/>
 
 			<!-- The vertical component of OBJ texture coordinates is now
-			     flipped, which seems to be the standard behavior. Undo 
+			     flipped, which seems to be the standard behavior. Undo
 				 this change for consistency in old scenes. -->
 			<xsl:if test="@type='obj'">
 				<boolean name="flipTexCoords" value="false"/>
@@ -66,7 +66,7 @@
 	<xsl:template match="bsdf[@type='microfacet' or @type='phong' or @type='ward']">
 		<xsl:variable name="diffuseAmount">
 			<xsl:choose>
-				<xsl:when test="float[@name='diffuseAmount']"> 
+				<xsl:when test="float[@name='diffuseAmount']">
 					<xsl:value-of select="float[@name='diffuseAmount']/@value"/>
 				</xsl:when>
 				<xsl:otherwise>1.0</xsl:otherwise>
@@ -74,7 +74,7 @@
 		</xsl:variable>
 		<xsl:variable name="specularAmount">
 			<xsl:choose>
-				<xsl:when test="float[@name='specularAmount']"> 
+				<xsl:when test="float[@name='specularAmount']">
 					<xsl:value-of select="float[@name='specularAmount']/@value"/>
 				</xsl:when>
 				<xsl:otherwise>1.0</xsl:otherwise>
@@ -211,7 +211,7 @@
 	<xsl:template match="float[@name='sizeMultiplier']/@name">
 		<xsl:attribute name="name">densityMultiplier</xsl:attribute>
 	</xsl:template>
-	
+
 	<!-- There is no more 'mirror' plugin; replace with smooth chrome -->
 	<xsl:template match="bsdf[@type='mirror']/@type">
 		<xsl:attribute name="type">conductor</xsl:attribute>
@@ -246,7 +246,7 @@
 	<xsl:template match="bsdf[@type='composite']/@type">
 		<xsl:attribute name="type">mixturebsdf</xsl:attribute>
 	</xsl:template>
-	
+
 	<!-- Update the name of the exrtexture plugin -->
 	<xsl:template match="texture[@type='exrtexture']/@type">
 		<xsl:attribute name="type">bitmap</xsl:attribute>

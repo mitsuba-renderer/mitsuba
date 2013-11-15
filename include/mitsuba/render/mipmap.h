@@ -52,12 +52,14 @@ namespace stats {
 
 /// Specifies the desired antialiasing filter
 enum EMIPFilterType {
-	/// No filtering (i.e. nearest neighbor lookups)
+	/// No filtering, nearest neighbor lookups
 	ENearest = 0,
+	/// No filtering, only bilinear interpolation
+	EBilinear = 1,
 	/// Basic trilinear filtering
-	ETrilinear = 1,
+	ETrilinear = 2,
 	/// Elliptically weighted average
-	EEWA = 2,
+	EEWA = 3
 };
 
 /**
@@ -179,7 +181,7 @@ public:
 		/* 1. Determine the number of MIP levels. The following
 		      code also handles non-power-of-2 input. */
 		m_levels = 1;
-		if (m_filterType != ENearest) {
+		if (m_filterType != ENearest && m_filterType != EBilinear) {
 			Vector2i size = bitmap_->getSize();
 			while (size.x > 1 || size.y > 1) {
 				size.x = std::max(1, (size.x + 1) / 2);
@@ -233,7 +235,7 @@ public:
 		m_sizeRatio[0] = Vector2(1, 1);
 
 		/* 3. Progressively downsample until only a 1x1 image is left */
-		if (m_filterType != ENearest) {
+		if (m_filterType != ENearest && m_filterType != EBilinear) {
 			Vector2i size = bitmap_->getSize();
 			m_levels = 1;
 			while (size.x > 1 || size.y > 1) {
@@ -344,7 +346,7 @@ public:
 		mmapPtr += m_pyramid[0].getBufferSize();
 		m_sizeRatio[0] = Vector2(1, 1);
 
-		if (m_filterType != ENearest) {
+		if (m_filterType != ENearest && m_filterType != EBilinear) {
 			/* Map the remainder of the image pyramid */
 			int level = 1;
 			while (size.x > 1 || size.y > 1) {
@@ -425,7 +427,7 @@ public:
 		size_t expectedFileSize = sizeof(MIPMapHeader) + padding
 			+ Array2DType::bufferSize(size);
 
-		if (filterType != ENearest) {
+		if (filterType != ENearest && filterType != EBilinear) {
 			while (size.x > 1 || size.y > 1) {
 				size.x = std::max(1, (size.x + 1) / 2);
 				size.y = std::max(1, (size.y + 1) / 2);
@@ -586,10 +588,42 @@ public:
 		     + evalTexel(level, xPos + 1, yPos + 1) * dx1 * dy1;
 	}
 
+	/**
+	 * \brief Evaluate the gradient of the texture at the given MIP level
+	 */
+	inline void evalGradientBilinear(int level, const Point2 &uv, Value *gradient) const {
+		if (EXPECT_NOT_TAKEN(!std::isfinite(uv.x) || !std::isfinite(uv.y))) {
+			Log(EWarn, "evalGradientBilinear(): encountered a NaN!");
+			gradient[0] = gradient[1] = Value(0.0f);
+			return;
+		} else if (EXPECT_NOT_TAKEN(level >= m_levels)) {
+			evalGradientBilinear(m_levels-1, uv, gradient);
+			return;
+		}
+
+		/* Convert to fractional pixel coordinates on the specified level */
+		const Vector2i &size = m_pyramid[level].getSize();
+		Float u = uv.x * size.x - 0.5f, v = uv.y * size.y - 0.5f;
+
+		int xPos = floorToInt(u), yPos = floorToInt(v);
+		Float dx = u - xPos, dy = v - yPos;
+
+		const Value p00 = evalTexel(level, xPos,   yPos);
+		const Value p10 = evalTexel(level, xPos+1, yPos);
+		const Value p01 = evalTexel(level, xPos,   yPos+1);
+		const Value p11 = evalTexel(level, xPos+1, yPos+1);
+		Value tmp = p01 + p10 - p11;
+
+		gradient[0] = (p10 + p00*(dy-1) - tmp*dy) * size.x;
+		gradient[1] = (p01 + p00*(dx-1) - tmp*dx) * size.y;
+	}
+
 	/// \brief Perform a filtered texture lookup using the configured method
 	Value eval(const Point2 &uv, const Vector2 &d0, const Vector2 &d1) const {
 		if (m_filterType == ENearest)
 			return evalBox(0, uv);
+		else if (m_filterType == EBilinear)
+			return evalBilinear(0, uv);
 
 		/* Convert into texel coordinates */
 		const Vector2i &size = m_pyramid[0].getSize();
@@ -685,6 +719,7 @@ public:
 
 		switch (m_filterType) {
 			case ENearest: oss << "nearest," << endl; break;
+			case EBilinear: oss << "bilinear," << endl; break;
 			case ETrilinear: oss << "trilinear," << endl; break;
 			case EEWA: oss << "ewa," << endl; break;
 		}

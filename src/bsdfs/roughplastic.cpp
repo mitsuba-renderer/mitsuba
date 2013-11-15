@@ -155,7 +155,7 @@ MTS_NAMESPACE_BEGIN
  *     <!-- Fetch roughness values from a texture and slightly reduce them -->
  *     <texture type="scale" name="alpha">
  *         <texture name="alpha" type="bitmap">
- *             <string name="filename" value="bump.png"/>
+ *             <string name="filename" value="roughness.png"/>
  *         </texture>
  *         <float name="scale" value="0.6"/>
  *     </texture>

@@ -91,7 +91,7 @@
 	<xsl:template match="film[@type='pngfilm']/@type">
 		<xsl:attribute name="type">ldrfilm</xsl:attribute>
 	</xsl:template>
-	
+
 	<!-- Update the 'focusDepth' attribute name -->
 	<xsl:template match="float[@name='focusDepth']/@name">
 		<xsl:attribute name="name">focusDistance</xsl:attribute>

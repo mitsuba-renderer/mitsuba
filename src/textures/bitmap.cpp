@@ -219,6 +219,8 @@ public:
 
 		if (filterType == "ewa")
 			m_filterType = EEWA;
+		else if (filterType == "bilinear")
+			m_filterType = EBilinear;
 		else if (filterType == "trilinear")
 			m_filterType = ETrilinear;
 		else if (filterType == "nearest")
@@ -451,6 +453,32 @@ public:
 		return result;
 	}
 
+	void evalGradient(const Point2 &uv, Spectrum *gradient) const {
+		/* There are no ray differentials to do any kind of
+		   prefiltering. Evaluate the full-resolution texture */
+
+		if (m_mipmap3.get()) {
+			Color3 result[2];
+			if (m_mipmap3->getFilterType() != ENearest) {
+				m_mipmap3->evalGradientBilinear(0, uv, result);
+				gradient[0].fromLinearRGB(result[0][0], result[0][1], result[0][2]);
+				gradient[1].fromLinearRGB(result[1][0], result[1][1], result[1][2]);
+			} else {
+				gradient[0] = gradient[1] = Spectrum(0.0f);
+			}
+		} else {
+			Color1 result[2];
+			if (m_mipmap1->getFilterType() != ENearest) {
+				m_mipmap1->evalGradientBilinear(0, uv, result);
+				gradient[0] = Spectrum(result[0][0]);
+				gradient[1] = Spectrum(result[1][0]);
+			} else {
+				gradient[0] = gradient[1] = Spectrum(0.0f);
+			}
+		}
+		stats::filteredLookups.incrementBase();
+	}
+
 	ref<Bitmap> getBitmap(const Vector2i &/* unused */) const {
 		return m_mipmap1.get() ? m_mipmap1->toBitmap() : m_mipmap3->toBitmap();
 	}
@@ -598,6 +626,10 @@ public:
 		switch (mipmap1 ? mipmap1->getFilterType() : mipmap3->getFilterType()) {
 			case ENearest:
 				m_gpuTexture->setFilterType(GPUTexture::ENearest);
+				break;
+			case EBilinear:
+				m_gpuTexture->setFilterType(GPUTexture::ELinear);
+				m_gpuTexture->setMipMapped(false);
 				break;
 			default:
 				m_gpuTexture->setFilterType(GPUTexture::EMipMapLinear);

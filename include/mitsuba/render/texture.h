@@ -41,6 +41,16 @@ public:
 	 */
 	virtual Spectrum eval(const Intersection &its, bool filter = true) const;
 
+	/**
+	 * \brief Return the texture gradient at \c its
+	 *
+	 * The parameter \c gradient should point to an array with space for
+	 * two \ref Spectrum data structures corresponding to the U and V derivative.
+	 *
+	 * \remark This function is usually implemented pointwise without any kind of filtering.
+	 */
+	virtual void evalGradient(const Intersection &its, Spectrum *gradient) const;
+
 	/// Return the component-wise average value of the texture over its domain
 	virtual Spectrum getAverage() const;
 
@@ -108,6 +118,16 @@ public:
 	 */
 	Spectrum eval(const Intersection &its, bool filter = true) const;
 
+	/**
+	 * \brief Return the texture gradient at \c its
+	 *
+	 * The parameter \c gradient should point to an array with space for
+	 * two \ref Spectrum data structures corresponding to the U and V derivative.
+	 *
+	 * \remark This function is usually implemented pointwise without any kind of filtering.
+	 */
+	void evalGradient(const Intersection &its, Spectrum *gradient) const;
+
 	/// Serialize to a binary data stream
 	virtual void serialize(Stream *stream, InstanceManager *manager) const;
 
@@ -117,6 +137,9 @@ public:
 	/// Filtered texture lookup -- Texture2D subclasses must provide this function
 	virtual Spectrum eval(const Point2 &uv, const Vector2 &d0,
 			const Vector2 &d1) const = 0;
+
+	/// Unfiltered radient lookup lookup -- Texture2D subclasses can optionally provide this function
+	virtual void evalGradient(const Point2 &uv, Spectrum *gradient) const;
 
 	/**
 	 * \brief Return a bitmap representation of the texture

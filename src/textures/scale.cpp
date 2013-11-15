@@ -86,6 +86,12 @@ public:
 		return m_nested->eval(its, filter) * m_scale;
 	}
 
+	void evalGradient(const Intersection &its, Spectrum *gradient) const {
+		m_nested->evalGradient(its, gradient);
+		gradient[0] *= m_scale;
+		gradient[1] *= m_scale;
+	}
+
 	Spectrum getAverage() const {
 		return m_nested->getAverage() * m_scale;
 	}

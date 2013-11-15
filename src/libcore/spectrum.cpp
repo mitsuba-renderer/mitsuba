@@ -632,8 +632,6 @@ void InterpolatedSpectrum::zeroExtend() {
 }
 
 Float InterpolatedSpectrum::average(Float lambdaMin, Float lambdaMax) const {
-	typedef std::vector<Float>::const_iterator iterator;
-
 	if (m_wavelengths.size() < 2)
 		return 0.0f;
 
