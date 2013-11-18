@@ -125,6 +125,39 @@ bp::list scene_getMedia(Scene *scene) {
 	return list;
 }
 
+
+typedef InternalArray<uint32_t>     InternalUInt32Array;
+typedef InternalArray<Point3>       InternalPoint3Array;
+typedef InternalArray<Normal>       InternalNormalArray;
+typedef InternalArray<Point2>       InternalPoint2Array;
+typedef InternalArray<Color3>       InternalColor3Array;
+typedef InternalArray<TangentSpace> InternalTangentSpaceArray;
+
+InternalUInt32Array trimesh_getTriangles(TriMesh *triMesh) {
+	BOOST_STATIC_ASSERT(sizeof(Triangle) == 3*sizeof(uint32_t));
+	return InternalUInt32Array(triMesh, (uint32_t *) triMesh->getTriangles(), triMesh->getTriangleCount()*3);
+}
+
+InternalPoint3Array trimesh_getVertexPositions(TriMesh *triMesh) {
+	return InternalPoint3Array(triMesh, triMesh->getVertexPositions(), triMesh->getVertexCount());
+}
+
+InternalNormalArray trimesh_getVertexNormals(TriMesh *triMesh) {
+	return InternalNormalArray(triMesh, triMesh->getVertexNormals(), triMesh->getVertexCount());
+}
+
+InternalPoint2Array trimesh_getVertexTexcoords(TriMesh *triMesh) {
+	return InternalPoint2Array(triMesh, triMesh->getVertexTexcoords(), triMesh->getVertexCount());
+}
+
+InternalColor3Array trimesh_getVertexColors(TriMesh *triMesh) {
+	return InternalColor3Array(triMesh, triMesh->getVertexColors(), triMesh->getVertexCount());
+}
+
+InternalTangentSpaceArray trimesh_getUVTangents(TriMesh *triMesh) {
+	return InternalTangentSpaceArray(triMesh, triMesh->getUVTangents(), triMesh->getVertexCount());
+}
+
 void export_render() {
 	bp::object renderModule(
 		bp::handle<>(bp::borrowed(PyImport_AddModule("mitsuba.render"))));
@@ -132,6 +165,13 @@ void export_render() {
 	PyObject *oldScope = bp::detail::current_scope;
 
 	BP_SETSCOPE(renderModule);
+
+	BP_INTERNAL_ARRAY(InternalUInt32Array);
+	BP_INTERNAL_ARRAY(InternalPoint3Array);
+	BP_INTERNAL_ARRAY(InternalPoint2Array);
+	BP_INTERNAL_ARRAY(InternalColor3Array);
+	BP_INTERNAL_ARRAY(InternalNormalArray);
+	BP_INTERNAL_ARRAY(InternalTangentSpaceArray);
 
 	bp::enum_<ETransportMode>("ETransportMode")
 		.value("ERadiance", ERadiance)
@@ -230,9 +270,7 @@ void export_render() {
 		.staticmethod("loadScene");
 
 	BP_CLASS(RenderJob, Thread, (bp::init<const std::string &, Scene *, RenderQueue *>()))
-		.def(bp::init<const std::string &, Scene *, RenderQueue *, int>())
-		.def(bp::init<const std::string &, Scene *, RenderQueue *, int, int>())
-		.def(bp::init<const std::string &, Scene *, RenderQueue *, int, int, int>())
+		.def(bp::init<const std::string &, Scene *, RenderQueue *, int, bp::optional<int, int> >())
 		.def("flush", &RenderJob::flush)
 		.def("cancel", &RenderJob::cancel)
 		.def("wait", &RenderJob::wait);
@@ -274,6 +312,14 @@ void export_render() {
 		.def("Le", &Intersection::Le)
 		.def("LoSub", &Intersection::LoSub)
 		.def("__repr__", &Intersection::toString);
+
+	BP_STRUCT(TangentSpace, bp::init<>())
+		.def(bp::init<Vector, Vector>())
+		.def(bp::init<Stream *>())
+		.def_readwrite("dpdu", &TangentSpace::dpdu)
+		.def_readwrite("dpdv", &TangentSpace::dpdv)
+		.def("serialize", &TangentSpace::serialize)
+		.def("__repr__", &TangentSpace::toString);
 
 	BP_STRUCT(PositionSamplingRecord, bp::init<>())
 		.def(bp::init<Float>())
@@ -340,20 +386,27 @@ void export_render() {
 		.def("hasBSDF", &Shape::hasBSDF)
 		.def("getBSDF", shape_getBSDF, BP_RETURN_VALUE)
 		.def("getPrimitiveCount", &Shape::getPrimitiveCount)
-		.def("getEffectivePrimitiveCount", &Shape::getEffectivePrimitiveCount);
+		.def("getEffectivePrimitiveCount", &Shape::getEffectivePrimitiveCount)
+		.def("copyAttachments", &Shape::copyAttachments);
 
 	void (TriMesh::*triMesh_serialize1)(Stream *stream) const = &TriMesh::serialize;
 	void (TriMesh::*triMesh_serialize2)(Stream *stream, InstanceManager *) const = &TriMesh::serialize;
 
-	BP_CLASS(TriMesh, Shape, (bp::init<std::string, size_t, size_t, bool, bool, bool, bool, bool>()))
+	BP_CLASS(TriMesh, Shape, (bp::init<std::string, size_t, size_t, bp::optional<bool, bool, bool, bool, bool> >()))
 		.def(bp::init<Stream *, InstanceManager *>())
 		.def(bp::init<Stream *, int>())
 		.def("getTriangleCount", &TriMesh::getTriangleCount)
+		.def("getTriangles", trimesh_getTriangles)
 		.def("getVertexCount", &TriMesh::getVertexCount)
+		.def("getVertexPositions", trimesh_getVertexPositions, BP_RETURN_VALUE)
 		.def("hasVertexNormals", &TriMesh::hasVertexNormals)
+		.def("getVertexNormals", trimesh_getVertexNormals, BP_RETURN_VALUE)
 		.def("hasVertexColors", &TriMesh::hasVertexColors)
+		.def("getVertexColors", trimesh_getVertexColors, BP_RETURN_VALUE)
 		.def("hasVertexTexcoords", &TriMesh::hasVertexTexcoords)
+		.def("getVertexTexcoords", trimesh_getVertexTexcoords, BP_RETURN_VALUE)
 		.def("hasUVTangents", &TriMesh::hasUVTangents)
+		.def("getUVTangents", trimesh_getUVTangents, BP_RETURN_VALUE)
 		.def("computeUVTangents", &TriMesh::computeUVTangents)
 		.def("computeNormals", &TriMesh::computeNormals)
 		.def("rebuildTopology", &TriMesh::rebuildTopology)

@@ -56,25 +56,25 @@ void shutdownFramework() {
 	Class::staticShutdown();
 }
 
-class spectrum_wrapper {
+template <typename SpectrumType> class SpectrumWrapper {
 public:
-	static Float get(const Spectrum &spec, int i) {
-		if (i < 0 || i >= SPECTRUM_SAMPLES) {
+	static Float get(const SpectrumType &spec, int i) {
+		if (i < 0 || i >= SpectrumType::dim) {
 			SLog(EError, "Index %i is out of range!", i);
 			return 0.0f;
 		}
 		return spec[i];
 	}
 
-	static void set(Spectrum &spec, int i, Float value) {
-		if (i < 0 || i >= SPECTRUM_SAMPLES)
+	static void set(SpectrumType &spec, int i, Float value) {
+		if (i < 0 || i >= SpectrumType::dim)
 			SLog(EError, "Index %i is out of range!", i);
 		else
 			spec[i] = value;
 	}
 
-	static int len(Spectrum &) {
-		return SPECTRUM_SAMPLES;
+	static int len(SpectrumType &) {
+		return SpectrumType::dim;
 	}
 };
 
@@ -1092,6 +1092,41 @@ void export_core() {
 		.def("getSpatialBounds", &AnimatedTransform::getSpatialBounds, BP_RETURN_VALUE)
 		.def("eval", &AnimatedTransform::eval, BP_RETURN_VALUE);
 
+	BP_STRUCT(Color3, bp::init<>())
+		.def(bp::init<Float>())
+		.def(bp::init<Float, Float, Float>())
+		.def(bp::self != bp::self)
+		.def(bp::self == bp::self)
+		.def(-bp::self)
+		.def(bp::self + bp::self)
+		.def(bp::self += bp::self)
+		.def(bp::self - bp::self)
+		.def(bp::self -= bp::self)
+		.def(bp::self *= Float())
+		.def(bp::self * Float())
+		.def(bp::self *= bp::self)
+		.def(bp::self * bp::self)
+		.def(bp::self / Float())
+		.def(bp::self /= Float())
+		.def(bp::self /= bp::self)
+		.def(bp::self / bp::self)
+		.def("isValid", &Color3::isValid)
+		.def("isNaN", &Color3::isNaN)
+		.def("average", &Color3::average)
+		.def("sqrt", &Color3::sqrt)
+		.def("exp", &Color3::exp)
+		.def("log", &Color3::log)
+		.def("pow", &Color3::pow)
+		.def("clampNegative", &Color3::clampNegative)
+		.def("min", &Color3::min)
+		.def("max", &Color3::max)
+		.def("isZero", &Color3::isZero)
+		.def("getLuminance", &Color3::getLuminance)
+		.def("__repr__", &Color3::toString)
+		.def("__len__", &SpectrumWrapper<Color3>::len)
+		.def("__getitem__", &SpectrumWrapper<Color3>::get)
+		.def("__setitem__", &SpectrumWrapper<Color3>::set);
+
 	BP_STRUCT(Spectrum, bp::init<>())
 		.def("__init__", bp::make_constructor(spectrum_array_constructor))
 		.def(bp::init<Float>())
@@ -1115,7 +1150,9 @@ void export_core() {
 		.def("isNaN", &Spectrum::isNaN)
 		.def("average", &Spectrum::average)
 		.def("sqrt", &Spectrum::sqrt)
+		.def("safe_sqrt", &Spectrum::safe_sqrt)
 		.def("exp", &Spectrum::exp)
+		.def("log", &Spectrum::log)
 		.def("pow", &Spectrum::pow)
 		.def("clampNegative", &Spectrum::clampNegative)
 		.def("min", &Spectrum::min)
@@ -1134,9 +1171,9 @@ void export_core() {
 		.def("fromContinuousSpectrum", &Spectrum::fromContinuousSpectrum)
 		.def("serialize", &Spectrum::serialize)
 		.def("__repr__", &Spectrum::toString)
-		.def("__len__", &spectrum_wrapper::len)
-		.def("__getitem__", &spectrum_wrapper::get)
-		.def("__setitem__", &spectrum_wrapper::set);
+		.def("__len__", &SpectrumWrapper<Spectrum>::len)
+		.def("__getitem__", &SpectrumWrapper<Spectrum>::get)
+		.def("__setitem__", &SpectrumWrapper<Spectrum>::set);
 
 	BP_SETSCOPE(Spectrum_struct);
 	bp::enum_<Spectrum::EConversionIntent>("EConversionIntent")

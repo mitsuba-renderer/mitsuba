@@ -184,7 +184,7 @@ public:
 		using namespace mitsuba;
 
 		if (i < 0 || i >= Size) {
-			SLog(EError, "Index %i is out of range!", i);
+			SLog(mitsuba::EError, "Index %i is out of range!", i);
 			return (Scalar) 0;
 		}
 		return value[i];
@@ -194,7 +194,7 @@ public:
 		using namespace mitsuba;
 
 		if (i < 0 || i >= Size)
-			SLog(EError, "Index %i is out of range!", i);
+			SLog(mitsuba::EError, "Index %i is out of range!", i);
 		else
 			value[i] = arg;
 	}
@@ -203,6 +203,37 @@ public:
 		return Size;
 	}
 };
+
+template <typename Value> struct InternalArray {
+public:
+	InternalArray(mitsuba::Object *obj, Value *ptr, size_t length) : obj(obj), ptr(ptr), length(length) { }
+	InternalArray(const InternalArray &a) : obj(a.obj), ptr(a.ptr), length(a.length) { }
+
+	inline int len() { return (int) this->length; }
+
+	Value get(int i) {
+		if (i < 0 || (size_t) i >= length)
+			SLog(mitsuba::EError, "Index %i is out of range!", i);
+		return ptr[i];
+	}
+
+	void set(int i, Value value) {
+		if (i < 0 || (size_t) i >= length)
+			SLog(mitsuba::EError, "Index %i is out of range!", i);
+		ptr[i] = value;
+	}
+private:
+	mitsuba::ref<mitsuba::Object> obj;
+	Value *ptr;
+	size_t length;
+};
+
+#define BP_INTERNAL_ARRAY(Name) \
+	BP_STRUCT(Name, bp::no_init) \
+		.def("__len__", &Name::len) \
+		.def("__getitem__", &Name::get) \
+		.def("__setitem__", &Name::set)
+
 
 namespace mitsuba {
 	class SerializableObject;

@@ -395,3 +395,40 @@ A useful property of this approach is that scene loading and initialization
 must only take place once. Performance-wise, this compares favourably with
 running many separate rendering jobs, e.g. using the \code{mitsuba}
 command-line executable.
+
+\subsection{Creating triangle-based shapes}
+It is possible to create new triangle-based shapes directly in Python, though
+doing so is discouraged: because Python is an interpreted programming language,
+the construction of large meshes will run very slowly. The builtin shapes
+and shape loaders are to be preferred when this is an option. That said, the
+following snippet shows how to create \code{TriMesh} objects from within Python:
+\begin{python}
+# Create a new mesh with 1 triangle, 3 vertices,
+# and allocate buffers for normals and texture coordinates
+mesh = TriMesh('Name of this mesh', 1, 3, True, True)
+
+v = mesh.getVertexPositions()
+v[0] = Point3(0, 0, 0)
+v[1] = Point3(1, 0, 0)
+v[2] = Point3(0, 1, 0)
+
+n = mesh.getVertexNormals()
+n[0] = Normal(0, 0, 1)
+n[1] = Normal(0, 0, 1)
+n[2] = Normal(0, 0, 1)
+
+t = mesh.getTriangles() # Indexed triangle list: tri 1 references vertices 0,1,2
+t[0] = 0
+t[1] = 1
+t[2] = 2
+
+uv = mesh.getTexcoords()
+uv[0] = Point2(0, 0)
+uv[1] = Point2(1, 0)
+uv[2] = Point2(0, 1)
+
+mesh.configure()
+
+# Add to a scene (assumes 'scene' is available)
+sensor.addChild(mesh)
+\end{python}

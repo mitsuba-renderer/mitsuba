@@ -33,6 +33,7 @@ MTS_NAMESPACE_BEGIN
  * necessarily orthogonal.
  *
  * \ingroup librender
+ * \ingroup libpython
  */
 struct TangentSpace {
 	/// Position partial with respect to the U parameter of the local chart
@@ -42,6 +43,8 @@ struct TangentSpace {
 	Vector dpdv;
 
 	inline TangentSpace() { }
+	inline TangentSpace(const Vector &dpdu, const Vector &dpdv)
+		: dpdu(dpdu), dpdv(dpdv) { }
 	inline TangentSpace(Stream *stream) :
 		dpdu(stream), dpdv(stream) {
 	}
@@ -49,6 +52,12 @@ struct TangentSpace {
 	inline void serialize(Stream *stream) {
 		dpdu.serialize(stream);
 		dpdv.serialize(stream);
+	}
+
+	inline std::string toString() const {
+		std::ostringstream oss;
+		oss << "TangentSpace[dpdu=" << dpdu.toString() << ", dpdv=" << dpdv.toString() << "]";
+		return oss.str();
 	}
 };
 
