@@ -28,6 +28,7 @@
 #include <mitsuba/render/bsdf.h>
 #include <mitsuba/render/emitter.h>
 #include <boost/filesystem/fstream.hpp>
+#include <boost/unordered_map.hpp>
 
 #define MTS_FILEFORMAT_HEADER     0x041C
 #define MTS_FILEFORMAT_VERSION_V3 0x0003
@@ -846,6 +847,108 @@ void TriMesh::serialize(Stream *stream, InstanceManager *manager) const {
 			m_vertexCount * sizeof(Color3)/sizeof(Float));
 	stream->writeUIntArray(reinterpret_cast<uint32_t *>(m_triangles),
 		m_triangleCount * sizeof(Triangle)/sizeof(uint32_t));
+}
+
+ref<TriMesh> TriMesh::fromBlender(const std::string &name,
+		size_t faceCount, void *_facePtr, size_t vertexCount, void *_vertexPtr, void *_uvPtr, void *_colPtr, short mat_nr) {
+	struct MFace {
+		uint32_t v[4];
+		int16_t mat_nr;
+		uint8_t edcode, flag;
+	};
+
+	struct MVert {
+		float co[3];
+		int16_t no[3];
+		uint8_t flag, bweight;
+	};
+
+	struct MCol {
+		uint8_t a, r, g, b;
+	};
+
+	struct MLoopUV {
+		float uv[2];
+		int32_t flag;
+	};
+
+	MFace *facePtr   = (MFace *) _facePtr;
+	MVert *vertexPtr = (MVert *) _vertexPtr;
+	MCol *colPtr     = (MCol *)  _colPtr;
+	MLoopUV *uvPtr   = (MLoopUV *) _uvPtr;
+
+	boost::unordered_map<uint32_t, uint32_t> vertexMap;
+	uint32_t triangleCtr = 0, vertexCtr = 0;
+
+	for (int i=0; i<faceCount; ++i) {
+		const MFace &face = facePtr[i];
+
+		if (face.mat_nr == mat_nr) {
+			bool triangle = face.v[3] == 0;
+			for (int j=0; j<(triangle ? 3 : 4); ++j) {
+				if (vertexMap.find(face.v[j]) == vertexMap.end())
+					vertexMap[face.v[j]] = vertexCtr++;
+			}
+			triangleCtr += triangle ? 1 : 2;
+		}
+	}
+
+	ref<TriMesh> triMesh = new TriMesh(name, triangleCtr, vertexCtr, true,
+		uvPtr != NULL, colPtr != NULL);
+
+	uint32_t *triangles     = (uint32_t *) triMesh->getTriangles();
+	Point *vertexPositions  = (Point *) triMesh->getVertexPositions();
+	Normal *vertexNormals   = (Normal *) triMesh->getVertexNormals();
+	Color3 *vertexColors    = (Color3 *)  triMesh->getVertexColors();
+	Point2 *vertexTexcoords = (Point2 *)  triMesh->getVertexTexcoords();
+
+	for (int i=0; i<faceCount; ++i) {
+		const MFace &face = facePtr[i];
+
+		if (face.mat_nr == mat_nr) {
+			*triangles++ = vertexMap[face.v[0]];
+			*triangles++ = vertexMap[face.v[1]];
+			*triangles++ = vertexMap[face.v[2]];
+
+			if (face.v[3] != 0) {
+				*triangles++ = vertexMap[face.v[0]];
+				*triangles++ = vertexMap[face.v[2]];
+				*triangles++ = vertexMap[face.v[3]];
+			}
+		}
+	}
+
+	const float normalScale = 1.0f / 32767.0f;
+	const float rgbScale = 1.0f / 255.0f;
+
+	for (boost::unordered_map<uint32_t, uint32_t>::iterator it = vertexMap.begin();
+			it != vertexMap.end(); ++it) {
+		const MVert &vertex = vertexPtr[it->first];
+		uint32_t idx = it->second;
+
+		vertexPositions[idx] = Point3(vertex.co[0], vertex.co[1], vertex.co[2]);
+		vertexNormals[idx] = normalize(Normal(
+			vertex.no[0] * normalScale,
+			vertex.no[1] * normalScale,
+			vertex.no[2] * normalScale
+		));
+
+		if (uvPtr) {
+			const MLoopUV &uv = uvPtr[it->first];
+			vertexTexcoords[idx] = Point2(uv.uv[0], uv.uv[1]);
+		}
+
+		if (colPtr) {
+			const MCol &col = colPtr[it->first];
+			vertexColors[idx] = Color3(
+				col.r * rgbScale,
+				col.g * rgbScale,
+				col.b * rgbScale
+			);
+		}
+	}
+
+	return triMesh;
 }
 
 void TriMesh::writeOBJ(const fs::path &path) const {

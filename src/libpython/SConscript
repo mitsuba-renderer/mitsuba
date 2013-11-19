@@ -31,7 +31,7 @@ for ver in hasPython:
 		pythonEnv.Append(CPPFLAGS = ['/bigobj'])
 
 	if sys.platform == 'darwin':
-		pythonEnv.Append(LINKFLAGS=['-Xlinker', '-rpath', '-Xlinker', '@loader_path/../../Contents/Frameworks'])
+		pythonEnv.Append(LINKFLAGS=['-Xlinker', '-rpath', '-Xlinker', '@loader_path/../../Contents/Frameworks', '-undefined', 'dynamic_lookup'])
 
 	if hasPython:
 		libcore_obj = pythonEnv.SharedObject('core_'+ver, 'core.cpp')

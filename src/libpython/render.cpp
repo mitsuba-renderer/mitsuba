@@ -125,7 +125,6 @@ bp::list scene_getMedia(Scene *scene) {
 	return list;
 }
 
-
 typedef InternalArray<uint32_t>     InternalUInt32Array;
 typedef InternalArray<Point3>       InternalPoint3Array;
 typedef InternalArray<Normal>       InternalNormalArray;
@@ -156,6 +155,13 @@ InternalColor3Array trimesh_getVertexColors(TriMesh *triMesh) {
 
 InternalTangentSpaceArray trimesh_getUVTangents(TriMesh *triMesh) {
 	return InternalTangentSpaceArray(triMesh, triMesh->getUVTangents(), triMesh->getVertexCount());
+}
+
+ref<TriMesh> trimesh_fromBlender(const std::string &name,
+		size_t faceCount, size_t facePtr, size_t vertexCount, size_t vertexPtr, size_t uvPtr, size_t colPtr, short matID) {
+	return TriMesh::fromBlender(name, faceCount, reinterpret_cast<void *>(facePtr), vertexCount,
+		reinterpret_cast<void *>(vertexPtr), reinterpret_cast<void *>(uvPtr),
+		reinterpret_cast<void *>(colPtr), matID);
 }
 
 void export_render() {
@@ -412,7 +418,9 @@ void export_render() {
 		.def("rebuildTopology", &TriMesh::rebuildTopology)
 		.def("serialize", triMesh_serialize1)
 		.def("serialize", triMesh_serialize2)
-		.def("writeOBJ", &TriMesh::writeOBJ);
+		.def("writeOBJ", &TriMesh::writeOBJ)
+		.def("fromBlender", trimesh_fromBlender)
+		.staticmethod("fromBlender");
 
 	Shape *(AbstractEmitter::*abstractemitter_getShape)(void) = &AbstractEmitter::getShape;
 	Medium *(AbstractEmitter::*abstractemitter_getMedium)(void) = &AbstractEmitter::getMedium;

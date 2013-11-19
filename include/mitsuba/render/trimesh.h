@@ -299,6 +299,10 @@ public:
 	 */
 	size_t getEffectivePrimitiveCount() const;
 
+	/// Import a shape from the Blender in-memory representation
+	static ref<TriMesh> fromBlender(const std::string &name, size_t faceCount, void *facePtr,
+		size_t vertexCount, void *vertexPtr, void *uvPtr, void *colPtr, short matNr);
+
 	/// Export an Wavefront OBJ version of this file
 	void writeOBJ(const fs::path &path) const;
 
