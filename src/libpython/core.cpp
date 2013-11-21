@@ -1702,6 +1702,8 @@ void export_core() {
 	#endif
 
 	bp::detail::current_scope = oldScope;
+}
+
 BOOST_PYTHON_MODULE(mitsuba) {
 	bp::object package = bp::scope();
 	package.attr("__path__") = "mitsuba";
