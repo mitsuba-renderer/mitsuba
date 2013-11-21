@@ -534,6 +534,119 @@ bp::list fileresolver_resolveAll(const FileResolver *fres, const fs::path &path)
 	return result;
 }
 
+struct NativeBuffer {
+	ref<Object> owner;
+	void *ptr;
+	Py_ssize_t count;
+	Bitmap::EComponentFormat format;
+
+	NativeBuffer(Object *owner, void *ptr, size_t count, Bitmap::EComponentFormat format)
+		: owner(owner), ptr(ptr), count((Py_ssize_t) count), format(format) { }
+
+	static int getbuffer(PyObject *obj, Py_buffer *view, int flags) {
+		bp::extract<NativeBuffer&> b(obj);
+		if (!b.check()) {
+			PyErr_SetString(PyExc_BufferError, "Native buffer is invalid!");
+			view->obj = NULL;
+			return -1;
+		}
+		NativeBuffer &buf = b();
+
+		if (!buf.ptr) {
+			PyErr_SetString(PyExc_BufferError, "Native buffer does not point anywhere!");
+			view->obj = NULL;
+			return -1;
+		}
+
+		if (view == NULL)
+			return 0;
+
+		view->obj = obj;
+		if (view->obj)
+			Py_INCREF(view->obj);
+		buf.owner->incRef();
+
+		char *format = NULL;
+		int itemSize = 0;
+		switch (buf.format) {
+			case Bitmap::EUInt8:   format = (char *)"B"; itemSize = 1; break;
+			case Bitmap::EUInt16:  format = (char *)"H"; itemSize = 2; break;
+			case Bitmap::EUInt32:  format = (char *)"I"; itemSize = 4; break;
+			case Bitmap::EFloat32: format = (char *)"f"; itemSize = 4; break;
+			case Bitmap::EFloat64: format = (char *)"d"; itemSize = 8; break;
+			default:
+				PyErr_SetString(PyExc_BufferError, "Unsupported buffer format!");
+				view->obj = NULL;
+				return -1;
+		}
+
+
+		view->buf = buf.ptr;
+		view->len = itemSize * buf.count;
+		view->readonly = false;
+		view->itemsize = itemSize;
+		view->format = NULL;
+		if ((flags & PyBUF_FORMAT) == PyBUF_FORMAT)
+			view->format = format;
+		view->ndim = 1;
+		view->shape = NULL;
+		if ((flags & PyBUF_ND) == PyBUF_ND)
+			view->shape = &buf.count;
+		view->strides = NULL;
+		if ((flags & PyBUF_STRIDES) == PyBUF_STRIDES)
+			view->strides = &(view->itemsize);
+		view->suboffsets = NULL;
+		view->internal = NULL;
+		return 0;
+	}
+
+	static void releasebuffer(PyObject *obj, Py_buffer *view) {
+		bp::extract<NativeBuffer&> b(obj);
+		if (!b.check()) {
+			PyErr_SetString(PyExc_BufferError, "Native buffer is invalid!");
+			return;
+		}
+		NativeBuffer &buf = b();
+		buf.owner->decRef();
+	}
+
+	static Py_ssize_t len(PyObject *obj) {
+		bp::extract<NativeBuffer&> b(obj);
+		if (!b.check()) {
+			PyErr_SetString(PyExc_BufferError, "Native buffer is invalid!");
+			return -1;
+		}
+		return b().count;
+	}
+
+	static PyObject* item(PyObject *obj, Py_ssize_t idx) {
+		bp::extract<NativeBuffer&> b(obj);
+		if (!b.check()) {
+			PyErr_SetString(PyExc_BufferError, "Native buffer is invalid!");
+			return 0;
+		}
+		NativeBuffer &buf = b();
+
+		bp::object result;
+		switch (buf.format) {
+			case Bitmap::EUInt8:   result = bp::object(((uint8_t *) buf.ptr)[idx]); break;
+			case Bitmap::EUInt16:  result = bp::object(((uint16_t *) buf.ptr)[idx]); break;
+			case Bitmap::EUInt32:  result = bp::object(((uint32_t *) buf.ptr)[idx]); break;
+			case Bitmap::EFloat32: result = bp::object(((float *) buf.ptr)[idx]); break;
+			case Bitmap::EFloat64: result = bp::object(((double *) buf.ptr)[idx]); break;
+			default:
+				PyErr_SetString(PyExc_BufferError, "Unsupported buffer format!");
+				return 0;
+		}
+
+		return boost::python::incref(result.ptr());
+	}
+};
+
+NativeBuffer bitmap_getNativeBuffer(Bitmap *bitmap) {
+	return NativeBuffer(bitmap, bitmap->getFloat32Data(), bitmap->getPixelCount() * bitmap->getChannelCount(), bitmap->getComponentFormat());
+}
+
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(fromLinearRGB_overloads, fromLinearRGB, 3, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(fromXYZ_overloads, fromXYZ, 3, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(fromIPT_overloads, fromIPT, 3, 4)
@@ -861,6 +974,7 @@ void export_core() {
 		.def("fromByteArray", &bitmap_fromByteArray)
 		.def("toByteArray", &bitmap_toByteArray_1)
 		.def("toByteArray", &bitmap_toByteArray_2)
+		.def("getNativeBuffer", bitmap_getNativeBuffer)
 		.staticmethod("join")
 		.staticmethod("arithmeticOperation");
 
@@ -1555,6 +1669,35 @@ void export_core() {
 	bp::def("radicalInverse", radicalInverse);
 	bp::def("radicalInverseFast", radicalInverseFast);
 	bp::def("radicalInverseIncremental", radicalInverseIncremental);
+
+	bp::class_<NativeBuffer>("NativeBuffer", bp::no_init);
+
+	const bp::converter::registration& fb_reg(
+		bp::converter::registry::lookup(bp::type_id<NativeBuffer>()));
+	PyTypeObject* fb_type = fb_reg.get_class_object();
+
+	static PyBufferProcs NativeBuffer_buffer_procs = {
+		#if PY_MAJOR_VERSION < 3
+			NULL, NULL, NULL, NULL,
+		#endif
+		&NativeBuffer::getbuffer,
+		&NativeBuffer::releasebuffer
+	};
+
+	// partial sequence protocol support
+	static PySequenceMethods NativeBuffer_as_sequence = {
+		&NativeBuffer::len,
+		NULL,
+		NULL,
+		&NativeBuffer::item
+	};
+
+	fb_type->tp_as_sequence = &NativeBuffer_as_sequence;
+	fb_type->tp_as_buffer = &NativeBuffer_buffer_procs;
+
+	#if PY_MAJOR_VERSION < 3
+		fb_type->tp_flags |= Py_TPFLAGS_HAVE_NEWBUFFER;
+	#endif
 
 	bp::detail::current_scope = oldScope;
 }
