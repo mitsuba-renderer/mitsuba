@@ -432,3 +432,91 @@ mesh.configure()
 # Add to a scene (assumes 'scene' is available)
 sensor.addChild(mesh)
 \end{python}
+
+\subsection{PyQt/PySide interaction with Mitsuba}
+The following listing contains a complete program that
+renders a sphere and efficiently displays it in a PyQt window
+(change the import declarations to make it work in PySide).
+\begin{python}
+import mitsuba, multiprocessing, sys
+
+from mitsuba.core import Scheduler, PluginManager, \
+    LocalWorker, Properties, Bitmap, Point2i, FileStream
+
+from mitsuba.render import RenderQueue, RenderJob, Scene
+
+from PyQt4.QtCore import QPoint
+from PyQt4.QtGui import QApplication, QMainWindow, QPainter, QImage
+
+class MitsubaView(QMainWindow):
+    def __init__(self):
+        super(MitsubaView, self).__init__()
+        self.setWindowTitle('Mitsuba/Qt demo')
+        self.initializeMitsuba()
+        self.image = self.render(self.createScene())
+        self.resize(self.image.width(), self.image.height())
+
+    def initializeMitsuba(self):
+        # Start up the scheduling system with one worker per local core
+        self.scheduler = Scheduler.getInstance()
+        for i in range(0, multiprocessing.cpu_count()):
+            self.scheduler.registerWorker(LocalWorker(i, 'wrk%i' % i))
+        self.scheduler.start()
+        # Create a queue for tracking render jobs
+        self.queue = RenderQueue()
+        # Get a reference to the plugin manager
+        self.pmgr = PluginManager.getInstance()
+
+    def shutdownMitsuba(self):
+        self.queue.join()
+        self.scheduler.stop()
+
+    def createScene(self):
+        # Create a simple scene containing a sphere
+        sphere = self.pmgr.createObject(Properties("sphere"))
+        sphere.configure()
+        scene = Scene()
+        scene.addChild(sphere)
+        scene.configure()
+        # Don't automatically write an output bitmap file when the
+        # rendering process finishes (want to control this from Python)
+        scene.setDestinationFile('')
+        return scene
+
+    def render(self, scene):
+        # Create a render job and insert it into the queue
+        job = RenderJob('myRenderJob', scene, self.queue)
+        job.start()
+        # Wait for the job to finish
+        self.queue.waitLeft(0)
+        # Develop the camera's film into an 8 bit sRGB bitmap
+        film = scene.getFilm()
+        size = film.getSize()
+        bitmap = Bitmap(Bitmap.ERGB, Bitmap.EUInt8, size)
+        film.develop(Point2i(0, 0), size, Point2i(0, 0), bitmap)
+        buf = bitmap.getNativeBuffer()
+        # Write to a PNG bitmap file
+        outFile = FileStream("rendering.png", FileStream.ETruncReadWrite)
+        bitmap.write(Bitmap.EPNG, outFile)
+        outFile.close()
+        # Also create a QImage (using a fast memory copy in C++)
+        image = QImage(bitmap.getNativeBuffer(),
+            size.x, size.y, QImage.Format_RGB888)
+        return image
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.drawImage(QPoint(0, 0), self.image)
+        del painter
+
+def main():
+    app = QApplication(sys.argv)
+    view = MitsubaView()
+    view.show()
+    retval = app.exec_()
+    view.shutdownMitsuba()
+    sys.exit(retval)
+
+if __name__ == '__main__':
+    main()
+\end{python}
