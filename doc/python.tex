@@ -396,7 +396,7 @@ must only take place once. Performance-wise, this compares favourably with
 running many separate rendering jobs, e.g. using the \code{mitsuba}
 command-line executable.
 
-\subsection{Creating triangle-based shapes}
+\subsubsection{Creating triangle-based shapes}
 It is possible to create new triangle-based shapes directly in Python, though
 doing so is discouraged: because Python is an interpreted programming language,
 the construction of large meshes will run very slowly. The builtin shapes
@@ -433,10 +433,12 @@ mesh.configure()
 sensor.addChild(mesh)
 \end{python}
 
-\subsection{PyQt/PySide interaction with Mitsuba}
+\subsubsection{PyQt/PySide interaction with Mitsuba}
 The following listing contains a complete program that
 renders a sphere and efficiently displays it in a PyQt window
-(change the import declarations to make it work in PySide).
+(to make this work in PySide, change all occurrences of \code{PyQt4} to \code{PySide} in the
+import declarations and rename the function call to \code{getNativeBuffer()} to \code{toByteArray()},
+which is a tiny bit less efficient).
 \begin{python}
 import mitsuba, multiprocessing, sys
 
@@ -494,7 +496,6 @@ class MitsubaView(QMainWindow):
         size = film.getSize()
         bitmap = Bitmap(Bitmap.ERGB, Bitmap.EUInt8, size)
         film.develop(Point2i(0, 0), size, Point2i(0, 0), bitmap)
-        buf = bitmap.getNativeBuffer()
         # Write to a PNG bitmap file
         outFile = FileStream("rendering.png", FileStream.ETruncReadWrite)
         bitmap.write(Bitmap.EPNG, outFile)
@@ -520,3 +521,28 @@ def main():
 if __name__ == '__main__':
     main()
 \end{python}
+
+\subsubsection{Calling Mitsuba functions from a multithread Python program}
+By default, Mitsuba assumes that threads accessing Mitsuba-internal
+data structures were created by (or at least registered with) Mitsuba. This is the
+case for the main thread and subclasses of \code{mitsuba.core.Thread}. When a
+Mitsuba function is called from an event dispatch thread of a multithreaded
+Python application that is not known to Mitsuba, an exception or crash will result.
+
+To avoid this, get a reference to the main thread right after loading the Mitsuba plugin
+and save some related state (the attached \code{FileResolver} and \code{Logger} instances).
+\begin{python}
+mainThread = Thread.getThead()
+saved_fresolver = mainThread.getFileResolver()
+saved_logger = mainThread.getLogger()
+\end{python}
+
+Later when accessed from an unregister thread, execute the following:
+\begin{python}
+# This rendering thread was not created by Mitsuba -- register it
+newThread = Thread.registerUnmanagedThread('render')
+newThread.setFileResolver(saved_fresolver)
+newThread.setLogger(saved_logger)
+\end{python}
+It is fine to execute this several times (\code{registerUnmanagedThread} just returns
+a reference to the associated \code{Thread} instance if it was already registered).
