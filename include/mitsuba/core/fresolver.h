@@ -83,6 +83,12 @@ public:
 	/// Clear all stored search paths
 	void clear();
 
+	/// Return the number of stored paths
+	inline size_t getPathCount() const { return m_paths.size(); }
+
+	/// Return one of the stored paths
+	inline const fs::path &getPath(size_t index) const { return m_paths[index]; }
+
 	/// Return a human-readable string representation
 	std::string toString() const;
 

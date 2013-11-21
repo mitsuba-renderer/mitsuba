@@ -1043,6 +1043,8 @@ void export_core() {
 	BP_SETSCOPE(coreModule);
 
 	BP_CLASS(FileResolver, Object, bp::init<>())
+		.def("getPathCount", &FileResolver::getPathCount)
+		.def("getPath", &FileResolver::getPath, BP_RETURN_VALUE)
 		.def("resolve", &FileResolver::resolve, BP_RETURN_VALUE)
 		.def("resolveAll", &fileresolver_resolveAll)
 		.def("resolveAbsolute", &FileResolver::resolveAbsolute, BP_RETURN_VALUE)
@@ -1700,8 +1702,6 @@ void export_core() {
 	#endif
 
 	bp::detail::current_scope = oldScope;
-}
-
 BOOST_PYTHON_MODULE(mitsuba) {
 	bp::object package = bp::scope();
 	package.attr("__path__") = "mitsuba";
