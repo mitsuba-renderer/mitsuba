@@ -2,17 +2,17 @@
 # Contributer: Alex Combas <blenderwell@gmail.com>
 # Contributer: Wenzel Jakob <wenzel@mitsuba-renderer.org>
 pkgname="mitsuba-hg"
-pkgver=1
+pkgver=1672
 pkgrel=1
 pkgdesc="Mitsuba physically based renderer"
 url="http://mitsuba-renderer.org/"
 license=("GPL3")
 arch=("i686" "x86_64")
-depends=("xerces-c" "glew" "openexr" "boost" "libpng" "libjpeg" "qt" "collada-dom")
+depends=("xerces-c" "glew" "openexr" "boost" "libpng" "libjpeg" "qt4" "collada-dom" "fftw")
 makedepends=("mercurial" "scons")
 provides=("mitsuba")
 
-_hgroot="https://mitsuba-renderer.org/hg"
+_hgroot="https://mitsuba-renderer.org/repos"
 _hgrepo="mitsuba"
 
 build() {
@@ -33,7 +33,8 @@ package() {
 		${pkgdir}/usr/share/applications \
 		${pkgdir}/usr/share/pixmaps \
 		${pkgdir}/usr/include/mitsuba/{core,hw,render,bidir} \
-		${pkgdir}/usr/lib/python3.2/lib-dynload
+		${pkgdir}/usr/lib/python2.7/lib-dynload \
+		${pkgdir}/usr/lib/python3.3/lib-dynload
 
 	cd ${_hgrepo}
 	install -m755 dist/mitsuba dist/mtsgui dist/mtsimport dist/mtssrv dist/mtsutil ${pkgdir}/usr/bin
@@ -46,7 +47,8 @@ package() {
 	install -m644 dist/data/schema/* ${pkgdir}/usr/share/mitsuba/data/schema
 	install -m644 dist/data/ior/* ${pkgdir}/usr/share/mitsuba/data/ior
 	install -m644 dist/data/microfacet/* ${pkgdir}/usr/share/mitsuba/data/microfacet
-	install -m644 dist/python/3.2/mitsuba.so ${pkgdir}/usr/lib/python3.2/lib-dynload
+	install -m644 dist/python/2.7/mitsuba.so ${pkgdir}/usr/lib/python2.7/lib-dynload
+	install -m644 dist/python/3.3/mitsuba.so ${pkgdir}/usr/lib/python3.3/lib-dynload
 	install -m644 data/linux/mitsuba.desktop ${pkgdir}/usr/share/applications
 	install -m644 src/mtsgui/resources/mitsuba48.png ${pkgdir}/usr/share/pixmaps
 	install -m644 include/mitsuba/*.h ${pkgdir}/usr/include/mitsuba

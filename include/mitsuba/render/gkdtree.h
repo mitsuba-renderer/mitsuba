@@ -995,6 +995,15 @@ protected:
 			indices[i] = i;
 		}
 
+		#if defined(DOUBLE_PRECISION)
+			for (int i=0; i<3; ++i) {
+				aabb.min[i] = nextafterf((float) aabb.min[i],
+						  -std::numeric_limits<float>::max());
+				aabb.max[i] = nextafterf((float) aabb.max[i],
+						  std::numeric_limits<float>::max());
+			}
+		#endif
+
 		KDLog(m_logLevel, "Computed scene bounds in %i ms",
 				timer->getMilliseconds());
 		KDLog(m_logLevel, "");

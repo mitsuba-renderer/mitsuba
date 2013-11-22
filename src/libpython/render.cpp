@@ -125,6 +125,45 @@ bp::list scene_getMedia(Scene *scene) {
 	return list;
 }
 
+typedef InternalArray<uint32_t>     InternalUInt32Array;
+typedef InternalArray<Point3>       InternalPoint3Array;
+typedef InternalArray<Normal>       InternalNormalArray;
+typedef InternalArray<Point2>       InternalPoint2Array;
+typedef InternalArray<Color3>       InternalColor3Array;
+typedef InternalArray<TangentSpace> InternalTangentSpaceArray;
+
+InternalUInt32Array trimesh_getTriangles(TriMesh *triMesh) {
+	BOOST_STATIC_ASSERT(sizeof(Triangle) == 3*sizeof(uint32_t));
+	return InternalUInt32Array(triMesh, (uint32_t *) triMesh->getTriangles(), triMesh->getTriangleCount()*3);
+}
+
+InternalPoint3Array trimesh_getVertexPositions(TriMesh *triMesh) {
+	return InternalPoint3Array(triMesh, triMesh->getVertexPositions(), triMesh->getVertexCount());
+}
+
+InternalNormalArray trimesh_getVertexNormals(TriMesh *triMesh) {
+	return InternalNormalArray(triMesh, triMesh->getVertexNormals(), triMesh->getVertexCount());
+}
+
+InternalPoint2Array trimesh_getVertexTexcoords(TriMesh *triMesh) {
+	return InternalPoint2Array(triMesh, triMesh->getVertexTexcoords(), triMesh->getVertexCount());
+}
+
+InternalColor3Array trimesh_getVertexColors(TriMesh *triMesh) {
+	return InternalColor3Array(triMesh, triMesh->getVertexColors(), triMesh->getVertexCount());
+}
+
+InternalTangentSpaceArray trimesh_getUVTangents(TriMesh *triMesh) {
+	return InternalTangentSpaceArray(triMesh, triMesh->getUVTangents(), triMesh->getVertexCount());
+}
+
+ref<TriMesh> trimesh_fromBlender(const std::string &name,
+		size_t faceCount, size_t facePtr, size_t vertexCount, size_t vertexPtr, size_t uvPtr, size_t colPtr, short matID) {
+	return TriMesh::fromBlender(name, faceCount, reinterpret_cast<void *>(facePtr), vertexCount,
+		reinterpret_cast<void *>(vertexPtr), reinterpret_cast<void *>(uvPtr),
+		reinterpret_cast<void *>(colPtr), matID);
+}
+
 void export_render() {
 	bp::object renderModule(
 		bp::handle<>(bp::borrowed(PyImport_AddModule("mitsuba.render"))));
@@ -132,6 +171,13 @@ void export_render() {
 	PyObject *oldScope = bp::detail::current_scope;
 
 	BP_SETSCOPE(renderModule);
+
+	BP_INTERNAL_ARRAY(InternalUInt32Array);
+	BP_INTERNAL_ARRAY(InternalPoint3Array);
+	BP_INTERNAL_ARRAY(InternalPoint2Array);
+	BP_INTERNAL_ARRAY(InternalColor3Array);
+	BP_INTERNAL_ARRAY(InternalNormalArray);
+	BP_INTERNAL_ARRAY(InternalTangentSpaceArray);
 
 	bp::enum_<ETransportMode>("ETransportMode")
 		.value("ERadiance", ERadiance)
@@ -215,14 +261,22 @@ void export_render() {
 		.def("getRadius", &ReconstructionFilter::getRadius)
 		.def("getBorderSize", &ReconstructionFilter::getBorderSize);
 
+	BP_SETSCOPE(ReconstructionFilter_class);
+	bp::enum_<ReconstructionFilter::EBoundaryCondition>("EBoundaryCondition")
+		.value("EClamp", ReconstructionFilter::EClamp)
+		.value("ERepeat", ReconstructionFilter::ERepeat)
+		.value("EMirror", ReconstructionFilter::EMirror)
+		.value("EZero", ReconstructionFilter::EZero)
+		.value("EOne", ReconstructionFilter::EOne)
+		.export_values();
+	BP_SETSCOPE(renderModule);
+
 	bp::class_<SceneHandler, boost::noncopyable>("SceneHandler", bp::no_init)
 		.def("loadScene", &loadScene, BP_RETURN_VALUE)
 		.staticmethod("loadScene");
 
 	BP_CLASS(RenderJob, Thread, (bp::init<const std::string &, Scene *, RenderQueue *>()))
-		.def(bp::init<const std::string &, Scene *, RenderQueue *, int>())
-		.def(bp::init<const std::string &, Scene *, RenderQueue *, int, int>())
-		.def(bp::init<const std::string &, Scene *, RenderQueue *, int, int, int>())
+		.def(bp::init<const std::string &, Scene *, RenderQueue *, int, bp::optional<int, int> >())
 		.def("flush", &RenderJob::flush)
 		.def("cancel", &RenderJob::cancel)
 		.def("wait", &RenderJob::wait);
@@ -264,6 +318,14 @@ void export_render() {
 		.def("Le", &Intersection::Le)
 		.def("LoSub", &Intersection::LoSub)
 		.def("__repr__", &Intersection::toString);
+
+	BP_STRUCT(TangentSpace, bp::init<>())
+		.def(bp::init<Vector, Vector>())
+		.def(bp::init<Stream *>())
+		.def_readwrite("dpdu", &TangentSpace::dpdu)
+		.def_readwrite("dpdv", &TangentSpace::dpdv)
+		.def("serialize", &TangentSpace::serialize)
+		.def("__repr__", &TangentSpace::toString);
 
 	BP_STRUCT(PositionSamplingRecord, bp::init<>())
 		.def(bp::init<Float>())
@@ -330,26 +392,35 @@ void export_render() {
 		.def("hasBSDF", &Shape::hasBSDF)
 		.def("getBSDF", shape_getBSDF, BP_RETURN_VALUE)
 		.def("getPrimitiveCount", &Shape::getPrimitiveCount)
-		.def("getEffectivePrimitiveCount", &Shape::getEffectivePrimitiveCount);
+		.def("getEffectivePrimitiveCount", &Shape::getEffectivePrimitiveCount)
+		.def("copyAttachments", &Shape::copyAttachments);
 
 	void (TriMesh::*triMesh_serialize1)(Stream *stream) const = &TriMesh::serialize;
 	void (TriMesh::*triMesh_serialize2)(Stream *stream, InstanceManager *) const = &TriMesh::serialize;
 
-	BP_CLASS(TriMesh, Shape, (bp::init<std::string, size_t, size_t, bool, bool, bool, bool, bool>()))
+	BP_CLASS(TriMesh, Shape, (bp::init<std::string, size_t, size_t, bp::optional<bool, bool, bool, bool, bool> >()))
 		.def(bp::init<Stream *, InstanceManager *>())
 		.def(bp::init<Stream *, int>())
 		.def("getTriangleCount", &TriMesh::getTriangleCount)
+		.def("getTriangles", trimesh_getTriangles)
 		.def("getVertexCount", &TriMesh::getVertexCount)
+		.def("getVertexPositions", trimesh_getVertexPositions, BP_RETURN_VALUE)
 		.def("hasVertexNormals", &TriMesh::hasVertexNormals)
+		.def("getVertexNormals", trimesh_getVertexNormals, BP_RETURN_VALUE)
 		.def("hasVertexColors", &TriMesh::hasVertexColors)
+		.def("getVertexColors", trimesh_getVertexColors, BP_RETURN_VALUE)
 		.def("hasVertexTexcoords", &TriMesh::hasVertexTexcoords)
+		.def("getVertexTexcoords", trimesh_getVertexTexcoords, BP_RETURN_VALUE)
 		.def("hasUVTangents", &TriMesh::hasUVTangents)
+		.def("getUVTangents", trimesh_getUVTangents, BP_RETURN_VALUE)
 		.def("computeUVTangents", &TriMesh::computeUVTangents)
 		.def("computeNormals", &TriMesh::computeNormals)
 		.def("rebuildTopology", &TriMesh::rebuildTopology)
 		.def("serialize", triMesh_serialize1)
 		.def("serialize", triMesh_serialize2)
-		.def("writeOBJ", &TriMesh::writeOBJ);
+		.def("writeOBJ", &TriMesh::writeOBJ)
+		.def("fromBlender", trimesh_fromBlender)
+		.staticmethod("fromBlender");
 
 	Shape *(AbstractEmitter::*abstractemitter_getShape)(void) = &AbstractEmitter::getShape;
 	Medium *(AbstractEmitter::*abstractemitter_getMedium)(void) = &AbstractEmitter::getMedium;
@@ -371,9 +442,9 @@ void export_render() {
 
 	BP_SETSCOPE(AbstractEmitter_class);
 	bp::enum_<AbstractEmitter::EEmitterType>("EEmitterType")
-		.value("EDeltaDirection,", AbstractEmitter::EDeltaDirection)
-		.value("EDeltaPosition,", AbstractEmitter::EDeltaPosition)
-		.value("EOnSurface,", AbstractEmitter::EOnSurface)
+		.value("EDeltaDirection", AbstractEmitter::EDeltaDirection)
+		.value("EDeltaPosition", AbstractEmitter::EDeltaPosition)
+		.value("EOnSurface", AbstractEmitter::EOnSurface)
 		.export_values();
 	BP_SETSCOPE(renderModule);
 
@@ -385,7 +456,7 @@ void export_render() {
 
 	BP_SETSCOPE(Emitter_class);
 	bp::enum_<Emitter::EEmitterFlags>("EEmitterFlags")
-		.value("EEnvironmentEmitter,", Emitter::EEnvironmentEmitter)
+		.value("EEnvironmentEmitter", Emitter::EEnvironmentEmitter)
 		.export_values();
 	BP_SETSCOPE(renderModule);
 
@@ -434,6 +505,14 @@ void export_render() {
 		.def("setFarClip", &ProjectiveCamera::setFarClip)
 		.def("setFocusDistance", &ProjectiveCamera::setFocusDistance);
 
+	BP_CLASS(Integrator, ConfigurableObject, bp::no_init)
+		.def("preprocess", &Integrator::preprocess)
+		.def("render", &Integrator::render)
+		.def("cancel", &Integrator::cancel)
+		.def("postprocess", &Integrator::postprocess)
+		.def("configureSampler", &Integrator::configureSampler)
+		.def("getSubIntegrator", &Integrator::getSubIntegrator, BP_RETURN_VALUE);
+
 	BP_STRUCT(BSDFSamplingRecord, (bp::init<const Intersection &, Sampler *, ETransportMode>()))
 		.def(bp::init<const Intersection &, const Vector &, ETransportMode>())
 		.def(bp::init<const Intersection &, const Vector &, const Vector &, ETransportMode>())
@@ -464,15 +543,15 @@ void export_render() {
 
 	BP_SETSCOPE(BSDF_class);
 	bp::enum_<BSDF::EBSDFType>("EBSDFType")
-		.value("ENull,", BSDF::ENull)
-		.value("EDiffuseReflection,", BSDF::EDiffuseReflection)
-		.value("EDiffuseTransmission,", BSDF::EDiffuseTransmission)
+		.value("ENull", BSDF::ENull)
+		.value("EDiffuseReflection", BSDF::EDiffuseReflection)
+		.value("EDiffuseTransmission", BSDF::EDiffuseTransmission)
 		.value("EGlossyReflection", BSDF::EGlossyReflection)
-		.value("EGlossyTransmission,", BSDF::EGlossyTransmission)
-		.value("EDeltaReflection,", BSDF::EDeltaReflection)
-		.value("EDeltaTransmission,", BSDF::EDeltaTransmission)
-		.value("EDelta1DReflection,", BSDF::EDelta1DReflection)
-		.value("EDelta1DTransmission,", BSDF::EDelta1DTransmission)
+		.value("EGlossyTransmission", BSDF::EGlossyTransmission)
+		.value("EDeltaReflection", BSDF::EDeltaReflection)
+		.value("EDeltaTransmission", BSDF::EDeltaTransmission)
+		.value("EDelta1DReflection", BSDF::EDelta1DReflection)
+		.value("EDelta1DTransmission", BSDF::EDelta1DTransmission)
 		.value("EAnisotropic", BSDF::EAnisotropic)
 		.value("ESpatiallyVarying", BSDF::ESpatiallyVarying)
 		.value("ENonSymmetric", BSDF::ENonSymmetric)

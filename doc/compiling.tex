@@ -108,8 +108,8 @@ package may be named differently if you are using Debian Linux or another Ubuntu
 First, run
 \begin{shell}
 $\text{\$}$ sudo apt-get install build-essential scons mercurial qt4-dev-tools libpng12-dev
-    libjpeg62-dev libilmbase-dev libxerces-c-dev libboost-all-dev
-	libopenexr-dev libglewmx1.5-dev libxxf86vm-dev libpcrecpp0 libeigen3-dev
+    libjpeg-dev libilmbase-dev libxerces-c-dev libboost-all-dev libopenexr-dev
+    libglewmx-dev libxxf86vm-dev libpcrecpp0 libeigen3-dev libfftw3-dev
 \end{shell}
 To get COLLADA support, you will also need to install the \texttt{collada-dom} packages
 or build them from scratch. Here, we install the \code{x86\_64} binaries and development
@@ -194,7 +194,7 @@ using another version.
 
 First, run
 \begin{shell}
-$\text{\$}$ sudo yum install mercurial gcc-c++ scons boost-devel qt4-devel OpenEXR-devel xerces-c-devel python-devel glew-devel libpng-devel libjpeg-devel collada-dom-devel eigen3-devel
+$\text{\$}$ sudo yum install mercurial gcc-c++ scons boost-devel qt4-devel OpenEXR-devel xerces-c-devel python-devel glew-devel libpng-devel libjpeg-devel collada-dom-devel eigen3-devel fftw3-devel
 \end{shell}
 Afterwards, simply run
 \begin{shell}
@@ -322,8 +322,8 @@ configuration file from the \texttt{build} directory.
 \subsection{Building on Mac OS X}
 \vspace{-5mm}
 \remarks{
-	\item Due to an unfortunate bug in the Mac OS core libraries, OpenMP is not available when compiling
-	using the regular \code{llvm-gcc} toolchain (it is available when using Intel XE Composer). This will cause the following parts of Mitsuba
+	\item Unfortunately, OpenMP is not available when compiling
+	using the regular \code{clang} toolchain (it is available when using Intel XE Composer). This will cause the following parts of Mitsuba
 	to run single-threaded: bitmap resampling (i.e. MIP map generation), blue noise point generation in the \pluginref{dipole}
 	plugin, as well as the \pluginref{ppm} and \pluginref{sppm} plugins.
 }

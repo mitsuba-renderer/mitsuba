@@ -7,7 +7,6 @@ dist/libmitsuba-hw.so /usr/lib
 dist/libmitsuba-render.so /usr/lib
 dist/libmitsuba-core.so /usr/lib
 dist/libmitsuba-bidir.so /usr/lib
-dist/python/PYTHONVERSION/mitsuba.so /usr/lib/pythonPYTHONVERSION/dist-packages
 dist/plugins/* /usr/share/mitsuba/plugins
 dist/data/* /usr/share/mitsuba/data
 src/mtsgui/resources/mitsuba48.png /usr/share/pixmaps

@@ -340,10 +340,10 @@ template<> std::tr1::function <void (ply::float32)>
 			return std::tr1::bind(&PLYLoader::normal_y_callback, this,  _1);
 		} else if (property_name == "nz") {
 			return std::tr1::bind(&PLYLoader::normal_z_callback, this,  _1);
-		} else if (property_name == "u") {
+		} else if (property_name == "u" || property_name == "texture_u" || property_name == "s") {
 			m_hasTexCoords = true;
 			return std::tr1::bind(&PLYLoader::texcoord_u_callback, this,  _1);
-		} else if (property_name == "v") {
+		} else if (property_name == "v" || property_name == "texture_v" || property_name == "t") {
 			return std::tr1::bind(&PLYLoader::texcoord_v_callback, this,  _1);
 		} else if (property_name == "diffuse_red" || property_name == "red") {
 			return std::tr1::bind(&PLYLoader::red_callback, this,  _1);

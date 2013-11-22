@@ -38,6 +38,12 @@ MTS_NAMESPACE_BEGIN
  * metadata, and the gamma setting can be stored as well. Please see
  * the class methods and enumerations for further detail.
  *
+ * The Python version of this API contains thee additional member functions:
+ * <tt>fromByteArray</tt> and <tt>toByteArray</tt> copy image data
+ * between the Bitmap instance and a Python <tt>bytearray</tt>. The function
+ * <tt>getNativeBuffer</tt> returns a <tt>memoryview</tt>-compatible buffer
+ * object.
+ *
  * \ingroup libcore
  * \ingroup libpython
  */
@@ -351,6 +357,9 @@ public:
 
 	/// Return whether this image has matching width and height
 	inline bool isSquare() const { return m_size.x == m_size.y; }
+
+	/// Return a string representation of the name of a channel
+	std::string getChannelName(int channelIndex) const;
 
 	/// Return whether this image has an alpha channel
 	inline bool hasAlpha() const {
@@ -678,6 +687,9 @@ public:
 	 * pixel format, that <tt>gamma=1</tt>, and that it uses a EFloat16/EFloat32/EFloat64
 	 * component format. The conversion process is destructive in the sense that it overwrites
 	 * the original image.
+	 *
+	 * \remark In the Python bindings, the signature of this function is:
+	 * <tt>(logAvgLuminance, maxLuminance) = tonemapReinhard(logAvgLuminance, maxLuminance, key, burn)</tt>
 	 */
 	void tonemapReinhard(Float &logAvgLuminance, Float &maxLuminance,
 			Float key, Float burn);
@@ -797,6 +809,25 @@ public:
 	inline void accumulate(const Bitmap *bitmap) {
 		accumulate(bitmap, Point2i(0), Point2i(0), bitmap->getSize());
 	}
+
+	/**
+	 * \brief Convolve the image with a (centered) convolution kernel
+	 *
+	 * When compiled with FFTW, Mitsuba will do the convolution
+	 * in frequency space using three FFT operations. Otherwise,
+	 * it falls back to a brute force method with quadratic
+	 * complexity.
+	 *
+	 * The image can have any resolution; the kernel should be
+	 * square and of odd resolution. Both images must be of the
+	 * same floating point-valued component format. The kernel can
+	 * either have one color channel or as many color channels as
+	 * the image to be convolved.
+	 *
+	 * The convolution is always performed in double precision.
+	 * irrespective of the precision of the underlying data.
+	 */
+	void convolve(const Bitmap *kernel);
 
 	/**
 	 * \brief Perform an arithmetic operation using two images

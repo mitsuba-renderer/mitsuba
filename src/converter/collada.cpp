@@ -16,6 +16,11 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
+#if defined(COLLADA_DOM_2_4)
+	#define COLLADA_DOM_SUPPORT141
+	#define COLLADA_DOM_USING_141
+#endif
+
 #include <mitsuba/mitsuba.h>
 #include <mitsuba/render/trimesh.h>
 #include <mitsuba/core/fresolver.h>
@@ -480,7 +485,7 @@ void writeGeometry(ColladaContext &ctx, const std::string &prefixName, std::stri
 		stream->close();
 		filename = "meshes/" + filename;
 	} else {
-		ctx.cvt->m_geometryDict.push_back((uint32_t) ctx.cvt->m_geometryFile->getPos());
+		ctx.cvt->m_geometryDict.push_back((uint64_t) ctx.cvt->m_geometryFile->getPos());
 		mesh->serialize(ctx.cvt->m_geometryFile);
 		filename = ctx.cvt->m_geometryFileName.filename().string();
 	}
@@ -1588,17 +1593,17 @@ void GeometryConverter::convertCollada(const fs::path &inputFile,
 	CustomErrorHandler errorHandler;
 	daeErrorHandler::setErrorHandler(&errorHandler);
 	SLog(EInfo, "Loading \"%s\" ..", inputFile.filename().string().c_str());
-#if COLLADA_DOM_SUPPORT141
-	DAE *dae = new DAE(NULL, NULL, "1.4.1");
-	domCOLLADA *document = dae->open141(inputFile.string());
-	if (document == NULL)
-		SLog(EError, "Could not load \"%s\"!", inputFile.string().c_str());
-#else
-	DAE *dae = new DAE();
-	if (dae->load(inputFile.string().c_str()) != DAE_OK)
-		SLog(EError, "Could not load \"%s\"!", inputFile.string().c_str());
-	domCOLLADA *document = dae->getDom(inputFile.string().c_str());
-#endif
+	#if defined(COLLADA_DOM_2_4)
+		DAE *dae = new DAE(NULL, NULL, "1.4.1");
+		if (dae->load(inputFile.string().c_str()) != DAE_OK)
+			SLog(EError, "Could not load \"%s\"!", inputFile.string().c_str());
+		ColladaDOM141::domCOLLADA *document = dae->getDom141(inputFile.string().c_str());
+	#else
+		DAE *dae = new DAE();
+		if (dae->load(inputFile.string().c_str()) != DAE_OK)
+			SLog(EError, "Could not load \"%s\"!", inputFile.string().c_str());
+		domCOLLADA *document = dae->getDom(inputFile.string().c_str());
+	#endif
 	domVisual_scene *visualScene = daeSafeCast<domVisual_scene>
 		(document->getDescendant("visual_scene"));
 	if (!visualScene)

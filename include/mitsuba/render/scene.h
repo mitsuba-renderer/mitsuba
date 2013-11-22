@@ -841,25 +841,6 @@ public:
 		return emitter->getSamplingWeight() * m_emitterPDF.getNormalization();
 	}
 
-	/**
-	 * \brief Sample a position according to the emission profile
-	 * defined by the emitters in the scene.
-	 *
-	 * To sample the directional component, please use the
-	 * \ref Emitter::sampleDirection() method.
-	 *
-	 * \param pRec
-	 *    A position record to be populated with the sampled
-	 *    position and related information
-	 *
-	 * \param sample
-	 *    A uniformly distributed 2D vector
-	 *
-	 * \return
-	 *    An importance weight associated with the sampled position.
-	 *    This accounts for the difference in the spatial part of the
-	 *    emission profile and the density function.
-	 */
  	/**
 	 * \brief Importance sample a ray according to the emission profile
 	 * defined by the sensors in the scene

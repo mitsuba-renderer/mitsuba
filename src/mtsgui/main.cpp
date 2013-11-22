@@ -158,6 +158,10 @@ void collect_zombies(int s) {
 }
 #endif
 
+#if defined(__OSX__)
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
 int main(int argc, char *argv[]) {
 	int retval;
 
@@ -212,6 +216,18 @@ int main(int argc, char *argv[]) {
 
 	qRegisterMetaType<ELogLevel>("ELogLevel");
 	qRegisterMetaType<fs::path>("fs::path");
+
+#if defined(__OSX__)
+    SInt32 versMaj, versMin;
+    Gestalt(gestaltSystemVersionMajor, &versMaj);
+    Gestalt(gestaltSystemVersionMinor, &versMin);
+
+    if (versMaj*100+versMin > 1008) {
+        // fix Mac OS X 10.9 (mavericks) font issue
+        // https://bugreports.qt-project.org/browse/QTBUG-32789
+        QFont::insertSubstitution(".Lucida Grande UI", "Lucida Grande");
+    }
+#endif
 
 	MitsubaApplication app(argc, argv);
 	try {

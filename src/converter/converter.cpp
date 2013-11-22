@@ -297,7 +297,7 @@ void GeometryConverter::convert(const fs::path &inputFile,
 	}
 	if (m_geometryFile) {
 		for (size_t i=0; i<m_geometryDict.size(); ++i)
-			m_geometryFile->writeSize(m_geometryDict[i]);
+			m_geometryFile->writeULong((uint64_t) m_geometryDict[i]);
 		m_geometryFile->writeUInt((uint32_t) m_geometryDict.size());
 		m_geometryFile->close();
 	}

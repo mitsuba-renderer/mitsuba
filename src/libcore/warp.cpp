@@ -85,7 +85,7 @@ Point2 Warp::squareToUniformDiskConcentric(const Point2 &sample) {
 	Float phi, r;
 	if (r1 == 0 && r2 == 0) {
 		r = phi = 0;
-	} if (r1*r1 > r2*r2) {
+	} else if (r1*r1 > r2*r2) {
 		r = r1;
 		phi = (M_PI/4.0f) * (r2/r1);
 	} else {

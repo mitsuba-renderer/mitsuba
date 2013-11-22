@@ -125,7 +125,7 @@ inline Point2 sample02(size_t n) {
 }
 
 /**
- * \ref Generate fast and reasonably good pseudorandom numbers using the
+ * \brief Generate fast and reasonably good pseudorandom numbers using the
  * Tiny Encryption Algorithm (TEA) by David Wheeler and Roger Needham.
  *
  * For details, refer to "GPU Random Numbers via the Tiny Encryption Algorithm"
@@ -216,10 +216,10 @@ extern MTS_EXPORT_CORE Float radicalInverseIncremental(int base, Float x);
  * functions for the first 1024 prime number bases. For that reason, only works for
  * such bases.
  *
- * \ref baseIndex
+ * \param baseIndex
  *    Prime number index starting at 0 (i.e. 3 would cause 7 to be
  *    used as the basis)
- * \ref perm
+ * \param index
  *    Sequence index
  */
 extern MTS_EXPORT_CORE Float radicalInverseFast(uint16_t baseIndex, uint64_t index);

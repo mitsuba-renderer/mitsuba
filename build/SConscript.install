@@ -1,6 +1,6 @@
 import fnmatch
 
-Import('env', 'os', 'sys', 'plugins', 'dist', 
+Import('env', 'os', 'sys', 'plugins', 'dist',
 	'MTS_VERSION', 'hasQt', 'hasCollada', 'hasPython', 'hasBreakpad')
 
 installTargets = []
@@ -60,17 +60,9 @@ if sys.platform == 'win32':
 		if '.dll' in plugin.__str__():
 			installTargets += env.Install(os.path.join(distDir, 'plugins'), plugin)
 
-	if 'WIN64' in env['CXXFLAGS']:
-		dllprefix='#dependencies/lib/x64'
-	else:
-		dllprefix='#dependencies/lib/i386'
-
-	if env['MSVC_VERSION'] == '9.0':
-		compilerType = 'vc90'
-	elif env['MSVC_VERSION'] == '10.0':
-		compilerType = 'vc100'
-	else:
-		raise Exception('Unknown compiler version!')
+	compilerType = 'vc' + env['MSVC_VERSION'].replace('.', '')
+	archType = 'x64' if 'WIN64' in env['CXXFLAGS'] else 'i386'
+	dllprefix = '#dependencies/lib/%s_%s' % (archType, compilerType[:-1])
 
 	if hasCollada:
 		install(distDir, ['converter/mtsimport.exe'])
@@ -81,26 +73,28 @@ if sys.platform == 'win32':
 	install(distDir, ['libcore/libmitsuba-core.dll', 'libhw/libmitsuba-hw.dll',
 			'librender/libmitsuba-render.dll', 'libbidir/libmitsuba-bidir.dll'])
 	install(sdkLibDir, ['libcore/mitsuba-core.lib', 'libhw/mitsuba-hw.lib',
-			'librender/mitsuba-render.lib', 'libbidir/mitsuba-bidir.lib']) 
+			'librender/mitsuba-render.lib', 'libbidir/mitsuba-bidir.lib'])
 	for entry in os.walk(os.path.join(basePath, "include")):
 		includeDir = entry[0][len(basePath)+1:]
 		installTargets += env.Install(os.path.join(sdkDir, includeDir),
 			[ ('#' + os.path.join(includeDir, fname)) for fname in entry[2] ])
 	for ver in hasPython:
 		installAs(os.path.join(distDir, 'python/'+ver+'/mitsuba.pyd'), 'libpython/mitsuba_python' + ver + '.dll')
-	install(distDir, ['Iex.dll', 'Half.dll','IlmThread.dll', 'Imath.dll','IlmImf.dll','zlib1.dll',
-		'libpng15.dll',	'jpeg62.dll', 'xerces-c_3_1.dll', 'glew32mx.dll'],
+	install(distDir, ['Iex.dll', 'Half.dll','IlmThread.dll', 'Imath.dll','IlmImf.dll','zlib.dll',
+		'libpng16.dll',	'jpeg62.dll', 'xerces-c_3_1.dll', 'glew32mx.dll', 'libfftw-3.3.dll'],
 		prefix=dllprefix)
-	install(distDir, ['libcollada14dom23.dll', 
-		'boost_python-vc100-mt-1_50.dll', 'boost_python3-vc100-mt-1_50.dll',
-		'boost_system-vc100-mt-1_50.dll', 'boost_filesystem-vc100-mt-1_50.dll',
-		'boost_chrono-vc100-mt-1_50.dll', 'boost_thread-vc100-mt-1_50.dll'],
-		dllprefix)
+	install(distDir, ['libcollada14dom24.dll'], dllprefix)
+	for boostlib in ['python27', 'python32', 'python33', 'system', 'filesystem', 'chrono', 'thread']:
+		install(distDir, ['boost_%s-%s-mt-1_53.dll' % (boostlib, compilerType)], dllprefix)
 
 	if 'WIN64' in env['CXXFLAGS']:
-		installTargets += env.Install(distDir, '#dependencies/bin/vcredist_2010_sp1_x64.exe')
+		if compilerType == 'vc120':
+			installTargets += env.Install(distDir, '#dependencies/bin/vcredist_2013_x64.exe')
+		else:
+			installTargets += env.Install(distDir, '#dependencies/bin/vcredist_2010_sp1_x64.exe')
 	else:
 		installTargets += env.Install(distDir, '#dependencies/bin/vcredist_2010_sp1_x86.exe')
+
 	installTargets += env.Install(distDir, '#data/windows/README.txt')
 
 	if 'REDIST_PATH' in env:

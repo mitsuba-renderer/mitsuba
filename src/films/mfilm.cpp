@@ -239,6 +239,9 @@ public:
 	}
 
 	void develop(const Scene *scene, Float renderTime) {
+		if (m_destFile.empty())
+			return;
+
 		Log(EDebug, "Developing film ..");
 
 		fs::path filename = m_destFile;

@@ -62,8 +62,6 @@ public:
 	 *
 	 * In comparison to \ref resolve(), this funtion returns all
 	 * matches instead of only the first one.
-	 *
-	 * \remark This function is not exposed in the Python bindings
 	 */
 	std::vector<fs::path> resolveAll(const fs::path &path) const;
 
@@ -84,6 +82,12 @@ public:
 
 	/// Clear all stored search paths
 	void clear();
+
+	/// Return the number of stored paths
+	inline size_t getPathCount() const { return m_paths.size(); }
+
+	/// Return one of the stored paths
+	inline const fs::path &getPath(size_t index) const { return m_paths[index]; }
 
 	/// Return a human-readable string representation
 	std::string toString() const;

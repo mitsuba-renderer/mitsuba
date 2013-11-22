@@ -17,7 +17,8 @@ plugins += env.SharedLibrary('mixturebsdf', ['mixturebsdf.cpp'])
 plugins += env.SharedLibrary('blendbsdf', ['blendbsdf.cpp'])
 plugins += env.SharedLibrary('coating', ['coating.cpp'])
 plugins += env.SharedLibrary('roughcoating', ['roughcoating.cpp'])
-plugins += env.SharedLibrary('bump', ['bump.cpp'])
+plugins += env.SharedLibrary('bumpmap', ['bumpmap.cpp'])
+plugins += env.SharedLibrary('normalmap', ['normalmap.cpp'])
 
 # Other materials
 plugins += env.SharedLibrary('ward', ['ward.cpp'])

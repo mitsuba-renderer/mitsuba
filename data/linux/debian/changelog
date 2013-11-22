@@ -1,3 +1,22 @@
+mitsuba (0.4.5-1) unstable; urgency=low
+  * New height field intersection shape
+  * kd-tree precision improvements when rendering in double precision
+  * Feature to create a bitmap texture from a single color channel of an image
+  * Python API: More complete coverage of the Mitsuba core API
+  * Feature to quickly convert between Mitsuba images and Python byte arrays.
+  * Frequency-space convolution of large-scale images using FFTW3
+  * Bloom filter in support in 'mtsutil tonemap'
+  * OSX 10.9 font fixes, initial improvements for machines with a retina display
+  * New perspective camera with model radial distortion
+  * Python 3.3 support on Windows
+  * Collecting rendering statistics turned out to cause severe memory
+    contention on previous releases. This has now been fixed, leading to
+    significant speedups on machines with many cores (>4).
+  * Worker threads now request CPU affinity on platforms where this is supported
+  * Many smaller robustness fixes and bugfixes in various parts of the
+    renderer -- see the changelog for details
+ -- Wenzel Jakob <wenzel@cs.cornell.edu>  Mon, 04 Nov 2013 00:00:00 -0400
+
 mitsuba (0.4.4-1) unstable; urgency=low
   * Improved Python support for rendering animations and motion blur
   * Photon mapper logic rewrite to account for certain missing specular paths

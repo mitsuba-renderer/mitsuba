@@ -15,6 +15,7 @@
 #include <mitsuba/core/sched_remote.h>
 #include <mitsuba/core/netobject.h>
 #include <mitsuba/core/sstream.h>
+#include <mitsuba/core/cstream.h>
 #include <mitsuba/core/qmc.h>
 #include <mitsuba/core/sshstream.h>
 #include <mitsuba/render/scenehandler.h>
@@ -55,25 +56,25 @@ void shutdownFramework() {
 	Class::staticShutdown();
 }
 
-class spectrum_wrapper {
+template <typename SpectrumType> class SpectrumWrapper {
 public:
-	static Float get(const Spectrum &spec, int i) {
-		if (i < 0 || i >= SPECTRUM_SAMPLES) {
+	static Float get(const SpectrumType &spec, int i) {
+		if (i < 0 || i >= SpectrumType::dim) {
 			SLog(EError, "Index %i is out of range!", i);
 			return 0.0f;
 		}
 		return spec[i];
 	}
 
-	static void set(Spectrum &spec, int i, Float value) {
-		if (i < 0 || i >= SPECTRUM_SAMPLES)
+	static void set(SpectrumType &spec, int i, Float value) {
+		if (i < 0 || i >= SpectrumType::dim)
 			SLog(EError, "Index %i is out of range!", i);
 		else
 			spec[i] = value;
 	}
 
-	static int len(Spectrum &) {
-		return SPECTRUM_SAMPLES;
+	static int len(SpectrumType &) {
+		return SpectrumType::dim;
 	}
 };
 
@@ -144,7 +145,6 @@ struct path_to_python_str {
 			boost::python::object(path.string()).ptr());
 	}
 };
-
 
 struct TSpectrum_to_Spectrum {
 	static PyObject* convert(const TSpectrum<Float, SPECTRUM_SAMPLES> &spectrum) {
@@ -294,14 +294,6 @@ static bp::tuple spectrum_toIPT(const Spectrum &s) {
 	return bp::make_tuple(I, P, T);
 }
 
-void aabb_expandby_aabb(AABB *aabb, const AABB &aabb2) { aabb->expandBy(aabb2); }
-void aabb_expandby_point(AABB *aabb, const Point &p) { aabb->expandBy(p); }
-Float aabb_distanceto_aabb(AABB *aabb, const AABB &aabb2) { return aabb->distanceTo(aabb2); }
-Float aabb_distanceto_point(AABB *aabb, const Point &p) { return aabb->distanceTo(p); }
-Float aabb_sqrdistanceto_aabb(AABB *aabb, const AABB &aabb2) { return aabb->squaredDistanceTo(aabb2); }
-Float aabb_sqrdistanceto_point(AABB *aabb, const Point &p) { return aabb->squaredDistanceTo(p); }
-bool aabb_contains_aabb(AABB *aabb, const AABB &aabb2) { return aabb->contains(aabb2); }
-bool aabb_contains_point(AABB *aabb, const Point &p) { return aabb->contains(p); }
 bp::object bsphere_rayIntersect(BSphere *bsphere, const Ray &ray) {
 	Float nearT, farT;
 	if (bsphere->rayIntersect(ray, nearT, farT))
@@ -318,6 +310,22 @@ bp::object aabb_rayIntersect(AABB *aabb, const Ray &ray) {
 	else
 		return bp::object();
 
+}
+
+bp::object logger_readLog(Logger *logger) {
+	std::string string;
+	if (logger->readLog(string))
+		return bp::object(string);
+	else
+		return bp::object();
+}
+
+bp::object aabb_rayIntersect2(AABB *aabb, const Ray &ray, Float nearT, Float farT) {
+	Point nearP, farP;
+	if (aabb->rayIntersect(ray, nearT, farT, nearP, farP))
+		return bp::make_tuple(nearT, farT, nearP, farP);
+	else
+		return bp::object();
 }
 
 Vector transform_mul_vector(Transform *transform, const Vector &vector) { return transform->operator()(vector); }
@@ -463,6 +471,49 @@ ref<Bitmap> bitmap_convert_4(Bitmap *bitmap, Bitmap::EPixelFormat pixelFormat, B
 	return bitmap->convert(pixelFormat, componentFormat);
 }
 
+void bitmap_fromByteArray(Bitmap *bitmap, bp::object obj) {
+	if (PyByteArray_Check(obj.ptr())) {
+		uint8_t *ptr = (uint8_t *) PyByteArray_AsString(obj.ptr());
+		size_t size = PyByteArray_Size(obj.ptr());
+		SAssertEx(size == bitmap->getBufferSize(), "Bitmap::fromByteArray(): buffer sizes don't match!");
+
+		memcpy(bitmap->getData(), ptr, size);
+	} else {
+		SLog(EError, "Bitmap::fromByteArray(): Invalid argument!");
+	}
+}
+
+void bitmap_toByteArray_1(const Bitmap *bitmap, bp::object obj) {
+	if (PyByteArray_Check(obj.ptr())) {
+		uint8_t *ptr = (uint8_t *) PyByteArray_AsString(obj.ptr());
+		size_t size = PyByteArray_Size(obj.ptr());
+		SAssertEx(size == bitmap->getBufferSize(), "Bitmap::fromByteArray(): buffer sizes don't match!");
+
+		memcpy(ptr, bitmap->getData(), size);
+	} else {
+		SLog(EError, "Bitmap::toByteArray(): Invalid argument!");
+	}
+}
+
+bp::object bitmap_toByteArray_2(const Bitmap *bitmap) {
+	return bp::object(bp::handle<>(PyByteArray_FromStringAndSize(
+			(char *) bitmap->getUInt8Data(), bitmap->getBufferSize())));
+}
+
+bp::tuple bitmap_tonemapReinhard(Bitmap *bitmap, Float logAvgLuminance, Float maxLuminance, Float key, Float burn) {
+	bitmap->tonemapReinhard(logAvgLuminance, maxLuminance, key, burn);
+	return bp::make_tuple(logAvgLuminance, maxLuminance);
+}
+
+bp::object bitmap_join(Bitmap::EPixelFormat fmt, bp::list list) {
+	std::vector<Bitmap *> bitmaps(bp::len(list));
+
+	for (int i=0; i<bp::len(list); ++i)
+		bitmaps[i] = bp::extract<Bitmap *>(list[i]);
+
+	return bp::object(Bitmap::join(fmt, bitmaps));
+}
+
 Transform transform_glOrthographic1(Float clipNear, Float clipFar) {
 	return Transform::glOrthographic(clipNear, clipFar);
 }
@@ -471,6 +522,129 @@ Transform transform_glOrthographic2(Float clipLeft, Float clipRight,
 		Float clipBottom, Float clipTop, Float clipNear, Float clipFar) {
 	return Transform::glOrthographic(clipLeft, clipRight,
 		clipBottom, clipTop, clipNear, clipFar);
+}
+
+bp::list fileresolver_resolveAll(const FileResolver *fres, const fs::path &path) {
+	bp::list result;
+	std::vector<fs::path> paths = fres->resolveAll(path);
+
+	for (size_t i=0; i<paths.size(); ++i)
+		result.append(paths[i]);
+
+	return result;
+}
+
+struct NativeBuffer {
+	ref<Object> owner;
+	void *ptr;
+	Py_ssize_t count;
+	Bitmap::EComponentFormat format;
+
+	NativeBuffer(Object *owner, void *ptr, size_t count, Bitmap::EComponentFormat format)
+		: owner(owner), ptr(ptr), count((Py_ssize_t) count), format(format) { }
+
+	static int getbuffer(PyObject *obj, Py_buffer *view, int flags) {
+		bp::extract<NativeBuffer&> b(obj);
+		if (!b.check()) {
+			PyErr_SetString(PyExc_BufferError, "Native buffer is invalid!");
+			view->obj = NULL;
+			return -1;
+		}
+		NativeBuffer &buf = b();
+
+		if (!buf.ptr) {
+			PyErr_SetString(PyExc_BufferError, "Native buffer does not point anywhere!");
+			view->obj = NULL;
+			return -1;
+		}
+
+		if (view == NULL)
+			return 0;
+
+		view->obj = obj;
+		if (view->obj)
+			Py_INCREF(view->obj);
+		buf.owner->incRef();
+
+		char *format = NULL;
+		int itemSize = 0;
+		switch (buf.format) {
+			case Bitmap::EUInt8:   format = (char *)"B"; itemSize = 1; break;
+			case Bitmap::EUInt16:  format = (char *)"H"; itemSize = 2; break;
+			case Bitmap::EUInt32:  format = (char *)"I"; itemSize = 4; break;
+			case Bitmap::EFloat32: format = (char *)"f"; itemSize = 4; break;
+			case Bitmap::EFloat64: format = (char *)"d"; itemSize = 8; break;
+			default:
+				PyErr_SetString(PyExc_BufferError, "Unsupported buffer format!");
+				view->obj = NULL;
+				return -1;
+		}
+
+
+		view->buf = buf.ptr;
+		view->len = itemSize * buf.count;
+		view->readonly = false;
+		view->itemsize = itemSize;
+		view->format = NULL;
+		if ((flags & PyBUF_FORMAT) == PyBUF_FORMAT)
+			view->format = format;
+		view->ndim = 1;
+		view->shape = NULL;
+		if ((flags & PyBUF_ND) == PyBUF_ND)
+			view->shape = &buf.count;
+		view->strides = NULL;
+		if ((flags & PyBUF_STRIDES) == PyBUF_STRIDES)
+			view->strides = &(view->itemsize);
+		view->suboffsets = NULL;
+		view->internal = NULL;
+		return 0;
+	}
+
+	static void releasebuffer(PyObject *obj, Py_buffer *view) {
+		bp::extract<NativeBuffer&> b(obj);
+		if (!b.check()) {
+			PyErr_SetString(PyExc_BufferError, "Native buffer is invalid!");
+			return;
+		}
+		NativeBuffer &buf = b();
+		buf.owner->decRef();
+	}
+
+	static Py_ssize_t len(PyObject *obj) {
+		bp::extract<NativeBuffer&> b(obj);
+		if (!b.check()) {
+			PyErr_SetString(PyExc_BufferError, "Native buffer is invalid!");
+			return -1;
+		}
+		return b().count;
+	}
+
+	static PyObject* item(PyObject *obj, Py_ssize_t idx) {
+		bp::extract<NativeBuffer&> b(obj);
+		if (!b.check()) {
+			PyErr_SetString(PyExc_BufferError, "Native buffer is invalid!");
+			return 0;
+		}
+		NativeBuffer &buf = b();
+
+		bp::object result;
+		switch (buf.format) {
+			case Bitmap::EUInt8:   result = bp::object(((uint8_t *) buf.ptr)[idx]); break;
+			case Bitmap::EUInt16:  result = bp::object(((uint16_t *) buf.ptr)[idx]); break;
+			case Bitmap::EUInt32:  result = bp::object(((uint32_t *) buf.ptr)[idx]); break;
+			case Bitmap::EFloat32: result = bp::object(((float *) buf.ptr)[idx]); break;
+			case Bitmap::EFloat64: result = bp::object(((double *) buf.ptr)[idx]); break;
+			default:
+				PyErr_SetString(PyExc_BufferError, "Unsupported buffer format!");
+				return 0;
+		}
+
+		return boost::python::incref(result.ptr());
+	}
+};
+
+NativeBuffer bitmap_getNativeBuffer(Bitmap *bitmap) {
+	return NativeBuffer(bitmap, bitmap->getFloat32Data(), bitmap->getPixelCount() * bitmap->getChannelCount(), bitmap->getComponentFormat());
 }
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(fromLinearRGB_overloads, fromLinearRGB, 3, 4)
@@ -506,6 +680,7 @@ void export_core() {
 	bp::class_<StringMap>("StringMap")
 		.def(bp::map_indexing_suite<StringMap>());
 
+	/* Logging */
 	bp::enum_<ELogLevel>("ELogLevel")
 		.value("ETrace", ETrace)
 		.value("EDebug", EDebug)
@@ -515,6 +690,11 @@ void export_core() {
 		.export_values();
 
 	bp::def("Log", &mts_log);
+
+	/* Basic constants */
+	boost::python::scope().attr("Epsilon") = Epsilon;
+	boost::python::scope().attr("ShadowEpsilon") = ShadowEpsilon;
+	boost::python::scope().attr("DeltaEpsilon") = DeltaEpsilon;
 
 	bp::class_<Class, boost::noncopyable>("Class", bp::no_init)
 		.def("getName", &Class::getName, BP_RETURN_CONSTREF)
@@ -596,6 +776,8 @@ void export_core() {
 		.def("getReceivedBytes", &SocketStream::getReceivedBytes)
 		.def("getSentBytes", &SocketStream::getSentBytes);
 
+	BP_CLASS_DECL(ConsoleStream, Stream, bp::init<>());
+
 	BP_CLASS(SSHStream, Stream, (bp::init<std::string, std::string, const StringVector &>()))
 		.def(bp::init<std::string, std::string, const StringVector &, int>())
 		.def(bp::init<std::string, std::string, const StringVector &, int, int>())
@@ -676,8 +858,18 @@ void export_core() {
 		.def("append", &Appender::append)
 		.def("logProgress", &appender_logProgress);
 
+	BP_CLASS(StreamAppender, Appender, bp::init<std::string>())
+		.def("logsToFile", &StreamAppender::logsToFile)
+		.def("readLog", &StreamAppender::readLog);
+
 	BP_WRAPPED_CLASS(Formatter, FormatterWrapper, Object, bp::init<>())
 		.def("format", &Formatter::format);
+
+	BP_CLASS(DefaultFormatter, Formatter, bp::init<>())
+		.def("setHaveDate", &DefaultFormatter::setHaveDate)
+		.def("setHaveThread", &DefaultFormatter::setHaveThread)
+		.def("setHaveLogLevel", &DefaultFormatter::setHaveLogLevel)
+		.def("setHaveClass", &DefaultFormatter::setHaveClass);
 
 	Appender *(Logger::*logger_get_appender)(size_t) = &Logger::getAppender;
 	BP_CLASS(Logger, Object, bp::init<ELogLevel>())
@@ -693,6 +885,7 @@ void export_core() {
 		.def("getAppender", logger_get_appender, BP_RETURN_VALUE)
 		.def("getFormatter", &Logger::getFormatter, BP_RETURN_VALUE)
 		.def("setFormatter", &Logger::setFormatter)
+		.def("readLog", &logger_readLog)
 		.def("getWarningCount", &Logger::getWarningCount);
 
 	BP_CLASS(InstanceManager, Object, bp::init<>())
@@ -714,34 +907,30 @@ void export_core() {
 
 	void (Bitmap::*accumulate_1)(const Bitmap *bitmap, Point2i sourceOffset, Point2i targetOffset, Vector2i size) = &Bitmap::accumulate;
 	void (Bitmap::*accumulate_2)(const Bitmap *bitmap, Point2i targetOffset) = &Bitmap::accumulate;
+	void (Bitmap::*accumulate_3)(const Bitmap *bitmap) = &Bitmap::accumulate;
 	const Properties &(Bitmap::*get_metadata)() const = &Bitmap::getMetadata;
+
+	void (Bitmap::*resample_1)(const ReconstructionFilter *,
+		ReconstructionFilter::EBoundaryCondition, ReconstructionFilter::EBoundaryCondition,
+		Bitmap *, Float, Float) const  = &Bitmap::resample;
+
+	ref<Bitmap> (Bitmap::*resample_2)(const ReconstructionFilter *,
+		ReconstructionFilter::EBoundaryCondition, ReconstructionFilter::EBoundaryCondition,
+		const Vector2i &, Float, Float) const  = &Bitmap::resample;
 
 	BP_CLASS(Bitmap, Object, (bp::init<Bitmap::EPixelFormat, Bitmap::EComponentFormat, const Vector2i &>()))
 		.def(bp::init<Bitmap::EPixelFormat, Bitmap::EComponentFormat, const Vector2i &, int>())
 		.def(bp::init<Bitmap::EFileFormat, Stream *>())
-		.def("clone", &Bitmap::clone, BP_RETURN_VALUE)
-		.def("clear", &Bitmap::clear)
-		.def("separateChannel", &Bitmap::separateChannel, BP_RETURN_VALUE)
-		.def("expand", &Bitmap::expand, BP_RETURN_VALUE)
-		.def("flipVertically", &Bitmap::flipVertically)
-		.def("crop", &Bitmap::crop)
-		.def("applyMatrix", &bitmap_applyMatrix)
-		.def("colorBalance", &Bitmap::colorBalance)
-		.def("accumulate", accumulate_1)
-		.def("accumulate", accumulate_2)
-		.def("write", &bitmap_write)
-		.def("setMetadataString", &Bitmap::setMetadataString)
-		.def("getMetadataString", &Bitmap::getMetadataString, BP_RETURN_VALUE)
-		.def("setMetadata", &Bitmap::setMetadata)
-		.def("getMetadata", get_metadata, BP_RETURN_VALUE)
-		.def("setGamma", &Bitmap::setGamma)
-		.def("getGamma", &Bitmap::getGamma)
+		.def("getPixelFormat", &Bitmap::getPixelFormat)
+		.def("getComponentFormat", &Bitmap::getComponentFormat)
+		.def("getSize", &Bitmap::getSize, BP_RETURN_VALUE)
+		.def("getPixelCount", &Bitmap::getPixelCount)
 		.def("getWidth", &Bitmap::getWidth)
 		.def("getHeight", &Bitmap::getHeight)
 		.def("getChannelCount", &Bitmap::getChannelCount)
-		.def("getPixelFormat", &Bitmap::getPixelFormat)
-		.def("getComponentFormat", &Bitmap::getComponentFormat)
+		.def("getChannelName", &Bitmap::getChannelName, BP_RETURN_VALUE)
 		.def("isSquare", &Bitmap::isSquare)
+		.def("hasAlpha", &Bitmap::hasAlpha)
 		.def("getBitsPerComponent", &Bitmap::getBitsPerComponent)
 		.def("getBytesPerComponent", &Bitmap::getBytesPerComponent)
 		.def("getBytesPerPixel", &Bitmap::getBytesPerPixel)
@@ -750,13 +939,44 @@ void export_core() {
 		.def("setPixel", &Bitmap::setPixel)
 		.def("drawHLine", &Bitmap::drawHLine)
 		.def("drawVLine", &Bitmap::drawVLine)
+		.def("clone", &Bitmap::clone, BP_RETURN_VALUE)
+		.def("clear", &Bitmap::clear)
+		.def("write", &bitmap_write)
+		.def("tonemapReinhard", &bitmap_tonemapReinhard)
+		.def("expand", &Bitmap::expand, BP_RETURN_VALUE)
+		.def("separateChannel", &Bitmap::separateChannel, BP_RETURN_VALUE)
+		.def("join", &bitmap_join, BP_RETURN_VALUE)
+		.def("crop", &Bitmap::crop)
+		.def("flipVertically", &Bitmap::flipVertically)
+		.def("rotateFlip", &Bitmap::rotateFlip, BP_RETURN_VALUE)
+		.def("scale", &Bitmap::scale)
+		.def("colorBalance", &Bitmap::colorBalance)
+		.def("applyMatrix", &bitmap_applyMatrix)
+		.def("accumulate", accumulate_1)
+		.def("accumulate", accumulate_2)
+		.def("accumulate", accumulate_3)
+		.def("convolve", &Bitmap::convolve)
+		.def("arithmeticOperation", &Bitmap::arithmeticOperation, BP_RETURN_VALUE)
+		.def("resample", resample_1)
+		.def("resample", resample_2, BP_RETURN_VALUE)
+		.def("setGamma", &Bitmap::setGamma)
+		.def("getGamma", &Bitmap::getGamma)
+		.def("setMetadataString", &Bitmap::setMetadataString)
+		.def("getMetadataString", &Bitmap::getMetadataString, BP_RETURN_VALUE)
+		.def("setMetadata", &Bitmap::setMetadata)
+		.def("getMetadata", get_metadata, BP_RETURN_VALUE)
 		.def("drawRect", &Bitmap::drawRect)
 		.def("fillRect", &Bitmap::fillRect)
-		.def("getSize", &Bitmap::getSize, BP_RETURN_VALUE)
 		.def("convert", &bitmap_convert_1, BP_RETURN_VALUE)
 		.def("convert", &bitmap_convert_2, BP_RETURN_VALUE)
 		.def("convert", &bitmap_convert_3, BP_RETURN_VALUE)
-		.def("convert", &bitmap_convert_4, BP_RETURN_VALUE);
+		.def("convert", &bitmap_convert_4, BP_RETURN_VALUE)
+		.def("fromByteArray", &bitmap_fromByteArray)
+		.def("toByteArray", &bitmap_toByteArray_1)
+		.def("toByteArray", &bitmap_toByteArray_2)
+		.def("getNativeBuffer", bitmap_getNativeBuffer)
+		.staticmethod("join")
+		.staticmethod("arithmeticOperation");
 
 	BP_SETSCOPE(Bitmap_class);
 	bp::enum_<Bitmap::EPixelFormat>("EPixelFormat")
@@ -764,6 +984,8 @@ void export_core() {
 		.value("ELuminanceAlpha", Bitmap::ELuminanceAlpha)
 		.value("ERGB", Bitmap::ERGB)
 		.value("ERGBA", Bitmap::ERGBA)
+		.value("EXYZ", Bitmap::EXYZ)
+		.value("EXYZA", Bitmap::EXYZA)
 		.value("ESpectrum", Bitmap::ESpectrum)
 		.value("ESpectrumAlpha", Bitmap::ESpectrumAlpha)
 		.value("ESpectrumAlphaWeight", Bitmap::ESpectrumAlphaWeight)
@@ -793,10 +1015,38 @@ void export_core() {
 		.value("EAuto", Bitmap::EAuto)
 		.export_values();
 
+	bp::enum_<Bitmap::EArithmeticOperation>("EArithmeticOperation")
+		.value("EAddition", Bitmap::EAddition)
+		.value("ESubtraction", Bitmap::ESubtraction)
+		.value("EDivision", Bitmap::EDivision)
+		.export_values();
+
+	bp::enum_<Bitmap::ERotateFlipType>("ERotateFlipType")
+		.value("ERotateNoneFlipNone", Bitmap::ERotateNoneFlipNone)
+		.value("ERotate180FlipXY", Bitmap::ERotate180FlipXY)
+		.value("ERotate90FlipNone", Bitmap::ERotate90FlipNone)
+		.value("ERotate270FlipXY", Bitmap::ERotate270FlipXY)
+		.value("ERotate180FlipNone", Bitmap::ERotate180FlipNone)
+		.value("ERotateNoneFlipXY", Bitmap::ERotateNoneFlipXY)
+		.value("ERotate270FlipNone", Bitmap::ERotate270FlipNone)
+		.value("ERotate90FlipXY", Bitmap::ERotate90FlipXY)
+		.value("ERotateNoneFlipX", Bitmap::ERotateNoneFlipX)
+		.value("ERotate180FlipY", Bitmap::ERotate180FlipY)
+		.value("ERotate90FlipX", Bitmap::ERotate90FlipX)
+		.value("ERotate270FlipY", Bitmap::ERotate270FlipY)
+		.value("ERotate180FlipX", Bitmap::ERotate180FlipX)
+		.value("ERotateNoneFlipY", Bitmap::ERotateNoneFlipY)
+		.value("ERotate270FlipX", Bitmap::ERotate270FlipX)
+		.value("ERotate90FlipY", Bitmap::ERotate90FlipY)
+		.export_values();
+
 	BP_SETSCOPE(coreModule);
 
 	BP_CLASS(FileResolver, Object, bp::init<>())
+		.def("getPathCount", &FileResolver::getPathCount)
+		.def("getPath", &FileResolver::getPath, BP_RETURN_VALUE)
 		.def("resolve", &FileResolver::resolve, BP_RETURN_VALUE)
+		.def("resolveAll", &fileresolver_resolveAll)
 		.def("resolveAbsolute", &FileResolver::resolveAbsolute, BP_RETURN_VALUE)
 		.def("clone", &FileResolver::clone, BP_RETURN_VALUE)
 		.def("appendPath", &FileResolver::appendPath)
@@ -958,6 +1208,41 @@ void export_core() {
 		.def("getSpatialBounds", &AnimatedTransform::getSpatialBounds, BP_RETURN_VALUE)
 		.def("eval", &AnimatedTransform::eval, BP_RETURN_VALUE);
 
+	BP_STRUCT(Color3, bp::init<>())
+		.def(bp::init<Float>())
+		.def(bp::init<Float, Float, Float>())
+		.def(bp::self != bp::self)
+		.def(bp::self == bp::self)
+		.def(-bp::self)
+		.def(bp::self + bp::self)
+		.def(bp::self += bp::self)
+		.def(bp::self - bp::self)
+		.def(bp::self -= bp::self)
+		.def(bp::self *= Float())
+		.def(bp::self * Float())
+		.def(bp::self *= bp::self)
+		.def(bp::self * bp::self)
+		.def(bp::self / Float())
+		.def(bp::self /= Float())
+		.def(bp::self /= bp::self)
+		.def(bp::self / bp::self)
+		.def("isValid", &Color3::isValid)
+		.def("isNaN", &Color3::isNaN)
+		.def("average", &Color3::average)
+		.def("sqrt", &Color3::sqrt)
+		.def("exp", &Color3::exp)
+		.def("log", &Color3::log)
+		.def("pow", &Color3::pow)
+		.def("clampNegative", &Color3::clampNegative)
+		.def("min", &Color3::min)
+		.def("max", &Color3::max)
+		.def("isZero", &Color3::isZero)
+		.def("getLuminance", &Color3::getLuminance)
+		.def("__repr__", &Color3::toString)
+		.def("__len__", &SpectrumWrapper<Color3>::len)
+		.def("__getitem__", &SpectrumWrapper<Color3>::get)
+		.def("__setitem__", &SpectrumWrapper<Color3>::set);
+
 	BP_STRUCT(Spectrum, bp::init<>())
 		.def("__init__", bp::make_constructor(spectrum_array_constructor))
 		.def(bp::init<Float>())
@@ -981,7 +1266,9 @@ void export_core() {
 		.def("isNaN", &Spectrum::isNaN)
 		.def("average", &Spectrum::average)
 		.def("sqrt", &Spectrum::sqrt)
+		.def("safe_sqrt", &Spectrum::safe_sqrt)
 		.def("exp", &Spectrum::exp)
+		.def("log", &Spectrum::log)
 		.def("pow", &Spectrum::pow)
 		.def("clampNegative", &Spectrum::clampNegative)
 		.def("min", &Spectrum::min)
@@ -1000,9 +1287,9 @@ void export_core() {
 		.def("fromContinuousSpectrum", &Spectrum::fromContinuousSpectrum)
 		.def("serialize", &Spectrum::serialize)
 		.def("__repr__", &Spectrum::toString)
-		.def("__len__", &spectrum_wrapper::len)
-		.def("__getitem__", &spectrum_wrapper::get)
-		.def("__setitem__", &spectrum_wrapper::set);
+		.def("__len__", &SpectrumWrapper<Spectrum>::len)
+		.def("__getitem__", &SpectrumWrapper<Spectrum>::get)
+		.def("__setitem__", &SpectrumWrapper<Spectrum>::set);
 
 	BP_SETSCOPE(Spectrum_struct);
 	bp::enum_<Spectrum::EConversionIntent>("EConversionIntent")
@@ -1041,19 +1328,27 @@ void export_core() {
 		.export_values();
 	BP_SETSCOPE(coreModule);
 
+	BP_STRUCT(Vector1, bp::init<>())
+		.def(bp::init< Float>())
+		.def(bp::init<Point1>())
+		.def_readwrite("x", &Vector1::x);
+
 	BP_STRUCT(Vector2, bp::init<>())
+		.def(bp::init<Float>())
 		.def(bp::init<Float, Float>())
 		.def(bp::init<Point2>())
 		.def_readwrite("x", &Vector2::x)
 		.def_readwrite("y", &Vector2::y);
 
 	BP_STRUCT(Vector2i, bp::init<>())
+		.def(bp::init<int>())
 		.def(bp::init<int, int>())
 		.def(bp::init<Point2i>())
 		.def_readwrite("x", &Vector2i::x)
 		.def_readwrite("y", &Vector2i::y);
 
 	BP_STRUCT(Vector3, bp::init<>())
+		.def(bp::init<Float>())
 		.def(bp::init<Float, Float, Float>())
 		.def(bp::init<Point3>())
 		.def(bp::init<Normal>())
@@ -1069,6 +1364,7 @@ void export_core() {
 		.def_readwrite("z", &Normal::z);
 
 	BP_STRUCT(Vector3i, bp::init<>())
+		.def(bp::init<int>())
 		.def(bp::init<int, int, int>())
 		.def(bp::init<Point3i>())
 		.def_readwrite("x", &Vector3i::x)
@@ -1076,6 +1372,7 @@ void export_core() {
 		.def_readwrite("z", &Vector3i::z);
 
 	BP_STRUCT(Vector4, bp::init<>())
+		.def(bp::init<Float>())
 		.def(bp::init<Float, Float, Float, Float>())
 		.def(bp::init<Point4>())
 		.def_readwrite("x", &Vector4::x)
@@ -1084,6 +1381,7 @@ void export_core() {
 		.def_readwrite("w", &Vector4::w);
 
 	BP_STRUCT(Vector4i, bp::init<>())
+		.def(bp::init<int>())
 		.def(bp::init<int, int, int, int>())
 		.def(bp::init<Point4i>())
 		.def_readwrite("x", &Vector4i::x)
@@ -1091,19 +1389,27 @@ void export_core() {
 		.def_readwrite("z", &Vector4i::z)
 		.def_readwrite("w", &Vector4i::w);
 
+	BP_STRUCT(Point1, bp::init<>())
+		.def(bp::init<Float>())
+		.def(bp::init<Vector1>())
+		.def_readwrite("x", &Point1::x);
+
 	BP_STRUCT(Point2, bp::init<>())
+		.def(bp::init<Float>())
 		.def(bp::init<Float, Float>())
 		.def(bp::init<Vector2>())
 		.def_readwrite("x", &Point2::x)
 		.def_readwrite("y", &Point2::y);
 
 	BP_STRUCT(Point2i, bp::init<>())
+		.def(bp::init<int>())
 		.def(bp::init<int, int>())
 		.def(bp::init<Vector2i>())
 		.def_readwrite("x", &Point2i::x)
 		.def_readwrite("y", &Point2i::y);
 
 	BP_STRUCT(Point3, bp::init<>())
+		.def(bp::init<Float>())
 		.def(bp::init<Float, Float, Float>())
 		.def(bp::init<Vector3>())
 		.def(bp::init<Normal>())
@@ -1112,6 +1418,7 @@ void export_core() {
 		.def_readwrite("z", &Point3::z);
 
 	BP_STRUCT(Point3i, bp::init<>())
+		.def(bp::init<int>())
 		.def(bp::init<int, int, int>())
 		.def(bp::init<Vector3i>())
 		.def_readwrite("x", &Point3i::x)
@@ -1119,6 +1426,7 @@ void export_core() {
 		.def_readwrite("z", &Point3i::z);
 
 	BP_STRUCT(Point4, bp::init<>())
+		.def(bp::init<Float>())
 		.def(bp::init<Float, Float, Float, Float>())
 		.def(bp::init<Vector4>())
 		.def_readwrite("x", &Point4::x)
@@ -1127,6 +1435,7 @@ void export_core() {
 		.def_readwrite("w", &Point4::w);
 
 	BP_STRUCT(Point4i, bp::init<>())
+		.def(bp::init<int>())
 		.def(bp::init<int, int, int, int>())
 		.def(bp::init<Vector4i>())
 		.def_readwrite("x", &Point4i::x)
@@ -1233,43 +1542,33 @@ void export_core() {
 		.def("serialize", &BSphere::serialize)
 		.def("__repr__", &BSphere::toString);
 
-	bp::class_<AABB>("AABB", bp::init<>())
+	BP_STRUCT_DECL(AABB1, bp::init<>());
+	BP_IMPLEMENT_AABB_OPS(AABB1, Point1);
+
+	BP_STRUCT_DECL(AABB2, bp::init<>());
+	BP_IMPLEMENT_AABB_OPS(AABB2, Point2);
+
+	typedef TAABB<Point3> AABB3;
+	BP_STRUCT_DECL(AABB3, bp::init<>());
+	BP_IMPLEMENT_AABB_OPS(AABB3, Point3);
+
+	BP_SUBSTRUCT(AABB, AABB3, bp::init<>())
 		.def(bp::init<AABB>())
-		.def(bp::init<Point>())
-		.def(bp::init<Point, Point>())
+		.def(bp::init<AABB3>())
+		.def(bp::init<Point3>())
+		.def(bp::init<Point3, Point3>())
 		.def(bp::init<Stream *>())
-		.def_readwrite("min", &AABB::min)
-		.def_readwrite("max", &AABB::max)
-		.def("getSurfaceArea", &AABB::getSurfaceArea)
-		.def("getVolume", &AABB::getVolume)
-		.def("getCorner", &AABB::getCorner, BP_RETURN_VALUE)
-		.def("overlaps", &AABB::overlaps)
-		.def("getCenter", &AABB::getCenter, BP_RETURN_VALUE)
-		.def("reset", &AABB::reset)
-		.def("clip", &AABB::clip)
-		.def("isValid", &AABB::isValid)
-		.def("expandBy", &aabb_expandby_aabb)
-		.def("expandBy", &aabb_expandby_point)
-		.def("distanceTo", &aabb_distanceto_aabb)
-		.def("distanceTo", &aabb_distanceto_point)
-		.def("squaredDistanceTo", &aabb_sqrdistanceto_aabb)
-		.def("squaredDistanceTo", &aabb_sqrdistanceto_point)
-		.def("contains", &aabb_contains_aabb)
-		.def("contains", &aabb_contains_point)
-		.def("getLargestAxis", &AABB::getLargestAxis)
-		.def("getShortestAxis", &AABB::getShortestAxis)
-		.def("getExtents", &AABB::getExtents, BP_RETURN_VALUE)
-		.def(bp::self == bp::self)
-		.def(bp::self != bp::self)
 		.def("rayIntersect", &aabb_rayIntersect)
-		.def("getBSphere", &AABB::getBSphere, BP_RETURN_VALUE)
-		.def("serialize", &AABB::serialize)
-		.def("__repr__", &AABB::toString);
+		.def("rayIntersect", &aabb_rayIntersect2)
+		.def("getBSphere", &AABB::getBSphere, BP_RETURN_VALUE);
+
+	BP_STRUCT_DECL(AABB4, bp::init<>());
+	BP_IMPLEMENT_AABB_OPS(AABB4, Point4);
 
 	bp::class_<Frame>("Frame", bp::init<>())
 		.def(bp::init<Vector, Vector, Normal>())
 		.def(bp::init<Vector, Vector, Vector>())
-		.def(bp::init<Normal>())
+		.def(bp::init<Vector>())
 		.def(bp::init<Stream *>())
 		.def_readwrite("s", &Frame::s)
 		.def_readwrite("t", &Frame::t)
@@ -1277,7 +1576,6 @@ void export_core() {
 		.def("serialize", &Frame::serialize)
 		.def("toLocal", &Frame::toLocal, BP_RETURN_VALUE)
 		.def("toWorld", &Frame::toWorld, BP_RETURN_VALUE)
-		.def("__repr__", &Frame::toString)
 		.def("cosTheta", &Frame::cosTheta)
 		.def("cosTheta2", &Frame::cosTheta2)
 		.def("sinTheta", &Frame::sinTheta)
@@ -1288,6 +1586,9 @@ void export_core() {
 		.def("cosPhi", &Frame::cosPhi)
 		.def("sinPhi2", &Frame::sinPhi2)
 		.def("cosPhi2", &Frame::cosPhi2)
+		.def(bp::self != bp::self)
+		.def(bp::self == bp::self)
+		.def("__repr__", &Frame::toString)
 		.staticmethod("cosTheta")
 		.staticmethod("cosTheta2")
 		.staticmethod("sinTheta")
@@ -1370,6 +1671,35 @@ void export_core() {
 	bp::def("radicalInverse", radicalInverse);
 	bp::def("radicalInverseFast", radicalInverseFast);
 	bp::def("radicalInverseIncremental", radicalInverseIncremental);
+
+	bp::class_<NativeBuffer>("NativeBuffer", bp::no_init);
+
+	const bp::converter::registration& fb_reg(
+		bp::converter::registry::lookup(bp::type_id<NativeBuffer>()));
+	PyTypeObject* fb_type = fb_reg.get_class_object();
+
+	static PyBufferProcs NativeBuffer_buffer_procs = {
+		#if PY_MAJOR_VERSION < 3
+			NULL, NULL, NULL, NULL,
+		#endif
+		&NativeBuffer::getbuffer,
+		&NativeBuffer::releasebuffer
+	};
+
+	// partial sequence protocol support
+	static PySequenceMethods NativeBuffer_as_sequence = {
+		&NativeBuffer::len,
+		NULL,
+		NULL,
+		&NativeBuffer::item
+	};
+
+	fb_type->tp_as_sequence = &NativeBuffer_as_sequence;
+	fb_type->tp_as_buffer = &NativeBuffer_buffer_procs;
+
+	#if PY_MAJOR_VERSION < 3
+		fb_type->tp_flags |= Py_TPFLAGS_HAVE_NEWBUFFER;
+	#endif
 
 	bp::detail::current_scope = oldScope;
 }

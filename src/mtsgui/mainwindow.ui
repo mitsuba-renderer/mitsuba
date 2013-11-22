@@ -251,7 +251,7 @@
    </property>
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/resources/open16.png</normaloff>:/resources/open16.png</iconset>
+     <normaloff>:/resources/open.png</normaloff>:/resources/open.png</iconset>
    </property>
    <property name="text">
     <string>&amp;Open ..</string>
@@ -325,7 +325,7 @@
   <action name="actionAbout">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/resources/about16.png</normaloff>:/resources/about16.png</iconset>
+     <normaloff>:/resources/about.png</normaloff>:/resources/about.png</iconset>
    </property>
    <property name="text">
     <string>&amp;About Mitsuba</string>
@@ -334,7 +334,7 @@
   <action name="actionSave">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/resources/save16.png</normaloff>:/resources/save16.png</iconset>
+     <normaloff>:/resources/save.png</normaloff>:/resources/save.png</iconset>
    </property>
    <property name="text">
     <string>&amp;Save</string>
@@ -346,7 +346,7 @@
   <action name="actionSaveAs">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/resources/saveas16.png</normaloff>:/resources/saveas16.png</iconset>
+     <normaloff>:/resources/saveas.png</normaloff>:/resources/saveas.png</iconset>
    </property>
    <property name="text">
     <string>Save &amp;As ..</string>
@@ -382,7 +382,7 @@
   <action name="actionImport">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/resources/import16.png</normaloff>:/resources/import16.png</iconset>
+     <normaloff>:/resources/import.png</normaloff>:/resources/import.png</iconset>
    </property>
    <property name="text">
     <string>&amp;Import ..</string>
@@ -418,7 +418,7 @@
   <action name="actionReferenceManual">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/resources/help16.png</normaloff>:/resources/help16.png</iconset>
+     <normaloff>:/resources/help.png</normaloff>:/resources/help.png</iconset>
    </property>
    <property name="text">
     <string>&amp;Reference Manual</string>
@@ -430,7 +430,7 @@
   <action name="actionClose">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/resources/close16.png</normaloff>:/resources/close16.png</iconset>
+     <normaloff>:/resources/close.png</normaloff>:/resources/close.png</iconset>
    </property>
    <property name="text">
     <string>&amp;Close Tab</string>
@@ -442,7 +442,7 @@
   <action name="actionExportImage">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/resources/picture16.png</normaloff>:/resources/picture16.png</iconset>
+     <normaloff>:/resources/picture.png</normaloff>:/resources/picture.png</iconset>
    </property>
    <property name="text">
     <string>Ex&amp;port Image ..</string>
@@ -466,7 +466,7 @@
   <action name="actionAdjustSize">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/resources/adjustsize16.png</normaloff>:/resources/adjustsize16.png</iconset>
+     <normaloff>:/resources/adjustsize.png</normaloff>:/resources/adjustsize.png</iconset>
    </property>
    <property name="text">
     <string>Resize to &amp;Fit</string>

@@ -26,9 +26,12 @@
 #pragma warning(disable : 4267) // 'return' : conversion from 'size_t' to 'long', possible loss of data
 #endif
 
-#define BP_STRUCT(Name, Init) \
+#define BP_STRUCT_DECL(Name, Init) \
 	bp::class_<Name> Name ##_struct(#Name, Init); \
-	bp::register_ptr_to_python<Name*>(); \
+	bp::register_ptr_to_python<Name*>();
+
+#define BP_STRUCT(Name, Init) \
+	BP_STRUCT_DECL(Name, Init) \
 	Name ##_struct
 
 #define BP_SUBSTRUCT(Name, Base, Init) \
@@ -36,9 +39,12 @@
 	bp::register_ptr_to_python<Name*>(); \
 	Name ##_struct
 
-#define BP_CLASS(Name, Base, Init) \
+#define BP_CLASS_DECL(Name, Base, Init) \
 	bp::class_<Name, ref<Name>, bp::bases<Base>, boost::noncopyable> Name ##_class(#Name, Init); \
-	bp::register_ptr_to_python<Name*>(); \
+	bp::register_ptr_to_python<Name*>();
+
+#define BP_CLASS(Name, Base, Init) \
+	BP_CLASS_DECL(Name, Base, Init) \
 	Name ##_class
 
 #define BP_WRAPPED_CLASS(Name, Wrapper, Base, Init) \
@@ -94,6 +100,49 @@
 		.def("__getitem__", &FixedSizeSupport<Name, Scalar, Size>::get) \
 		.def("__setitem__", &FixedSizeSupport<Name, Scalar, Size>::set)
 
+#define BP_IMPLEMENT_AABB_OPS(AABBType, PointType) \
+	void (AABBType::*AABBType ##_expandBy1)(const AABBType &) = &AABBType::expandBy; \
+	void (AABBType::*AABBType ##_expandBy2)(const PointType &) = &AABBType::expandBy; \
+	Float (AABBType::*AABBType ##_distanceTo1)(const AABBType &) const = &AABBType::distanceTo; \
+	Float (AABBType::*AABBType ##_distanceTo2)(const PointType &) const = &AABBType::distanceTo; \
+	Float (AABBType::*AABBType ##_squaredDistanceTo1)(const AABBType &) const = &AABBType::squaredDistanceTo; \
+	Float (AABBType::*AABBType ##_squaredDistanceTo2)(const PointType &) const = &AABBType::squaredDistanceTo; \
+	bool (AABBType::*AABBType ##_contains1)(const AABBType &) const = &AABBType::contains; \
+	bool (AABBType::*AABBType ##_contains2)(const PointType &) const = &AABBType::contains; \
+	\
+	AABBType ##_struct \
+		.def(bp::init<AABBType>()) \
+		.def(bp::init<PointType>()) \
+		.def(bp::init<PointType, PointType>()) \
+		.def(bp::init<Stream *>()) \
+		.def_readwrite("min", &AABBType::min) \
+		.def_readwrite("max", &AABBType::max) \
+		.def(bp::self == bp::self) \
+		.def(bp::self != bp::self) \
+		.def("clip", &AABBType::clip) \
+		.def("reset", &AABBType::reset) \
+		.def("getVolume", &AABBType::getVolume) \
+		.def("getSurfaceArea", &AABBType::getSurfaceArea) \
+		.def("getCenter", &AABBType::getCenter, BP_RETURN_VALUE) \
+		.def("getCorner", &AABBType::getCorner, BP_RETURN_VALUE) \
+		.def("getChild", &AABBType::getChild, BP_RETURN_VALUE) \
+		.def("overlaps", &AABBType::overlaps) \
+		.def("expandBy", AABBType ##_expandBy1) \
+		.def("expandBy", AABBType ##_expandBy2) \
+		.def("distanceTo", AABBType ##_distanceTo1) \
+		.def("distanceTo", AABBType ##_distanceTo2) \
+		.def("squaredDistanceTo", AABBType ##_squaredDistanceTo1) \
+		.def("squaredDistanceTo", AABBType ##_squaredDistanceTo2) \
+		.def("isValid", &AABBType::isValid) \
+		.def("isEmpty", &AABBType::isEmpty) \
+		.def("getLargestAxis", &AABBType::getLargestAxis) \
+		.def("getShortestAxis", &AABBType::getShortestAxis) \
+		.def("getExtents", &AABBType::getExtents, BP_RETURN_VALUE) \
+		.def("serialize", &AABBType::serialize) \
+		.def("contains", AABBType ##_contains1) \
+		.def("contains", AABBType ##_contains2) \
+		.def("__repr__", &AABBType::toString);
+
 #define BP_SETSCOPE(value) do { \
 		bp::detail::current_scope = value.ptr(); \
 	} while (0);
@@ -135,7 +184,7 @@ public:
 		using namespace mitsuba;
 
 		if (i < 0 || i >= Size) {
-			SLog(EError, "Index %i is out of range!", i);
+			SLog(mitsuba::EError, "Index %i is out of range!", i);
 			return (Scalar) 0;
 		}
 		return value[i];
@@ -145,7 +194,7 @@ public:
 		using namespace mitsuba;
 
 		if (i < 0 || i >= Size)
-			SLog(EError, "Index %i is out of range!", i);
+			SLog(mitsuba::EError, "Index %i is out of range!", i);
 		else
 			value[i] = arg;
 	}
@@ -154,6 +203,37 @@ public:
 		return Size;
 	}
 };
+
+template <typename Value> struct InternalArray {
+public:
+	InternalArray(mitsuba::Object *obj, Value *ptr, size_t length) : obj(obj), ptr(ptr), length(length) { }
+	InternalArray(const InternalArray &a) : obj(a.obj), ptr(a.ptr), length(a.length) { }
+
+	inline int len() { return (int) this->length; }
+
+	Value get(int i) {
+		if (i < 0 || (size_t) i >= length)
+			SLog(mitsuba::EError, "Index %i is out of range!", i);
+		return ptr[i];
+	}
+
+	void set(int i, Value value) {
+		if (i < 0 || (size_t) i >= length)
+			SLog(mitsuba::EError, "Index %i is out of range!", i);
+		ptr[i] = value;
+	}
+private:
+	mitsuba::ref<mitsuba::Object> obj;
+	Value *ptr;
+	size_t length;
+};
+
+#define BP_INTERNAL_ARRAY(Name) \
+	BP_STRUCT(Name, bp::no_init) \
+		.def("__len__", &Name::len) \
+		.def("__getitem__", &Name::get) \
+		.def("__setitem__", &Name::set)
+
 
 namespace mitsuba {
 	class SerializableObject;

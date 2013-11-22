@@ -45,7 +45,7 @@ class MTS_EXPORT_CORE ReconstructionFilter : public ConfigurableObject {
 public:
 	/**
 	 * \brief When resampling data to a different resolution using
-	 * \ref Resample, this enumeration specifies how lookups
+	 * \ref Resampler::resample(), this enumeration specifies how lookups
 	 * <em>outside</em> of the input domain are handled.
 	 *
 	 * \see Resampler

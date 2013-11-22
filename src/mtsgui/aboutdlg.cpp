@@ -78,6 +78,10 @@ AboutDialog::AboutDialog(QWidget *parent) :
 	configFlags += "MTS_HAS_BREAKPAD ";
 #endif
 
+#if defined(MTS_HAS_FFTW)
+	configFlags += "MTS_HAS_FFTW ";
+#endif
+
 	configFlags += formatString("SPECTRUM_SAMPLES=%i ",
 		SPECTRUM_SAMPLES).c_str();
 

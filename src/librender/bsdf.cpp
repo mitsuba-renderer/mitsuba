@@ -63,6 +63,10 @@ Float BSDF::getEta() const {
 	return 1.0f;
 }
 
+Frame BSDF::getFrame(const Intersection &its) const {
+	return its.shFrame;
+}
+
 Float BSDF::getRoughness(const Intersection &its, int component) const {
 	NotImplementedError("getRoughness");
 }

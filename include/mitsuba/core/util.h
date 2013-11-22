@@ -24,8 +24,9 @@
 
 MTS_NAMESPACE_BEGIN
 
-/*! \addtogroup libcore */
-/*! @{ */
+/*! \addtogroup libcore
+ *  @{
+ */
 
 // -----------------------------------------------------------------------
 //! @{ \name String-related utility functions
@@ -274,10 +275,25 @@ extern MTS_EXPORT_CORE Float hypot2(Float a, Float b);
 extern MTS_EXPORT_CORE Float log2(Float value);
 
 /// Always-positive modulo function (assumes b > 0)
-inline int modulo(int a, int b) {
-	int r = a % b;
+inline int32_t modulo(int32_t a, int32_t b) {
+	int32_t r = a % b;
 	return (r < 0) ? r+b : r;
 }
+
+/// Always-positive modulo function (assumes b > 0)
+inline int64_t modulo(int64_t a, int64_t b) {
+	int64_t r = a % b;
+	return (r < 0) ? r+b : r;
+}
+
+#if defined(MTS_AMBIGUOUS_SIZE_T)
+inline ssize_t modulo(ssize_t a, ssize_t b) {
+	if (sizeof(ssize_t) == 8)
+		return modulo((int64_t) a, (int64_t) b);
+	else
+		return modulo((int32_t) a, (int32_t) b);
+}
+#endif
 
 /// Always-positive modulo function, float version (assumes b > 0)
 inline Float modulo(Float a, Float b) {
@@ -544,6 +560,8 @@ extern MTS_EXPORT_CORE Float fresnelDielectricExt(Float cosThetaI,
  *
  * \param cosThetaI
  * 		Cosine of the angle between the normal and the incident ray
+ * \param eta
+ * 		Relative refractive index
  */
 inline Float fresnelDielectricExt(Float cosThetaI, Float eta) { Float cosThetaT;
 	return fresnelDielectricExt(cosThetaI, cosThetaT, eta); }

@@ -63,6 +63,6 @@ public:
 	std::string m_filmType;
 	ref<FileStream> m_geometryFile;
 	fs::path m_geometryFileName;
-	std::vector<uint32_t> m_geometryDict;
+	std::vector<size_t> m_geometryDict;
 	bool m_packGeometry;
 };

@@ -21,20 +21,15 @@ GLFLAGS        = ['-DGLEW_MX']
 BOOSTLIB       = ['boost_system', 'boost_filesystem', 'boost_thread']
 COLLADAINCLUDE = ['/usr/include/collada-dom', '/usr/include/collada-dom/1.4']
 COLLADALIB     = ['collada14dom', 'xml2']
+FFTWLIB        = ['fftw3_threads', 'fftw3']
 
-# The following assumes that the Mitsuba bindings should be built for the
-# "default" Python version. It is also possible to build bindings for multiple
-# versions at the same time by explicitly specifying e.g. PYTHON27INCLUDE,
-# PYTHON27LIB, PYTHON27LIBDIR and PYTHON32INCLUDE, PYTHON32LIB, PYTHON32LIBDIR
+# The following runs a helper script to search for installed Python
+# packages that have a Boost Python library of matching version.
+# A Mitsuba binding library will be compiled for each such pair.
+# Alternatively, you could also specify the paths and libraries manually
+# using the variables PYTHON27INCLUDE, PYTHON27LIB, PYTHON27LIBDIR etc.
 
-pyver = os.popen("python --version 2>&1 | grep -oE '([[:digit:]].[[:digit:]])'").read().strip().replace('.', '')
-env = locals()
-
-env['PYTHON'+pyver+'INCLUDE']  = []
-env['PYTHON'+pyver+'LIB']      = ['boost_python-mt-py'+pyver]
-
-for entry in os.popen("python-config --cflags --libs").read().split():
-	if entry[:2] == '-I':
-		env['PYTHON'+pyver+'INCLUDE'] += [entry[2:]]
-	if entry[:2] == '-l':
-		env['PYTHON'+pyver+'LIB'] += [entry[2:]]
+import sys, os
+sys.path.append(os.path.abspath('../data/scons'))
+from detect_python import detect_python
+locals().update(detect_python())

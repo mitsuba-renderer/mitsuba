@@ -1,5 +1,5 @@
 Name:		mitsuba
-Version:	0.4.4
+Version:	0.4.5
 Release:	1%{?dist}
 Summary:	Mitsuba renderer
 Group:		Applications/Graphics
@@ -7,7 +7,7 @@ License:	GPL-3
 URL:		http://www.mitsuba-renderer.org
 Source:		%{name}-%{version}.tar.gz
 BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
-BuildRequires:	gcc-c++ scons boost-devel qt4-devel OpenEXR-devel xerces-c-devel python-devel glew-devel collada-dom-devel eigen3-devel
+BuildRequires:	gcc-c++ scons boost-devel qt4-devel OpenEXR-devel xerces-c-devel python-devel glew-devel collada-dom-devel eigen3-devel fftw-devel
 Requires:	boost qt4 OpenEXR-libs xerces-c python libGLEWmx collada-dom
 %description
 Mitsuba is an extensible rendering framework written in portable C++. It implements unbiased as well as biased techniques and contains heavy optimizations targeted towards current CPU architectures.
@@ -30,7 +30,6 @@ scons
 rm -rf $RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT%{_libdir}
 mkdir -p $RPM_BUILD_ROOT%{_bindir}
-mkdir -p $RPM_BUILD_ROOT%{_libdir}/python2.7/lib-dynload
 mkdir -p $RPM_BUILD_ROOT/usr/share/mitsuba/plugins
 mkdir -p $RPM_BUILD_ROOT/usr/share/pixmaps
 mkdir -p $RPM_BUILD_ROOT/usr/share/applications
@@ -43,7 +42,11 @@ cp dist/mitsuba $RPM_BUILD_ROOT%{_bindir}
 cp dist/mtssrv $RPM_BUILD_ROOT%{_bindir}
 cp dist/mtsutil $RPM_BUILD_ROOT%{_bindir}
 cp dist/mtsimport $RPM_BUILD_ROOT%{_bindir}
-cp dist/python/2.7/mitsuba.so $RPM_BUILD_ROOT%{_libdir}/python2.7/lib-dynload
+for pyver in `ls dist/python`
+do
+	mkdir -p $RPM_BUILD_ROOT%{_libdir}/python$pyver/lib-dynload
+	cp -a dist/python/$pyver/mitsuba.so $RPM_BUILD_ROOT%{_libdir}/python$pyver/lib-dynload
+done
 cp dist/plugins/* $RPM_BUILD_ROOT/usr/share/mitsuba/plugins
 cp -Rdp dist/data $RPM_BUILD_ROOT/usr/share/mitsuba/data
 cp src/mtsgui/resources/mitsuba48.png $RPM_BUILD_ROOT/usr/share/pixmaps
@@ -54,7 +57,7 @@ rm -rf $RPM_BUILD_ROOT
 %files
 %defattr(-,root,root,-)
 %{_libdir}/libmitsuba-*.so
-%{_libdir}/python2.7/lib-dynload/mitsuba.so
+%{_libdir}/python*
 %{_bindir}/*
 /usr/share/pixmaps/mitsuba48.png
 /usr/share/applications/mitsuba.desktop
@@ -62,6 +65,9 @@ rm -rf $RPM_BUILD_ROOT
 %files devel
 /usr/include/*
 %changelog
+
+* Sun Nov 10 2013 Wenzel Jakob <wenzel@cs.cornell.edu> 0.4.5%{?dist}
+- Upgrade to version 0.4.5
 
 * Thu Feb 28 2013 Wenzel Jakob <wenzel@cs.cornell.edu> 0.4.4%{?dist}
 - Upgrade to version 0.4.4

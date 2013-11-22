@@ -501,6 +501,14 @@ public:
 		return value;
 	}
 
+	/// Component-wise logarithm
+	inline TSpectrum log() const {
+		TSpectrum value;
+		for (int i=0; i<N; i++)
+			value.s[i] = math::fastlog(s[i]);
+		return value;
+	}
+
 	/// Component-wise exponentation
 	inline TSpectrum exp() const {
 		TSpectrum value;
@@ -591,6 +599,7 @@ protected:
 /** \brief RGB color data type
  *
  * \ingroup libcore
+ * \ingroup libpython
  */
 struct MTS_EXPORT_CORE Color3 : public TSpectrum<Float, 3> {
 public:
@@ -615,6 +624,11 @@ public:
 	/// Initialize to the given RGB value
 	inline Color3(Float r, Float g, Float b) {
 		s[0] = r; s[1] = g; s[2] = b;
+	}
+
+	/// Return the luminance (assuming the color value is expressed in linear sRGB)
+	inline Float getLuminance() const {
+		return s[0] * 0.212671f + s[1] * 0.715160f + s[2] * 0.072169f;
 	}
 };
 
@@ -736,7 +750,7 @@ public:
 	 * red-green color opponency, and \c T (tritan) encodes
 	 * blue-red color opponency. For normalized input, the
 	 * range of attainable values is given by
-	 * \f I\in $[0,1], P,T\in [-1,1]\f$.
+	 * \f$ I\in $[0,1], P,T\in [-1,1]\f$.
 	 *
 	 * In the Python API, this function returns a 3-tuple
 	 * with the result of the operation.

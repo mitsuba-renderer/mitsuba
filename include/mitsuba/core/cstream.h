@@ -27,6 +27,7 @@ MTS_NAMESPACE_BEGIN
 /** \brief Stream-style interface to the default stdin/stdout console streams
  *
  * \ingroup libcore
+ * \ingroup libpython
  */
 class MTS_EXPORT_CORE ConsoleStream : public Stream {
 public:

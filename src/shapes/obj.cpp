@@ -59,6 +59,9 @@ MTS_NAMESPACE_BEGIN
  *	      Specifies an optional linear object-to-world transformation.
  *        \default{none (i.e. object space $=$ world space)}
  *     }
+ *	   \parameter{collapse}{\Boolean}{
+ *	     Collapse all contained meshes into a single object \default{\code{false}}
+ *	   }
  * }
  * \renderings{
  *     \label{fig:rungholt}
@@ -196,6 +199,9 @@ public:
 		/* Causes all normals to be flipped */
 		m_flipNormals = props.getBoolean("flipNormals", false);
 
+		/* Collapse all contained shapes / groups into a single object? */
+		m_collapse = props.getBoolean("collapse", false);
+
 		/* Causes all texture coordinates to be vertically flipped */
 		bool flipTexCoords = props.getBoolean("flipTexCoords", true);
 
@@ -238,7 +244,7 @@ public:
 				Normal n;
 				iss >> n.x >> n.y >> n.z;
 				normals.push_back(n);
-			} else if (buf == "g") {
+			} else if (buf == "g" && !m_collapse) {
 				std::string targetName;
 				std::string newName = trim(line.substr(1, line.length()-1));
 
@@ -816,6 +822,7 @@ private:
 	bool m_flipNormals, m_faceNormals;
 	std::string m_name;
 	AABB m_aabb;
+	bool m_collapse;
 };
 
 MTS_IMPLEMENT_CLASS_S(WavefrontOBJ, false, Shape)

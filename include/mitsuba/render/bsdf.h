@@ -453,6 +453,15 @@ public:
 	 */
 	virtual Float getRoughness(const Intersection &its, int index) const;
 
+	/**
+	 * \brief Sometimes, BSDF models make use of a perturbed frame for
+	 * internal shading computations (e.g. bump maps). This function
+	 * exposes this internal frame.
+	 *
+	 * By default, it returns <tt>its.shFrame</tt>
+	 */
+	virtual Frame getFrame(const Intersection &its) const;
+
 	// =============================================================
 	//! @{ \name ConfigurableObject interface
 	// =============================================================

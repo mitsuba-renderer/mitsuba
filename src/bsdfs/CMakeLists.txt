@@ -18,7 +18,8 @@ add_bsdf(roughconductor  roughconductor.cpp microfacet.h)
 add_bsdf(roughplastic    roughplastic.cpp microfacet.h ior.h)
 
 # Materials that act as modifiers
-add_bsdf(bump         bump.cpp)
+add_bsdf(bumpmap      bumpmap.cpp)
+add_bsdf(normalmap    normalmap.cpp)
 add_bsdf(twosided     twosided.cpp)
 add_bsdf(mask         mask.cpp)
 add_bsdf(mixturebsdf  mixturebsdf.cpp)

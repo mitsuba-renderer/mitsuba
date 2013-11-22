@@ -155,7 +155,7 @@ public:
 		/// When the file contains multiple meshes, this index specifies which one to load
 		int shapeIndex = props.getInteger("shapeIndex", 0);
 
-		m_name = (props.getID() != "unnamed") ? props.getID()
+		std::string name = (props.getID() != "unnamed") ? props.getID()
 			: formatString("%s@%i", filePath.stem().string().c_str(), shapeIndex);
 
 		/* Load the geometry */
@@ -164,6 +164,9 @@ public:
 		loadCompressed(filePath, shapeIndex);
 		Log(EDebug, "Done (" SIZE_T_FMT " triangles, " SIZE_T_FMT " vertices, %i ms)",
 			m_triangleCount, m_vertexCount, timer->getMilliseconds());
+
+		if (m_name.empty())
+			m_name = name;
 
 		/* By default, any existing normals will be used for
 		   rendering. If no normals are found, Mitsuba will

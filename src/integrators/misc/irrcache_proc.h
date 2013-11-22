@@ -94,7 +94,6 @@ private:
 	ref<IrradianceRecordVector> m_samples;
 	int m_resolution;
 	bool m_gradients, m_clampNeighbor, m_clampScreen;
-	Float m_influenceMin, m_influenceMax;
 	Float m_quality;
 	ProgressReporter *m_progress;
 };

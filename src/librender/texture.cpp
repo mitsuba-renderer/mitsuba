@@ -53,6 +53,24 @@ ref<Texture> Texture::expand() {
 	return this;
 }
 
+void Texture::evalGradient(const Intersection &_its, Spectrum *gradient) const {
+	const Float eps = Epsilon;
+	Intersection its(_its);
+
+	Spectrum value = eval(its, false);
+
+	its.p = _its.p + its.dpdu * eps;
+	its.uv = _its.uv + Point2(eps, 0);
+	Spectrum valueU = eval(its, false);
+
+	its.p = _its.p + its.dpdv * eps;
+	its.uv = _its.uv + Point2(0, eps);
+	Spectrum valueV = eval(its, false);
+
+	gradient[0] = (valueU - value)*(1/eps);
+	gradient[1] = (valueV - value)*(1/eps);
+}
+
 Texture::~Texture() { }
 
 void Texture::serialize(Stream *stream, InstanceManager *manager) const {
@@ -99,6 +117,26 @@ Spectrum Texture2D::eval(const Intersection &its, bool filter) const {
 	} else {
 		return eval(uv);
 	}
+}
+
+void Texture2D::evalGradient(const Intersection &its, Spectrum *gradient) const {
+	Point2 uv = Point2(its.uv.x * m_uvScale.x, its.uv.y * m_uvScale.y) + m_uvOffset;
+
+	evalGradient(uv, gradient);
+
+	gradient[0] *= m_uvScale.x;
+	gradient[1] *= m_uvScale.y;
+}
+
+void Texture2D::evalGradient(const Point2 &uv, Spectrum *gradient) const {
+	const Float eps = Epsilon;
+
+	Spectrum value = eval(uv);
+	Spectrum valueU = eval(uv + Vector2(eps, 0));
+	Spectrum valueV = eval(uv + Vector2(0, eps));
+
+	gradient[0] = (valueU - value)*(1/eps);
+	gradient[1] = (valueV - value)*(1/eps);
 }
 
 ref<Bitmap> Texture2D::getBitmap(const Vector2i &sizeHint) const {

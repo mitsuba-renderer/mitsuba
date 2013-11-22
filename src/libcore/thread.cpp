@@ -294,7 +294,7 @@ bool Thread::setPriority(EThreadPriority priority) {
 			break;
 	}
 
-	// If the frunction succeeds, the return value is nonzero
+	// If the function succeeds, the return value is nonzero
 	const HANDLE handle = d->thread.native_handle();
 	if (SetThreadPriority(handle, win32Priority) == 0) {
 		Log(EWarn, "Could not adjust the thread priority to %i: %s!",
@@ -315,6 +315,10 @@ void Thread::setCoreAffinity(int coreID) {
 #if defined(__OSX__)
 	/* CPU affinity not supported on OSX */
 #elif defined(__LINUX__)
+	/* Don't try to set CPU affinity if running inside Valgrind */
+	if (getenv("VALGRIND_OPTS") != NULL)
+		return;
+
 	int nCores = getCoreCount();
 	cpu_set_t *cpuset = CPU_ALLOC(nCores);
 	if (cpuset == NULL)
@@ -352,7 +356,6 @@ void Thread::setCoreAffinity(int coreID) {
 int Thread::getCoreAffinity() const {
 	return d->coreAffinity;
 }
-
 
 void Thread::dispatch(Thread *thread) {
 	detail::initializeLocalTLS();
@@ -412,7 +415,6 @@ void Thread::dispatch(Thread *thread) {
 
 	thread->exit();
 }
-
 
 void Thread::join() {
 	/* Only one call to join() at a time */
@@ -506,8 +508,13 @@ void Thread::staticInitialization() {
 }
 
 Thread *Thread::registerUnmanagedThread(const std::string &name) {
-	Thread *thread = getThread();
+	Thread *thread = NULL;
+	try {
+		thread = getThread();
+	} catch (...) { }
+
 	if (!thread) {
+		detail::initializeLocalTLS();
 		thread = new UnmanagedThread(name);
 		thread->d->running = false;
 		thread->d->joined = false;

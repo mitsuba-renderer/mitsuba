@@ -2,23 +2,24 @@
   <qresource prefix="/">
     <file>resources/log.png</file>
     <file>resources/play.png</file>
-    <file>resources/save16.png</file>
+    <file>resources/save.png</file>
     <file>resources/add.png</file>
     <file>resources/devel.png</file>
-    <file>resources/import16.png</file>
+    <file>resources/import.png</file>
     <file>resources/branch-closed.png</file>
     <file>resources/clear.png</file>
-    <file>resources/help16.png</file>
+    <file>resources/help.png</file>
     <file>resources/settings.png</file>
-    <file>resources/open16.png</file>
+    <file>resources/open.png</file>
     <file>resources/camera.png</file>
     <file>resources/appicon.png</file>
-    <file>resources/about16.png</file>
+    <file>resources/about.png</file>
     <file>resources/refresh.png</file>
-    <file>resources/saveas16.png</file>
-    <file>resources/close16.png</file>
-    <file>resources/adjustsize16.png</file>
-    <file>resources/picture16.png</file>
+    <file>resources/refresh@2x.png</file>
+    <file>resources/saveas.png</file>
+    <file>resources/close.png</file>
+    <file>resources/adjustsize.png</file>
+    <file>resources/picture.png</file>
     <file>resources/duplicatetab.png</file>
     <file>resources/logo.png</file>
     <file>resources/stop.png</file>

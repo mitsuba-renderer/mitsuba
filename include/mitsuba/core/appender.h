@@ -60,10 +60,14 @@ protected:
  * arbitrary C++ output stream
  *
  * \ingroup libcore
+ * \ingroup libpython
  */
 class MTS_EXPORT_CORE StreamAppender : public Appender {
 public:
-	/// Create a new stream appender
+	/**
+	 * Create a new stream appender
+	 * \remark This constructor is not exposed in the Python bindings
+	 */
 	StreamAppender(std::ostream *pStream);
 
 	/// Create a new stream appender logging to a file

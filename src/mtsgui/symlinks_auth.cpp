@@ -1,7 +1,7 @@
 #if defined(__APPLE__)
 #include <Carbon/Carbon.h>
-#include <Authorization.h>
-#include <AuthorizationTags.h>
+#include <Security/Authorization.h>
+#include <Security/AuthorizationTags.h>
 #include <unistd.h>
 #include <iostream>
 #include <sstream>

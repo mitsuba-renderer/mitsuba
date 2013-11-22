@@ -22,6 +22,7 @@
 #include <mitsuba/core/fstream.h>
 #include <boost/algorithm/string.hpp>
 #include <boost/scoped_array.hpp>
+#include <boost/thread/mutex.hpp>
 
 #if defined(__WINDOWS__)
 #undef _CRT_SECURE_NO_WARNINGS
@@ -57,6 +58,11 @@ extern "C" {
 	#include <jpeglib.h>
 	#include <jerror.h>
 };
+#endif
+
+#if defined(MTS_HAS_FFTW)
+#include <complex>
+#include <fftw3.h>
 #endif
 
 MTS_NAMESPACE_BEGIN
@@ -344,6 +350,34 @@ size_t Bitmap::getBufferSize() const {
 	return bytesPerRow * (size_t) m_size.y;
 }
 
+std::string Bitmap::getChannelName(int idx) const {
+	Assert(idx < m_channelCount);
+	char name = '\0';
+
+	switch (m_pixelFormat) {
+		case ELuminance: name = 'L'; break;
+		case ELuminanceAlpha: name = "YA"[idx]; break;
+		case ERGBA:
+		case ERGB: name = "RGBA"[idx]; break;
+		case EXYZA:
+		case EXYZ: name = "XYZA"[idx]; break;
+		case ESpectrumAlphaWeight:
+		case ESpectrumAlpha:
+			if (idx == m_channelCount-1)
+				return m_pixelFormat == ESpectrumAlpha ? "A" : "W";
+			else if (idx == m_channelCount-2 && m_pixelFormat == ESpectrumAlphaWeight)
+				return "A";
+		case ESpectrum: {
+				std::pair<Float, Float> coverage = Spectrum::getBinCoverage(idx);
+				return formatString("%.2f-%.2fnm", coverage.first, coverage.second);
+			}
+		default:
+			Log(EError, "Unknown pixel format!");
+	}
+
+	return std::string(1, name);
+}
+
 void Bitmap::updateChannelCount() {
 	switch (m_pixelFormat) {
 		case ELuminance: m_channelCount = 1; break;
@@ -556,6 +590,246 @@ void Bitmap::accumulate(const Bitmap *bitmap, Point2i sourceOffset,
 		source += sourceStride;
 		target += targetStride;
 	}
+}
+
+#if defined(MTS_HAS_FFTW)
+static boost::mutex __fftw_lock;
+#endif
+
+void Bitmap::convolve(const Bitmap *_kernel) {
+	if (_kernel->getWidth() != _kernel->getHeight())
+		Log(EError, "Bitmap::convolve(): convolution kernel must be square!");
+	if (_kernel->getWidth() % 2 != 1)
+		Log(EError, "Bitmap::convolve(): convolution kernel size must be odd!");
+	if (_kernel->getChannelCount() != getChannelCount() && _kernel->getChannelCount() != 1)
+		Log(EError, "Bitmap::convolve(): kernel and bitmap have different channel counts!");
+	if (_kernel->getComponentFormat() != getComponentFormat())
+		Log(EError, "Bitmap::convolve(): kernel and bitmap have different component formats!");
+	if (m_componentFormat != EFloat16 && m_componentFormat != EFloat32 && m_componentFormat != EFloat64)
+		Log(EError, "Bitmap::convolve(): unsupported component format! (must be float16/float32/float64)");
+
+	int channelCountKernel = _kernel->getChannelCount();
+
+	size_t kernelSize   = (size_t) _kernel->getWidth(),
+		   hKernelSize  = kernelSize / 2,
+		   width        = (size_t) m_size.x,
+		   height       = (size_t) m_size.y;
+
+#if defined(MTS_HAS_FFTW)
+	typedef std::complex<double> complex;
+
+	size_t paddedWidth  = width + hKernelSize,
+		   paddedHeight = height + hKernelSize,
+		   paddedSize   = paddedWidth*paddedHeight;
+
+	__fftw_lock.lock();
+	complex *kernel  = (complex *) fftw_malloc(sizeof(complex) * paddedSize),
+	        *kernelS = (complex *) fftw_malloc(sizeof(complex) * paddedSize),
+	        *data    = (complex *) fftw_malloc(sizeof(complex) * paddedSize),
+	        *dataS   = (complex *) fftw_malloc(sizeof(complex) * paddedSize);
+
+	if (!kernel || !kernelS || !data || !dataS) {
+		__fftw_lock.unlock();
+		SLog(EError, "Bitmap::convolve(): Unable to allocate temporary memory!");
+	}
+
+	/* Create a FFTW plan for a 2D DFT of this size */
+	fftw_plan p = fftw_plan_dft_2d((int) paddedHeight, (int) paddedWidth,
+		(fftw_complex *) kernel, (fftw_complex *) kernelS, FFTW_FORWARD, FFTW_ESTIMATE);
+	__fftw_lock.unlock();
+
+	memset(kernel, 0, sizeof(complex)*paddedSize);
+
+	for (int ch=0; ch<m_channelCount; ++ch) {
+		memset(data, 0, sizeof(complex)*paddedSize);
+		switch (m_componentFormat) {
+			case EFloat16:
+				/* Copy and zero-pad the convolution kernel in a wraparound fashion */
+				if (ch < channelCountKernel) {
+					for (size_t y=0; y<kernelSize; ++y) {
+						ssize_t wrappedY = modulo(hKernelSize - (ssize_t) y, (ssize_t) paddedHeight);
+						for (size_t x=0; x<kernelSize; ++x) {
+							ssize_t wrappedX = modulo(hKernelSize - (ssize_t) x, (ssize_t) paddedWidth);
+							kernel[wrappedX+wrappedY*paddedWidth] = _kernel->getFloat16Data()[(x+y*kernelSize)*channelCountKernel+ch];
+						}
+					}
+				}
+
+				/* Copy and zero-pad the input data */
+				for (size_t y=0; y<height; ++y)
+					for (size_t x=0; x<width; ++x)
+						data[x+y*paddedWidth] = getFloat16Data()[(x+y*width)*m_channelCount + ch];
+				break;
+
+			case EFloat32:
+				/* Copy and zero-pad the convolution kernel in a wraparound fashion */
+				if (ch < channelCountKernel) {
+					for (size_t y=0; y<kernelSize; ++y) {
+						ssize_t wrappedY = modulo(hKernelSize - (ssize_t) y, (ssize_t) paddedHeight);
+						for (size_t x=0; x<kernelSize; ++x) {
+							ssize_t wrappedX = modulo(hKernelSize - (ssize_t) x, (ssize_t) paddedWidth);
+							kernel[wrappedX+wrappedY*paddedWidth] = _kernel->getFloat32Data()[(x+y*kernelSize)*channelCountKernel+ch];
+						}
+					}
+				}
+
+				/* Copy and zero-pad the input data */
+				for (size_t y=0; y<height; ++y)
+					for (size_t x=0; x<width; ++x)
+						data[x+y*paddedWidth] = getFloat32Data()[(x+y*width)*m_channelCount + ch];
+				break;
+
+			case EFloat64:
+				/* Copy and zero-pad the convolution kernel in a wraparound fashion */
+				if (ch < channelCountKernel) {
+					for (size_t y=0; y<kernelSize; ++y) {
+						ssize_t wrappedY = modulo(hKernelSize - (ssize_t) y, (ssize_t) paddedHeight);
+						for (size_t x=0; x<kernelSize; ++x) {
+							ssize_t wrappedX = modulo(hKernelSize - (ssize_t) x, (ssize_t) paddedWidth);
+							kernel[wrappedX+wrappedY*paddedWidth] = _kernel->getFloat64Data()[(x+y*kernelSize)*channelCountKernel+ch];
+						}
+					}
+				}
+
+				/* Copy and zero-pad the input data */
+				for (size_t y=0; y<height; ++y)
+					for (size_t x=0; x<width; ++x)
+						data[x+y*paddedWidth] = getFloat64Data()[(x+y*width)*m_channelCount + ch];
+				break;
+
+			default:
+				Log(EError, "Unsupported component format!");
+		}
+
+		/* FFT the kernel */
+		if (ch < channelCountKernel)
+			fftw_execute(p);
+
+		/* FFT the image */
+		fftw_execute_dft(p, (fftw_complex *) data, (fftw_complex *) dataS);
+
+		/* Multiply in frequency space -- also conjugate and scale to use the computed FFT plan backwards */
+		double factor = (double) 1 / (paddedWidth*paddedHeight);
+		for (size_t i=0; i<paddedSize; ++i)
+			dataS[i] = factor * std::conj(dataS[i] * kernelS[i]);
+
+		/* "IFFT" */
+		fftw_execute_dft(p, (fftw_complex *) dataS, (fftw_complex *) data);
+
+		switch (m_componentFormat) {
+			case EFloat16:
+				for (size_t y=0; y<height; ++y)
+					for (size_t x=0; x<width; ++x)
+						getFloat16Data()[(x+y*width)*m_channelCount+ch] = half((float) std::real(data[x+y*paddedWidth]));
+				break;
+
+			case EFloat32:
+				for (size_t y=0; y<height; ++y)
+					for (size_t x=0; x<width; ++x)
+						getFloat32Data()[(x+y*width)*m_channelCount+ch] = (float) std::real(data[x+y*paddedWidth]);
+				break;
+
+			case EFloat64:
+				for (size_t y=0; y<height; ++y)
+					for (size_t x=0; x<width; ++x)
+						getFloat64Data()[(x+y*width)*m_channelCount+ch] = (double) std::real(data[x+y*paddedWidth]);
+				break;
+
+			default:
+				Log(EError, "Unsupported component format!");
+		}
+	}
+	__fftw_lock.lock();
+	fftw_destroy_plan(p);
+	fftw_free(kernel);
+	fftw_free(kernelS);
+	fftw_free(data);
+	fftw_free(dataS);
+	__fftw_lock.unlock();
+#else
+	/* Brute force fallback version */
+	uint8_t *output_ = static_cast<uint8_t *>(allocAligned(getBufferSize()));
+	for (int ch=0; ch<m_channelCount; ++ch) {
+		int chKernel = channelCountKernel > 1 ? ch : 0;
+
+		switch (m_componentFormat) {
+			case EFloat16: {
+					const half *input = getFloat16Data();
+					const half *kernel = _kernel->getFloat16Data();
+					half *output = (half *) output_;
+
+					for (size_t y=0; y<height; ++y) {
+						for (size_t x=0; x<width; ++x) {
+							double result = 0;
+							for (size_t ky=0; ky<kernelSize; ++ky) {
+								for (size_t kx=0; kx<kernelSize; ++kx) {
+									ssize_t xs = x + kx - (ssize_t) hKernelSize,
+											ys = y + ky - (ssize_t) hKernelSize;
+									if (xs >= 0 && ys >= 0 && xs < (ssize_t) width && ys < (ssize_t) height)
+										result += (double) kernel[(kx+ky*kernelSize)*channelCountKernel+chKernel]
+											* (double) input[(xs+ys*width)*m_channelCount+ch];
+								}
+							}
+							output[(x+y*width)*m_channelCount+ch] = (half) result;
+						}
+					}
+				}
+				break;
+
+			case EFloat32: {
+					const float *input = getFloat32Data();
+					const float *kernel = _kernel->getFloat32Data();
+					float *output = (float *) output_;
+
+					for (size_t y=0; y<height; ++y) {
+						for (size_t x=0; x<width; ++x) {
+							double result = 0;
+							for (size_t ky=0; ky<kernelSize; ++ky) {
+								for (size_t kx=0; kx<kernelSize; ++kx) {
+									ssize_t xs = x + kx - (ssize_t) hKernelSize,
+											ys = y + ky - (ssize_t) hKernelSize;
+									if (xs >= 0 && ys >= 0 && xs < (ssize_t) width && ys < (ssize_t) height)
+										result += kernel[(kx+ky*kernelSize)*channelCountKernel+chKernel]
+											* input[(xs+ys*width)*m_channelCount+ch];
+								}
+							}
+							output[(x+y*width)*m_channelCount+ch] = (float) result;
+						}
+					}
+				}
+				break;
+
+			case EFloat64: {
+					const double *input = getFloat64Data();
+					const double *kernel = _kernel->getFloat64Data();
+					double *output = (double *) output_;
+
+					for (size_t y=0; y<height; ++y) {
+						for (size_t x=0; x<width; ++x) {
+							double result = 0;
+							for (size_t ky=0; ky<kernelSize; ++ky) {
+								for (size_t kx=0; kx<kernelSize; ++kx) {
+									ssize_t xs = x + kx - (ssize_t) hKernelSize,
+											ys = y + ky - (ssize_t) hKernelSize;
+									if (xs >= 0 && ys >= 0 && xs < (ssize_t) width && ys < (ssize_t) height)
+										result += kernel[(kx+ky*kernelSize)*channelCountKernel+chKernel]
+											* input[(xs+ys*width)*m_channelCount+ch];
+								}
+							}
+							output[(x+y*width)*m_channelCount+ch] = result;
+						}
+					}
+				}
+				break;
+			default:
+				Log(EError, "Unsupported component format!");
+		}
+	}
+	if (m_ownsData)
+		freeAligned(m_data);
+	m_data = output_;
+	m_ownsData = true;
+#endif
 }
 
 void Bitmap::scale(Float value) {
@@ -800,7 +1074,6 @@ ref<Bitmap> Bitmap::arithmeticOperation(Bitmap::EArithmeticOperation operation, 
 
 	return output;
 }
-
 
 void Bitmap::colorBalance(Float r, Float g, Float b) {
 	if (m_pixelFormat != ERGB && m_pixelFormat != ERGBA)
@@ -1234,7 +1507,10 @@ ref<Bitmap> Bitmap::separateChannel(int channelIndex) {
 
 ref<Bitmap> Bitmap::join(EPixelFormat fmt,
 			const std::vector<Bitmap *> &sourceBitmaps) {
-	const Bitmap *ch0 = sourceBitmaps.at(0);
+	if (sourceBitmaps.size() == 0)
+		Log(EError, "Bitmap::join(): Need at least one bitmap!");
+
+	const Bitmap *ch0 = sourceBitmaps[0];
 	if (ch0->getComponentFormat() == EBitmask)
 		Log(EError, "Conversions involving bitmasks are currently not supported!");
 
@@ -1669,7 +1945,8 @@ void Bitmap::writePNG(Stream *stream, int compression) const {
 	png_text *text = NULL;
 
 	Properties metadata(m_metadata);
-	metadata.setString("generatedBy", "Mitsuba version " MTS_VERSION);
+	if (!metadata.hasProperty("generatedBy"))
+		metadata.setString("generatedBy", "Mitsuba version " MTS_VERSION);
 
 	std::vector<std::string> keys = metadata.getPropertyNames();
 	std::vector<std::string> values(keys.size());
@@ -2239,7 +2516,8 @@ void Bitmap::writeOpenEXR(Stream *stream,
 	#endif
 
 	Properties metadata(m_metadata);
-	metadata.setString("generatedBy", "Mitsuba version " MTS_VERSION);
+	if (!metadata.hasProperty("generatedBy"))
+		metadata.setString("generatedBy", "Mitsuba version " MTS_VERSION);
 
 	std::vector<std::string> keys = metadata.getPropertyNames();
 
@@ -2911,10 +3189,20 @@ void Bitmap::staticInitialization() {
 
 	/* Initialize the Bitmap format conversion */
 	FormatConverter::staticInitialization();
+
+#if defined(MTS_HAS_FFTW)
+	/* Initialize FFTW if enabled */
+	fftw_init_threads();
+	fftw_plan_with_nthreads(getCoreCount());
+#endif
 }
 
 void Bitmap::staticShutdown() {
 	FormatConverter::staticShutdown();
+
+#if defined(MTS_HAS_FFTW)
+	fftw_cleanup_threads();
+#endif
 }
 
 ref<Bitmap> Bitmap::expand() {
