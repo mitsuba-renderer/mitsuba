@@ -22,15 +22,12 @@
 
 #include <mitsuba/mitsuba.h>
 #include <mitsuba/core/quad.h>
-#include <boost/numeric/ublas/matrix.hpp>
-#include <numeric>
+#include <Eigen/Core>
 
 MTS_NAMESPACE_BEGIN
 
 /* Precompute normalization coefficients for the first 10 bands */
 #define SH_NORMTBL_SIZE 10
-
-namespace ublas  = boost::numeric::ublas;
 
 struct SHVector;
 
@@ -39,15 +36,18 @@ struct SHVector;
  * rotation matrix
  *
  * \ingroup libcore
+ * \ingroup libpython
  */
 struct MTS_EXPORT_CORE SHRotation {
-	std::vector<ublas::matrix<Float> > blocks;
+	typedef Eigen::Matrix<Float, Eigen::Dynamic, Eigen::Dynamic> Matrix;
+
+	std::vector<Matrix> blocks;
 
 	/// Construct a new rotation storage for the given number of bands
 	inline SHRotation(int bands) : blocks(bands) {
 		for (int i=0; i<bands; ++i) {
 			int dim = 2*i+1;
-			blocks[i] = ublas::matrix<Float>(dim, dim);
+			blocks[i] = Matrix(dim, dim);
 		}
 	}
 
@@ -79,6 +79,7 @@ struct MTS_EXPORT_CORE SHRotation {
  * \endcode
  *
  * \ingroup libcore
+ * \ingroup libpython
  */
 struct MTS_EXPORT_CORE SHVector {
 public:
@@ -126,49 +127,103 @@ public:
 
 	/// Set all coefficients to zero
 	inline void clear() {
-		for (size_t i=0; i<m_coeffs.size(); ++i)
-			m_coeffs[i] = 0;
+		m_coeffs.setZero();
 	}
 
 	/// Component-wise addition
 	inline SHVector& operator+=(const SHVector &v) {
-		if (v.m_coeffs.size() > m_coeffs.size())
-			m_coeffs.resize(v.m_coeffs.size(), 0);
-		for (size_t i=0; i<v.m_coeffs.size(); ++i)
-			m_coeffs[i] += v.m_coeffs[i];
+		ptrdiff_t extendBy = v.m_coeffs.size() - m_coeffs.size();
+		if (extendBy > 0) {
+			m_coeffs.conservativeResize(v.m_coeffs.rows());
+			m_coeffs.tail(extendBy).setZero();
+			m_bands = v.m_bands;
+		}
+		m_coeffs.head(m_coeffs.size()) += v.m_coeffs.head(m_coeffs.size());
 		return *this;
+	}
+
+	/// Component-wise addition
+	inline SHVector operator+(const SHVector &v) const {
+		SHVector vec(std::max(m_bands, v.m_bands));
+		if (m_bands > v.m_bands) {
+			vec.m_coeffs = m_coeffs;
+			vec.m_coeffs.head(v.m_coeffs.size()) += v.m_coeffs;
+		} else {
+			vec.m_coeffs = v.m_coeffs;
+			vec.m_coeffs.head(m_coeffs.size()) += m_coeffs;
+		}
+		return vec;
 	}
 
 	/// Component-wise subtraction
 	inline SHVector& operator-=(const SHVector &v) {
-		if (v.m_coeffs.size() > m_coeffs.size())
-			m_coeffs.resize(v.m_coeffs.size(), 0);
-		for (size_t i=0; i<v.m_coeffs.size(); ++i)
-			m_coeffs[i] -= v.m_coeffs[i];
+		ptrdiff_t extendBy = v.m_coeffs.size() - m_coeffs.size();
+		if (extendBy > 0) {
+			m_coeffs.conservativeResize(v.m_coeffs.rows());
+			m_coeffs.tail(extendBy).setZero();
+			m_bands = v.m_bands;
+		}
+		m_coeffs.head(m_coeffs.size()) -= v.m_coeffs.head(m_coeffs.size());
+		return *this;
+	}
+
+	/// Component-wise subtraction
+	inline SHVector operator-(const SHVector &v) const {
+		SHVector vec(std::max(m_bands, v.m_bands));
+		if (m_bands > v.m_bands) {
+			vec.m_coeffs = m_coeffs;
+			vec.m_coeffs.head(v.m_coeffs.size()) -= v.m_coeffs;
+		} else {
+			vec.m_coeffs = -v.m_coeffs;
+			vec.m_coeffs.head(m_coeffs.size()) += m_coeffs;
+		}
+		return vec;
+	}
+
+	/// Add a scalar multiple of another vector
+	inline SHVector& madd(Float f, const SHVector &v) {
+		ptrdiff_t extendBy = v.m_coeffs.size() - m_coeffs.size();
+		if (extendBy > 0) {
+			m_coeffs.conservativeResize(v.m_coeffs.rows());
+			m_coeffs.tail(extendBy).setZero();
+			m_bands = v.m_bands;
+		}
+		m_coeffs.head(m_coeffs.size()) += v.m_coeffs.head(m_coeffs.size()) * f;
+
 		return *this;
 	}
 
 	/// Scalar multiplication
 	inline SHVector &operator*=(Float f) {
-		std::transform(m_coeffs.begin(), m_coeffs.end(), m_coeffs.begin(),
-			std::bind2nd(std::multiplies<Float>(), f));
+		m_coeffs *= f;
 		return *this;
 	}
 
-	/// Add a scalar multiple of another vector
-	inline void madd(Float f, const SHVector &v) {
-		if (v.m_coeffs.size() > m_coeffs.size())
-			m_coeffs.resize(v.m_coeffs.size(), 0);
-		for (size_t i=0; i<v.m_coeffs.size(); ++i)
-			m_coeffs[i] += f*v.m_coeffs[i];
+	/// Scalar multiplication
+	inline SHVector operator*(Float f) const {
+		SHVector vec(m_bands);
+		vec.m_coeffs = m_coeffs * f;
+		return vec;
 	}
 
 	/// Scalar division
 	inline SHVector &operator/=(Float f) {
-		Float inv = (Float) 1.0f / f;
-		std::transform(m_coeffs.begin(), m_coeffs.end(), m_coeffs.begin(),
-			std::bind2nd(std::multiplies<Float>(), inv));
+		m_coeffs *= (Float) 1 / f;
 		return *this;
+	}
+
+	/// Scalar division
+	inline SHVector operator/(Float f) const {
+		SHVector vec(m_bands);
+		vec.m_coeffs = m_coeffs * (1/f);
+		return vec;
+	}
+
+	/// Negation operator
+	inline SHVector operator-() const {
+		SHVector vec(m_bands);
+		vec.m_coeffs = -m_coeffs;
+		return vec;
 	}
 
 	/// Access coefficient m (in {-l, ..., l}) on band l
@@ -206,29 +261,30 @@ public:
 	/// Check if this function is azumuthally invariant
 	bool isAzimuthallyInvariant() const;
 
-	/// Turn into a string representation
-	std::string toString() const;
+	/// Equality comparison operator
+	inline bool operator==(const SHVector &v) const {
+		return m_bands == v.m_bands && m_coeffs == v.m_coeffs;
+	}
+
+	/// Equality comparison operator
+	inline bool operator!=(const SHVector &v) const {
+		return !operator==(v);
+	}
 
 	/// Dot product
-	inline friend Float dot(const SHVector &v1, const SHVector &v2) {
-		const size_t size = std::min(v1.m_coeffs.size(), v2.m_coeffs.size());
-		return std::inner_product(
-			v1.m_coeffs.begin(), v1.m_coeffs.begin() + size,
-			v2.m_coeffs.begin(), Float()
-		);
-	}
+	inline friend Float dot(const SHVector &v1, const SHVector &v2);
 
 	/// Normalize so that the represented function becomes a valid distribution
 	void normalize();
 
 	/// Compute the second spherical moment (analytic)
-	ublas::matrix<Float> mu2() const;
+	Matrix3x3 mu2() const;
 
 	/// Brute-force search for the minimum value over the sphere
 	Float findMinimum(int res) const;
 
 	/// Add a constant value
-	void offset(Float value);
+	void addOffset(Float value);
 
 	/**
 	 * \brief Convolve the SH representation with the supplied kernel.
@@ -322,6 +378,9 @@ public:
 		return error/denom;
 	}
 
+	/// Turn into a string representation
+	std::string toString() const;
+
 	/// Return a normalization coefficient
 	inline static Float normalization(int l, int m) {
 		if (l < SH_NORMTBL_SIZE)
@@ -346,19 +405,27 @@ public:
 	static void staticShutdown();
 protected:
 	/// Helper function for rotation() -- computes a diagonal block based on the previous level
-	static void rotationBlock(const ublas::matrix<Float> &M1, const ublas::matrix<Float> &Mp, ublas::matrix<Float> &Mn);
+	static void rotationBlock(const SHRotation::Matrix &M1, const SHRotation::Matrix &Mp, SHRotation::Matrix &Mn);
 
 	/// Compute a normalization coefficient
 	static Float computeNormalization(int l, int m);
 private:
 	int m_bands;
-	std::vector<Float> m_coeffs;
+	Eigen::Matrix<Float, Eigen::Dynamic, 1> m_coeffs;
 	static Float *m_normalization;
 };
+
+inline Float dot(const SHVector &v1, const SHVector &v2) {
+	const size_t size = std::min(v1.m_coeffs.size(), v2.m_coeffs.size());
+	return v1.m_coeffs.head(size).dot(v2.m_coeffs.head(size));
+}
 
 /**
  * \brief Implementation of 'Importance Sampling Spherical Harmonics'
  * by W. Jarsz, N. Carr and H. W. Jensen (EUROGRAPHICS 2009)
+ *
+ * \ingroup libcore
+ * \ingroup libpython
  */
 class MTS_EXPORT_CORE SHSampler : public Object {
 public:

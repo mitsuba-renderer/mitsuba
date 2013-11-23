@@ -30,6 +30,7 @@ MTS_NAMESPACE_BEGIN
  * as data is written to the stream.
  *
  * \ingroup libcore
+ * \ingroup libpython
  */
 class MTS_EXPORT_CORE MemoryStream : public Stream {
 public:
@@ -47,6 +48,8 @@ public:
 	 * A memory stream created in this way will never resize the
 	 * underlying buffer. An exception is thrown e.g. when attempting
 	 * to extend its size
+	 *
+	 * \remark This constructor is not available in the python bindings
 	 */
 	MemoryStream(void *ptr, size_t size);
 

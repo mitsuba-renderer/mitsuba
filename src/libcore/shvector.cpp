@@ -87,7 +87,7 @@ Float SHVector::findMinimum(int res = 32) const {
 	return minimum;
 }
 
-void SHVector::offset(Float value) {
+void SHVector::addOffset(Float value) {
 	operator()(0, 0) += 2 * value * (Float) std::sqrt(M_PI);
 }
 
@@ -146,14 +146,13 @@ void SHVector::convolve(const SHVector &kernel) {
 	}
 }
 
-ublas::matrix<Float> SHVector::mu2() const {
+Matrix3x3 SHVector::mu2() const {
 	const Float sqrt5o3 = std::sqrt((Float) 5/ (Float) 3);
 	const Float sqrto3 = std::sqrt((Float) 1/ (Float) 3);
-	ublas::matrix<Float> result(3, 3);
+	Matrix3x3 result;
+	result.setZero();
 
 	SAssert(m_bands > 0);
-
-	result.clear();
 	result(0, 0) = result(1, 1) =
 		result(2, 2) = sqrt5o3*operator()(0,0);
 
@@ -211,16 +210,16 @@ void SHVector::staticShutdown() {
 }
 
 struct RotationBlockHelper {
-	const ublas::matrix<Float> &M1, &Mp;
-	ublas::matrix<Float> &Mn;
+	const SHRotation::Matrix &M1, &Mp;
+	SHRotation::Matrix &Mn;
 	int prevLevel, level;
 
 	inline RotationBlockHelper(
-		const ublas::matrix<Float> &M1,
-		const ublas::matrix<Float> &Mp,
-		ublas::matrix<Float> &Mn)
-		: M1(M1), Mp(Mp), Mn(Mn), prevLevel((int) Mp.size1()/2),
-		level((int) Mp.size1()/2+1) { }
+		const SHRotation::Matrix &M1,
+		const SHRotation::Matrix &Mp,
+		SHRotation::Matrix &Mn)
+		: M1(M1), Mp(Mp), Mn(Mn), prevLevel((int) Mp.rows()/2),
+		level((int) Mp.rows()/2+1) { }
 
 	inline Float delta(int i, int j) const {
 		return (i == j) ? (Float) 1 : (Float) 0;
@@ -310,9 +309,9 @@ struct RotationBlockHelper {
 };
 
 void SHVector::rotationBlock(
-		const ublas::matrix<Float> &M1,
-		const ublas::matrix<Float> &Mp,
-		ublas::matrix<Float> &Mn) {
+		const SHRotation::Matrix &M1,
+		const SHRotation::Matrix &Mp,
+		SHRotation::Matrix &Mn) {
 	RotationBlockHelper rbh(M1, Mp, Mn);
 	rbh.compute();
 }
@@ -343,7 +342,7 @@ void SHVector::rotation(const Transform &t, SHRotation &rot) {
 void SHRotation::operator()(const SHVector &source, SHVector &target) const {
 	SAssert(source.getBands() == target.getBands());
 	for (int l=0; l<source.getBands(); ++l) {
-		const ublas::matrix<Float> &M = blocks[l];
+		const SHRotation::Matrix &M = blocks[l];
 		for (int m1=-l; m1<=l; ++m1) {
 			Float result = 0;
 			for (int m2=-l; m2<=l; ++m2)

@@ -24,8 +24,8 @@ for ver in hasPython:
 
 	if sys.platform != 'win32':
 		# Python has serious aliasing issues. Disable -fstrict-aliasing only for this library
-		pythonEnv.Append(CXXFLAGS = ['-fno-strict-aliasing']);
-		pythonEnv.RemoveFlags(['-fstrict-aliasing', '-ftree-vectorize']);
+		pythonEnv.Append(CXXFLAGS = ['-fno-strict-aliasing'])
+		pythonEnv.RemoveFlags(['-fstrict-aliasing', '-ftree-vectorize'])
 	else:
 		# Create an OBJ file with many addressable sections (or compilation may fail on Windows)
 		pythonEnv.Append(CPPFLAGS = ['/bigobj'])
@@ -36,4 +36,7 @@ for ver in hasPython:
 	if hasPython:
 		libcore_obj = pythonEnv.SharedObject('core_'+ver, 'core.cpp')
 		librender_obj = pythonEnv.SharedObject('render_'+ver, 'render.cpp')
-		libpython = pythonEnv.SharedLibrary('mitsuba_python'+ver, [libcore_obj, librender_obj]);
+		libpython = pythonEnv.SharedLibrary('mitsuba_python'+ver, [libcore_obj, librender_obj])
+
+        if sys.platform == 'darwin':
+            env.AddPostAction(libpython, 'strip -u -r $TARGET')

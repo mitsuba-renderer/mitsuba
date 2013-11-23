@@ -7,30 +7,30 @@
 
 using namespace mitsuba;
 
-bool intersection_get_hasUVPartials(const Intersection &its) { return its.hasUVPartials;  }
-void intersection_set_hasUVPartials(Intersection &its, bool value) { its.hasUVPartials = value;  }
-uint32_t intersection_get_primIndex(const Intersection &its) { return its.primIndex;  }
-void intersection_set_primIndex(Intersection &its, uint32_t value) { its.primIndex = value;  }
+static bool intersection_get_hasUVPartials(const Intersection &its) { return its.hasUVPartials;  }
+static void intersection_set_hasUVPartials(Intersection &its, bool value) { its.hasUVPartials = value;  }
+static uint32_t intersection_get_primIndex(const Intersection &its) { return its.primIndex;  }
+static void intersection_set_primIndex(Intersection &its, uint32_t value) { its.primIndex = value;  }
 
-const Intersection &bsdfsamplingrecord_get_its(const BSDFSamplingRecord &bRec) {
+static const Intersection &bsdfsamplingrecord_get_its(const BSDFSamplingRecord &bRec) {
 	return bRec.its;
 }
 
-unsigned int bsdf_getType_1(const BSDF *bsdf) {
+static unsigned int bsdf_getType_1(const BSDF *bsdf) {
 	return bsdf->getType();
 }
 
-unsigned int bsdf_getType_2(const BSDF *bsdf, int index) {
+static unsigned int bsdf_getType_2(const BSDF *bsdf, int index) {
 	return bsdf->getType(index);
 }
 
-bp::tuple bsdf_sample(const BSDF *bsdf, BSDFSamplingRecord &bRec, const Point2 &sample) {
+static bp::tuple bsdf_sample(const BSDF *bsdf, BSDFSamplingRecord &bRec, const Point2 &sample) {
 	Float pdf;
 	Spectrum result = bsdf->sample(bRec, pdf, sample);
 	return bp::make_tuple(result, pdf);
 }
 
-bp::object shape_rayIntersect(const Shape *shape, const Ray &ray, Float mint, Float maxt) {
+static bp::object shape_rayIntersect(const Shape *shape, const Ray &ray, Float mint, Float maxt) {
 	uint8_t temp[MTS_KD_INTERSECTION_TEMP];
 	Float t;
 
@@ -45,7 +45,7 @@ bp::object shape_rayIntersect(const Shape *shape, const Ray &ray, Float mint, Fl
 	return bp::object(its);
 }
 
-bp::object scene_rayIntersect(const Scene *scene, const Ray &ray) {
+static bp::object scene_rayIntersect(const Scene *scene, const Ray &ray) {
 	Intersection its;
 
 	if (!scene->rayIntersect(ray, its))
@@ -54,7 +54,7 @@ bp::object scene_rayIntersect(const Scene *scene, const Ray &ray) {
 	return bp::object(its);
 }
 
-bp::object scene_rayIntersectAll(const Scene *scene, const Ray &ray) {
+static bp::object scene_rayIntersectAll(const Scene *scene, const Ray &ray) {
 	Intersection its;
 
 	if (!scene->rayIntersectAll(ray, its))
@@ -63,26 +63,26 @@ bp::object scene_rayIntersectAll(const Scene *scene, const Ray &ray) {
 	return bp::object(its);
 }
 
-bp::tuple shape_getCurvature(const Shape *shape, const Intersection &its, bool shadingFrame) {
+static bp::tuple shape_getCurvature(const Shape *shape, const Intersection &its, bool shadingFrame) {
 	Float H, K;
 	shape->getCurvature(its, H, K, shadingFrame);
 	return bp::make_tuple(H, K);
 }
 
-bp::tuple shape_getNormalDerivative(const Shape *shape, const Intersection &its, bool shadingFrame) {
+static bp::tuple shape_getNormalDerivative(const Shape *shape, const Intersection &its, bool shadingFrame) {
 	Vector dpdu, dpdv;
 	shape->getNormalDerivative(its, dpdu, dpdv, shadingFrame);
 	return bp::make_tuple(dpdu, dpdv);
 }
 
-ref<Scene> loadScene(const fs::path &filename, const StringMap &params) {
+static ref<Scene> loadScene(const fs::path &filename, const StringMap &params) {
 	SceneHandler::ParameterMap pmap;
 	for (StringMap::const_iterator it = params.begin(); it != params.end(); ++it)
 		pmap[it->first]=it->second;
 	return SceneHandler::loadScene(filename, pmap);
 }
 
-bp::list scene_getSensors(Scene *scene) {
+static bp::list scene_getSensors(Scene *scene) {
 	bp::list list;
 	ref_vector<Sensor> &sensors = scene->getSensors();
 	for (size_t i=0; i<sensors.size(); ++i)
@@ -90,10 +90,10 @@ bp::list scene_getSensors(Scene *scene) {
 	return list;
 }
 
-bp::object scene_getSensor(Scene *scene) { return cast(scene->getSensor()); }
-bp::object scene_getIntegrator(Scene *scene) { return cast(scene->getIntegrator()); }
+static bp::object scene_getSensor(Scene *scene) { return cast(scene->getSensor()); }
+static bp::object scene_getIntegrator(Scene *scene) { return cast(scene->getIntegrator()); }
 
-bp::list scene_getMeshes(Scene *scene) {
+static bp::list scene_getMeshes(Scene *scene) {
 	bp::list list;
 	std::vector<TriMesh *> &meshes = scene->getMeshes();
 	for (size_t i=0; i<meshes.size(); ++i)
@@ -101,7 +101,7 @@ bp::list scene_getMeshes(Scene *scene) {
 	return list;
 }
 
-bp::list scene_getShapes(Scene *scene) {
+static bp::list scene_getShapes(Scene *scene) {
 	bp::list list;
 	ref_vector<Shape> &shapes = scene->getShapes();
 	for (size_t i=0; i<shapes.size(); ++i)
@@ -109,7 +109,7 @@ bp::list scene_getShapes(Scene *scene) {
 	return list;
 }
 
-bp::list scene_getEmitters(Scene *scene) {
+static bp::list scene_getEmitters(Scene *scene) {
 	bp::list list;
 	ref_vector<Emitter> &emitters = scene->getEmitters();
 	for (size_t i=0; i<emitters.size(); ++i)
@@ -117,7 +117,7 @@ bp::list scene_getEmitters(Scene *scene) {
 	return list;
 }
 
-bp::list scene_getMedia(Scene *scene) {
+static bp::list scene_getMedia(Scene *scene) {
 	bp::list list;
 	ref_vector<Medium> &media = scene->getMedia();
 	for (size_t i=0; i<media.size(); ++i)
@@ -132,32 +132,32 @@ typedef InternalArray<Point2>       InternalPoint2Array;
 typedef InternalArray<Color3>       InternalColor3Array;
 typedef InternalArray<TangentSpace> InternalTangentSpaceArray;
 
-InternalUInt32Array trimesh_getTriangles(TriMesh *triMesh) {
+static InternalUInt32Array trimesh_getTriangles(TriMesh *triMesh) {
 	BOOST_STATIC_ASSERT(sizeof(Triangle) == 3*sizeof(uint32_t));
 	return InternalUInt32Array(triMesh, (uint32_t *) triMesh->getTriangles(), triMesh->getTriangleCount()*3);
 }
 
-InternalPoint3Array trimesh_getVertexPositions(TriMesh *triMesh) {
+static InternalPoint3Array trimesh_getVertexPositions(TriMesh *triMesh) {
 	return InternalPoint3Array(triMesh, triMesh->getVertexPositions(), triMesh->getVertexCount());
 }
 
-InternalNormalArray trimesh_getVertexNormals(TriMesh *triMesh) {
+static InternalNormalArray trimesh_getVertexNormals(TriMesh *triMesh) {
 	return InternalNormalArray(triMesh, triMesh->getVertexNormals(), triMesh->getVertexCount());
 }
 
-InternalPoint2Array trimesh_getVertexTexcoords(TriMesh *triMesh) {
+static InternalPoint2Array trimesh_getVertexTexcoords(TriMesh *triMesh) {
 	return InternalPoint2Array(triMesh, triMesh->getVertexTexcoords(), triMesh->getVertexCount());
 }
 
-InternalColor3Array trimesh_getVertexColors(TriMesh *triMesh) {
+static InternalColor3Array trimesh_getVertexColors(TriMesh *triMesh) {
 	return InternalColor3Array(triMesh, triMesh->getVertexColors(), triMesh->getVertexCount());
 }
 
-InternalTangentSpaceArray trimesh_getUVTangents(TriMesh *triMesh) {
+static InternalTangentSpaceArray trimesh_getUVTangents(TriMesh *triMesh) {
 	return InternalTangentSpaceArray(triMesh, triMesh->getUVTangents(), triMesh->getVertexCount());
 }
 
-ref<TriMesh> trimesh_fromBlender(const std::string &name,
+static ref<TriMesh> trimesh_fromBlender(const std::string &name,
 		size_t faceCount, size_t facePtr, size_t vertexCount, size_t vertexPtr, size_t uvPtr, size_t colPtr, short matID) {
 	return TriMesh::fromBlender(name, faceCount, reinterpret_cast<void *>(facePtr), vertexCount,
 		reinterpret_cast<void *>(vertexPtr), reinterpret_cast<void *>(uvPtr),
@@ -254,22 +254,6 @@ void export_render() {
 		.def("next2D", &Sampler::next2D, BP_RETURN_VALUE)
 		.def("request1DArray", &Sampler::request1DArray)
 		.def("request2DArray", &Sampler::request2DArray);
-
-	BP_CLASS(ReconstructionFilter, ConfigurableObject, bp::no_init)
-		.def("eval", &ReconstructionFilter::eval)
-		.def("evalDiscretized", &ReconstructionFilter::evalDiscretized)
-		.def("getRadius", &ReconstructionFilter::getRadius)
-		.def("getBorderSize", &ReconstructionFilter::getBorderSize);
-
-	BP_SETSCOPE(ReconstructionFilter_class);
-	bp::enum_<ReconstructionFilter::EBoundaryCondition>("EBoundaryCondition")
-		.value("EClamp", ReconstructionFilter::EClamp)
-		.value("ERepeat", ReconstructionFilter::ERepeat)
-		.value("EMirror", ReconstructionFilter::EMirror)
-		.value("EZero", ReconstructionFilter::EZero)
-		.value("EOne", ReconstructionFilter::EOne)
-		.export_values();
-	BP_SETSCOPE(renderModule);
 
 	bp::class_<SceneHandler, boost::noncopyable>("SceneHandler", bp::no_init)
 		.def("loadScene", &loadScene, BP_RETURN_VALUE)
