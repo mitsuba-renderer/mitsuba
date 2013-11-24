@@ -2112,7 +2112,7 @@ void export_core() {
 	Float (*dotSH)(const SHVector &, const SHVector &) = &mitsuba::dot;
 	bp::def("dot", dotSH);
 
-	BP_CLASS(SHSampler, Object, bp::init<int, int>())
+	BP_CLASS(SHSampler, Object, (bp::init<int, int>()))
 		.def("warp", &SHSampler::warp);
 
 	BP_STRUCT(SHRotation, bp::init<int>())
