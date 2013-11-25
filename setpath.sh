@@ -7,6 +7,16 @@
 #    source setpath.sh   for Zsh or Bash
 #
 
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+	echo "The setpath.sh script must be sourced, not executed. In other words, run\n"
+	echo "$ source setpath.sh\n"
+	echo "If you wish to use the Mitsuba Python bindings, you should also specify"
+	echo "your Python version /before/ sourcing setpath.sh, e.g.\n"
+	echo "$ export MITSUBA_PYVER=3.3"
+	echo "$ source setpath.sh"
+	exit 0
+fi
+
 if [ "$BASH_VERSION" ]; then
 	MITSUBA_DIR=$(dirname "$BASH_SOURCE")
 	export MITSUBA_DIR=$(builtin cd "$MITSUBA_DIR"; builtin pwd)

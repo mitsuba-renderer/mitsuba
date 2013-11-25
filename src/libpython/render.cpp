@@ -75,7 +75,11 @@ static bp::tuple shape_getNormalDerivative(const Shape *shape, const Intersectio
 	return bp::make_tuple(dpdu, dpdv);
 }
 
-static ref<Scene> loadScene(const fs::path &filename, const StringMap &params) {
+static ref<Scene> loadScene1(const fs::path &filename) {
+	return SceneHandler::loadScene(filename);
+}
+
+static ref<Scene> loadScene2(const fs::path &filename, const StringMap &params) {
 	SceneHandler::ParameterMap pmap;
 	for (StringMap::const_iterator it = params.begin(); it != params.end(); ++it)
 		pmap[it->first]=it->second;
@@ -256,7 +260,8 @@ void export_render() {
 		.def("request2DArray", &Sampler::request2DArray);
 
 	bp::class_<SceneHandler, boost::noncopyable>("SceneHandler", bp::no_init)
-		.def("loadScene", &loadScene, BP_RETURN_VALUE)
+		.def("loadScene", &loadScene1, BP_RETURN_VALUE)
+		.def("loadScene", &loadScene2, BP_RETURN_VALUE)
 		.staticmethod("loadScene");
 
 	BP_CLASS(RenderJob, Thread, (bp::init<const std::string &, Scene *, RenderQueue *>()))
