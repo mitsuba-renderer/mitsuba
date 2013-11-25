@@ -34,7 +34,7 @@ SHVector::SHVector(Stream *stream) {
 
 void SHVector::serialize(Stream *stream) const {
 	stream->writeInt(m_bands);
-	for (size_t i=0; i<m_coeffs.size(); ++i)
+	for (size_t i=0; i<(size_t) m_coeffs.size(); ++i)
 		stream->writeFloat(m_coeffs[i]);
 }
 
@@ -132,7 +132,7 @@ Float SHVector::evalAzimuthallyInvariant(const Vector &v) const {
 void SHVector::normalize() {
 	Float correction = 1/(2 * (Float) std::sqrt(M_PI)*operator()(0,0));
 
-	for (size_t i=0; i<m_coeffs.size(); ++i)
+	for (size_t i=0; i<(size_t) m_coeffs.size(); ++i)
 		m_coeffs[i] *= correction;
 }
 
