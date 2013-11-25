@@ -21,6 +21,12 @@
 
 MTS_NAMESPACE_BEGIN
 
+void RenderListener::workBeginEvent(const RenderJob *job, const RectangularWorkUnit *wu, int worker) { }
+void RenderListener::workEndEvent(const RenderJob *job, const ImageBlock *wr) { }
+void RenderListener::workCanceledEvent(const RenderJob *job, const Point2i &offset, const Vector2i &size) { }
+void RenderListener::refreshEvent(const RenderJob *job) { }
+void RenderListener::finishJobEvent(const RenderJob *job, bool cancelled) { }
+
 RenderQueue::RenderQueue() {
 	m_mutex = new Mutex();
 	m_joinMutex = new Mutex();
@@ -138,5 +144,5 @@ void RenderQueue::signalRefresh(const RenderJob *job) {
 }
 
 MTS_IMPLEMENT_CLASS(RenderQueue, false, Object)
-MTS_IMPLEMENT_CLASS(RenderListener, true, Object)
+MTS_IMPLEMENT_CLASS(RenderListener, false, Object)
 MTS_NAMESPACE_END

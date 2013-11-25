@@ -514,6 +514,7 @@ def main():
     app = QApplication(sys.argv)
     view = MitsubaView()
     view.show()
+    view.raise_()
     retval = app.exec_()
     view.shutdownMitsuba()
     sys.exit(retval)

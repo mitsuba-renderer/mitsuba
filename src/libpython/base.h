@@ -166,6 +166,7 @@ namespace boost {
 #include <boost/python.hpp>
 #include <boost/python/suite/indexing/vector_indexing_suite.hpp>
 #include <boost/python/suite/indexing/map_indexing_suite.hpp>
+#include <boost/thread/mutex.hpp>
 
 namespace bp = boost::python;
 
@@ -204,6 +205,32 @@ public:
 	}
 };
 
+class AcquireGIL {
+public:
+    inline AcquireGIL() {
+        state = PyGILState_Ensure();
+    }
+
+    inline ~AcquireGIL() {
+        PyGILState_Release(state);
+    }
+private:
+    PyGILState_STATE state;
+};
+
+class ReleaseGIL {
+public:
+    inline ReleaseGIL() {
+        state = PyEval_SaveThread();
+    }
+
+    inline ~ReleaseGIL() {
+        PyEval_RestoreThread(state);
+    }
+private:
+    PyThreadState *state;
+};
+
 template <typename Value> struct InternalArray {
 public:
 	InternalArray(mitsuba::Object *obj, Value *ptr, size_t length) : obj(obj), ptr(ptr), length(length) { }
@@ -227,6 +254,24 @@ private:
 	Value *ptr;
 	size_t length;
 };
+
+// Trivial single threaded scoped lock to detect reentrant code
+struct TrivialScopedLock {
+    TrivialScopedLock(bool &inside) : inside(inside) {
+        inside = true;
+    }
+
+    ~TrivialScopedLock() {
+        inside = false;
+    }
+    bool &inside;
+};
+
+#define CALLBACK_SYNC_GIL() \
+    if (m_locked) \
+        return; \
+	AcquireGIL gil; \
+    TrivialScopedLock lock(m_locked)
 
 #define BP_INTERNAL_ARRAY(Name) \
 	BP_STRUCT(Name, bp::no_init) \

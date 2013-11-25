@@ -168,6 +168,65 @@ static ref<TriMesh> trimesh_fromBlender(const std::string &name,
 		reinterpret_cast<void *>(colPtr), matID);
 }
 
+class RenderListenerWrapper : public RenderListener {
+public:
+	RenderListenerWrapper(PyObject *self) : m_self(self), m_locked(false) { Py_INCREF(m_self); }
+
+	void workBeginEvent(const RenderJob *job, const RectangularWorkUnit *wu, int worker) {
+        CALLBACK_SYNC_GIL();
+   		bp::call_method<void>(m_self, "workBeginEvent", bp::ptr(job), bp::ptr(wu), worker);
+	}
+
+	void workEndEvent(const RenderJob *job, const ImageBlock *wr) {
+        CALLBACK_SYNC_GIL();
+   		bp::call_method<void>(m_self, "workEndEvent", bp::ptr(job), bp::ptr(wr));
+	}
+
+	void workCanceledEvent(const RenderJob *job, const Point2i &offset,
+			const Vector2i &size) {
+        CALLBACK_SYNC_GIL();
+		bp::call_method<void>(m_self, "workCanceledEvent", bp::ptr(job), offset, size);
+	}
+
+	void refreshEvent(const RenderJob *job) {
+        CALLBACK_SYNC_GIL();
+		bp::call_method<void>(m_self, "refreshEvent", bp::ptr(job));
+	}
+
+	void finishJobEvent(const RenderJob *job, bool cancelled) {
+        CALLBACK_SYNC_GIL();
+		bp::call_method<void>(m_self, "finishJobEvent", bp::ptr(job), cancelled);
+	}
+
+	virtual ~RenderListenerWrapper() {
+		Py_DECREF(m_self);
+	}
+private:
+	PyObject *m_self;
+    bool m_locked;
+};
+
+static void renderQueue_join(RenderQueue *queue) {
+	ReleaseGIL gil;
+	queue->join();
+}
+
+static void renderQueue_waitLeft(RenderQueue *queue, size_t count) {
+	ReleaseGIL gil;
+	queue->waitLeft(count);
+}
+
+static void scene_cancel(Scene *scene) {
+	ReleaseGIL gil;
+	scene->cancel();
+}
+
+static void renderJob_cancel(RenderJob *job) {
+	ReleaseGIL gil;
+	job->cancel();
+}
+
+
 void export_render() {
 	bp::object renderModule(
 		bp::handle<>(bp::borrowed(PyImport_AddModule("mitsuba.render"))));
@@ -208,7 +267,7 @@ void export_render() {
 		.def("render", &Scene::render)
 		.def("postprocess", &Scene::postprocess)
 		.def("flush", &Scene::flush)
-		.def("cancel", &Scene::cancel)
+		.def("cancel", scene_cancel)
 		.def("rayIntersect", &scene_rayIntersect)
 		.def("rayIntersectAll", &scene_rayIntersectAll)
 		.def("evalTransmittance", &Scene::evalTransmittance)
@@ -267,15 +326,18 @@ void export_render() {
 	BP_CLASS(RenderJob, Thread, (bp::init<const std::string &, Scene *, RenderQueue *>()))
 		.def(bp::init<const std::string &, Scene *, RenderQueue *, int, bp::optional<int, int> >())
 		.def("flush", &RenderJob::flush)
-		.def("cancel", &RenderJob::cancel)
+		.def("cancel", renderJob_cancel)
 		.def("wait", &RenderJob::wait);
 
 	BP_CLASS(RenderQueue, Object, bp::init<>())
 		.def("getJobCount", &RenderQueue::getJobCount)
 		.def("addJob", &RenderQueue::addJob)
 		.def("removeJob", &RenderQueue::removeJob)
-		.def("waitLeft", &RenderQueue::waitLeft)
-		.def("join", &RenderQueue::join)
+		.def("getRenderTime", &RenderQueue::getRenderTime)
+		.def("registerListener", &RenderQueue::registerListener)
+		.def("unregisterListener", &RenderQueue::unregisterListener)
+		.def("waitLeft", renderQueue_waitLeft)
+		.def("join", renderQueue_join)
 		.def("flush", &RenderQueue::flush);
 
 	BP_STRUCT(Intersection, bp::init<>())
@@ -575,6 +637,45 @@ void export_render() {
 		.def("perlinNoise", &Noise::perlinNoise)
 		.def("turbulence", &Noise::turbulence)
 		.def("fbm", &Noise::fbm);
+
+	void (ImageBlock::*imageBlock_put1)(const ImageBlock *) = &ImageBlock::put;
+	bool (ImageBlock::*imageBlock_put2)(const Point2 &, const Spectrum &, Float) = &ImageBlock::put;
+	Bitmap *(ImageBlock::*imageBlock_getBitmap)() = &ImageBlock::getBitmap;
+
+	BP_CLASS(ImageBlock, WorkResult, (bp::init<Bitmap::EPixelFormat, const Vector2i &, bp::optional<const ReconstructionFilter *, int, bool> >()))
+		.def("setOffset", &ImageBlock::setOffset)
+		.def("getOffset", &ImageBlock::getOffset, BP_RETURN_VALUE)
+		.def("setSize", &ImageBlock::setSize)
+		.def("getSize", &ImageBlock::getSize, BP_RETURN_VALUE)
+		.def("getWidth", &ImageBlock::getWidth)
+		.def("getHeight", &ImageBlock::getHeight)
+		.def("setWarn", &ImageBlock::setWarn)
+		.def("getWarn", &ImageBlock::getWarn)
+		.def("getBorderSize", &ImageBlock::getBorderSize)
+		.def("getChannelCount", &ImageBlock::getChannelCount)
+		.def("getBitmap", imageBlock_getBitmap, BP_RETURN_VALUE)
+		.def("clear", &ImageBlock::clear)
+		.def("put", imageBlock_put1)
+		.def("put", imageBlock_put2)
+		.def("clone", &ImageBlock::clone, BP_RETURN_VALUE)
+		.def("copyTo", &ImageBlock::copyTo);
+
+	BP_CLASS(RectangularWorkUnit, WorkUnit, bp::init<>())
+		.def("getOffset", &RectangularWorkUnit::getOffset, BP_RETURN_VALUE)
+		.def("setOffset", &RectangularWorkUnit::setOffset)
+		.def("getSize", &RectangularWorkUnit::getSize, BP_RETURN_VALUE)
+		.def("setSize", &RectangularWorkUnit::setSize);
+
+	bp::class_<RenderListener, ref<RenderListenerWrapper>, boost::noncopyable>
+			RenderListener_class("RenderListener", bp::init<>());
+	bp::register_ptr_to_python<RenderListener*>();
+	bp::implicitly_convertible<ref<RenderListenerWrapper>, ref<RenderListener> >();
+
+	RenderListener_class.def("workBeginEvent", &RenderListener::workBeginEvent)
+		.def("workEndEvent", &RenderListener::workEndEvent)
+		.def("workCanceledEvent", &RenderListener::workCanceledEvent)
+		.def("refreshEvent", &RenderListener::refreshEvent)
+		.def("finishJobEvent", &RenderListener::finishJobEvent);
 
 	bp::detail::current_scope = oldScope;
 }

@@ -323,11 +323,15 @@ static void mts_log(ELogLevel level, const std::string &msg) {
 
 class FormatterWrapper : public Formatter {
 public:
-	FormatterWrapper(PyObject *self) : m_self(self) { Py_INCREF(m_self); }
+	FormatterWrapper(PyObject *self) : m_self(self), m_locked(false) { Py_INCREF(m_self); }
 
 	std::string format(ELogLevel logLevel, const Class *theClass,
 			const Thread *thread, const std::string &text,
 			const char *file, int line) {
+        if (m_locked)
+            return "";
+        AcquireGIL gil;
+        TrivialScopedLock lock(m_locked);
 		return bp::call_method<std::string>(m_self, "format", logLevel,
 				bp::ptr(const_cast<Class *>(theClass)),
 				bp::ptr(const_cast<Thread *>(thread)), text, file, line);
@@ -338,20 +342,23 @@ public:
 	}
 private:
 	PyObject *m_self;
+    bool m_locked;
 };
 
 class AppenderWrapper : public Appender {
 public:
-	AppenderWrapper(PyObject *self) : m_self(self) { Py_INCREF(m_self); }
+	AppenderWrapper(PyObject *self) : m_self(self), m_locked(false) { Py_INCREF(m_self); }
 
 	void append(ELogLevel level, const std::string &text) {
+        CALLBACK_SYNC_GIL();
 		bp::call_method<void>(m_self, "append", level, text);
 	}
 
 	void logProgress(Float progress, const std::string &name,
 		const std::string &formatted, const std::string &eta,
 		const void *ptr) {
-		bp::call_method<void>(m_self, "logProgress", name, formatted, eta);
+        CALLBACK_SYNC_GIL();
+		bp::call_method<void>(m_self, "logProgress", progress, name, formatted, eta);
 	}
 
 	virtual ~AppenderWrapper() {
@@ -359,6 +366,7 @@ public:
 	}
 private:
 	PyObject *m_self;
+    bool m_locked;
 };
 
 static Spectrum *spectrum_array_constructor(bp::list list) {
@@ -434,6 +442,11 @@ static bp::object aabb_rayIntersect2(AABB *aabb, const Ray &ray, Float nearT, Fl
 		return bp::object();
 }
 
+static void thread_join(Thread *thread) {
+	ReleaseGIL gil;
+	thread->join();
+}
+
 static Vector transform_mul_vector(Transform *transform, const Vector &vector) { return transform->operator()(vector); }
 static Vector4 transform_mul_vector4(Transform *transform, const Vector4 &vector) { return transform->operator()(vector); }
 static Normal transform_mul_normal(Transform *transform, const Normal &normal) { return transform->operator()(normal); }
@@ -499,10 +512,16 @@ static ConfigurableObject *pluginmgr_create(PluginManager *manager, bp::dict dic
 		}
 	}
 
-	ConfigurableObject *object = manager->createObject(properties);
+	ConfigurableObject *object;
+	if (properties.getPluginName() == "scene")
+		object = new Scene(properties);
+	else
+		object = manager->createObject(properties);
+
 	for (std::map<std::string, ConfigurableObject *>::iterator it = children.begin();
 		it != children.end(); ++it)
 		object->addChild(it->first, it->second);
+
 	object->configure();
 	return object;
 }
@@ -1067,7 +1086,7 @@ void export_core() {
 		.def("registerUnmanagedThread", &Thread::registerUnmanagedThread, BP_RETURN_VALUE)
 		.def("sleep", &Thread::sleep)
 		.def("detach", &Thread::detach)
-		.def("join", &Thread::join)
+		.def("join", thread_join)
 		.def("start", &Thread::start)
 		.staticmethod("sleep")
 		.staticmethod("getThread")
@@ -2122,6 +2141,8 @@ void export_core() {
 }
 
 BOOST_PYTHON_MODULE(mitsuba) {
+	PyEval_InitThreads();
+
 	bp::object package = bp::scope();
 	package.attr("__path__") = "mitsuba";
 
