@@ -581,9 +581,11 @@ class MitsubaView(QMainWindow):
 
     def __init__(self):
         super(MitsubaView, self).__init__()
-        self.setWindowTitle('Mitsuba/Qt demo')
+        # Initialize Mitsuba
         self.initializeMitsuba()
-        self.qimage = self.render(self.createScene())
+        self.job = self.createRenderJob()
+        # Initialize the user interface
+        self.setWindowTitle('Mitsuba/Qt demo')
         status = self.statusBar()
         status.setContentsMargins(0,0,5,0)
         self.progress = QProgressBar(status)
@@ -605,7 +607,9 @@ class MitsubaView(QMainWindow):
         self.renderProgress.connect(self.progress.setValue, Qt.QueuedConnection)
         self.renderingCompleted.connect(handleRenderingCompleted,
             Qt.QueuedConnection)
+        # Start the rendering process
         status.showMessage("Rendering ..")
+        self.job.start()
 
     def initializeMitsuba(self):
         # Start up the scheduling system with one worker per local core
@@ -629,13 +633,41 @@ class MitsubaView(QMainWindow):
         logger.clearAppenders()
         logger.addAppender(CustomAppender())
 
+        # Listener to update bitmap subregions when blocks finish rendering
+        class CustomListener(RenderListener):
+            def __init__(self):
+                super(CustomListener, self).__init__()
+                self.time = 0
+            def workBeginEvent(self2, job, wu, thr):
+                self.bitmap.drawRect(wu.getOffset(), wu.getSize(), Spectrum(1.0))
+                now = time.time()
+                if now - self2.time > .25:
+                    self.viewUpdated.emit()
+                    self2.time = now
+            def workEndEvent(self2, job, wr):
+                self.film.develop(wr.getOffset(), wr.getSize(),
+                    wr.getOffset(), self.bitmap)
+                now = time.time()
+                if now - self2.time > .25:
+                    self.viewUpdated.emit()
+                    self2.time = now
+            def refreshEvent(self2, job):
+                self.film.develop(Point2i(0), self.bitmap.getSize(), Point2i(0), self.bitmap)
+                self.viewUpdated.emit()
+            def finishJobEvent(self2, job, cancelled):
+                self2.refreshEvent(job)
+                self.renderingCompleted.emit(cancelled)
+
+        # Create a custom listener and register it with the image queue
+        self.queue.registerListener(CustomListener())
+
     def closeEvent(self, e):
         self.job.cancel()
         self.queue.join()
         self.scheduler.stop()
 
-    def createScene(self):
-        scene = self.pmgr.create({
+    def createRenderJob(self):
+        self.scene = self.pmgr.create({
             'type' : 'scene',
             'sphere' : {
                 'type' : 'sphere',
@@ -652,49 +684,19 @@ class MitsubaView(QMainWindow):
                 }
             }
         })
-        return scene
 
-    def render(self, scene):
-        film = scene.getFilm()
-        size = film.getSize()
+        self.film = self.scene.getFilm()
+        size = self.film.getSize()
 
         # Bitmap that will store pixels of the developed film
         self.bitmap = Bitmap(Bitmap.ERGB, Bitmap.EUInt8, size)
         self.bitmap.clear()
 
-        # Listener to update bitmap subregions when blocks finish rendering
-        class CustomListener(RenderListener):
-            def __init__(self):
-                super(CustomListener, self).__init__()
-                self.time = 0
-            def workBeginEvent(self2, job, wu, thr):
-                self.bitmap.drawRect(wu.getOffset(), wu.getSize(), Spectrum(1.0))
-                now = time.time()
-                if now - self2.time > .25:
-                    self.viewUpdated.emit()
-                    self2.time = now
-            def workEndEvent(self2, job, wr):
-                film.develop(wr.getOffset(), wr.getSize(),
-                    wr.getOffset(), self.bitmap)
-                now = time.time()
-                if now - self2.time > .25:
-                    self.viewUpdated.emit()
-                    self2.time = now
-            def refreshEvent(self2, job):
-                film.develop(Point2i(0), size, Point2i(0), self.bitmap)
-                self.viewUpdated.emit()
-            def finishJobEvent(self2, job, cancelled):
-                self2.refreshEvent(job)
-                self.renderingCompleted.emit(cancelled)
-
-        # Create a render job and insert it into the queue
-        self.job = RenderJob('rjob', scene, self.queue)
-        self.queue.registerListener(CustomListener())
-        self.job.start()
-
-        # Return a QImage that directly points into the contents of self.bitmap
-        return QImage(self.bitmap.getNativeBuffer(),
+        # Create a QImage that directly points into the contents of self.bitmap
+        self.qimage = QImage(self.bitmap.getNativeBuffer(),
             size.x, size.y, QImage.Format_RGB888)
+
+        return RenderJob('rjob', self.scene, self.queue)
 
     def keyPressEvent(self, e):
         if e.key() == Qt.Key_Escape:
