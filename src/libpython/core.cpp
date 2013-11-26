@@ -26,6 +26,34 @@
 
 using namespace mitsuba;
 
+bool check_python_exception() {
+    AcquireGIL gil;
+
+	PyObject *exception_ = NULL, *value_ = NULL, *traceback_ = NULL;
+	PyErr_Fetch(&exception_, &value_, &traceback_);
+
+	if (!exception_)
+		return false;
+
+	PyErr_NormalizeException(&exception_, &value_, &traceback_);
+
+	bp::object exception(bp::handle<>(bp::allow_null(exception_)));
+	bp::object value(bp::handle<>(bp::allow_null(value_)));
+	bp::object traceback(bp::handle<>(bp::allow_null(traceback_)));
+
+	PyErr_Clear();
+
+	bp::object traceback_package(bp::import("traceback"));
+	bp::object format_exception = traceback_package.attr("format_exception");
+	bp::object formatted_list = format_exception(exception, value, traceback);
+	bp::object formatted = bp::str("\n").join(formatted_list);
+
+	SLog(EWarn, "Caught a Python exception: %s",
+		bp::extract<std::string>(formatted)().c_str());
+
+	return true;
+}
+
 static void initializeFramework() {
 	/* Initialize the core framework */
 	Class::staticInitialization();
@@ -40,6 +68,7 @@ static void initializeFramework() {
 	Scheduler::staticInitialization();
 	SHVector::staticInitialization();
 	SceneHandler::staticInitialization();
+	Thread::registerCrashHandler(&check_python_exception);
 }
 
 static void shutdownFramework() {
@@ -901,7 +930,7 @@ struct PythonIntegrandFromPythonCallable {
 	}
 };
 
-bp::tuple GaussLobattoIntegrator_integrate(GaussLobattoIntegrator *integrator,
+static bp::tuple GaussLobattoIntegrator_integrate(GaussLobattoIntegrator *integrator,
 		const GaussLobattoIntegrator::Integrand &integrand, Float a, Float b) {
 	size_t nEvals = 0;
 	Float result = integrator->integrate(integrand, a, b, &nEvals);
@@ -1177,6 +1206,7 @@ void export_core() {
 		.def("getComponentFormat", &Bitmap::getComponentFormat)
 		.def("getSize", &Bitmap::getSize, BP_RETURN_VALUE)
 		.def("getPixelCount", &Bitmap::getPixelCount)
+		.def("average", &Bitmap::average)
 		.def("getWidth", &Bitmap::getWidth)
 		.def("getHeight", &Bitmap::getHeight)
 		.def("getChannelCount", &Bitmap::getChannelCount)

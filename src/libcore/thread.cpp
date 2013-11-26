@@ -19,6 +19,7 @@
 #include <mitsuba/core/lock.h>
 #include <mitsuba/core/fresolver.h>
 #include <mitsuba/core/atomic.h>
+
 #if defined(MTS_OPENMP)
 # include <omp.h>
 #endif
@@ -97,6 +98,10 @@ struct Thread::ThreadPrivate {
 		priority(Thread::ENormalPriority), coreAffinity(-1),
 	    critical(false) { }
 };
+
+static std::vector<bool (*)(void)> __crashHandlers;
+static std::vector<Thread *> __unmanagedThreads;
+static boost::mutex __unmanagedMutex;
 
 /**
  * Dummy class to associate a thread identity with the main thread
@@ -405,12 +410,6 @@ void Thread::dispatch(Thread *thread) {
 		Log(warnLogLevel, "Fatal error: uncaught exception: \"%s\"", e.what());
 		if (thread->d->critical)
 			_exit(-1);
-	} catch (...) {
-		ELogLevel warnLogLevel = thread->getLogger()->getErrorLevel() == EError
-			? EWarn : EInfo;
-		Log(warnLogLevel, "Fatal error - uncaught exception (unknown type)");
-		if (thread->d->critical)
-			_exit(-1);
 	}
 
 	thread->exit();
@@ -467,9 +466,6 @@ std::string Thread::toString() const {
 	return oss.str();
 }
 
-static std::vector<Thread *> __unmanagedThreads;
-static boost::mutex __unmanagedMutex;
-
 #if defined(MTS_OPENMP) && defined(__OSX__)
 static int __omp_threadCount = 0;
 static pthread_key_t __omp_key;
@@ -525,6 +521,10 @@ Thread *Thread::registerUnmanagedThread(const std::string &name) {
 		__unmanagedThreads.push_back((UnmanagedThread *) thread);
 	}
 	return thread;
+}
+
+void Thread::registerCrashHandler(bool (*handler)(void)) {
+	__crashHandlers.push_back(handler);
 }
 
 void Thread::staticShutdown() {

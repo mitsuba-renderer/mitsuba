@@ -291,7 +291,9 @@ typedef std::map<std::string, std::string> StringMap;
 
 extern void export_core();
 extern void export_render();
+extern void export_ad();
 extern bp::object cast(mitsuba::ConfigurableObject *obj);
+extern bool check_python_exception();
 
 #endif /* __PYTHON_BASE_H */
 

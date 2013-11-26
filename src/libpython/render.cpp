@@ -174,28 +174,38 @@ public:
 
 	void workBeginEvent(const RenderJob *job, const RectangularWorkUnit *wu, int worker) {
         CALLBACK_SYNC_GIL();
-   		bp::call_method<void>(m_self, "workBeginEvent", bp::ptr(job), bp::ptr(wu), worker);
+		try {
+	   		bp::call_method<void>(m_self, "workBeginEvent", bp::ptr(job), bp::ptr(wu), worker);
+		} catch (bp::error_already_set &) { check_python_exception(); }
 	}
 
 	void workEndEvent(const RenderJob *job, const ImageBlock *wr) {
         CALLBACK_SYNC_GIL();
-   		bp::call_method<void>(m_self, "workEndEvent", bp::ptr(job), bp::ptr(wr));
+		try {
+   			bp::call_method<void>(m_self, "workEndEvent", bp::ptr(job), bp::ptr(wr));
+		} catch (bp::error_already_set &) { check_python_exception(); }
 	}
 
 	void workCanceledEvent(const RenderJob *job, const Point2i &offset,
 			const Vector2i &size) {
         CALLBACK_SYNC_GIL();
-		bp::call_method<void>(m_self, "workCanceledEvent", bp::ptr(job), offset, size);
+		try {
+			bp::call_method<void>(m_self, "workCanceledEvent", bp::ptr(job), offset, size);
+		} catch (bp::error_already_set &) { check_python_exception(); }
 	}
 
 	void refreshEvent(const RenderJob *job) {
         CALLBACK_SYNC_GIL();
-		bp::call_method<void>(m_self, "refreshEvent", bp::ptr(job));
+		try {
+			bp::call_method<void>(m_self, "refreshEvent", bp::ptr(job));
+		} catch (bp::error_already_set &) { check_python_exception(); }
 	}
 
 	void finishJobEvent(const RenderJob *job, bool cancelled) {
         CALLBACK_SYNC_GIL();
-		bp::call_method<void>(m_self, "finishJobEvent", bp::ptr(job), cancelled);
+		try {
+			bp::call_method<void>(m_self, "finishJobEvent", bp::ptr(job), cancelled);
+		} catch (bp::error_already_set &) { check_python_exception(); }
 	}
 
 	virtual ~RenderListenerWrapper() {
