@@ -92,6 +92,12 @@ public:
 	 */
 	inline bool isInteractive() const { return m_interactive; }
 
+	/// Get a pointer to the underlying scene
+	inline Scene *getScene() { return m_scene.get(); }
+
+	/// Get a pointer to the underlying scene (const version)
+	inline const Scene *getScene() const { return m_scene.get(); }
+
 	MTS_DECLARE_CLASS()
 protected:
 	/// Virtual destructor
