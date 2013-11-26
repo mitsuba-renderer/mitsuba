@@ -143,8 +143,8 @@ public:
 
 struct path_to_python_str {
 	static PyObject* convert(fs::path const& path) {
-		return boost::python::incref(
-			boost::python::object(path.string()).ptr());
+		return bp::incref(
+			bp::object(path.string()).ptr());
 	}
 };
 
@@ -672,7 +672,7 @@ static bp::tuple DiscreteDistribution_sampleReuse(DiscreteDistribution *d, Float
 }
 
 static Float DiscreteDistribution_getitem(DiscreteDistribution *d, int i) {
-	if (i < 0 || i >= d->size()) {
+	if (i < 0 || i >= (int) d->size()) {
 		SLog(EError, "Index %i is out of range!", i);
 		return 0.0f;
 	}
@@ -846,7 +846,7 @@ struct NativeBuffer {
 				return 0;
 		}
 
-		return boost::python::incref(result.ptr());
+		return bp::incref(result.ptr());
 	}
 };
 
@@ -921,6 +921,8 @@ void export_core() {
 
 	BP_SETSCOPE(coreModule);
 
+	coreModule.attr("__path__") = "mitsuba.core";
+
 	/* Basic STL containers */
 	bp::class_<StringVector>("StringVector")
 		.def(bp::vector_indexing_suite<StringVector>());
@@ -939,9 +941,9 @@ void export_core() {
 	bp::def("Log", &mts_log);
 
 	/* Basic constants */
-	boost::python::scope().attr("Epsilon") = Epsilon;
-	boost::python::scope().attr("ShadowEpsilon") = ShadowEpsilon;
-	boost::python::scope().attr("DeltaEpsilon") = DeltaEpsilon;
+	coreModule.attr("Epsilon") = Epsilon;
+	coreModule.attr("ShadowEpsilon") = ShadowEpsilon;
+	coreModule.attr("DeltaEpsilon") = DeltaEpsilon;
 
 	bp::class_<Class, boost::noncopyable>("Class", bp::no_init)
 		.def("getName", &Class::getName, BP_RETURN_CONSTREF)
@@ -1762,8 +1764,8 @@ void export_core() {
 	bp::def("normalize", normalize4);
 	bp::def("cross", cross3);
 
-	bp::scope().attr("Vector") = bp::scope().attr("Vector3");
-	bp::scope().attr("Point") = bp::scope().attr("Point3");
+	coreModule.attr("Vector") = coreModule.attr("Vector3");
+	coreModule.attr("Point") = coreModule.attr("Point3");
 
 	bp::class_<Matrix4x4>("Matrix4x4", bp::init<>())
 		.def(bp::init<Float>())

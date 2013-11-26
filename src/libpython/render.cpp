@@ -234,6 +234,7 @@ void export_render() {
 	PyObject *oldScope = bp::detail::current_scope;
 
 	BP_SETSCOPE(renderModule);
+	renderModule.attr("__path__") = "mitsuba.render";
 
 	BP_INTERNAL_ARRAY(InternalUInt32Array);
 	BP_INTERNAL_ARRAY(InternalPoint3Array);
