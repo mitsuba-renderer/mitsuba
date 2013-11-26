@@ -39,3 +39,5 @@ for ver in hasPython:
 
 	if sys.platform == 'darwin':
 		env.AddPostAction(libpython, 'strip -u -r $TARGET')
+	elif 'linux' in sys.platform:
+		env.AddPostAction(libpython, 'strip $TARGET')

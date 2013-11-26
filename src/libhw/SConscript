@@ -10,8 +10,7 @@ if sys.platform == 'win32':
 	libhw_objects += ['wglsession.cpp',
 		'wgldevice.cpp',
 		'wglrenderer.cpp']
-
-elif sys.platform == 'linux2':
+elif 'linux' in sys.platform:
 	libhw_objects += ['x11session.cpp',
 		'x11device.cpp',
 		'glxdevice.cpp',

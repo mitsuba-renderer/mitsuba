@@ -533,7 +533,7 @@ class MitsubaView(QMainWindow):
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.drawImage(QPoint(0, 0), self.image)
-        del painter
+        painter.end()
 
 def main():
     app = QApplication(sys.argv)
@@ -652,7 +652,8 @@ class MitsubaView(QMainWindow):
                     self.viewUpdated.emit()
                     self2.time = now
             def refreshEvent(self2, job):
-                self.film.develop(Point2i(0), self.bitmap.getSize(), Point2i(0), self.bitmap)
+                self.film.develop(Point2i(0), self.bitmap.getSize(),
+                    Point2i(0), self.bitmap)
                 self.viewUpdated.emit()
             def finishJobEvent(self2, job, cancelled):
                 self2.refreshEvent(job)
@@ -688,11 +689,11 @@ class MitsubaView(QMainWindow):
         self.film = self.scene.getFilm()
         size = self.film.getSize()
 
-        # Bitmap that will store pixels of the developed film
+        # Mitsuba Bitmap that will store pixels of the developed film
         self.bitmap = Bitmap(Bitmap.ERGB, Bitmap.EUInt8, size)
         self.bitmap.clear()
 
-        # Create a QImage that directly points into the contents of self.bitmap
+        # Create a Qt Image that directly points into the contents of self.bitmap
         self.qimage = QImage(self.bitmap.getNativeBuffer(),
             size.x, size.y, QImage.Format_RGB888)
 
@@ -706,7 +707,7 @@ class MitsubaView(QMainWindow):
         super(MitsubaView, self).paintEvent(event)
         painter = QPainter(self)
         painter.drawImage(QPoint(0, 0), self.qimage)
-        del painter
+        painter.end()
 
 def main():
     import signal

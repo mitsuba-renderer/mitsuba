@@ -880,7 +880,7 @@ ref<TriMesh> TriMesh::fromBlender(const std::string &name,
 	boost::unordered_map<uint32_t, uint32_t> vertexMap;
 	uint32_t triangleCtr = 0, vertexCtr = 0;
 
-	for (int i=0; i<faceCount; ++i) {
+	for (uint32_t i=0; i<faceCount; ++i) {
 		const MFace &face = facePtr[i];
 
 		if (face.mat_nr == mat_nr) {
@@ -896,13 +896,13 @@ ref<TriMesh> TriMesh::fromBlender(const std::string &name,
 	ref<TriMesh> triMesh = new TriMesh(name, triangleCtr, vertexCtr, true,
 		uvPtr != NULL, colPtr != NULL);
 
-	uint32_t *triangles     = (uint32_t *) triMesh->getTriangles();
-	Point *vertexPositions  = (Point *) triMesh->getVertexPositions();
-	Normal *vertexNormals   = (Normal *) triMesh->getVertexNormals();
-	Color3 *vertexColors    = (Color3 *)  triMesh->getVertexColors();
-	Point2 *vertexTexcoords = (Point2 *)  triMesh->getVertexTexcoords();
+	uint32_t *triangles       = (uint32_t *) triMesh->getTriangles();
+	Point    *vertexPositions = (Point *)    triMesh->getVertexPositions();
+	Normal   *vertexNormals   = (Normal *)   triMesh->getVertexNormals();
+	Color3   *vertexColors    = (Color3 *)   triMesh->getVertexColors();
+	Point2   *vertexTexcoords = (Point2 *)   triMesh->getVertexTexcoords();
 
-	for (int i=0; i<faceCount; ++i) {
+	for (uint32_t i=0; i<faceCount; ++i) {
 		const MFace &face = facePtr[i];
 
 		if (face.mat_nr == mat_nr) {
