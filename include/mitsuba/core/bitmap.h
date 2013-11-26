@@ -732,6 +732,9 @@ public:
 	/// Vertically flip the image contents
 	void flipVertically();
 
+	/// Compute the average value of the bitmap
+	Spectrum average() const;
+
 	/// Perform the specified rotatation & flip operation
 	ref<Bitmap> rotateFlip(ERotateFlipType type) const;
 

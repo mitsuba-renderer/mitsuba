@@ -592,6 +592,59 @@ void Bitmap::accumulate(const Bitmap *bitmap, Point2i sourceOffset,
 	}
 }
 
+Spectrum Bitmap::average() const {
+	if (m_gamma != 1 || (m_componentFormat != EFloat16 &&
+				m_componentFormat != EFloat32 && m_componentFormat != EFloat64))
+		Log(EError, "Bitmap::average() assumes a floating point image with linear gamma!");
+
+	size_t pixelCount = (size_t) m_size.x * (size_t) m_size.y;
+	Float *accum = new Float[m_channelCount];
+	memset(accum, 0, sizeof(Float) * m_channelCount);
+
+	switch (m_componentFormat) {
+		case EFloat16: {
+				const half *ptr = getFloat16Data();
+				for (size_t i=0; i<pixelCount; ++i)
+					for (int ch=0; ch<m_channelCount; ++ch)
+						accum[ch] += (Float) *ptr++;
+			}
+			break;
+
+		case EFloat32: {
+				const float *ptr = getFloat32Data();
+				for (size_t i=0; i<pixelCount; ++i)
+					for (int ch=0; ch<m_channelCount; ++ch)
+						accum[ch] += (Float) *ptr++;
+			}
+			break;
+
+		case EFloat64: {
+				const double *ptr = getFloat64Data();
+				for (size_t i=0; i<pixelCount; ++i)
+					for (int ch=0; ch<m_channelCount; ++ch)
+						accum[ch] += (Float) *ptr++;
+			}
+			break;
+
+		default:
+			Log(EError, "average(): Unsupported component format!");
+	}
+
+	for (int ch=0; ch<m_channelCount; ++ch)
+		accum[ch] /= pixelCount;
+
+	const FormatConverter *cvt = FormatConverter::getInstance(
+		std::make_pair(EFloat, EFloat)
+	);
+
+	Spectrum result;
+	cvt->convert(m_pixelFormat, 1.0f, accum,
+		ESpectrum, 1.0f, &result, 1);
+
+	delete[] accum;
+	return result;
+}
+
 #if defined(MTS_HAS_FFTW)
 static boost::mutex __fftw_lock;
 #endif

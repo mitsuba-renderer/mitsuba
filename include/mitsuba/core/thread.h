@@ -163,6 +163,15 @@ public:
 	 */
 	static Thread *registerUnmanagedThread(const std::string &name);
 
+	/**
+	 * \brief Register a thread crash handler
+	 *
+	 * A crash handler is called whenever a thread fails with an uncaught
+	 * exception. This can be used to implement more useful error messages
+	 * in certain circumstances
+	 */
+	static void registerCrashHandler(bool (*handler)(void));
+
 	MTS_DECLARE_CLASS()
 protected:
 	/// Virtual destructor
