@@ -32,6 +32,10 @@ for ver in hasPython:
 
 	if sys.platform == 'darwin':
 		pythonEnv.Append(LINKFLAGS=['-Xlinker', '-rpath', '-Xlinker', '@loader_path/../../Contents/Frameworks', '-undefined', 'dynamic_lookup'])
+	elif 'linux' in sys.platform:
+        # Linux: ensure that all core Mitsuba libraries are loaded when the plugin is used in Python
+		pythonEnv.Append(SHLINKFLAGS=['-Wl,-R,\'$$ORIGIN/../..\''])
+        pythonEnv.Append(SHLINKFLAGS=['-Wl,-no-as-needed', '-lmitsuba-hw', '-Wl,-no-as-needed', '-lmitsuba-bidir'])
 
 	libcore_obj = pythonEnv.SharedObject('core_'+ver, 'core.cpp')
 	librender_obj = pythonEnv.SharedObject('render_'+ver, 'render.cpp')
