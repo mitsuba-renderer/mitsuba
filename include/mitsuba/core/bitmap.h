@@ -446,6 +446,12 @@ public:
 	/// Draw a filled rectangle with the specified position and size
 	void fillRect(Point2i offset, Vector2i size, const Spectrum &value);
 
+	/**
+	 * \brief Convenience function to visually indicate that a thread is
+	 * working on a certain part of an image
+	 */
+	void drawWorkUnit(const Point2i &offset, const Vector2i &size, int worker);
+
 	/// Bitmap equality operator (useful for unit-tests etc.)
 	bool operator==(const Bitmap &bitmap) const;
 

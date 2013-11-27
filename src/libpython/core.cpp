@@ -1249,6 +1249,7 @@ void export_core() {
 		.def("getMetadata", get_metadata, BP_RETURN_VALUE)
 		.def("drawRect", &Bitmap::drawRect)
 		.def("fillRect", &Bitmap::fillRect)
+		.def("drawWorkUnit", &Bitmap::drawWorkUnit)
 		.def("convert", &bitmap_convert_1, BP_RETURN_VALUE)
 		.def("convert", &bitmap_convert_2, BP_RETURN_VALUE)
 		.def("convert", &bitmap_convert_3, BP_RETURN_VALUE)

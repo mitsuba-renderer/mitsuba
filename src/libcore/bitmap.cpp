@@ -3278,6 +3278,56 @@ ref<Bitmap> Bitmap::expand() {
 	return output;
 }
 
+void Bitmap::drawWorkUnit(const Point2i &offset, const Vector2i &size, int worker) {
+	int ox = offset.x, oy = offset.y,
+		ex = ox + size.x, ey = oy + size.y;
+	if (size.x < 3 || size.y < 3)
+		return;
+
+	const float *color = NULL;
+
+	/* Use desaturated colors to highlight the worker
+	   responsible for rendering the current image */
+	const float white[]     = { 1.0f, 1.0f, 1.0f };
+	const float red[]       = { 1.0f, 0.3f, 0.3f };
+	const float green[]     = { 0.3f, 1.0f, 0.3f };
+	const float blue[]      = { 0.3f, 0.3f, 1.0f };
+	const float gray[]      = { 0.5f, 0.5f, 0.5f };
+	const float yellow[]    = { 1.0f, 1.0f, 0.0f };
+	const float magenta[]   = { 1.0f, 0.3f, 1.0f };
+	const float turquoise[] = { 0.3f, 1.0f, 1.0f };
+
+	switch (worker % 8) {
+		case 1: color = green; break;
+		case 2: color = yellow; break;
+		case 3: color = blue; break;
+		case 4: color = gray; break;
+		case 5: color = red; break;
+		case 6: color = magenta; break;
+		case 7: color = turquoise; break;
+		case 0:
+		default:
+			color = white;
+			break;
+	}
+
+	float scale = .7f * (color[0] * 0.212671f + color[1] * 0.715160f + color[2] * 0.072169f);
+
+	Spectrum spec;
+	spec.fromLinearRGB(color[0]*scale,
+		color[1]*scale,
+		color[2]*scale);
+
+	drawHLine(oy, ox, ox + 3, spec);
+	drawHLine(oy, ex - 4, ex - 1, spec);
+	drawHLine(ey - 1, ox, ox + 3, spec);
+	drawHLine(ey - 1, ex - 4, ex - 1, spec);
+	drawVLine(ox, oy, oy + 3, spec);
+	drawVLine(ex - 1, oy, oy + 3, spec);
+	drawVLine(ex - 1, ey - 4, ey - 1, spec);
+	drawVLine(ox, ey - 4, ey - 1, spec);
+}
+
 std::ostream &operator<<(std::ostream &os, const Bitmap::EPixelFormat &value) {
 	switch (value) {
 		case Bitmap::ELuminance: os << "luminance"; break;
