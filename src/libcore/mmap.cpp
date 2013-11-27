@@ -104,14 +104,20 @@ MemoryMappedFile::~MemoryMappedFile() {
 		#if defined(__LINUX__) || defined(__OSX__)
 			int retval = munmap(d->data, d->size);
 			if (retval != 0)
-				Log(EError, "munmap(): unable to unmap memory!");
+				Log(EWarn, "munmap(): unable to unmap memory!");
 		#elif defined(WIN32)
-			if (!UnmapViewOfFile(d->data))
-				Log(EError, "UnmapViewOfFile(): unable to unmap memory: %s", lastErrorText().c_str());
-			if (!CloseHandle(d->fileMapping))
-				Log(EError, "CloseHandle(): unable to close file mapping: %s", lastErrorText().c_str());
-			if (!CloseHandle(d->file))
-				Log(EError, "CloseHandle(): unable to close file: %s", lastErrorText().c_str());
+			if (!UnmapViewOfFile(d->data) {
+				Log(EWarn, "UnmapViewOfFile(): unable to unmap memory: %s", lastErrorText().c_str());
+				return;
+			}
+			if (!CloseHandle(d->fileMapping)) {
+				Log(EWarn, "CloseHandle(): unable to close file mapping: %s", lastErrorText().c_str());
+				return;
+			}
+			if (!CloseHandle(d->file)) {
+				Log(EWarn, "CloseHandle(): unable to close file: %s", lastErrorText().c_str());
+				return;
+			}
 		#endif
 	}
 }
