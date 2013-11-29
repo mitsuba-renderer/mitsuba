@@ -210,8 +210,13 @@ public:
 		oss << "AreaLight[" << endl
 			<< "  radiance = " << m_radiance.toString() << "," << endl
 			<< "  samplingWeight = " << m_samplingWeight << "," << endl
-			<< "  surfaceArea = " << m_shape->getSurfaceArea() << "," << endl
-			<< "  medium = " << indent(m_medium.toString()) << endl
+			<< "  surfaceArea = ";
+		if (m_shape)
+			oss << m_shape->getSurfaceArea();
+		else
+			oss << "<no shape attached!>";
+		oss << "," << endl
+		    << "  medium = " << indent(m_medium.toString()) << endl
 			<< "]";
 		return oss.str();
 	}
