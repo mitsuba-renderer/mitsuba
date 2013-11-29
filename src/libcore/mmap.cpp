@@ -44,7 +44,7 @@ MemoryMappedFile::MemoryMappedFile(const fs::path &filename, size_t size)
 		Log(EError, "close(): unable to close file!");
 #elif defined(_WIN32)
 	d->file = CreateFile(filename.string().c_str(), GENERIC_WRITE | GENERIC_READ,
-		FILE_SHARE_WRITE, NULL, CREATE_ALWAYS,
+		FILE_SHARE_WRITE|FILE_SHARE_READ, NULL, CREATE_ALWAYS,
 		FILE_ATTRIBUTE_NORMAL, NULL);
 	if (d->file == INVALID_HANDLE_VALUE)
 		Log(EError, "Could not open \"%s\": %s", d->filename.string().c_str(),
@@ -80,7 +80,7 @@ MemoryMappedFile::MemoryMappedFile(const fs::path &filename)
 		Log(EError, "close(): unable to close file!");
 #elif defined(WIN32)
 	d->file = CreateFile(filename.string().c_str(), GENERIC_READ,
-		FILE_SHARE_READ, NULL, OPEN_EXISTING,
+		FILE_SHARE_WRITE|FILE_SHARE_READ, NULL, OPEN_EXISTING,
 		FILE_ATTRIBUTE_NORMAL, NULL);
 	if (d->file == INVALID_HANDLE_VALUE)
 		Log(EError, "Could not open \"%s\": %s", d->filename.string().c_str(),
