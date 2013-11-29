@@ -548,8 +548,10 @@ static ConfigurableObject *pluginmgr_create(PluginManager *manager, bp::dict dic
 		object = manager->createObject(properties);
 
 	for (std::map<std::string, ConfigurableObject *>::iterator it = children.begin();
-		it != children.end(); ++it)
+		it != children.end(); ++it) {
 		object->addChild(it->first, it->second);
+		it->second->setParent(object);
+	}
 
 	object->configure();
 	return object;
