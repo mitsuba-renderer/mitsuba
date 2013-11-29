@@ -106,7 +106,7 @@ MemoryMappedFile::~MemoryMappedFile() {
 			if (retval != 0)
 				Log(EWarn, "munmap(): unable to unmap memory!");
 		#elif defined(WIN32)
-			if (!UnmapViewOfFile(d->data) {
+			if (!UnmapViewOfFile(d->data)) {
 				Log(EWarn, "UnmapViewOfFile(): unable to unmap memory: %s", lastErrorText().c_str());
 				return;
 			}
