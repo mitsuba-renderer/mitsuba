@@ -939,6 +939,11 @@ static bp::tuple GaussLobattoIntegrator_integrate(GaussLobattoIntegrator *integr
 	return bp::make_tuple(result, nEvals);
 }
 
+static std::string memString1(size_t size) { return mitsuba::memString(size); }
+static std::string memString2(size_t size, bool precise) { return mitsuba::memString(size, precise); }
+static std::string timeString1(Float size) { return mitsuba::timeString(size); }
+static std::string timeString2(Float size, bool precise) { return mitsuba::timeString(size, precise); }
+
 void export_core() {
 	bp::to_python_converter<fs::path, path_to_python_str>();
 	bp::to_python_converter<TSpectrum<Float, SPECTRUM_SAMPLES>, TSpectrum_to_Spectrum>();
@@ -1356,7 +1361,6 @@ void export_core() {
 	#if PY_MAJOR_VERSION < 3
 		fb_type->tp_flags |= Py_TPFLAGS_HAVE_NEWBUFFER;
 	#endif
-
 
 	BP_CLASS(FileResolver, Object, bp::init<>())
 		.def("getPathCount", &FileResolver::getPathCount)
@@ -2006,7 +2010,7 @@ void export_core() {
 	Spectrum (*fresnelConductorApprox2)(Float, const Spectrum &, const Spectrum &) = &fresnelConductorApprox;
 	Spectrum (*fresnelConductorExact2)(Float, const Spectrum &, const Spectrum &) = &fresnelConductorExact;
 
-	/* Functions from utility.h */
+	/* Functions from util.h */
 	bp::def("fresnelDielectric", &fresnelDielectric);
 	bp::def("fresnelDielectricExt", &fresnelDielectricExt1);
 	bp::def("fresnelDielectricExt", &fresnelDielectricExt2);
@@ -2020,6 +2024,16 @@ void export_core() {
 	bp::def("refract", &refract2);
 	bp::def("refract", &refract3);
 	bp::def("coordinateSystem", &mkCoordinateSystem);
+	bp::def("memString", &memString1);
+	bp::def("memString", &memString2);
+	bp::def("timeString", &timeString1);
+	bp::def("timeString", &timeString2);
+	bp::def("getCoreCount", &getCoreCount);
+	bp::def("getHostName", &getHostName);
+	bp::def("getPrivateMemoryUsage", &getPrivateMemoryUsage);
+	bp::def("getFQDN", &getFQDN);
+	bp::def("rdtsc", &rdtsc);
+	bp::def("hypot2", &hypot2);
 
 	/* Functions from qmc.h */
 	bp::def("radicalInverse2Single", radicalInverse2Single);
@@ -2171,6 +2185,20 @@ void export_core() {
 
 	BP_STRUCT(SHRotation, bp::init<int>())
 		.def("__call__", &SHRotation::operator());
+
+	BP_CLASS(Timer, Object, bp::init<bp::optional<bool> >())
+		.def("start", &Timer::start)
+		.def("reset", &Timer::reset)
+		.def("stop", &Timer::stop)
+		.def("lap", &Timer::lap)
+		.def("getNanoseconds", &Timer::getNanoseconds)
+		.def("getMicroseconds", &Timer::getMicroseconds)
+		.def("getMilliseconds", &Timer::getMilliseconds)
+		.def("getSeconds", &Timer::getSeconds)
+		.def("getNanosecondsSinceStart", &Timer::getNanosecondsSinceStart)
+		.def("getMicrosecondsSinceStart", &Timer::getMicrosecondsSinceStart)
+		.def("getMillisecondsSinceStart", &Timer::getMillisecondsSinceStart)
+		.def("getSecondsSinceStart", &Timer::getSecondsSinceStart);
 
 	bp::detail::current_scope = oldScope;
 }
