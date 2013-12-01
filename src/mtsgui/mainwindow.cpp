@@ -246,7 +246,8 @@ MainWindow::MainWindow(QWidget *parent) :
 MainWindow::~MainWindow() {
 	m_renderQueue->unregisterListener(m_renderListener);
 	ref<Scheduler> scheduler = Scheduler::getInstance();
-	scheduler->pause();
+	if (scheduler->isRunning())
+		scheduler->pause();
 	for (int i=0; i<m_connections.size(); ++i) {
 		ServerConnection &c = m_connections[i];
 		scheduler->unregisterWorker(c.worker);
@@ -259,10 +260,52 @@ MainWindow::~MainWindow() {
     delete ui;
 }
 
-void MainWindow::initWorkers() {
+bool MainWindow::initWorkersProcessArgv() {
 	QSettings settings;
-	ref<Scheduler> scheduler = Scheduler::getInstance();
+	QStringList args = qApp->arguments(), toBeLoaded;
 	int localWorkerCount = settings.value("localWorkers", getCoreCount()).toInt();
+	ref<Scheduler> scheduler = Scheduler::getInstance();
+
+	for (int i=1; i<args.count(); ++i) {
+		if (args[i].startsWith("-D")) {
+			QString value = args[i].mid(2);
+			if (value.length() == 0 && i+1<args.count())
+				value = args[++i];
+			QStringList list = value.split("=");
+			if (list.length() == 2)
+				m_parameters[list[0].toStdString()] = list[1].toStdString();
+		} else if (args[i].startsWith("-a")) {
+			ref<FileResolver> resolver = Thread::getThread()->getFileResolver();
+			QString value = args[i].mid(2);
+			if (value.length() == 0 && i+1<args.count())
+				value = args[++i];
+			resolver->appendPath(value.toStdString());
+		} else if (args[i].startsWith("-p")) {
+			QString value = args[i].mid(2);
+			if (value.length() == 0 && i+1<args.count())
+				value = args[++i];
+			bool ok = false;
+			unsigned int numCores = value.toUInt(&ok, 10);
+			if (ok)
+				localWorkerCount = numCores;
+		} else if (args[i] == "-h") {
+			cout <<  "Mitsuba version " << Version(MTS_VERSION).toStringComplete()
+				 << ", Copyright (c) " MTS_YEAR " Wenzel Jakob" << endl;
+			cout <<  "Usage: mtsgui [options] <One or more scene XML files>" << endl;
+			cout <<  "Options/Arguments:" << endl;
+			cout <<  "   -h          Display this help text" << endl << endl;
+			cout <<  "   -D key=val  Define a constant, which can referenced as \"$key\" in the scene" << endl << endl;
+			cout <<  "   -a p1;p2;.. Add one or more entries to the resource search path" << endl << endl;
+			cout <<  "   -p count    Override the detected number of processors." << endl << endl;
+			cout <<  " For documentation, please refer to http://www.mitsuba-renderer.org/docs.html" << endl;
+			return false;
+		} else if (args[i].startsWith("-")) {
+			cerr << "Unknown option \"" << args[i].toStdString() << "\"" << endl;
+		} else {
+			toBeLoaded.append(args[i]);
+		}
+	}
+
 	m_workerPriority = (Thread::EThreadPriority)
 		settings.value("workerPriority", (int) Thread::ELowPriority).toInt();
 	for (int i=0; i<localWorkerCount; ++i)
@@ -317,22 +360,12 @@ void MainWindow::initWorkers() {
 		scheduler->registerWorker(new LocalWorker(0, formatString("wrk%i", localWorkerCtr++), m_workerPriority));
 	}
 
-	QStringList args = qApp->arguments();
-	for (int i=1; i<args.count(); ++i) {
-		if (args[i].startsWith("-D")) {
-			QString value = args[i].mid(2);
-			if (value.length() == 0 && i+1<args.count())
-				value = args[++i];
-			QStringList list = value.split("=");
-			if (list.length() == 2)
-				m_parameters[list[0].toStdString()] = list[1].toStdString();
-			continue;
-		}
-		loadFile(args[i]);
-	}
+	for (int i=0; i<toBeLoaded.size(); ++i)
+		loadFile(toBeLoaded[i]);
 
 	scheduler->start();
 	raise();
+	return true;
 }
 
 

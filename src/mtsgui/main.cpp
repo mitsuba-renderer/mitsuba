@@ -163,7 +163,7 @@ void collect_zombies(int s) {
 #endif
 
 int main(int argc, char *argv[]) {
-	int retval;
+	int retval = -1;
 
 	/* Initialize the core framework */
 	Class::staticInitialization();
@@ -298,8 +298,8 @@ int main(int argc, char *argv[]) {
 #endif
 
 		mainWindow = new MainWindow();
-		mainWindow->initWorkers();
-		retval = app.exec();
+		if (mainWindow->initWorkersProcessArgv())
+			retval = app.exec();
 
 #if defined(MTS_HAS_BREAKPAD)
 	#if defined(__OSX__)
@@ -313,7 +313,6 @@ int main(int argc, char *argv[]) {
 		SLog(EWarn, "Critical exception during startup: %s", e.what());
 		QMessageBox::critical(NULL, QString("Critical exception"),
 			e.what(), QMessageBox::Ok);
-		retval = -1;
 	}
 	Statistics::getInstance()->printStats();
 

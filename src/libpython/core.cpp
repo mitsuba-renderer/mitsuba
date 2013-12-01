@@ -901,6 +901,7 @@ struct NativeBuffer {
 			case Bitmap::EUInt8:   result = bp::object(((uint8_t *) buf.ptr)[idx]); break;
 			case Bitmap::EUInt16:  result = bp::object(((uint16_t *) buf.ptr)[idx]); break;
 			case Bitmap::EUInt32:  result = bp::object(((uint32_t *) buf.ptr)[idx]); break;
+			case Bitmap::EFloat16: result = bp::object((float) ((half *) buf.ptr)[idx]); break;
 			case Bitmap::EFloat32: result = bp::object(((float *) buf.ptr)[idx]); break;
 			case Bitmap::EFloat64: result = bp::object(((double *) buf.ptr)[idx]); break;
 			default:

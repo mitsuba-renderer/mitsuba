@@ -120,7 +120,7 @@ public:
 	void loadFile(QString filename);
 	void adjustSize();
 	bool isActive();
-	void initWorkers();
+	bool initWorkersProcessArgv();
 
 protected:
 	SceneContext *loadScene(const QString &filename);
