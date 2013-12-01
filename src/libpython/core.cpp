@@ -23,6 +23,7 @@
 #include <mitsuba/render/scenehandler.h>
 #include <mitsuba/render/scene.h>
 #include <boost/algorithm/string.hpp>
+#include <boost/python/tuple.hpp>
 
 using namespace mitsuba;
 
@@ -775,11 +776,49 @@ extern MTS_EXPORT_CORE void gaussLobatto(int n, Float *nodes, Float *weights);
 struct NativeBuffer {
 	ref<Object> owner;
 	void *ptr;
-	Py_ssize_t count;
 	Bitmap::EComponentFormat format;
+	int ndim;
+	Py_ssize_t shape[3], strides[4];
+	const char* formatString;
 
-	NativeBuffer(Object *owner, void *ptr, size_t count, Bitmap::EComponentFormat format)
-		: owner(owner), ptr(ptr), count((Py_ssize_t) count), format(format) { }
+	NativeBuffer(Object *owner, void *ptr, Bitmap::EComponentFormat format, int ndim,
+			size_t shape[3]) : owner(owner), ptr(ptr), format(format), ndim(ndim) {
+		size_t itemSize = 0;
+		switch (format) {
+			case Bitmap::EUInt8:   formatString = "B"; itemSize = 1; break;
+			case Bitmap::EUInt16:  formatString = "H"; itemSize = 2; break;
+			case Bitmap::EUInt32:  formatString = "I"; itemSize = 4; break;
+			case Bitmap::EFloat16: formatString = "e"; itemSize = 2; break;
+			case Bitmap::EFloat32: formatString = "f"; itemSize = 4; break;
+			case Bitmap::EFloat64: formatString = "d"; itemSize = 8; break;
+			default:
+				SLog(EError, "Unsupported bufer format!");
+		}
+		strides[ndim] = itemSize;
+
+		for (int i=ndim-1; i>=0; --i) {
+			this->shape[i] = shape[i];
+			strides[i] = strides[i+1] * shape[i];
+		}
+	}
+
+	std::string toString() const {
+		std::ostringstream oss;
+		oss << "NativeBuffer[ndim=" << ndim << ", shape=[";
+		for (int i=0; i<ndim; ++i) {
+			oss << shape[i];
+			if (i+1 < ndim)
+				oss << ", ";
+		}
+		oss << "], strides=[";
+		for (int i=0; i<=ndim; ++i) {
+			oss << strides[i];
+			if (i+1 <= ndim)
+				oss << ", ";
+		}
+		oss << "], format=" << format << ", size=" << memString(strides[0]) << "]";
+		return oss.str();
+	}
 
 	static int getbuffer(PyObject *obj, Py_buffer *view, int flags) {
 		bp::extract<NativeBuffer&> b(obj);
@@ -804,37 +843,28 @@ struct NativeBuffer {
 			Py_INCREF(view->obj);
 		buf.owner->incRef();
 
-		char *format = NULL;
-		int itemSize = 0;
-		switch (buf.format) {
-			case Bitmap::EUInt8:   format = (char *)"B"; itemSize = 1; break;
-			case Bitmap::EUInt16:  format = (char *)"H"; itemSize = 2; break;
-			case Bitmap::EUInt32:  format = (char *)"I"; itemSize = 4; break;
-			case Bitmap::EFloat32: format = (char *)"f"; itemSize = 4; break;
-			case Bitmap::EFloat64: format = (char *)"d"; itemSize = 8; break;
-			default:
-				PyErr_SetString(PyExc_BufferError, "Unsupported buffer format!");
-				view->obj = NULL;
-				return -1;
-		}
-
-
-		view->buf = buf.ptr;
-		view->len = itemSize * buf.count;
-		view->readonly = false;
-		view->itemsize = itemSize;
-		view->format = NULL;
-		if ((flags & PyBUF_FORMAT) == PyBUF_FORMAT)
-			view->format = format;
 		view->ndim = 1;
+		view->buf = buf.ptr;
+		view->format = NULL;
 		view->shape = NULL;
-		if ((flags & PyBUF_ND) == PyBUF_ND)
-			view->shape = &buf.count;
-		view->strides = NULL;
-		if ((flags & PyBUF_STRIDES) == PyBUF_STRIDES)
-			view->strides = &(view->itemsize);
 		view->suboffsets = NULL;
 		view->internal = NULL;
+		view->strides = NULL;
+		view->len = buf.strides[0];
+		view->readonly = false;
+		view->itemsize = buf.strides[buf.ndim];
+
+		if ((flags & PyBUF_FORMAT) == PyBUF_FORMAT)
+			view->format = const_cast<char *>(buf.formatString);
+
+		if ((flags & PyBUF_STRIDES) == PyBUF_STRIDES)
+			view->strides = &buf.strides[1];
+
+		if ((flags & PyBUF_ND) == PyBUF_ND) {
+			view->ndim = buf.ndim;
+			view->shape = &buf.shape[0];
+		}
+
 		return 0;
 	}
 
@@ -854,7 +884,8 @@ struct NativeBuffer {
 			PyErr_SetString(PyExc_BufferError, "Native buffer is invalid!");
 			return -1;
 		}
-		return b().count;
+		NativeBuffer &buf = b();
+		return buf.strides[0] / buf.strides[buf.ndim];
 	}
 
 	static PyObject* item(PyObject *obj, Py_ssize_t idx) {
@@ -882,7 +913,14 @@ struct NativeBuffer {
 };
 
 static NativeBuffer bitmap_getNativeBuffer(Bitmap *bitmap) {
-	return NativeBuffer(bitmap, bitmap->getFloat32Data(), bitmap->getPixelCount() * bitmap->getChannelCount(), bitmap->getComponentFormat());
+	int ndim = bitmap->getChannelCount() == 1 ? 2 : 3;
+	size_t shape[3] = {
+		bitmap->getHeight(),
+		bitmap->getWidth(),
+		bitmap->getChannelCount()
+	};
+
+	return NativeBuffer(bitmap, bitmap->getUInt8Data(), bitmap->getComponentFormat(), ndim, shape);
 }
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(fromLinearRGB_overloads, fromLinearRGB, 3, 4)
@@ -1333,7 +1371,8 @@ void export_core() {
 	BP_SETSCOPE(coreModule);
 
 	/* Native buffers for bitmaps */
-	bp::class_<NativeBuffer>("NativeBuffer", bp::no_init);
+	bp::class_<NativeBuffer>("NativeBuffer", bp::no_init)
+		.def("__repr__", &NativeBuffer::toString);
 
 	const bp::converter::registration& fb_reg(
 		bp::converter::registry::lookup(bp::type_id<NativeBuffer>()));

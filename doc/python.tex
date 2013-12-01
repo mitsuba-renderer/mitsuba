@@ -459,7 +459,7 @@ newThread.setLogger(saved_logger)
 It is fine to execute this several times (\code{registerUnmanagedThread} just returns
 a reference to the associated \code{Thread} instance if it was already registered).
 
-\subsubsection{PyQt/PySide interaction with Mitsuba (simple version)}
+\subsubsection{Mitsuba interaction with PyQt/PySide (simple version)}
 The following listing contains a complete program that
 renders a sphere and efficiently displays it in a PyQt window
 (to make this work in PySide, change all occurrences of \code{PyQt4} to \code{PySide} in the
@@ -548,7 +548,7 @@ if __name__ == '__main__':
     main()
 \end{python}
 
-\subsubsection{PyQt/PySide interaction with Mitsuba (fancy)}
+\subsubsection{Mitsuba interaction with PyQt/PySide (fancy)}
 The following snippet is a much fancier version of the previous PyQt/PySide example.
 Instead of waiting for the rendering to finish and then displaying it, this example launches the
 rendering in the background and uses Mitsuba's \code{RenderListener} interface to update the
@@ -797,3 +797,10 @@ if __name__ == '__main__':
     main()
 \end{python}
 
+
+\subsubsection{Mitsuba interaction with NumPy}
+Suppose that \code{bitmap} contains a \code{mitsuba.core.Bitmap} instance (e.g. a rendering). Then the following snippet efficiently turns the image into a NumPy array:
+\begin{python}
+import numpy as np
+array = np.array(bitmap.getNativeBuffer())
+\end{python}
