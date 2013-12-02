@@ -782,7 +782,7 @@ struct NativeBuffer {
 	const char* formatString;
 
 	NativeBuffer(Object *owner, void *ptr, Bitmap::EComponentFormat format, int ndim,
-			size_t shape[3]) : owner(owner), ptr(ptr), format(format), ndim(ndim) {
+			Py_ssize_t shape[3]) : owner(owner), ptr(ptr), format(format), ndim(ndim) {
 		size_t itemSize = 0;
 		switch (format) {
 			case Bitmap::EUInt8:   formatString = "B"; itemSize = 1; break;
@@ -915,10 +915,10 @@ struct NativeBuffer {
 
 static NativeBuffer bitmap_getNativeBuffer(Bitmap *bitmap) {
 	int ndim = bitmap->getChannelCount() == 1 ? 2 : 3;
-	size_t shape[3] = {
-		bitmap->getHeight(),
-		bitmap->getWidth(),
-		bitmap->getChannelCount()
+	Py_ssize_t shape[3] = {
+		(Py_ssize_t) bitmap->getHeight(),
+		(Py_ssize_t) bitmap->getWidth(),
+		(Py_ssize_t) bitmap->getChannelCount()
 	};
 
 	return NativeBuffer(bitmap, bitmap->getUInt8Data(), bitmap->getComponentFormat(), ndim, shape);
