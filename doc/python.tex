@@ -601,7 +601,7 @@ class MitsubaRenderBuffer(RenderListener):
         self.bitmap.drawWorkUnit(wu.getOffset(), wu.getSize(), thr)
         self._potentially_send_update()
 
-    def workEndEvent(self, job, wr):
+    def workEndEvent(self, job, wr, cancelled):
         """ Callback: a worker thread finished rendering an image block.
             Tonemap the associated pixels and store them in 'self.bitmap' """
         film = self._get_film_ensure_initialized(job)

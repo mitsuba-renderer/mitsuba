@@ -36,7 +36,7 @@ public:
 	virtual void workBeginEvent(const RenderJob *job, const RectangularWorkUnit *wu, int worker);
 
 	/// Called when work has finished in a rectangular image region
-	virtual void workEndEvent(const RenderJob *job, const ImageBlock *wr);
+	virtual void workEndEvent(const RenderJob *job, const ImageBlock *wr, bool cancelled);
 
 	/// Called when work has been canceled in a rectangular image region
 	virtual void workCanceledEvent(const RenderJob *job, const Point2i &offset,
@@ -99,7 +99,7 @@ public:
 
 	/* Event distribution */
 	void signalWorkBegin(const RenderJob *job, const RectangularWorkUnit *wu, int worker);
-	void signalWorkEnd(const RenderJob *job, const ImageBlock *block);
+	void signalWorkEnd(const RenderJob *job, const ImageBlock *block, bool cancelled);
 	void signalWorkCanceled(const RenderJob *job, const Point2i &offset, const Vector2i &size);
 	void signalFinishJob(const RenderJob *job, bool cancelled);
 	void signalRefresh(const RenderJob *job);

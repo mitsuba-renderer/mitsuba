@@ -179,10 +179,10 @@ public:
 		} catch (bp::error_already_set &) { check_python_exception(); }
 	}
 
-	void workEndEvent(const RenderJob *job, const ImageBlock *wr) {
+	void workEndEvent(const RenderJob *job, const ImageBlock *wr, bool cancelled) {
         CALLBACK_SYNC_GIL();
 		try {
-   			bp::call_method<void>(m_self, "workEndEvent", bp::ptr(job), bp::ptr(wr));
+   			bp::call_method<void>(m_self, "workEndEvent", bp::ptr(job), bp::ptr(wr), cancelled);
 		} catch (bp::error_already_set &) { check_python_exception(); }
 	}
 
