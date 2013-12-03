@@ -58,7 +58,7 @@ public:
 	}
 
 	/// Called when work has finished in a rectangular image region
-	inline void workEndEvent(const RenderJob *job, const ImageBlock *wr) {
+	inline void workEndEvent(const RenderJob *job, const ImageBlock *wr, bool cancelled) {
 		emit workEnd(job, wr);
 	}
 
