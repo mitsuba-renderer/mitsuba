@@ -169,10 +169,12 @@ void SocketStream::read(void *ptr, size_t size) {
 		if (n == 0) {
 			throw EOFException("Connection closed while reading!",
 					(size_t) (data - (char *) ptr));
-		} else if (n == -1) {
-			handleError("recv", EWarn);
+		} else if (n == SOCKET_ERROR) {
+			if (!handleError("recv", EWarn))
+				continue; /* Wasn't an error after all -- continue */
+
 			throw EOFException("Connection closed while reading!",
-					(size_t) (data - (char *) ptr));
+						(size_t) (data - (char *) ptr));
 		}
 		size -= n;
 		data += n;
@@ -194,7 +196,9 @@ void SocketStream::write(const void *ptr, size_t size) {
 		int n = send(m_socket, data, size, 0);
 #endif
 		if (n == SOCKET_ERROR) {
-			handleError("send", EWarn);
+			if (!handleError("send", EWarn))
+				continue; /* Wasn't an error after all -- continue */
+
 			throw EOFException("Connection closed while writing!",
 					(size_t) (data - (char *) ptr));
 		}
@@ -242,7 +246,7 @@ void SocketStream::flush() {
 	/* Ignore */
 }
 
-void SocketStream::handleError(const std::string &cmd, ELogLevel level) {
+bool SocketStream::handleError(const std::string &cmd, ELogLevel level) {
 #ifndef WIN32
 	if (cmd.find("(") == std::string::npos)
 		Log(level, "Error in %s(): %s!", cmd.c_str(), strerror(errno));
@@ -252,8 +256,13 @@ void SocketStream::handleError(const std::string &cmd, ELogLevel level) {
 	std::string err;
 	int error = WSAGetLastError();
 	switch (error) {
-		case WSABASEERR: err = "No Error"; break;
-		case WSAEINTR: err = "Interrupted system call"; break;
+		case WSABASEERR: err = "Internal error (no reason given)"; break;
+		case WSAEINTR:
+			if (level == EWarn) /* This is not really a warning -- just retry the operation. */
+				return false;
+			else
+			   err = "Interrupted system call";
+			break;
 		case WSAEBADF: err = "Bad file number"; break;
 		case WSAEACCES: err = "Permission denied"; break;
 		case WSAEFAULT: err = "Bad address"; break;
@@ -309,6 +318,7 @@ void SocketStream::handleError(const std::string &cmd, ELogLevel level) {
 	else
 		Log(level, "Error %i in %s: %s!", error, cmd.c_str(), err.c_str());
 #endif
+	return true;
 }
 
 MTS_IMPLEMENT_CLASS(SocketStream, false, Stream)

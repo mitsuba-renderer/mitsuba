@@ -78,7 +78,7 @@ public:
 	std::string toString() const;
 
 	/// Handle the last socket-specific error (looks up the appropriate OS description)
-	static void handleError(const std::string &cmd, ELogLevel level = EError);
+	static bool handleError(const std::string &cmd, ELogLevel level = EError);
 
 	//! @}
 	// =============================================================
