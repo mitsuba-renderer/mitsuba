@@ -514,6 +514,52 @@ ref<Bitmap> Bitmap::rotateFlip(ERotateFlipType type) const {
 	return result;
 }
 
+void Bitmap::copyFrom(const Bitmap *bitmap, Point2i sourceOffset,
+		Point2i targetOffset, Vector2i size) {
+
+	if (m_componentFormat == EBitmask)
+		Log(EError, "Bitmap::copy(): bitmasks are not supported!");
+
+	Assert(getPixelFormat() == bitmap->getPixelFormat() &&
+	       getComponentFormat() == bitmap->getComponentFormat() &&
+	       getChannelCount() == bitmap->getChannelCount());
+
+	Vector2i offsetIncrease(
+		std::max(0, std::max(-sourceOffset.x, -targetOffset.x)),
+		std::max(0, std::max(-sourceOffset.y, -targetOffset.y))
+	);
+
+	sourceOffset += offsetIncrease;
+	targetOffset += offsetIncrease;
+	size -= offsetIncrease;
+
+	Vector2i sizeDecrease(
+		std::max(0, std::max(sourceOffset.x + size.x - bitmap->getWidth(), targetOffset.x + size.x - getWidth())),
+		std::max(0, std::max(sourceOffset.y + size.y - bitmap->getHeight(), targetOffset.y + size.y - getHeight())));
+
+	size -= sizeDecrease;
+
+	if (size.x <= 0 || size.y <= 0)
+		return;
+
+	const size_t
+		pixelStride  = getBytesPerPixel(),
+		sourceStride = bitmap->getWidth() * pixelStride,
+		targetStride = getWidth() * pixelStride;
+
+	const uint8_t *source = bitmap->getUInt8Data() +
+		(sourceOffset.x + sourceOffset.y * (size_t) bitmap->getWidth()) * pixelStride;
+
+	uint8_t *target = m_data +
+		(targetOffset.x + targetOffset.y * (size_t) m_size.x) * pixelStride;
+
+	for (int y = 0; y < size.y; ++y) {
+		memcpy(target, source, size.x * getBytesPerPixel());
+		source += sourceStride;
+		target += targetStride;
+	}
+}
+
 void Bitmap::accumulate(const Bitmap *bitmap, Point2i sourceOffset,
 		Point2i targetOffset, Vector2i size) {
 	Assert(getPixelFormat() == bitmap->getPixelFormat() &&

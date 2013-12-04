@@ -1235,6 +1235,9 @@ void export_core() {
 	void (Bitmap::*accumulate_1)(const Bitmap *bitmap, Point2i sourceOffset, Point2i targetOffset, Vector2i size) = &Bitmap::accumulate;
 	void (Bitmap::*accumulate_2)(const Bitmap *bitmap, Point2i targetOffset) = &Bitmap::accumulate;
 	void (Bitmap::*accumulate_3)(const Bitmap *bitmap) = &Bitmap::accumulate;
+	void (Bitmap::*copyFrom_1)(const Bitmap *bitmap, Point2i sourceOffset, Point2i targetOffset, Vector2i size) = &Bitmap::copyFrom;
+	void (Bitmap::*copyFrom_2)(const Bitmap *bitmap, Point2i targetOffset) = &Bitmap::copyFrom;
+	void (Bitmap::*copyFrom_3)(const Bitmap *bitmap) = &Bitmap::copyFrom;
 	const Properties &(Bitmap::*get_metadata)() const = &Bitmap::getMetadata;
 
 	void (Bitmap::*resample_1)(const ReconstructionFilter *,
@@ -1283,6 +1286,9 @@ void export_core() {
 		.def("accumulate", accumulate_1)
 		.def("accumulate", accumulate_2)
 		.def("accumulate", accumulate_3)
+		.def("copyFrom", copyFrom_1)
+		.def("copyFrom", copyFrom_2)
+		.def("copyFrom", copyFrom_3)
 		.def("convolve", &Bitmap::convolve)
 		.def("arithmeticOperation", &Bitmap::arithmeticOperation, BP_RETURN_VALUE)
 		.def("resample", resample_1)
