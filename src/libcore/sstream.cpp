@@ -247,7 +247,10 @@ void SocketStream::flush() {
 }
 
 bool SocketStream::handleError(const std::string &cmd, ELogLevel level) {
-#ifndef WIN32
+#if !defined(__WINDOWS__)
+	if (level == EWarn && errno == EINTR) /* This is not really a warning -- just retry the operation. */
+		return false;
+
 	if (cmd.find("(") == std::string::npos)
 		Log(level, "Error in %s(): %s!", cmd.c_str(), strerror(errno));
 	else
