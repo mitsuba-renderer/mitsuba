@@ -25,14 +25,18 @@
 
 #if defined(__GNUC__)
 #define MM_ALIGN16             __attribute__ ((aligned (16)))
-#elif defined(__OSX__) && defined(__GNUC__)
-#define MM_ALIGN16             __attribute__ ((aligned (16)))
+#define MM_ALIGN32             __attribute__ ((aligned (32)))
+#define MM_ALIGN64             __attribute__ ((aligned (64)))
 #elif defined(__MSVC__)
 #define MM_ALIGN16             __declspec(align(16))
+#define MM_ALIGN32             __declspec(align(32))
+#define MM_ALIGN64             __declspec(align(64))
 #else
 #error Unsupported compiler!
 #endif
-#define STACK_ALIGN16(t)       reinterpret_cast<float *>((reinterpret_cast<size_t>(t)+0xF) & ~(size_t) 0xF)
+#define STACK_ALIGN16(t)       reinterpret_cast<float *>((reinterpret_cast<size_t>(t)+0x0F) & ~(size_t) 0x0F)
+#define STACK_ALIGN32(t)       reinterpret_cast<float *>((reinterpret_cast<size_t>(t)+0x1F) & ~(size_t) 0x1F)
+#define STACK_ALIGN64(t)       reinterpret_cast<float *>((reinterpret_cast<size_t>(t)+0x3F) & ~(size_t) 0x3F)
 
 /* ========= SSE intrinsics ========= */
 #ifndef MTS_SSE
