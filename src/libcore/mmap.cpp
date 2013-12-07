@@ -134,5 +134,13 @@ size_t MemoryMappedFile::getSize() const {
 	return d->size;
 }
 
+std::string MemoryMappedFile::toString() const {
+	std::ostringstream oss;
+	oss << "MemoryMappedFile[filename=\""
+		<< d->filename.string() << "\", size=" 
+		<< memString(d->size) << "]";
+	return oss.str();
+}
+
 MTS_IMPLEMENT_CLASS(MemoryMappedFile, false, Object)
 MTS_NAMESPACE_END

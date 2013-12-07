@@ -75,14 +75,6 @@
 #define SQRT_TWO_DBL      1.41421356237309504880
 #define INV_SQRT_TWO_DBL  0.70710678118654752440
 
-#define M_E               M_E_DBL
-#define M_PI              M_PI_DBL
-#define INV_PI            INV_PI_DBL
-#define INV_TWOPI         INV_TWOPI_DBL
-#define INV_FOURPI        INV_FOURPI_DBL
-#define SQRT_TWO          SQRT_TWO_DBL
-#define INV_SQRT_TWO      INV_SQRT_TWO_DBL
-
 #ifdef SINGLE_PRECISION
 #define M_E               M_E_FLT
 #define M_PI              M_PI_FLT

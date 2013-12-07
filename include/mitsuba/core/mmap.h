@@ -46,10 +46,13 @@ public:
 	/// Return the size of the mapped region
 	size_t getSize() const;
 
-	/// Release all resources
-	virtual ~MemoryMappedFile();
+	/// Return a string representation
+	std::string toString() const;
 
 	MTS_DECLARE_CLASS()
+protected:
+	/// Release all resources
+	virtual ~MemoryMappedFile();
 private:
 	struct MemoryMappedFilePrivate;
 	boost::scoped_ptr<MemoryMappedFilePrivate> d;
