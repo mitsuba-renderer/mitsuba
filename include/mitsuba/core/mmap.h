@@ -31,11 +31,11 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_CORE MemoryMappedFile : public Object {
 public:
-	/// Map the specified file into memory
-	MemoryMappedFile(const fs::path &filename);
-
 	/// Create a new memory-mapped file of the specified size
 	MemoryMappedFile(const fs::path &filename, size_t size);
+
+	/// Map the specified file into memory
+	MemoryMappedFile(const fs::path &filename, bool readOnly = true);
 
 	/// Return a pointer to the file contents in memory
 	void *getData();
@@ -45,6 +45,17 @@ public:
 
 	/// Return the size of the mapped region
 	size_t getSize() const;
+
+	/**
+	 * \brief Resize the memory-mapped file
+	 *
+	 * This involves remapping the file, which will
+	 * generally change the pointer obtained via getData()
+	 */
+	void resize(size_t size);
+
+	/// Return whether the mapped memory region is read-only
+	bool isReadOnly() const;
 
 	/// Return a string representation
 	std::string toString() const;

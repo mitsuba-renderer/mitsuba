@@ -24,7 +24,7 @@
 #include <mitsuba/core/cobject.h>
 #include <mitsuba/core/version.h>
 
-#if !defined(WIN32)
+#if !defined(__WINDOWS__)
 # include <dlfcn.h>
 #else
 # include <windows.h>
@@ -43,7 +43,7 @@ namespace {
 }
 
 struct Plugin::PluginPrivate {
-#if defined(WIN32)
+#if defined(__WINDOWS__)
 	HMODULE handle;
 #else
 	void *handle;
@@ -61,7 +61,7 @@ struct Plugin::PluginPrivate {
 
 Plugin::Plugin(const std::string &shortName, const fs::path &path)
  : d(new PluginPrivate(shortName, path)) {
-#if defined(_WIN32)
+#if defined(___WINDOWS__)
 	d->handle = LoadLibraryW(path.c_str());
 	if (!d->handle) {
 		SLog(EError, "Error while loading plugin \"%s\": %s",
@@ -77,7 +77,7 @@ Plugin::Plugin(const std::string &shortName, const fs::path &path)
 	try {
 		d->getDescription = (GetDescriptionFunc) getSymbol("GetDescription");
 	} catch (...) {
-#if defined(_WIN32)
+#if defined(___WINDOWS__)
 		FreeLibrary(d->handle);
 #else
 		dlclose(d->handle);
@@ -102,7 +102,7 @@ Plugin::Plugin(const std::string &shortName, const fs::path &path)
 }
 
 bool Plugin::hasSymbol(const std::string &sym) const {
-#if defined(_WIN32)
+#if defined(___WINDOWS__)
 	void *ptr = GetProcAddress(d->handle, sym.c_str());
 #else
 	void *ptr = dlsym(d->handle, sym.c_str());
@@ -111,7 +111,7 @@ bool Plugin::hasSymbol(const std::string &sym) const {
 }
 
 void *Plugin::getSymbol(const std::string &sym) {
-#if defined(_WIN32)
+#if defined(___WINDOWS__)
 	void *data = GetProcAddress(d->handle, sym.c_str());
 	if (!data) {
 		SLog(EError, "Could not resolve symbol \"%s\" in \"%s\": %s",
@@ -152,7 +152,7 @@ const std::string& Plugin::getShortName() const {
 }
 
 Plugin::~Plugin() {
-#if defined(_WIN32)
+#if defined(___WINDOWS__)
 	FreeLibrary(d->handle);
 #else
 	dlclose(d->handle);
@@ -226,7 +226,7 @@ void PluginManager::ensurePluginLoaded(const std::string &name) {
 
 	/* Build the full plugin file name */
 	fs::path shortName = fs::path("plugins") / name;
-#if defined(WIN32)
+#if defined(__WINDOWS__)
 	shortName.replace_extension(".dll");
 #elif defined(__OSX__)
 	shortName.replace_extension(".dylib");

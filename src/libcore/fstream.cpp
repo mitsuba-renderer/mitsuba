@@ -19,7 +19,7 @@
 #include <mitsuba/core/fstream.h>
 #include <cerrno>
 
-#if !defined(WIN32)
+#if !defined(__WINDOWS__)
 # include <unistd.h>
 #else
 # include <windows.h>
@@ -30,7 +30,7 @@ MTS_NAMESPACE_BEGIN
 
 struct FileStream::FileStreamPrivate
 {
-#if defined(WIN32)
+#if defined(__WINDOWS__)
 	HANDLE file;
 #else
 	FILE* file;
@@ -80,7 +80,7 @@ void FileStream::open(const fs::path &path, EFileMode mode) {
 	d->write = true;
 	d->read = true;
 
-#ifdef WIN32
+#if defined(__WINDOWS__)
 	DWORD dwDesiredAccess = GENERIC_READ;
 	DWORD dwCreationDisposition = OPEN_EXISTING;
 
@@ -165,7 +165,7 @@ void FileStream::close() {
 	AssertEx(d->file != 0, "No file is currently open");
 	Log(ETrace, "Closing \"%s\"", d->path.string().c_str());
 
-#ifdef WIN32
+#if defined(__WINDOWS__)
 	if (!CloseHandle(d->file)) {
 		Log(EError, "Error while trying to close file \"%s\": %s",
 			d->path.string().c_str(), lastErrorText().c_str());
@@ -190,7 +190,7 @@ void FileStream::remove() {
 void FileStream::seek(size_t pos) {
 	AssertEx(d->file != 0, "No file is currently open");
 
-#ifdef WIN32
+#if defined(__WINDOWS__)
 	LARGE_INTEGER fpos;
 	fpos.QuadPart = pos;
 	if (SetFilePointerEx(d->file, fpos, 0, FILE_BEGIN) == INVALID_SET_FILE_POINTER) {
@@ -207,7 +207,7 @@ void FileStream::seek(size_t pos) {
 
 size_t FileStream::getPos() const {
 	AssertEx(d->file != 0, "No file is currently open");
-#ifdef WIN32
+#if defined(__WINDOWS__)
 	DWORD pos = SetFilePointer(d->file, 0, 0, FILE_CURRENT);
 	if (pos == INVALID_SET_FILE_POINTER) {
 		Log(EError, "Error while looking up the position in file \"%s\": %s",
@@ -228,7 +228,7 @@ size_t FileStream::getPos() const {
 size_t FileStream::getSize() const {
 	AssertEx(d->file != 0, "No file is currently open");
 
-#ifdef WIN32
+#if defined(__WINDOWS__)
 	LARGE_INTEGER result;
 	if (GetFileSizeEx(d->file, &result) == 0) {
 		Log(EError, "Error while getting the file size of \"%s\": %s",
@@ -260,7 +260,7 @@ void FileStream::truncate(size_t size) {
 	if (pos > size)
 		pos = size;
 
-#ifdef WIN32
+#if defined(__WINDOWS__)
 	seek(size);
 	if (!SetEndOfFile(d->file)) {
 		Log(EError, "Error while truncating file \"%s\": %s",
@@ -281,7 +281,7 @@ void FileStream::truncate(size_t size) {
 void FileStream::flush() {
 	AssertEx(d->file != 0, "No file is currently open");
 	AssertEx(d->write, "File is not open with write access");
-#ifdef WIN32
+#if defined(__WINDOWS__)
 	if (!FlushFileBuffers(d->file)) {
 		Log(EError, "Error while flusing the buffers of \"%s\": %s",
 			d->path.string().c_str(), lastErrorText().c_str());
@@ -300,7 +300,7 @@ void FileStream::read(void *pPtr, size_t size) {
 
 	if (size == 0)
 		return;
-#ifdef WIN32
+#if defined(__WINDOWS__)
 	DWORD lpNumberOfBytesRead;
 	if (!ReadFile(d->file, pPtr, (DWORD) size, &lpNumberOfBytesRead, 0)) {
 		Log(EError, "Error while reading from file \"%s\": %s",
@@ -329,7 +329,7 @@ void FileStream::write(const void *pPtr, size_t size) {
 	if (size == 0)
 		return;
 
-#ifdef WIN32
+#if defined(__WINDOWS__)
 	DWORD lpNumberOfBytesWritten;
 	if (!WriteFile(d->file, pPtr, (DWORD) size, &lpNumberOfBytesWritten, 0)) {
 		Log(EError, "Error while writing to file \"%s\": %s",
