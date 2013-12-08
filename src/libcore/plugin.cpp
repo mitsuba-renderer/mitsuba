@@ -61,7 +61,7 @@ struct Plugin::PluginPrivate {
 
 Plugin::Plugin(const std::string &shortName, const fs::path &path)
  : d(new PluginPrivate(shortName, path)) {
-#if defined(___WINDOWS__)
+#if defined(__WINDOWS__)
 	d->handle = LoadLibraryW(path.c_str());
 	if (!d->handle) {
 		SLog(EError, "Error while loading plugin \"%s\": %s",
@@ -77,7 +77,7 @@ Plugin::Plugin(const std::string &shortName, const fs::path &path)
 	try {
 		d->getDescription = (GetDescriptionFunc) getSymbol("GetDescription");
 	} catch (...) {
-#if defined(___WINDOWS__)
+#if defined(__WINDOWS__)
 		FreeLibrary(d->handle);
 #else
 		dlclose(d->handle);
@@ -102,7 +102,7 @@ Plugin::Plugin(const std::string &shortName, const fs::path &path)
 }
 
 bool Plugin::hasSymbol(const std::string &sym) const {
-#if defined(___WINDOWS__)
+#if defined(__WINDOWS__)
 	void *ptr = GetProcAddress(d->handle, sym.c_str());
 #else
 	void *ptr = dlsym(d->handle, sym.c_str());
@@ -111,7 +111,7 @@ bool Plugin::hasSymbol(const std::string &sym) const {
 }
 
 void *Plugin::getSymbol(const std::string &sym) {
-#if defined(___WINDOWS__)
+#if defined(__WINDOWS__)
 	void *data = GetProcAddress(d->handle, sym.c_str());
 	if (!data) {
 		SLog(EError, "Could not resolve symbol \"%s\" in \"%s\": %s",
@@ -152,7 +152,7 @@ const std::string& Plugin::getShortName() const {
 }
 
 Plugin::~Plugin() {
-#if defined(___WINDOWS__)
+#if defined(__WINDOWS__)
 	FreeLibrary(d->handle);
 #else
 	dlclose(d->handle);

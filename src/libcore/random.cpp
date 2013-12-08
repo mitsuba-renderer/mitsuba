@@ -473,7 +473,7 @@ void Random::State::init_by_array(const uint32_t *init_key, int key_length) {
 Random::Random() : mt(NULL) {
 	mt = (State *) allocAligned(sizeof(State));
 	Assert(mt != NULL);
-#if defined(___WINDOWS__)
+#if defined(__WINDOWS__)
 	seed();
 #else
 #if 0

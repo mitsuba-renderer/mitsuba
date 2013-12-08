@@ -38,7 +38,7 @@ struct MemoryMappedFile::MemoryMappedFilePrivate {
 				Log(EError, "Could not map \"%s\" to memory!", filename.string().c_str());
 			if (close(fd) != 0)
 				Log(EError, "close(): unable to close file!");
-		#elif defined(___WINDOWS__)
+		#elif defined(__WINDOWS__)
 			file = CreateFile(filename.string().c_str(), GENERIC_WRITE | GENERIC_READ,
 				FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 			if (file == INVALID_HANDLE_VALUE)
