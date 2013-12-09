@@ -143,7 +143,7 @@ public:
 	virtual Spectrum sampleRay(Ray &ray,
 		const Point2 &samplePosition,
 		const Point2 &apertureSample,
-		Float timeSample) const;
+		Float timeSample) const = 0;
 
 	/**
 	 * \brief Importance sample a ray differential according to the
