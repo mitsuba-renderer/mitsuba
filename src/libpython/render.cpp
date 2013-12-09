@@ -236,6 +236,29 @@ static void renderJob_cancel(RenderJob *job) {
 	job->cancel();
 }
 
+bp::tuple Sensor_sampleRay(Sensor *sensor, const Point2 &samplePosition, const Point2 &apertureSample, Float timeSample) {
+	Ray ray;
+	Spectrum result = sensor->sampleRay(ray, samplePosition, apertureSample, timeSample);
+	return bp::make_tuple(result, ray);
+}
+
+bp::tuple Sensor_sampleRayDifferential(Sensor *sensor, const Point2 &samplePosition, const Point2 &apertureSample, Float timeSample) {
+	RayDifferential ray;
+	Spectrum result = sensor->sampleRay(ray, samplePosition, apertureSample, timeSample);
+	return bp::make_tuple(result, ray);
+}
+
+bp::tuple Sensor_eval(Sensor *sensor, const Intersection &its, const Vector &d) {
+	Point2 samplePos;
+	Spectrum result = sensor->eval(its, d, samplePos);
+	return bp::make_tuple(result, samplePos);
+}
+
+bp::tuple Sensor_getSamplePosition(Sensor *sensor, const PositionSamplingRecord &pRec, const DirectionSamplingRecord &dRec) {
+	Point2 samplePos;
+	bool result = sensor->getSamplePosition(pRec, dRec, samplePos);
+	return bp::make_tuple(result, samplePos);
+}
 
 void export_render() {
 	bp::object renderModule(
@@ -524,11 +547,37 @@ void export_render() {
 		.export_values();
 	BP_SETSCOPE(renderModule);
 
-	BP_CLASS(Sensor, AbstractEmitter, bp::no_init) // incomplete
+	Film *(Sensor::*sensor_getFilm)(void) = &Sensor::getFilm;
+	Sampler *(Sensor::*sensor_getSampler)(void) = &Sensor::getSampler;
+
+	BP_CLASS(Sensor, AbstractEmitter, bp::no_init)
 		.def("getShutterOpen", &Sensor::getShutterOpen)
 		.def("setShutterOpen", &Sensor::setShutterOpen)
 		.def("getShutterOpenTime", &Sensor::getShutterOpenTime)
-		.def("setShutterOpenTime", &Sensor::setShutterOpenTime);
+		.def("setShutterOpenTime", &Sensor::setShutterOpenTime)
+		.def("sampleTime", &Sensor::sampleTime)
+		.def("sampleRay", &Sensor_sampleRay)
+		.def("sampleRayDifferential", &Sensor_sampleRayDifferential)
+		.def("eval", &Sensor_eval, BP_RETURN_VALUE)
+		.def("getSamplePosition", &Sensor_getSamplePosition)
+		.def("pdfTime", &Sensor::pdfTime)
+		.def("needsTimeSample", &Sensor::needsTimeSample)
+		.def("needsApertureSample", &Sensor::needsApertureSample)
+		.def("getFilm", sensor_getFilm, BP_RETURN_VALUE)
+		.def("getSampler", sensor_getSampler, BP_RETURN_VALUE)
+		.def("getAspect", &Sensor::getAspect);
+
+	BP_SETSCOPE(Sensor_class);
+	bp::enum_<Sensor::ESensorFlags>("ESensorFlags")
+		.value("EDeltaTime", Sensor::EDeltaTime)
+		.value("ENeedsApertureSample", Sensor::ENeedsApertureSample)
+		.value("EProjectiveCamera", Sensor::EProjectiveCamera)
+		.value("EPerspectiveCamera", Sensor::EPerspectiveCamera)
+		.value("EOrthographicCamera", Sensor::EOrthographicCamera)
+		.value("EPositionSampleMapsToPixels", Sensor::EPositionSampleMapsToPixels)
+		.value("EDirectionSampleMapsToPixels", Sensor::EDirectionSampleMapsToPixels)
+		.export_values();
+	BP_SETSCOPE(renderModule);
 
 	void (Film::*film_develop1)(const Scene *scene, Float renderTime) = &Film::develop;
 	bool (Film::*film_develop2)(const Point2i &offset, const Vector2i &size,
