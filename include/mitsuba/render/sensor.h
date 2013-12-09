@@ -140,6 +140,10 @@ public:
 	 *    In the Python API, the signature of this function is
 	 *    <tt>spectrum, ray = sensor.sampleRay(samplePosition, apertureSample)</tt>
 	 */
+	virtual Spectrum sampleRay(Ray &ray,
+		const Point2 &samplePosition,
+		const Point2 &apertureSample,
+		Float timeSample) const;
 
 	/**
 	 * \brief Importance sample a ray differential according to the
