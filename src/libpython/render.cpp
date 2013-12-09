@@ -11,6 +11,10 @@ static bool intersection_get_hasUVPartials(const Intersection &its) { return its
 static void intersection_set_hasUVPartials(Intersection &its, bool value) { its.hasUVPartials = value;  }
 static uint32_t intersection_get_primIndex(const Intersection &its) { return its.primIndex;  }
 static void intersection_set_primIndex(Intersection &its, uint32_t value) { its.primIndex = value;  }
+static Shape * intersection_get_shape(const Intersection &its) { return const_cast<Shape *>(its.shape);  }
+static void intersection_set_shape(Intersection &its, Shape * value) { its.shape = value;  }
+static Shape * intersection_get_instance(const Intersection &its) { return const_cast<Shape *>(its.instance);  }
+static void intersection_set_instance(Intersection &its, Shape * value) { its.instance = value;  }
 
 static const Intersection &bsdfsamplingrecord_get_its(const BSDFSamplingRecord &bRec) {
 	return bRec.its;
@@ -391,8 +395,8 @@ void export_render() {
 		.def_readwrite("time", &Intersection::time)
 		.def_readwrite("color", &Intersection::color)
 		.def_readwrite("wi", &Intersection::wi)
-		.def_readwrite("shape", &Intersection::shape)
-		.def_readwrite("instance", &Intersection::instance)
+		.add_property("shape", bp::make_function(&intersection_get_shape, BP_RETURN_VALUE), &intersection_set_shape)
+		.add_property("instance", bp::make_function(&intersection_get_instance, BP_RETURN_VALUE), &intersection_set_instance)
 		.add_property("hasUVPartials", &intersection_get_hasUVPartials, &intersection_set_hasUVPartials)
 		.add_property("primIndex", &intersection_get_primIndex, &intersection_set_primIndex)
 		.def("toWorld", &Intersection::toWorld, BP_RETURN_VALUE)
