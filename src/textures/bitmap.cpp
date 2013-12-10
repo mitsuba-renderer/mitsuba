@@ -542,6 +542,10 @@ public:
 		return true;
 	}
 
+	bool isMonochromatic() const {
+		return m_mipmap1.get() != NULL;
+	}
+
 	Vector3i getResolution() const {
 		if (m_mipmap3.get()) {
 			return Vector3i(

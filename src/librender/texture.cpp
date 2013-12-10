@@ -46,6 +46,7 @@ Spectrum Texture::getAverage() const { NotImplementedError("getAverage"); }
 Spectrum Texture::getMinimum() const { NotImplementedError("getMinimum"); }
 Spectrum Texture::getMaximum() const { NotImplementedError("getMaximum"); }
 bool Texture::isConstant() const { NotImplementedError("isConstant"); }
+bool Texture::isMonochromatic() const { NotImplementedError("isMonochromatic"); }
 bool Texture::usesRayDifferentials() const { NotImplementedError("usesRayDifferentials"); }
 ref<Bitmap> Texture::getBitmap(const Vector2i &) const { NotImplementedError("getBitmap"); }
 

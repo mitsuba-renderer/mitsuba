@@ -138,6 +138,10 @@ public:
 		return m_nested->usesRayDifferentials();
 	}
 
+	bool isMonochromatic() const {
+		return m_nested->isMonochromatic();
+	}
+
 	Shader *createShader(Renderer *renderer) const;
 
 	void serialize(Stream *stream, InstanceManager *manager) const {

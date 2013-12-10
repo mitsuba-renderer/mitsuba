@@ -73,6 +73,10 @@ public:
 		return false;
 	}
 
+	inline bool isMonochromatic() const {
+		return m_value == Spectrum(m_value[0]);
+	}
+
 	Shader *createShader(Renderer *renderer) const;
 
 	ref<Bitmap> getBitmap(const Vector2i &resolutionHint) const;
@@ -126,6 +130,10 @@ public:
 
 	inline bool usesRayDifferentials() const {
 		return false;
+	}
+
+	inline bool isMonochromatic() const {
+		return true;
 	}
 
 	Shader *createShader(Renderer *renderer) const;
@@ -187,6 +195,10 @@ public:
 		return m_a->usesRayDifferentials() || m_b->usesRayDifferentials();
 	}
 
+	inline bool isMonochromatic() const {
+		return m_a->isMonochromatic() && m_b->isMonochromatic();
+	}
+
 	Shader *createShader(Renderer *renderer) const;
 
 	ref<Bitmap> getBitmap(const Vector2i &resolutionHint) const;
@@ -244,6 +256,10 @@ public:
 
 	inline bool usesRayDifferentials() const {
 		return m_a->usesRayDifferentials() || m_b->usesRayDifferentials();
+	}
+
+	inline bool isMonochromatic() const {
+		return m_a->isMonochromatic() && m_b->isMonochromatic();
 	}
 
 	Shader *createShader(Renderer *renderer) const;
@@ -304,6 +320,10 @@ public:
 
 	inline bool usesRayDifferentials() const {
 		return m_a->usesRayDifferentials() || m_b->usesRayDifferentials();
+	}
+
+	inline bool isMonochromatic() const {
+		return m_a->isMonochromatic() && m_b->isMonochromatic();
 	}
 
 	Shader *createShader(Renderer *renderer) const;

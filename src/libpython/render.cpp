@@ -482,6 +482,7 @@ void export_render() {
 		.def("getSensor", shape_getSensor, BP_RETURN_VALUE)
 		.def("hasBSDF", &Shape::hasBSDF)
 		.def("getBSDF", shape_getBSDF, BP_RETURN_VALUE)
+		.def("setBSDF", &Shape::setBSDF)
 		.def("getPrimitiveCount", &Shape::getPrimitiveCount)
 		.def("getEffectivePrimitiveCount", &Shape::getEffectivePrimitiveCount)
 		.def("copyAttachments", &Shape::copyAttachments);
