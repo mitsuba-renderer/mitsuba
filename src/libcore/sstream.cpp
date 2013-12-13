@@ -246,15 +246,15 @@ void SocketStream::flush() {
 	/* Ignore */
 }
 
-bool SocketStream::handleError(const std::string &cmd, ELogLevel level) {
+bool SocketStream::handleError(const std::string &peer, const std::string &cmd, ELogLevel level) {
 #if !defined(__WINDOWS__)
 	if (level == EWarn && errno == EINTR) /* This is not really a warning -- just retry the operation. */
 		return false;
 
 	if (cmd.find("(") == std::string::npos)
-		Log(level, "Error in %s(): %s!", cmd.c_str(), strerror(errno));
+		Log(level, "[%s] Error in %s(): %s!", peer.c_str(), cmd.c_str(), strerror(errno));
 	else
-		Log(level, "Error in %s: %s!", cmd.c_str(), strerror(errno));
+		Log(level, "[%s] Error in %s: %s!", peer.c_str(), cmd.c_str(), strerror(errno));
 #else
 	std::string err;
 	int error = WSAGetLastError();

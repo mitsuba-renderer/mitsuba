@@ -78,7 +78,10 @@ public:
 	std::string toString() const;
 
 	/// Handle the last socket-specific error (looks up the appropriate OS description)
-	static bool handleError(const std::string &cmd, ELogLevel level = EError);
+	inline bool handleError(const std::string &cmd, ELogLevel level = EError) { return SocketStream::handleError(m_peer, cmd, level); }
+
+	/// Handle the last socket-specific error (looks up the appropriate OS description)
+	static bool handleError(const std::string &peer, const std::string &cmd, ELogLevel level = EError);
 
 	//! @}
 	// =============================================================
