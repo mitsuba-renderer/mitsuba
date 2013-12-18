@@ -138,7 +138,7 @@ public:
 		size_t size = (size_t) m_dataSize.x * (size_t) m_dataSize.y;
 		m_data = (Float *) allocAligned(size * sizeof(Float));
 		stream->readFloatArray(m_data, size);
-		buildInternal();
+		configure();
 	}
 
 	~Heightfield() {
@@ -462,19 +462,37 @@ public:
 			if (m_data != NULL)
 				Log(EError, "Attempted to attach multiple textures to a height field shape!");
 
-			ref<Bitmap> bitmap = static_cast<Texture *>(child)->getBitmap(m_sizeHint);
+			m_bitmap = static_cast<Texture *>(child)->getBitmap(m_sizeHint);
+		} else if (cClass->derivesFrom(ReconstructionFilter::m_theClass)) {
+			if (m_rfilter != NULL)
+				Log(EError, "Attempted to attach multiple reconstruction filters to a height field shape!");
 
-			m_dataSize = bitmap->getSize();
+			m_rfilter = static_cast<ReconstructionFilter *>(child);
+		} else {
+			Shape::addChild(name, child);
+		}
+	}
+
+	void configure() {
+		Shape::configure();
+
+		if (m_minmax)
+			return;
+
+		if (m_bitmap.get()) {
+			m_dataSize = m_bitmap->getSize();
 			if (m_dataSize.x < 2) m_dataSize.x = 2;
 			if (m_dataSize.y < 2) m_dataSize.y = 2;
 			if (!isPowerOfTwo(m_dataSize.x - 1)) m_dataSize.x = (int) roundToPowerOfTwo((uint32_t) m_dataSize.x - 1) + 1;
 			if (!isPowerOfTwo(m_dataSize.y - 1)) m_dataSize.y = (int) roundToPowerOfTwo((uint32_t) m_dataSize.y - 1) + 1;
 
-			if (bitmap->getSize() != m_dataSize) {
-				Log(EInfo, "Resampling heightfield texture from %ix%i to %ix%i ..",
-					bitmap->getWidth(), bitmap->getHeight(), m_dataSize.x, m_dataSize.y);
+			if (m_bitmap->getSize() != m_dataSize) {
+				m_bitmap = m_bitmap->convert(Bitmap::ELuminance, Bitmap::EFloat);
 
-				bitmap = bitmap->resample(NULL, ReconstructionFilter::EClamp,
+				Log(EInfo, "Resampling heightfield texture from %ix%i to %ix%i ..",
+					m_bitmap->getWidth(), m_bitmap->getHeight(), m_dataSize.x, m_dataSize.y);
+
+				m_bitmap = m_bitmap->resample(m_rfilter, ReconstructionFilter::EClamp,
 					ReconstructionFilter::EClamp, m_dataSize,
 					-std::numeric_limits<Float>::infinity(),
 					std::numeric_limits<Float>::infinity());
@@ -482,19 +500,13 @@ public:
 
 			size_t size = (size_t) m_dataSize.x * (size_t) m_dataSize.y * sizeof(Float);
 			m_data = (Float *) allocAligned(size);
-			bitmap->convert(m_data, Bitmap::ELuminance, Bitmap::EFloat);
+			m_bitmap->convert(m_data, Bitmap::ELuminance, Bitmap::EFloat);
 
 			m_objectToWorld = m_objectToWorld * Transform::translate(Vector(-1, -1, 0)) * Transform::scale(Vector(
 				(Float) 2 / (m_dataSize.x-1),
 				(Float) 2 / (m_dataSize.y-1), 1));
-
-			buildInternal();
-		} else {
-			Shape::addChild(name, child);
 		}
-	}
 
-	void buildInternal() {
 		size_t storageSize = (size_t) m_dataSize.x * (size_t) m_dataSize.y * sizeof(Float);
 		Log(EInfo, "Building acceleration data structure for %ix%i height field ..", m_dataSize.x, m_dataSize.y);
 
@@ -705,6 +717,8 @@ public:
 
 	MTS_DECLARE_CLASS()
 private:
+	ref<ReconstructionFilter> m_rfilter;
+	ref<Bitmap> m_bitmap;
 	Transform m_objectToWorld;
 	Vector2i m_sizeHint;
 	AABB m_dataAABB;

@@ -138,6 +138,7 @@
 					<xsd:element name="shape" type="shape"/>
 					<xsd:element name="medium" type="medium"/>
 					<xsd:element name="texture" type="texture"/>
+					<xsd:element name="rfilter" type="object"/>
 				</xsd:choice>
 			</xsd:extension>
 		</xsd:complexContent>
@@ -192,6 +193,7 @@
 					<xsd:group ref="objectGroup"/>
 					<xsd:element name="texture" type="texture"/>
 					<xsd:element name="ref" type="reference"/>
+					<xsd:element name="rfilter" type="object"/>
 				</xsd:choice>
 			</xsd:extension>
 		</xsd:complexContent>
