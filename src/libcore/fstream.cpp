@@ -381,7 +381,7 @@ ref<FileStream> FileStream::createTemporary() {
 		if (ret == 0 || ret > MAX_PATH)
 			Log(EError, "GetTempPath failed(): %s", lastErrorText().c_str());
 
-		ret = GetTempFileNameW(tempPath, TEXT("mitsuba"), 0, filename);
+		ret = GetTempFileNameW(tempPath, L"mitsuba", 0, filename);
 		if (ret == 0)
 			Log(EError, "GetTempFileName failed(): %s", lastErrorText().c_str());
 
@@ -390,7 +390,7 @@ ref<FileStream> FileStream::createTemporary() {
 
 		if (result->d->file == INVALID_HANDLE_VALUE)
 			Log(EError, "Error while trying to create temporary file \"%s\": %s",
-				d->path.string().c_str(), lastErrorText().c_str());
+				lastErrorText().c_str());
 
 		result->d->path = fs::path(filename);
 	#else
