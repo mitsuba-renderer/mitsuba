@@ -103,6 +103,9 @@ public:
 	//! @{ \name Miscellaneous
 	// =============================================================
 
+	/// Create a temporary file and return an associated FileStream
+	static ref<FileStream> createTemporary();
+
 	/// Initialize the file I/O layer (unicode conversions etc.)
 	static void staticInitialization();
 

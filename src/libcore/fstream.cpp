@@ -37,6 +37,7 @@ struct FileStream::FileStreamPrivate
 #endif
 	bool write;
 	bool read;
+	bool deleteOnClose;
 	FileStream::EFileMode mode;
 	fs::path path;
 
@@ -79,6 +80,7 @@ void FileStream::open(const fs::path &path, EFileMode mode) {
 	d->mode = mode;
 	d->write = true;
 	d->read = true;
+	d->deleteOnClose = false;
 
 #if defined(__WINDOWS__)
 	DWORD dwDesiredAccess = GENERIC_READ;
@@ -177,6 +179,14 @@ void FileStream::close() {
 	}
 #endif
 	d->file = 0;
+
+	if (d->deleteOnClose) {
+		try {
+			fs::remove(d->path);
+		} catch (...) {
+			Log(EWarn, "close(): Unable to delete file \"%s\"", d->path.c_str());
+		}
+	}
 }
 
 
@@ -358,6 +368,51 @@ bool FileStream::canRead() const {
 bool FileStream::canWrite() const {
 	AssertEx(d->file != 0, "No file is currently open");
 	return d->write;
+}
+
+ref<FileStream> FileStream::createTemporary() {
+	ref<FileStream> result = new FileStream();
+
+	#if defined(__WINDOWS__)
+		WCHAR tempPath[MAX_PATH];
+		WCHAR filename[MAX_PATH];
+
+		unsigned int ret = GetTempPathW(MAX_PATH, tempPath);
+		if (ret == 0 || ret > MAX_PATH)
+			Log(EError, "GetTempPath failed(): %s", lastErrorText().c_str());
+
+		ret = GetTempFileNameW(tempPath, TEXT("mitsuba"), 0, filename);
+		if (ret == 0)
+			Log(EError, "GetTempFileName failed(): %s", lastErrorText().c_str());
+
+		result->d->file = CreateFileW(filename, GENERIC_READ | GENERIC_WRITE,
+			0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+
+		if (result->d->file == INVALID_HANDLE_VALUE)
+			Log(EError, "Error while trying to create temporary file \"%s\": %s",
+				d->path.string().c_str(), lastErrorText().c_str());
+
+		result->d->path = fs::path(filename);
+	#else
+		char *path = strdup("/tmp/mitsuba_XXXXXX");
+		int fd = mkstemp(path);
+		if (fd == -1)
+			Log(EError, "Unable to create temporary file (1): %s", strerror(errno));
+
+		result->d->file = fdopen(fd, "wb+");
+		if (result->d->file == NULL)
+			Log(EError, "Unable to create temporary file (2): %s", strerror(errno));
+
+		result->d->path = path;
+		free(path);
+	#endif
+
+	result->d->mode = ETruncReadWrite;
+	result->d->write = true;
+	result->d->read = true;
+	result->d->deleteOnClose = true;
+
+	return result;
 }
 
 #if defined(__WINDOWS__)

@@ -1093,7 +1093,9 @@ void export_core() {
 				BP_RETURN_CONSTREF)
 		.def("open", &FileStream::open)
 		.def("close", &FileStream::close)
-		.def("remove", &FileStream::remove);
+		.def("remove", &FileStream::remove)
+		.def("createTemporary", &FileStream::createTemporary)
+		.staticmethod("createTemporary");
 
 	BP_CLASS(SocketStream, Stream, (bp::init<std::string, int>()))
 		.def("getPeer", &SocketStream::getPeer, BP_RETURN_CONSTREF)
