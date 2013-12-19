@@ -54,14 +54,28 @@ public:
 	 */
 	void resize(size_t size);
 
+	/// Return the associated filename
+	const fs::path &getFilename() const;
+
 	/// Return whether the mapped memory region is read-only
 	bool isReadOnly() const;
 
 	/// Return a string representation
 	std::string toString() const;
 
+	/**
+	 * \brief Create a temporary memory-mapped file
+	 *
+	 * \remark When closing the mapping, the file is
+	 * automatically deleted.
+	 */
+	static ref<MemoryMappedFile> createTemporary(size_t size);
+
 	MTS_DECLARE_CLASS()
 protected:
+	/// Internal constructor
+	MemoryMappedFile();
+
 	/// Release all resources
 	virtual ~MemoryMappedFile();
 private:

@@ -18,9 +18,10 @@ struct MemoryMappedFile::MemoryMappedFilePrivate {
 	size_t size;
 	void *data;
 	bool readOnly;
+	bool temp;
 
-	MemoryMappedFilePrivate(const fs::path & f, size_t s = 0)
-		: filename(f), size(s), data(NULL), readOnly(false) {}
+	MemoryMappedFilePrivate(const fs::path &f = "", size_t s = 0)
+		: filename(f), size(s), data(NULL), readOnly(false), temp(false) {}
 
 	void create() {
 		#if defined(__LINUX__) || defined(__OSX__)
@@ -57,10 +58,69 @@ struct MemoryMappedFile::MemoryMappedFilePrivate {
 		readOnly = false;
 	}
 
+	void createTemp() {
+		readOnly = false;
+		temp = true;
+
+		#if defined(__LINUX__) || defined(__OSX__)
+			char *path = strdup("/tmp/mitsuba_XXXXXX");
+			int fd = mkstemp(path);
+			if (fd == -1)
+				SLog(EError, "Unable to create temporary file (1): %s", strerror(errno));
+			filename = path;
+			free(path);
+
+			int result = lseek(fd, size-1, SEEK_SET);
+			if (result == -1)
+				Log(EError, "Could not set file size of \"%s\"!", filename.string().c_str());
+			result = write(fd, "", 1);
+			if (result != 1)
+				Log(EError, "Could not write to \"%s\"!", filename.string().c_str());
+
+			data = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+			if (data == NULL)
+				Log(EError, "Could not map \"%s\" to memory!", filename.string().c_str());
+
+			if (close(fd) != 0)
+				Log(EError, "close(): unable to close file!");
+		#elif defined(__WINDOWS__)
+			WCHAR tempPath[MAX_PATH];
+			WCHAR filename[MAX_PATH];
+
+			unsigned int ret = GetTempPathW(MAX_PATH, tempPath);
+			if (ret == 0 || ret > MAX_PATH)
+				SLog(EError, "GetTempPath failed(): %s", lastErrorText().c_str());
+
+			ret = GetTempFileNameW(tempPath, TEXT("mitsuba"), 0, filename);
+			if (ret == 0)
+				SLog(EError, "GetTempFileName failed(): %s", lastErrorText().c_str());
+
+			file = CreateFileW(filename, GENERIC_READ | GENERIC_WRITE,
+				0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+
+			if (file == INVALID_HANDLE_VALUE)
+				SLog(EError, "Error while trying to create temporary file \"%s\": %s",
+					d->path.string().c_str(), lastErrorText().c_str());
+
+			filename = fs::path(filename);
+
+			fileMapping = CreateFileMapping(file, NULL, PAGE_READWRITE, 0,
+				static_cast<DWORD>(size), NULL);
+			if (fileMapping == NULL)
+				Log(EError, "CreateFileMapping: Could not map \"%s\" to memory: %s",
+					filename.string().c_str(), lastErrorText().c_str());
+			data = (void *) MapViewOfFile(fileMapping, FILE_MAP_WRITE, 0, 0, 0);
+			if (data == NULL)
+				Log(EError, "MapViewOfFile: Could not map \"%s\" to memory: %s",
+					filename.string().c_str(), lastErrorText().c_str());
+		#endif
+	}
+
 	void map() {
 		if (!fs::exists(filename))
 			Log(EError, "The file \"%s\" does not exist!", filename.string().c_str());
 		size = (size_t) fs::file_size(filename);
+
 		#if defined(__LINUX__) || defined(__OSX__)
 			int fd = open(filename.string().c_str(), readOnly ? O_RDONLY : O_RDWR);
 			if (fd == -1)
@@ -91,10 +151,19 @@ struct MemoryMappedFile::MemoryMappedFilePrivate {
 	void unmap() {
 		SLog(ETrace, "Unmapping \"%s\" from memory",
 			filename.string().c_str());
+
 		#if defined(__LINUX__) || defined(__OSX__)
+			if (temp) {
+				/* Temporary file that will be deleted in any case:
+				   invalidate dirty pages to avoid a costly flush to disk */
+				int retval = msync(data, size, MS_INVALIDATE);
+				if (retval != 0)
+					Log(EError, "munmap(): unable to unmap memory: %s", strerror(errno));
+			}
+
 			int retval = munmap(data, size);
 			if (retval != 0)
-				Log(EError, "munmap(): unable to unmap memory!");
+				Log(EError, "munmap(): unable to unmap memory: %s", strerror(errno));
 		#elif defined(__WINDOWS__)
 			if (!UnmapViewOfFile(data))
 				Log(EError, "UnmapViewOfFile(): unable to unmap memory: %s", lastErrorText().c_str());
@@ -103,10 +172,22 @@ struct MemoryMappedFile::MemoryMappedFilePrivate {
 			if (!CloseHandle(file))
 				Log(EError, "CloseHandle(): unable to close file: %s", lastErrorText().c_str());
 		#endif
+
+		if (temp) {
+			try {
+				fs::remove(filename);
+			} catch (...) {
+				Log(EWarn, "unmap(): Unable to delete file \"%s\"", filename.string().c_str());
+			}
+		}
+
 		data = NULL;
 		size = 0;
 	}
 };
+
+MemoryMappedFile::MemoryMappedFile()
+	: d(new MemoryMappedFilePrivate()) { }
 
 MemoryMappedFile::MemoryMappedFile(const fs::path &filename, size_t size)
 	: d(new MemoryMappedFilePrivate(filename, size)) {
@@ -138,10 +219,13 @@ MemoryMappedFile::~MemoryMappedFile() {
 void MemoryMappedFile::resize(size_t size) {
 	if (!d->data)
 		Log(EError, "Internal error in MemoryMappedFile::resize()!");
+	bool temp = d->temp;
+	d->temp = false;
 	d->unmap();
 	fs::resize_file(d->filename, size);
 	d->size = size;
 	d->map();
+	d->temp = temp;
 }
 
 void *MemoryMappedFile::getData() {
@@ -159,6 +243,17 @@ size_t MemoryMappedFile::getSize() const {
 
 bool MemoryMappedFile::isReadOnly() const {
 	return d->readOnly;
+}
+
+const fs::path &MemoryMappedFile::getFilename() const {
+	return d->filename;
+}
+
+ref<MemoryMappedFile> MemoryMappedFile::createTemporary(size_t size) {
+	ref<MemoryMappedFile> result = new MemoryMappedFile();
+	result->d->size = size;
+	result->d->createTemp();
+	return result;
 }
 
 std::string MemoryMappedFile::toString() const {

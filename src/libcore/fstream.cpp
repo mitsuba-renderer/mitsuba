@@ -53,7 +53,6 @@ FileStream::FileStream(const fs::path &path, EFileMode mode)
 	open(path, mode);
 }
 
-
 FileStream::~FileStream() {
 	if (d->file != 0)
 		close();
@@ -188,7 +187,6 @@ void FileStream::close() {
 		}
 	}
 }
-
 
 void FileStream::remove() {
 	close();
