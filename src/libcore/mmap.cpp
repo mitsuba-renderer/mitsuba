@@ -85,24 +85,24 @@ struct MemoryMappedFile::MemoryMappedFilePrivate {
 				Log(EError, "close(): unable to close file!");
 		#elif defined(__WINDOWS__)
 			WCHAR tempPath[MAX_PATH];
-			WCHAR filename[MAX_PATH];
+			WCHAR tempFilename[MAX_PATH];
 
 			unsigned int ret = GetTempPathW(MAX_PATH, tempPath);
 			if (ret == 0 || ret > MAX_PATH)
 				SLog(EError, "GetTempPath failed(): %s", lastErrorText().c_str());
 
-			ret = GetTempFileNameW(tempPath, TEXT("mitsuba"), 0, filename);
+			ret = GetTempFileNameW(tempPath, L"mitsuba", 0, tempFilename);
 			if (ret == 0)
 				SLog(EError, "GetTempFileName failed(): %s", lastErrorText().c_str());
 
-			file = CreateFileW(filename, GENERIC_READ | GENERIC_WRITE,
+			file = CreateFileW(tempFilename, GENERIC_READ | GENERIC_WRITE,
 				0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 
 			if (file == INVALID_HANDLE_VALUE)
-				SLog(EError, "Error while trying to create temporary file \"%s\": %s",
-					d->path.string().c_str(), lastErrorText().c_str());
+				Log(EError, "Error while trying to create temporary file: %s",
+					lastErrorText().c_str());
 
-			filename = fs::path(filename);
+			filename = fs::path(tempFilename);
 
 			fileMapping = CreateFileMapping(file, NULL, PAGE_READWRITE, 0,
 				static_cast<DWORD>(size), NULL);

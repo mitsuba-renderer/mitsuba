@@ -387,7 +387,7 @@ ref<FileStream> FileStream::createTemporary() {
 			0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 
 		if (result->d->file == INVALID_HANDLE_VALUE)
-			Log(EError, "Error while trying to create temporary file \"%s\": %s",
+			Log(EError, "Error while trying to create temporary file: %s",
 				lastErrorText().c_str());
 
 		result->d->path = fs::path(filename);
