@@ -165,6 +165,13 @@ size_t getTotalSystemMemory() {
 	status.dwLength = sizeof(status);
 	GlobalMemoryStatusEx(&status);
 	return (size_t) status.ullTotalPhys;
+#elif defined(__OSX__)
+	int mib[2] = { CTL_HW, HW_MEMSIZE };
+	uint64_t size;
+	size_t len = sizeof(size);
+	if (sysctl(mib, 2, &size, &len, NULL, 0) < 0)
+		return 0;
+	return (size_t) size;
 #else
 	size_t pages = sysconf(_SC_PHYS_PAGES);
 	size_t page_size = sysconf(_SC_PAGE_SIZE);
