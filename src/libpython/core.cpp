@@ -2079,6 +2079,7 @@ void export_core() {
 	bp::def("getCoreCount", &getCoreCount);
 	bp::def("getHostName", &getHostName);
 	bp::def("getPrivateMemoryUsage", &getPrivateMemoryUsage);
+	bp::def("getTotalSystemMemory", &getTotalSystemMemory);
 	bp::def("getFQDN", &getFQDN);
 	bp::def("rdtsc", &rdtsc);
 	bp::def("hypot2", &hypot2);

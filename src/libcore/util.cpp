@@ -159,6 +159,19 @@ int getCoreCount() {
 #endif
 }
 
+size_t getTotalSystemMemory() {
+#if defined(__WINDOWS__)
+	MEMORYSTATUSEX status;
+	status.dwLength = sizeof(status);
+	GlobalMemoryStatusEx(&status);
+	return (size_t) status.ullTotalPhys;
+#else
+	size_t pages = sysconf(_SC_PHYS_PAGES);
+	size_t page_size = sysconf(_SC_PAGE_SIZE);
+	return pages * page_size;
+#endif
+}
+
 size_t getPrivateMemoryUsage() {
 #if defined(__WINDOWS__)
 	PROCESS_MEMORY_COUNTERS_EX pmc;

@@ -114,6 +114,9 @@ extern MTS_EXPORT_CORE std::string getHostName();
 /// Return the process private memory usage in bytes
 extern MTS_EXPORT_CORE size_t getPrivateMemoryUsage();
 
+/// Returns the total amount of memory available to the OS
+extern MTS_EXPORT_CORE size_t getTotalSystemMemory();
+
 /// Return the fully qualified domain name of this machine
 extern MTS_EXPORT_CORE std::string getFQDN();
 
