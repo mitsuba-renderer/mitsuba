@@ -448,7 +448,7 @@ struct vertex_key_order : public
 		else if (v1.uv.x > v2.uv.x) return 1;
 		if (v1.uv.y < v2.uv.y) return -1;
 		else if (v1.uv.y > v2.uv.y) return 1;
-		for (int i=0; i<SPECTRUM_SAMPLES; ++i) {
+		for (int i=0; i<Color3::dim; ++i) {
 			if (v1.col[i] < v2.col[i]) return -1;
 			else if (v1.col[i] > v2.col[i]) return 1;
 		}
@@ -474,6 +474,7 @@ void TriMesh::rebuildTopology(Float maxAngle) {
 	typedef std::multimap<Vertex, TopoData, vertex_key_order> MMap;
 	typedef std::pair<Vertex, TopoData> MPair;
 	const Float dpThresh = std::cos(degToRad(maxAngle));
+	size_t degenerateTriangles = 0;
 
 	if (m_normals) {
 		delete[] m_normals;
@@ -518,7 +519,17 @@ void TriMesh::rebuildTopology(Float maxAngle) {
 		Point v0 = m_positions[tri.idx[0]];
 		Point v1 = m_positions[tri.idx[1]];
 		Point v2 = m_positions[tri.idx[2]];
-		faceNormals[i] = Normal(normalize(cross(v1 - v0, v2 - v0)));
+
+		Normal n = cross(v1 - v0, v2 - v0);
+		Float l = n.length();
+		if (l > RCPOVERFLOW_FLT) {
+			n /= l;
+		} else {
+			n = Normal(0.0f); /* Degenerate triangle */
+			degenerateTriangles++;
+		}
+
+		faceNormals[i] = Normal(n);
 		for (int j=0; j<3; ++j)
 			newTriangles[i].idx[j] = 0xFFFFFFFFU;
 	}
@@ -589,6 +600,9 @@ void TriMesh::rebuildTopology(Float maxAngle) {
 	}
 
 	m_vertexCount = newPositions.size();
+
+	if (degenerateTriangles > 0)
+		Log(EWarn, "Mesh contains " SIZE_T_FMT " degenerate triangles!", degenerateTriangles);
 
 	Log(EInfo, "Done after %i ms (mesh now has " SIZE_T_FMT " vertices)",
 			timer->getMilliseconds(), m_vertexCount);
