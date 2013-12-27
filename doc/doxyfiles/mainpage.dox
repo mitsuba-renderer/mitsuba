@@ -29,29 +29,28 @@
 is a modular open-source rendering framework, which consists of a small set of core libraries
 and over 100 different plugins that implement functionality ranging from materials and light
 sources to complete rendering algorithms. This page provides information on the interface to these core
-libraries needed to develop custom plugins.</p> 
+libraries needed to develop custom plugins.</p>
 
 <p>The API documentation tracks the current development branch and is automatically
 regenerated every hour. Note that it is not a substitute for the reference manual!
 If you are planning to do any kind of serious development with Mitsuba, it is recommended that you
-first read one the following documents (preferably the latter)</p> 
-    - <a href="http://www.mitsuba-renderer.org/documentation.pdf">Reference Manual (Current release)</a>
-    - <a href="http://www.mitsuba-renderer.org/documentation-beta.pdf">Reference Manual (Development version)</a>
+first the following document:</p>
+    - <a href="http://www.mitsuba-renderer.org/releases/current/documentation.pdf">Reference Manual</a>
 
 <h2>API Structure</h2>
 <p>Mitsuba is split into four basic support libraries. Please use the links below to view their
 contents:
 </p><p>
 The <a href="group__libcore.html">core library (<tt>libcore</tt>)</a> implements basic
-functionality such as cross-platform file and bitmap I/O, data structures, scheduling, as well as logging 
+functionality such as cross-platform file and bitmap I/O, data structures, scheduling, as well as logging
 and plugin management.</p>
-<p>The <a href="group__librender.html">rendering library (<tt>librender</tt>)</a> contains abstractions 
+<p>The <a href="group__librender.html">rendering library (<tt>librender</tt>)</a> contains abstractions
 needed to load and represent scenes containing  light sources, shapes, materials, and participating media.</p>
 <p>The <a href="group__libhw.html">hardware acceleration library (<tt>libhw</tt>)</a>
 implements a cross-platform display library, an object-oriented OpenGL
-wrapper, as well as support for rendering interactive previews of scenes. 
+wrapper, as well as support for rendering interactive previews of scenes.
 <p>Finally, the <a href="group__libbidir.html">bidirectional library (<tt>libbidir</tt>)</a>
-contains a support layer that is used to implement bidirectional rendering algorithms such as 
+contains a support layer that is used to implement bidirectional rendering algorithms such as
 Bidirectional Path Tracing and Metropolis Light Transport. </p>
 <p>Mitsuba also exposes a subset of these libraries via Python bindings. To see
 a listing of all exported classes, <a href="group__libpython.html">click here</a>.</p>
