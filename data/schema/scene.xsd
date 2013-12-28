@@ -28,6 +28,7 @@
 				<xsd:element name="blackbody" type="blackbody"/>
 
 				<xsd:element name="alias" type="alias"/>
+				<xsd:element name="default" type="string"/>
 			</xsd:choice>
 			<xsd:attribute name="version" type="xsd:string"/>
 		</xsd:complexType>
@@ -49,6 +50,7 @@
 			<xsd:element name="rgb" type="rgb"/>
 			<xsd:element name="srgb" type="string"/>
 			<xsd:element name="blackbody" type="blackbody"/>
+			<xsd:element name="default" type="string"/>
 		</xsd:choice>
 	</xsd:group>
 

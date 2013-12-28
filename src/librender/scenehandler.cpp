@@ -102,9 +102,10 @@ SceneHandler::SceneHandler(const SAXParser *parser,
 	m_tags["blackbody"]  = TagEntry(EBlackBody,  (Class *) NULL);
 	m_tags["spectrum"]   = TagEntry(ESpectrum,   (Class *) NULL);
 	m_tags["transform"]  = TagEntry(ETransform,  (Class *) NULL);
-	m_tags["animation"]  = TagEntry(EAnimation, (Class *) NULL);
+	m_tags["animation"]  = TagEntry(EAnimation,  (Class *) NULL);
 	m_tags["include"]    = TagEntry(EInclude,    (Class *) NULL);
 	m_tags["alias"]      = TagEntry(EAlias,      (Class *) NULL);
+	m_tags["default"]    = TagEntry(EDefault,    (Class *) NULL);
 
 	XMLTransService::Codes failReason;
 	m_transcoder = XMLPlatformUtils::fgTransService->makeNewTranscoderFor(
@@ -653,6 +654,12 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 				object = handler->getScene();
 				delete parser;
 				delete handler;
+			}
+			break;
+
+		case EDefault: {
+				if (m_params.find(context.attributes["name"]) == m_params.end())
+					m_params[context.attributes["name"]] = context.attributes["value"];
 			}
 			break;
 
