@@ -312,6 +312,12 @@ Float PerspectiveCamera::getYFov() const {
 		std::tan(0.5f * degToRad(m_xfov)) / m_aspect));
 }
 
+Float PerspectiveCamera::getDiagonalFov() const {
+	Float width = std::tan(0.5f * degToRad(m_xfov));
+	Float diagonal = width * std::sqrt(1.0f + 1.0f / (m_aspect*m_aspect));
+	return radToDeg(2*std::atan(diagonal));
+}
+
 MTS_IMPLEMENT_CLASS(PerspectiveCamera, true, ProjectiveCamera)
 MTS_IMPLEMENT_CLASS(ProjectiveCamera, true, Sensor)
 MTS_IMPLEMENT_CLASS(Sensor, true, AbstractEmitter)
