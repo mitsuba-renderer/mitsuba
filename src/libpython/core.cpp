@@ -131,6 +131,8 @@ public:
 				return bp::object(props.getPoint(name));
 			case Properties::ETransform:
 				return bp::object(props.getTransform(name));
+			case Properties::EAnimatedTransform:
+				return bp::object(props.getAnimatedTransform(name));
 			case Properties::ESpectrum:
 				return bp::object(props.getSpectrum(name));
 			default:
@@ -148,6 +150,7 @@ public:
 		bp::extract<Point> extractPoint(value);
 		bp::extract<Transform> extractTransform(value);
 		bp::extract<Spectrum> extractSpectrum(value);
+		bp::extract<AnimatedTransform *> extractAnimatedTransform(value);
 
 		if (extractString.check()){
 			props.setString(name, extractString());
@@ -163,6 +166,8 @@ public:
 			props.setVector(name, extractVector());
 		} else if (extractTransform.check()) {
 			props.setTransform(name, extractTransform());
+		} else if (extractAnimatedTransform.check()) {
+			props.setAnimatedTransform(name, extractAnimatedTransform());
 		} else if (extractSpectrum.check()) {
 			props.setSpectrum(name, extractSpectrum());
 		} else {
