@@ -897,8 +897,6 @@ void loadMaterial(ColladaContext &ctx, domMaterial &mat) {
 		loadMaterialParam(ctx, "reflectance", diffuse, true);
 		ctx.os << "\t</bsdf>" << endl << endl;
 	} else if (blinn) {
-		SLog(EWarn, "\"%s\": Encountered a \"blinn\" COLLADA material, which is currently "
-			"unsupported in Mitsuba -- replacing it using a Phong material.", identifier.c_str());
 		domCommon_color_or_texture_type* diffuse = blinn->getDiffuse();
 		domCommon_color_or_texture_type* specular = blinn->getSpecular();
 		domCommon_float_or_param_type* shininess = blinn->getShininess();
@@ -912,7 +910,7 @@ void loadMaterial(ColladaContext &ctx, domMaterial &mat) {
 				isDiffuse = true;
 		}
 		if (isDiffuse) {
-			ctx.os << "\t<bsdf id=\"" << identifier << "\" type=\"diffuse\">" << endl;
+			ctx.os << "\t<bsdf id=\"phong\" type=\"diffuse\">" << endl;
 			loadMaterialParam(ctx, "reflectance", diffuse, false);
 			loadMaterialParam(ctx, "reflectance", diffuse, true);
 			ctx.os << "\t</bsdf>" << endl << endl;
