@@ -910,14 +910,12 @@ void loadMaterial(ColladaContext &ctx, domMaterial &mat) {
 				isDiffuse = true;
 		}
 		if (isDiffuse) {
-			ctx.os << "\t<bsdf id=\"phong\" type=\"diffuse\">" << endl;
+			ctx.os << "\t<bsdf id=\"" << identifier << "\" type=\"diffuse\">" << endl;
 			loadMaterialParam(ctx, "reflectance", diffuse, false);
 			loadMaterialParam(ctx, "reflectance", diffuse, true);
 			ctx.os << "\t</bsdf>" << endl << endl;
 		} else {
-			ctx.os << "\t<bsdf id=\"" << identifier << "\" type=\"blinn\">" << endl;
-			ctx.os << "\t\t<float name=\"specularReflectance\" value=\"1\"/>" << endl;
-			ctx.os << "\t\t<float name=\"diffuseReflectance\" value=\"1\"/>" << endl;
+			ctx.os << "\t<bsdf id=\"" << identifier << "\" type=\"phong\">" << endl;
 			loadMaterialParam(ctx, "diffuseReflectance", diffuse, false);
 			loadMaterialParam(ctx, "specularReflectance", specular, false);
 			loadMaterialParam(ctx, "exponent", shininess, false);
