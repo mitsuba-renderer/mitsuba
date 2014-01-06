@@ -3119,7 +3119,7 @@ void Bitmap::writeRGBE(Stream *stream) const {
 	stream->writeLine("#?RGBE");
 
 	std::vector<std::string> keys = m_metadata.getPropertyNames();
-	for (std::vector<std::string>::const_iterator it = keys.begin(); it != keys.end(); ) {
+	for (std::vector<std::string>::const_iterator it = keys.begin(); it != keys.end(); ++it) {
 		stream->writeLine(formatString("# Metadata [%s]:", it->c_str()));
 		std::istringstream iss(m_metadata.getAsString(*it));
 		std::string buf;
