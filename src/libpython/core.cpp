@@ -992,6 +992,8 @@ void export_core() {
 	bp::to_python_converter<fs::path, path_to_python_str>();
 	bp::to_python_converter<TSpectrum<Float, SPECTRUM_SAMPLES>, TSpectrum_to_Spectrum>();
 	bp::implicitly_convertible<std::string, fs::path>();
+	bp::implicitly_convertible<Normal, Vector>();
+
 	PythonIntegrandFromPythonCallable();
 
 	bp::object coreModule(
