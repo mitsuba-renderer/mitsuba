@@ -202,6 +202,7 @@ private slots:
 	void on_glView_crop(int type, int x=0, int y=0,
 		int width=0, int height=0);
 	void onSelectionChanged();
+	void onSwitchTab(int rel);
 
 private:
 	void exportImage(const QString &fileName);

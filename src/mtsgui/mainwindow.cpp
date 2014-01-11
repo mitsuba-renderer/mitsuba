@@ -169,6 +169,7 @@ MainWindow::MainWindow(QWidget *parent) :
 	connect(ui->glView, SIGNAL(statusMessage(const QString &)), this, SLOT(onStatusMessage(const QString &)),
 		Qt::QueuedConnection);
 	connect(ui->glView, SIGNAL(selectionChanged()), this, SLOT(onSelectionChanged()));
+	connect(ui->glView, SIGNAL(switchTab(int)), this, SLOT(onSwitchTab(int)));
 
 	/* Load defaults from app settings file */
 	ui->glView->setInvertMouse(settings.value("invertMouse", false).toBool());
@@ -498,6 +499,12 @@ void MainWindow::on_actionShowKDTree_triggered() {
 void MainWindow::on_actionFocusSelected_triggered() {
 	QKeyEvent event(QEvent::KeyPress, Qt::Key_F, Qt::NoModifier);
 	ui->glView->keyPressEvent(&event);
+}
+
+void MainWindow::onSwitchTab(int rel) {
+	int index = ui->tabBar->currentIndex() + rel;
+	if (index >= 0 && index < ui->tabBar->count())
+		ui->tabBar->setCurrentIndex(index);
 }
 
 void MainWindow::on_actionFocusAll_triggered() {

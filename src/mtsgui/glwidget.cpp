@@ -492,8 +492,16 @@ void GLWidget::keyPressEvent(QKeyEvent *event) {
 		case Qt::Key_PageUp:   m_context->movementScale *= 2; break;
 		case Qt::Key_PageDown: m_context->movementScale /= 2; break;
 		case Qt::Key_Left:
+			if (event->modifiers() & Qt::AltModifier) {
+				emit switchTab(-1);
+				return;
+			}
 			m_leftKeyDown = true; break;
 		case Qt::Key_Right:
+			if (event->modifiers() & Qt::AltModifier) {
+				emit switchTab(1);
+				return;
+			}
 			m_rightKeyDown = true; break;
 		case Qt::Key_Up:
 			m_upKeyDown = true; break;
@@ -520,7 +528,7 @@ void GLWidget::keyPressEvent(QKeyEvent *event) {
 			if (m_context->selectionMode == EScene) {
 				m_context->selectionMode = ENothing;
 				m_aabb.reset();
-			} else {
+			} else if (m_context->scene) {
 				m_context->selectionMode = EScene;
 				m_aabb = m_context->scene->getKDTree()->getAABB();
 			}
