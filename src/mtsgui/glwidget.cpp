@@ -583,6 +583,15 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 		m_cropEnd.x = std::min(std::max(0, m_mousePos.x()-offset.x), maxCrop.x-1);
 		m_cropEnd.y = std::min(std::max(0, m_mousePos.y()-offset.y), maxCrop.y-1);
 
+		if (event->modifiers().testFlag(Qt::ShiftModifier)) {
+			int dx = m_cropEnd.x-m_cropStart.x, dy = m_cropEnd.y-m_cropStart.y;
+
+			if (std::abs(dx) > std::abs(dy))
+				m_cropEnd.y = std::min(std::max(0, m_cropStart.y + dx), maxCrop.y-1);
+			else
+				m_cropEnd.x = std::min(std::max(0, m_cropStart.x + dy), maxCrop.x-1);
+		}
+
 		m_statusMessage =
 			formatString("%s: %i x %i pixels",
 				m_cropType == ECrop ? "Crop" : "Crop & Magnify",
