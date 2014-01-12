@@ -339,6 +339,10 @@ int mtssrv(int argc, char **argv) {
 			SLog(EError, "Error in sigaction(): %s!", strerror(errno));
 		if (sigaction(SIGINT, &sa, NULL) == -1)
 			SLog(EError, "Error in sigaction(): %s!", strerror(errno));
+
+		/* Ignore SIGPIPE */
+		signal(SIGPIPE, SIG_IGN);
+
 		SLog(EInfo, "%s: Listening on port %i.. Send Ctrl-C or SIGTERM to stop.", hostName.c_str(), listenPort);
 #endif
 
