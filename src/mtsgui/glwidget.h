@@ -127,6 +127,7 @@ protected:
 	Point2i upperLeft(bool flipY = false) const;
 	void reveal(const AABB &aabb);
 	Float autoFocus() const;
+	bool askReallyCancelRendering();
 
 	inline ProjectiveCamera *getProjectiveCamera() {
 		Sensor *sensor = m_context->scene->getSensor();

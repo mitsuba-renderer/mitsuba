@@ -362,12 +362,14 @@ void export_render() {
 		.staticmethod("loadScene");
 
  	Scene *(RenderJob::*renderJob_getScene)(void) = &RenderJob::getScene;
+ 	RenderQueue *(RenderJob::*renderJob_getRenderQueue)(void) = &RenderJob::getRenderQueue;
 	BP_CLASS(RenderJob, Thread, (bp::init<const std::string &, Scene *, RenderQueue *>()))
 		.def(bp::init<const std::string &, Scene *, RenderQueue *, int, bp::optional<int, int> >())
 		.def("flush", &RenderJob::flush)
 		.def("cancel", renderJob_cancel)
 		.def("wait", &RenderJob::wait)
- 		.def("getScene", renderJob_getScene, BP_RETURN_VALUE);
+ 		.def("getScene", renderJob_getScene, BP_RETURN_VALUE)
+ 		.def("getRenderQueue", renderJob_getRenderQueue, BP_RETURN_VALUE);
 
 	BP_CLASS(RenderQueue, Object, bp::init<>())
 		.def("getJobCount", &RenderQueue::getJobCount)
