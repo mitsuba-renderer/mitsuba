@@ -82,9 +82,6 @@ void RenderQueue::removeJob(RenderJob *job, bool cancelled) {
 	std::map<RenderJob *, JobRecord>::iterator it = m_jobs.find(job);
 	if (it == m_jobs.end())
 		Log(EError, "RenderQueue::removeRenderJob() - job not found!");
-	JobRecord &rec = (*it).second;
-	unsigned int ms = m_timer->getMilliseconds() - rec.startTime;
-	Log(EInfo, "Render time: %s", timeString(ms/1000.0f, true).c_str());
 	m_jobs.erase(job);
 	m_cond->broadcast();
 	{
