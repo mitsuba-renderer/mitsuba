@@ -608,9 +608,9 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 			int dx = m_cropEnd.x-m_cropStart.x, dy = m_cropEnd.y-m_cropStart.y;
 
 			if (std::abs(dx) > std::abs(dy))
-				m_cropEnd.y = std::min(std::max(0, m_cropStart.y + dx), maxCrop.y-1);
+				m_cropEnd.y = std::min(std::max(0, m_cropStart.y + std::abs(dx)*(dy<0 ? -1 : 1)), maxCrop.y-1);
 			else
-				m_cropEnd.x = std::min(std::max(0, m_cropStart.x + dy), maxCrop.x-1);
+				m_cropEnd.x = std::min(std::max(0, m_cropStart.x + std::abs(dy)*(dx<0 ? -1 : 1)), maxCrop.x-1);
 		}
 
 		m_statusMessage =
