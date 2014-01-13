@@ -46,6 +46,7 @@ public:
 		cout << "   -b r,g,b       Color balance: apply the specified per-channel multipliers" << endl << endl;
 		cout << "   -c x,y,w,h     Crop: tonemap a given rectangle instead of the entire image" << endl << endl;
 		cout << "   -s w,h         Resize the output image to the specified resolution" << endl << endl;
+		cout << "   -F name        Name of the resampling filter used by -s (Default = lanczos)" << endl << endl;
 		cout << "   -r x,y,w,h,i   Add a rectangle at the specified position and intensity, e.g." << endl;
 		cout << "                  to make paper figures. The intensity should be in [0, 255]." << endl << endl;
 		cout << "   -f fmt         Request a certain output format (png/jpg, default:png)" << endl << endl;
@@ -128,9 +129,10 @@ public:
 		bool runParallel = false;
 		ReconstructionFilter *rfilter = NULL;
 		Float bloomFov = 0;
+		std::string rfilterName = "lanczos";
 
 		/* Parse command-line arguments */
-		while ((optchar = getopt(argc, argv, "htxag:m:f:r:b:c:o:p:s:B:")) != -1) {
+		while ((optchar = getopt(argc, argv, "htxag:m:f:r:b:c:o:p:s:B:F:")) != -1) {
 			switch (optchar) {
 				case 'h': {
 						help();
@@ -157,6 +159,10 @@ public:
 					  else
 						  SLog(EError, "Unknown format! (must be png/jpg)");
 					}
+					break;
+
+				case 'F':
+					rfilterName = std::string(optarg);
 					break;
 
 				case 'B':
@@ -277,7 +283,7 @@ public:
 		if (resize[0] != -1) {
 			/* A resampling operation was requested; use a Lanczos Sinc reconstruction filter by default */
 			rfilter = static_cast<ReconstructionFilter *> (PluginManager::getInstance()->
-					createObject(MTS_CLASS(ReconstructionFilter), Properties("lanczos")));
+					createObject(MTS_CLASS(ReconstructionFilter), Properties(rfilterName)));
 			rfilter->configure();
 		}
 
