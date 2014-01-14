@@ -765,7 +765,6 @@ extern MTS_EXPORT_CORE Vector refract(const Vector &wi, const Normal &n,
  * \return
  *     Specularly transmitted direction (or zero in
  *     the case of total internal reflection)
- * \ingroup libpython
  */
 extern MTS_EXPORT_CORE Vector refract(const Vector &wi, const Normal &n, Float eta);
 

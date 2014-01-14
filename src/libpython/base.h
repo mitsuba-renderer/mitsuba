@@ -185,7 +185,7 @@ public:
 		using namespace mitsuba;
 
 		if (i < 0 || i >= Size) {
-			SLog(mitsuba::EError, "Index %i is out of range!", i);
+			SLog(mitsuba::EError, "Index %i is out of range! (allowed range: 0..%i)", i, Size-1);
 			return (Scalar) 0;
 		}
 		return value[i];
@@ -195,7 +195,7 @@ public:
 		using namespace mitsuba;
 
 		if (i < 0 || i >= Size)
-			SLog(mitsuba::EError, "Index %i is out of range!", i);
+			SLog(mitsuba::EError, "Index %i is out of range! (allowed range: 0..%i)", i, Size-1);
 		else
 			value[i] = arg;
 	}

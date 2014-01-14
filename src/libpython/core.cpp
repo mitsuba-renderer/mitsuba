@@ -992,7 +992,6 @@ void export_core() {
 	bp::to_python_converter<fs::path, path_to_python_str>();
 	bp::to_python_converter<TSpectrum<Float, SPECTRUM_SAMPLES>, TSpectrum_to_Spectrum>();
 	bp::implicitly_convertible<std::string, fs::path>();
-	bp::implicitly_convertible<Normal, Vector>();
 
 	PythonIntegrandFromPythonCallable();
 
@@ -1734,7 +1733,7 @@ void export_core() {
 		.def_readwrite("y", &Vector3::y)
 		.def_readwrite("z", &Vector3::z);
 
-	BP_STRUCT(Normal, bp::init<>())
+	BP_SUBSTRUCT(Normal, Vector3, bp::init<>())
 		.def(bp::init<Float, Float, Float>())
 		.def(bp::init<Vector>())
 		.def_readwrite("x", &Normal::x)
@@ -2077,7 +2076,6 @@ void export_core() {
 	bp::def("reflect", &reflect);
 	bp::def("refract", &refract1);
 	bp::def("refract", &refract2);
-	bp::def("refract", &refract3);
 	bp::def("coordinateSystem", &mkCoordinateSystem);
 	bp::def("memString", &memString1);
 	bp::def("memString", &memString2);
