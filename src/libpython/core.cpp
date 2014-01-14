@@ -591,10 +591,6 @@ static bp::tuple refract2(const Vector &wi, const Normal &n, Float eta) {
 	return bp::make_tuple(result, cosThetaT, F);
 }
 
-static Vector refract3(const Vector &wi, const Normal &n, Float eta) {
-	return refract(wi, n, eta);
-}
-
 static void bitmap_applyMatrix(Bitmap *bitmap, bp::list list) {
 	int length = bp::len(list);
 	if (length != 9)
