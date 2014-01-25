@@ -9,7 +9,12 @@ endif()
 # Set up CMake to use the Mitsuba bundled libraries. Set the variable
 # "MTS_NO_DEPENDENCIES" to a value which evaluates to TRUE to avoid
 # using the Mitsuba dependencies even if they are present.
-set(MTS_DEPS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/dependencies")
+if (MSVC)
+  set(MTS_DEPS_SUFFIX "_windows")
+else()
+  set(MTS_DEPS_SUFFIX "_macos")
+endif()
+set(MTS_DEPS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/dependencies${MTS_DEPS_SUFFIX}")
 if((MSVC OR APPLE) AND NOT MTS_NO_DEPENDENCIES AND
    IS_DIRECTORY "${MTS_DEPS_DIR}")
   set(MTS_DEPENDENCIES ON)
@@ -18,15 +23,17 @@ if((MSVC OR APPLE) AND NOT MTS_NO_DEPENDENCIES AND
   set(Boost_NO_SYSTEM_PATHS TRUE)
   
   if (MSVC)
+    math(EXPR MTS_MSVC_VERSION "(${MSVC_VERSION} - 600) / 100")
+    set(MTS_MSVC_VERSION "vc${MTS_MSVC_VERSION}")
     if(CMAKE_CL_64)
-      set(MTS_ARCH "x64")
+      set(MTS_PLATFORM "x64_${MTS_MSVC_VERSION}")
     else()
-      set(MTS_ARCH "i386")
+      set(MTS_PLATFORM "i386_${MTS_MSVC_VERSION}")
     endif()
     list(APPEND CMAKE_INCLUDE_PATH "${MTS_DEPS_DIR}/qt/include")
-    set(CMAKE_LIBRARY_PATH "${MTS_DEPS_DIR}/lib/${MTS_ARCH}/"
-      "${MTS_DEPS_DIR}/qt/${MTS_ARCH}/lib/")
-    set(QT_BINARY_DIR "${MTS_DEPS_DIR}/qt/${MTS_ARCH}/bin")
+    set(CMAKE_LIBRARY_PATH "${MTS_DEPS_DIR}/lib/${MTS_PLATFORM}/"
+      "${MTS_DEPS_DIR}/qt/${MTS_PLATFORM}/lib/")
+    set(QT_BINARY_DIR "${MTS_DEPS_DIR}/qt/${MTS_PLATFORM}/bin")
   elseif(APPLE)
     set(CMAKE_LIBRARY_PATH   "${MTS_DEPS_DIR}/lib")
     set(CMAKE_FRAMEWORK_PATH "${MTS_DEPS_DIR}/frameworks")
