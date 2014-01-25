@@ -105,6 +105,19 @@ macro(FIND_RELEASE_AND_DEBUG)
     PATHS ${LIBRELDBG_FIXED_PATHS}
     PATH_SUFFIXES lib
   )
+  
+  # Use a single debug name is the release version has been found
+  if (${LIBPREFIX}_LIBRARY_RELEASE)
+    get_filename_component(${LIBPREFIX}_LIBRARY_RELEASE_NAME
+      "${${LIBPREFIX}_LIBRARY_RELEASE}" NAME)
+    if ("${${LIBPREFIX}_LIBRARY_RELEASE_NAME}" MATCHES "(lib)?(.+)\\.[^.]+$")
+      set(LIBRELDBG_NAMES "${CMAKE_MATCH_2}")
+      if (WIN32 AND CMAKE_MATCH_1)
+        list(APPEND LIBRELDBG_NAMES "${CMAKE_MATCH_1}${CMAKE_MATCH_2}")
+      endif()
+    endif()
+  endif()
+  
   # CMake hangs if the list of library names is too long. As of CMake 2.8.11
   # it is far faster to call find_library many times with a single library name
   foreach(suffix ${LIBRELDBG_DBG_SUFFIXES})
