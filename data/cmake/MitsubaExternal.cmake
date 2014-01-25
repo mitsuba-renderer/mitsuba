@@ -90,10 +90,10 @@ int main (int argc, char **argv) {
 # Try to figure out if this boost distro has Boost::python. If we include
 # python in the main boost components list above, CMake will abort if it
 # is not found. So we resort to checking for the boost_python library's
-# existance to get a soft failure
-if (APPLE AND MTS_DEPENDENCIES)
-  set(mts_boost_python_names boost_python boost_python26 boost_python27
-    boost_python32 boost_python33)
+# existence to get a soft failure
+if ((APPLE OR WIN32) AND MTS_DEPENDENCIES)
+  set(mts_boost_python_names boost_python boost_python27
+    boost_python32 boost_python33 boost_python)
 else()
   set(mts_boost_python_names boost_python)
 endif()
@@ -101,31 +101,33 @@ find_library (mts_boost_python_lib NAMES ${mts_boost_python_names}
               HINTS ${Boost_LIBRARY_DIRS} NO_DEFAULT_PATH)
 mark_as_advanced (mts_boost_python_lib)
 if (NOT mts_boost_python_lib AND Boost_SYSTEM_LIBRARY_RELEASE)
-    get_filename_component (mts_boost_PYTHON_rel
-                            ${Boost_SYSTEM_LIBRARY_RELEASE} NAME
-                           )
-    string (REGEX REPLACE "^(lib)?(.+)_system(.+)$" "\\2_python\\3"
-            mts_boost_PYTHON_rel ${mts_boost_PYTHON_rel}
-           )
+    get_filename_component (mts_boost_SYSTEM_rel
+                            ${Boost_SYSTEM_LIBRARY_RELEASE} NAME)
+    set(mts_boost_PYTHON_rel_names "")
+    foreach (name ${mts_boost_python_names})
+      string (REGEX REPLACE "^(.*)boost_system(.+)$" "\\1${name}\\2"
+              mts_boost_PYTHON_rel ${mts_boost_SYSTEM_rel})
+      list(APPEND mts_boost_PYTHON_rel_names ${mts_boost_PYTHON_rel})
+    endforeach()
     find_library (mts_boost_PYTHON_LIBRARY_RELEASE
-                  NAMES ${mts_boost_PYTHON_rel} lib${mts_boost_PYTHON_rel}
+                  NAMES ${mts_boost_PYTHON_rel_names}
                   HINTS ${Boost_LIBRARY_DIRS}
-                  NO_DEFAULT_PATH
-                 )
+                  NO_DEFAULT_PATH)
     mark_as_advanced (mts_boost_PYTHON_LIBRARY_RELEASE)
 endif ()
 if (NOT mts_boost_python_lib AND Boost_SYSTEM_LIBRARY_DEBUG)
-    get_filename_component (mts_boost_PYTHON_dbg
-                            ${Boost_SYSTEM_LIBRARY_DEBUG} NAME
-                           )
-    string (REGEX REPLACE "^(lib)?(.+)_system(.+)$" "\\2_python\\3"
-            mts_boost_PYTHON_dbg ${mts_boost_PYTHON_dbg}
-           )
+    get_filename_component (mts_boost_SYSTEM_dbg
+                            ${Boost_SYSTEM_LIBRARY_DEBUG} NAME)
+    set(mts_boost_PYTHON_dbg_names "")
+    foreach (name ${mts_boost_python_names})
+      string (REGEX REPLACE "^(.*)boost_system(.+)$" "\\1${name}\\2"
+              mts_boost_PYTHON_dbg ${mts_boost_SYSTEM_dbg})
+      list(APPEND mts_boost_PYTHON_dbg_names ${mts_boost_PYTHON_dbg})
+    endforeach()
     find_library (mts_boost_PYTHON_LIBRARY_DEBUG
-                  NAMES ${mts_boost_PYTHON_dbg} lib${mts_boost_PYTHON_dbg}
+                  NAMES ${mts_boost_PYTHON_dbg_names}
                   HINTS ${Boost_LIBRARY_DIRS}
-                  NO_DEFAULT_PATH
-                 )
+                  NO_DEFAULT_PATH)
     mark_as_advanced (mts_boost_PYTHON_LIBRARY_DEBUG)
 endif ()
 if (mts_boost_python_lib OR
@@ -244,7 +246,14 @@ if (APPLE)
 endif()
 
 
-# The Python libraries.
+# The Python libraries. When using the built-in dependencies we need
+# to specify the include directory, otherwise CMake finds the one
+# from the local installation using the Windows registry / OSX Frameworks
+if (MTS_DEPENDENCIES AND NOT PYTHON_INCLUDE_DIR AND
+    EXISTS "${MTS_DEPS_DIR}/include/python27")
+  set(PYTHON_INCLUDE_DIR "${MTS_DEPS_DIR}/include/python27"
+      CACHE STRING "Path to the Python include directory.")
+endif()
 find_package (PythonLibs "2.6")
 CMAKE_DEPENDENT_OPTION(BUILD_PYTHON "Build the Python bindings." ON
   "PYTHONLIBS_FOUND;mts_boost_PYTHON_FOUND" OFF)
