@@ -152,6 +152,11 @@ public:
 		return false;
 	}
 
+	bool isMonochromatic() const {
+		return Spectrum(m_edgeColor[0]) == m_edgeColor
+			&& Spectrum(m_interiorColor[0]) == m_interiorColor;
+	}
+
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "WireFrame[" << endl

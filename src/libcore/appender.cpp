@@ -18,8 +18,9 @@
 
 #include <mitsuba/core/appender.h>
 #include <fstream>
-#ifdef WIN32
-#include <io.h>
+
+#if defined(__WINDOWS__)
+# include <io.h>
 #endif
 
 MTS_NAMESPACE_BEGIN
@@ -110,7 +111,7 @@ UnbufferedAppender::UnbufferedAppender(int fd)
 
 void UnbufferedAppender::append(ELogLevel level, const std::string &text) {
 	std::string value = text + std::string("\n");
-#if defined(WIN32)
+#if defined(__WINDOWS__)
 	write(m_fd, value.c_str(), (unsigned int) value.length());
 #else
 	if (write(m_fd, value.c_str(), value.length()) != (ssize_t) value.length())

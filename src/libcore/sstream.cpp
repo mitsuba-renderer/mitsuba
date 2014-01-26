@@ -19,7 +19,7 @@
 #include <mitsuba/core/sstream.h>
 #include <mitsuba/core/statistics.h>
 
-#if !defined(WIN32)
+#if !defined(__WINDOWS__)
 # include <unistd.h>
 # include <errno.h>
 # include <sys/types.h>
@@ -39,9 +39,12 @@
 
 MTS_NAMESPACE_BEGIN
 
+static StatsCounter bytesRcvd("Network", "Bytes received");
+static StatsCounter bytesSent("Network", "Bytes sent");
+
 namespace
 {
-#if defined(WIN32)
+#if defined(__WINDOWS__)
 // This function is natively avaiable since Windows Vista
 const char *inet_ntop(int af, const void *src, char *dst, socklen_t len) {
 	if (af == AF_INET) {
@@ -145,7 +148,7 @@ SocketStream::SocketStream(const std::string &host, int port)
 }
 
 SocketStream::~SocketStream() {
-#ifdef WIN32
+#ifdef __WINDOWS__
 	if (closesocket(m_socket) == SOCKET_ERROR)
 		handleError("closesocket");
 #else
@@ -155,11 +158,10 @@ SocketStream::~SocketStream() {
 }
 
 void SocketStream::read(void *ptr, size_t size) {
-	static StatsCounter bytesRcvd("Network", "Bytes received");
 	const size_t total = size;
 	char *data = (char *) ptr;
 	while (size > 0) {
-#if defined(WIN32)
+#if defined(__WINDOWS__)
 		int n = recv(m_socket, data, (int) size, 0);
 #else
 		int n = recv(m_socket, data, size, 0);
@@ -167,10 +169,12 @@ void SocketStream::read(void *ptr, size_t size) {
 		if (n == 0) {
 			throw EOFException("Connection closed while reading!",
 					(size_t) (data - (char *) ptr));
-		} else if (n == -1) {
-			handleError("recv", EWarn);
+		} else if (n == SOCKET_ERROR) {
+			if (!handleError("recv", EWarn))
+				continue; /* Wasn't an error after all -- continue */
+
 			throw EOFException("Connection closed while reading!",
-					(size_t) (data - (char *) ptr));
+						(size_t) (data - (char *) ptr));
 		}
 		size -= n;
 		data += n;
@@ -180,20 +184,21 @@ void SocketStream::read(void *ptr, size_t size) {
 }
 
 void SocketStream::write(const void *ptr, size_t size) {
-	static StatsCounter bytesSent("Network", "Bytes sent");
 	const size_t total = size;
 	char *data = (char *) ptr;
 	while (size > 0) {
 #if defined(__LINUX__)
 		/* Linux: Don't send the EPIPE signal when the connection breaks */
 		int n = send(m_socket, data, size, MSG_NOSIGNAL);
-#elif defined(WIN32)
+#elif defined(__WINDOWS__)
 		int n = send(m_socket, data, (int) size, 0);
 #else
 		int n = send(m_socket, data, size, 0);
 #endif
 		if (n == SOCKET_ERROR) {
-			handleError("send", EWarn);
+			if (!handleError("send", EWarn))
+				continue; /* Wasn't an error after all -- continue */
+
 			throw EOFException("Connection closed while writing!",
 					(size_t) (data - (char *) ptr));
 		}
@@ -241,18 +246,26 @@ void SocketStream::flush() {
 	/* Ignore */
 }
 
-void SocketStream::handleError(const std::string &cmd, ELogLevel level) {
-#ifndef WIN32
+bool SocketStream::handleError(const std::string &peer, const std::string &cmd, ELogLevel level) {
+#if !defined(__WINDOWS__)
+	if (level == EWarn && errno == EINTR) /* This is not really a warning -- just retry the operation. */
+		return false;
+
 	if (cmd.find("(") == std::string::npos)
-		Log(level, "Error in %s(): %s!", cmd.c_str(), strerror(errno));
+		Log(level, "[%s] Error in %s(): %s!", peer.c_str(), cmd.c_str(), strerror(errno));
 	else
-		Log(level, "Error in %s: %s!", cmd.c_str(), strerror(errno));
+		Log(level, "[%s] Error in %s: %s!", peer.c_str(), cmd.c_str(), strerror(errno));
 #else
 	std::string err;
 	int error = WSAGetLastError();
 	switch (error) {
-		case WSABASEERR: err = "No Error"; break;
-		case WSAEINTR: err = "Interrupted system call"; break;
+		case WSABASEERR: err = "Internal error (no reason given)"; break;
+		case WSAEINTR:
+			if (level == EWarn) /* This is not really a warning -- just retry the operation. */
+				return false;
+			else
+			   err = "Interrupted system call";
+			break;
 		case WSAEBADF: err = "Bad file number"; break;
 		case WSAEACCES: err = "Permission denied"; break;
 		case WSAEFAULT: err = "Bad address"; break;
@@ -308,6 +321,7 @@ void SocketStream::handleError(const std::string &cmd, ELogLevel level) {
 	else
 		Log(level, "Error %i in %s: %s!", error, cmd.c_str(), err.c_str());
 #endif
+	return true;
 }
 
 MTS_IMPLEMENT_CLASS(SocketStream, false, Stream)

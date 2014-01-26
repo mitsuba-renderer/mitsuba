@@ -22,6 +22,8 @@
 #include <mitsuba/core/bitmap.h>
 #include <mitsuba/core/plugin.h>
 #include <mitsuba/core/fstream.h>
+#include <mitsuba/core/serialization.h>
+#include <mitsuba/core/cobject.h>
 
 MTS_NAMESPACE_BEGIN
 

@@ -386,13 +386,11 @@ void GLWidget::focusOutEvent(QFocusEvent *event) {
 		m_movementTimer->stop();
 }
 
-
 void GLWidget::timerImpulse() {
 	if (!m_context || !m_context->scene || !m_preview->isRunning()) {
 		m_movementTimer->stop();
 		return;
 	}
-
 	if (m_animation) {
 		Float x = std::min(m_animationTimer->getMilliseconds() / 500.0f, 1.0f);
 		Float t = x*x*x*(x*(x*6-15)+10); // smootherstep by Ken Perlin
@@ -453,6 +451,23 @@ void GLWidget::timerImpulse() {
 	resetPreview();
 }
 
+bool GLWidget::askReallyCancelRendering() {
+	try {
+		Float renderTime = m_context->renderJob->getRenderTime();
+
+		if (renderTime < 10) /* Only ask for jobs that have been rendering for a bit */
+			return true;
+	} catch (...) {
+		return true;
+	}
+
+	bool cancel = QMessageBox::question(this,
+		"Really cancel rendering?", "Camera motion detected. Do you really want to cancel the rendering?",
+		QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes;
+
+	return cancel;
+}
+
 void GLWidget::resetPreview() {
 	if (!m_context || !m_context->scene || !m_preview->isRunning())
 		return;
@@ -492,8 +507,16 @@ void GLWidget::keyPressEvent(QKeyEvent *event) {
 		case Qt::Key_PageUp:   m_context->movementScale *= 2; break;
 		case Qt::Key_PageDown: m_context->movementScale /= 2; break;
 		case Qt::Key_Left:
+			if (event->modifiers() & Qt::AltModifier) {
+				emit switchTab(-1);
+				return;
+			}
 			m_leftKeyDown = true; break;
 		case Qt::Key_Right:
+			if (event->modifiers() & Qt::AltModifier) {
+				emit switchTab(1);
+				return;
+			}
 			m_rightKeyDown = true; break;
 		case Qt::Key_Up:
 			m_upKeyDown = true; break;
@@ -520,7 +543,7 @@ void GLWidget::keyPressEvent(QKeyEvent *event) {
 			if (m_context->selectionMode == EScene) {
 				m_context->selectionMode = ENothing;
 				m_aabb.reset();
-			} else {
+			} else if (m_context->scene) {
 				m_context->selectionMode = EScene;
 				m_aabb = m_context->scene->getKDTree()->getAABB();
 			}
@@ -535,6 +558,12 @@ void GLWidget::keyPressEvent(QKeyEvent *event) {
 	}
 	if (!m_movementTimer->isActive() && (m_leftKeyDown || m_rightKeyDown
 			|| m_upKeyDown || m_downKeyDown)) {
+
+		if (m_context->renderJob && !askReallyCancelRendering()) {
+			m_leftKeyDown = m_rightKeyDown = m_upKeyDown = m_downKeyDown = false;
+			return;
+		}
+
 		m_clock->reset();
 		m_movementTimer->start();
 	}
@@ -575,6 +604,15 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 		m_cropEnd.x = std::min(std::max(0, m_mousePos.x()-offset.x), maxCrop.x-1);
 		m_cropEnd.y = std::min(std::max(0, m_mousePos.y()-offset.y), maxCrop.y-1);
 
+		if (event->modifiers().testFlag(Qt::ShiftModifier)) {
+			int dx = m_cropEnd.x-m_cropStart.x, dy = m_cropEnd.y-m_cropStart.y;
+
+			if (std::abs(dx) > std::abs(dy))
+				m_cropEnd.y = std::min(std::max(0, m_cropStart.y + std::abs(dx)*(dy<0 ? -1 : 1)), maxCrop.y-1);
+			else
+				m_cropEnd.x = std::min(std::max(0, m_cropStart.x + std::abs(dy)*(dx<0 ? -1 : 1)), maxCrop.x-1);
+		}
+
 		m_statusMessage =
 			formatString("%s: %i x %i pixels",
 				m_cropType == ECrop ? "Crop" : "Crop & Magnify",
@@ -598,6 +636,12 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 		nearClip = camera->getNearClip(),
 		farClip = camera->getFarClip();
 
+	bool setCursor = true;
+	if (m_context->renderJob) {
+		if (!askReallyCancelRendering())
+			return;
+		setCursor = false;
+	}
 	if (focusDistance <= nearClip || focusDistance >= farClip) {
 		focusDistance = autoFocus();
 		camera->setFocusDistance(focusDistance);
@@ -606,7 +650,7 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 	Point target = p + d * focusDistance;
 	Vector up = m_context->up;
 
-	if (!m_didSetCursor) {
+	if (!m_didSetCursor && setCursor) {
 		QApplication::setOverrideCursor(Qt::BlankCursor);
 		m_didSetCursor = true;
 	}
@@ -811,9 +855,11 @@ void GLWidget::wheelEvent(QWheelEvent *event) {
 	} else {
 		if (!m_preview->isRunning() || m_context == NULL || m_context->scene == NULL || m_animation)
 			return;
-
 		PerspectiveCamera *camera = getPerspectiveCamera();
 		if (!camera)
+			return;
+
+		if (m_context->renderJob && !askReallyCancelRendering())
 			return;
 
 		Float focusDistance = camera->getFocusDistance(),

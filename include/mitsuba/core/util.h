@@ -114,6 +114,9 @@ extern MTS_EXPORT_CORE std::string getHostName();
 /// Return the process private memory usage in bytes
 extern MTS_EXPORT_CORE size_t getPrivateMemoryUsage();
 
+/// Returns the total amount of memory available to the OS
+extern MTS_EXPORT_CORE size_t getTotalSystemMemory();
+
 /// Return the fully qualified domain name of this machine
 extern MTS_EXPORT_CORE std::string getFQDN();
 
@@ -762,7 +765,6 @@ extern MTS_EXPORT_CORE Vector refract(const Vector &wi, const Normal &n,
  * \return
  *     Specularly transmitted direction (or zero in
  *     the case of total internal reflection)
- * \ingroup libpython
  */
 extern MTS_EXPORT_CORE Vector refract(const Vector &wi, const Normal &n, Float eta);
 

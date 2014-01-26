@@ -166,6 +166,7 @@ namespace boost {
 #include <boost/python.hpp>
 #include <boost/python/suite/indexing/vector_indexing_suite.hpp>
 #include <boost/python/suite/indexing/map_indexing_suite.hpp>
+#include <boost/thread/mutex.hpp>
 
 namespace bp = boost::python;
 
@@ -184,7 +185,7 @@ public:
 		using namespace mitsuba;
 
 		if (i < 0 || i >= Size) {
-			SLog(mitsuba::EError, "Index %i is out of range!", i);
+			SLog(mitsuba::EError, "Index %i is out of range! (allowed range: 0..%i)", i, Size-1);
 			return (Scalar) 0;
 		}
 		return value[i];
@@ -194,7 +195,7 @@ public:
 		using namespace mitsuba;
 
 		if (i < 0 || i >= Size)
-			SLog(mitsuba::EError, "Index %i is out of range!", i);
+			SLog(mitsuba::EError, "Index %i is out of range! (allowed range: 0..%i)", i, Size-1);
 		else
 			value[i] = arg;
 	}
@@ -202,6 +203,32 @@ public:
 	static int len(const T &) {
 		return Size;
 	}
+};
+
+class AcquireGIL {
+public:
+    inline AcquireGIL() {
+        state = PyGILState_Ensure();
+    }
+
+    inline ~AcquireGIL() {
+        PyGILState_Release(state);
+    }
+private:
+    PyGILState_STATE state;
+};
+
+class ReleaseGIL {
+public:
+    inline ReleaseGIL() {
+        state = PyEval_SaveThread();
+    }
+
+    inline ~ReleaseGIL() {
+        PyEval_RestoreThread(state);
+    }
+private:
+    PyThreadState *state;
 };
 
 template <typename Value> struct InternalArray {
@@ -228,6 +255,24 @@ private:
 	size_t length;
 };
 
+// Trivial single threaded scoped lock to detect reentrant code
+struct TrivialScopedLock {
+    TrivialScopedLock(bool &inside) : inside(inside) {
+        inside = true;
+    }
+
+    ~TrivialScopedLock() {
+        inside = false;
+    }
+    bool &inside;
+};
+
+#define CALLBACK_SYNC_GIL() \
+    if (m_locked) \
+        return; \
+	AcquireGIL gil; \
+    TrivialScopedLock lock(m_locked)
+
 #define BP_INTERNAL_ARRAY(Name) \
 	BP_STRUCT(Name, bp::no_init) \
 		.def("__len__", &Name::len) \
@@ -246,7 +291,9 @@ typedef std::map<std::string, std::string> StringMap;
 
 extern void export_core();
 extern void export_render();
+extern void export_ad();
 extern bp::object cast(mitsuba::ConfigurableObject *obj);
+extern bool check_python_exception();
 
 #endif /* __PYTHON_BASE_H */
 

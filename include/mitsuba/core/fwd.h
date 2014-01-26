@@ -46,6 +46,8 @@ class InterpolatedSpectrum;
 class LocalWorker;
 class Logger;
 template <int M, int N, typename T> struct Matrix;
+struct Matrix2x2;
+struct Matrix3x3;
 struct Matrix4x4;
 class MemoryStream;
 class MemoryMappedFile;
@@ -144,6 +146,7 @@ typedef TPoint4<int>          Point4i;
 typedef TPoint4<unsigned int> Point4u;
 typedef TPoint4<float>        Point4f;
 typedef TPoint4<double>       Point4d;
+/// \ingroup libpython
 typedef TQuaternion<Float>    Quaternion;
 typedef TVector2<size_t>      Size2;
 typedef TVector3<size_t>      Size3;

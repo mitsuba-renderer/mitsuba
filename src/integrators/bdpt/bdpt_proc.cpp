@@ -401,7 +401,7 @@ void BDPTProcess::processResult(const WorkResult *wr, bool cancelled) {
 	bool developFilm = m_config.lightImage &&
 		(m_parent->isInteractive() && m_refreshTimer->getMilliseconds() > 2000);
 
-	m_queue->signalWorkEnd(m_parent, result->getImageBlock());
+	m_queue->signalWorkEnd(m_parent, result->getImageBlock(), false);
 
 	if (developFilm)
 		develop();

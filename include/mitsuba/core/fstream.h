@@ -103,6 +103,14 @@ public:
 	//! @{ \name Miscellaneous
 	// =============================================================
 
+	/**
+	 * \brief Create a temporary file and return an associated FileStream
+	 *
+	 * \remark When closing the file stream, the file is automatically
+	 * deleted.
+	 */
+	static ref<FileStream> createTemporary();
+
 	/// Initialize the file I/O layer (unicode conversions etc.)
 	static void staticInitialization();
 

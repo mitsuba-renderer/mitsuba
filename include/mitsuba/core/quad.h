@@ -26,6 +26,8 @@
 MTS_NAMESPACE_BEGIN
 
 // -----------------------------------------------------------------------
+//! \ingroup libcore
+//! \ingroup libpython
 //! @{ \name Basic tools for non-adaptive quadrature
 // -----------------------------------------------------------------------
 
@@ -125,6 +127,7 @@ extern MTS_EXPORT_CORE void gaussLobatto(int n, Float *nodes, Float *weights);
  * analysts and developers - http://quantlib.org/
  *
  * \ingroup libcore
+ * \ingroup libpython
  */
 class MTS_EXPORT_CORE GaussLobattoIntegrator {
 public:

@@ -163,7 +163,7 @@ void collect_zombies(int s) {
 #endif
 
 int main(int argc, char *argv[]) {
-	int retval;
+	int retval = -1;
 
 	/* Initialize the core framework */
 	Class::staticInitialization();
@@ -216,18 +216,6 @@ int main(int argc, char *argv[]) {
 
 	qRegisterMetaType<ELogLevel>("ELogLevel");
 	qRegisterMetaType<fs::path>("fs::path");
-
-#if defined(__OSX__)
-    SInt32 versMaj, versMin;
-    Gestalt(gestaltSystemVersionMajor, &versMaj);
-    Gestalt(gestaltSystemVersionMinor, &versMin);
-
-    if (versMaj*100+versMin > 1008) {
-        // fix Mac OS X 10.9 (mavericks) font issue
-        // https://bugreports.qt-project.org/browse/QTBUG-32789
-        QFont::insertSubstitution(".Lucida Grande UI", "Lucida Grande");
-    }
-#endif
 
 	MitsubaApplication app(argc, argv);
 	try {
@@ -298,8 +286,8 @@ int main(int argc, char *argv[]) {
 #endif
 
 		mainWindow = new MainWindow();
-		mainWindow->initWorkers();
-		retval = app.exec();
+		if (mainWindow->initWorkersProcessArgv())
+			retval = app.exec();
 
 #if defined(MTS_HAS_BREAKPAD)
 	#if defined(__OSX__)
@@ -313,7 +301,6 @@ int main(int argc, char *argv[]) {
 		SLog(EWarn, "Critical exception during startup: %s", e.what());
 		QMessageBox::critical(NULL, QString("Critical exception"),
 			e.what(), QMessageBox::Ok);
-		retval = -1;
 	}
 	Statistics::getInstance()->printStats();
 

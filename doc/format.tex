@@ -368,13 +368,28 @@ This lets you include different parts of a scene configuration by changing the c
 \begin{xml}
 <include filename="nested-scene-$\texttt{\$}$version.xml"/>
 \end{xml}
+\subsection{Default parameter values}
+As mentioned before, scenes may contain named parameters that are supplied via the command line:
+\begin{xml}
+<bsdf type="diffuse">
+    <rgb name="reflectance" value="$\texttt{\$}$reflectance"/>
+</bsdf>
+\end{xml}
+In this case, an error will occur when loading the scene without an explicit command line argument of the form
+\code{-Dreflectance=}\mbox{$\langle$\emph{something}$\rangle$}. For convenience, it is possible to specify
+a default parameter value that takes precedence when no command line arguments are given. The syntax for this is
+\begin{xml}
+<default name="reflectance" value="something"/>
+\end{xml}
+and must precede occurrences of the parameter in the XML file.
+
 \subsection{Aliases}
 Sometimes, it can be useful to associate an object (e.g. a scattering model)
 with multiple identifiers. This can be accomplished using the \code{alias
 as=..} keyword:
 \begin{xml}
-	<bsdf type="diffuse" id="myMaterial1"/>
-	<alias id="myMaterial1" as="myMaterial2"/>
+<bsdf type="diffuse" id="myMaterial1"/>
+<alias id="myMaterial1" as="myMaterial2"/>
 \end{xml}
 After this statement, the diffuse scattering model will be bound to
 \emph{both} identifiers ``\code{myMaterial1}'' and ``\code{myMaterial2}''.

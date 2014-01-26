@@ -60,12 +60,17 @@ void __mts_init_cocoa() {
 }
 
 void __mts_set_appdefaults() {
+	if ([NSApp respondsToSelector:@selector(invalidateRestorableState)])
+		[NSApp invalidateRestorableState];
+#if 0
+
 	/* Disable annoying OSX synchronization feature. It's not supported by Qt in any case.. */
 	NSUserDefaults *prefs = [NSUserDefaults standardUserDefaults];
 	if (![prefs boolForKey: @"ApplePersistenceIgnoreState"]) {
 		[prefs setBool: YES forKey: @"ApplePersistenceIgnoreState"];
 		[prefs synchronize];
 	}
+#endif
 }
 
 MTS_NAMESPACE_END

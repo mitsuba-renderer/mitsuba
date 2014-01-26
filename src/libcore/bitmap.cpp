@@ -514,6 +514,52 @@ ref<Bitmap> Bitmap::rotateFlip(ERotateFlipType type) const {
 	return result;
 }
 
+void Bitmap::copyFrom(const Bitmap *bitmap, Point2i sourceOffset,
+		Point2i targetOffset, Vector2i size) {
+
+	if (m_componentFormat == EBitmask)
+		Log(EError, "Bitmap::copy(): bitmasks are not supported!");
+
+	Assert(getPixelFormat() == bitmap->getPixelFormat() &&
+	       getComponentFormat() == bitmap->getComponentFormat() &&
+	       getChannelCount() == bitmap->getChannelCount());
+
+	Vector2i offsetIncrease(
+		std::max(0, std::max(-sourceOffset.x, -targetOffset.x)),
+		std::max(0, std::max(-sourceOffset.y, -targetOffset.y))
+	);
+
+	sourceOffset += offsetIncrease;
+	targetOffset += offsetIncrease;
+	size -= offsetIncrease;
+
+	Vector2i sizeDecrease(
+		std::max(0, std::max(sourceOffset.x + size.x - bitmap->getWidth(), targetOffset.x + size.x - getWidth())),
+		std::max(0, std::max(sourceOffset.y + size.y - bitmap->getHeight(), targetOffset.y + size.y - getHeight())));
+
+	size -= sizeDecrease;
+
+	if (size.x <= 0 || size.y <= 0)
+		return;
+
+	const size_t
+		pixelStride  = getBytesPerPixel(),
+		sourceStride = bitmap->getWidth() * pixelStride,
+		targetStride = getWidth() * pixelStride;
+
+	const uint8_t *source = bitmap->getUInt8Data() +
+		(sourceOffset.x + sourceOffset.y * (size_t) bitmap->getWidth()) * pixelStride;
+
+	uint8_t *target = m_data +
+		(targetOffset.x + targetOffset.y * (size_t) m_size.x) * pixelStride;
+
+	for (int y = 0; y < size.y; ++y) {
+		memcpy(target, source, size.x * getBytesPerPixel());
+		source += sourceStride;
+		target += targetStride;
+	}
+}
+
 void Bitmap::accumulate(const Bitmap *bitmap, Point2i sourceOffset,
 		Point2i targetOffset, Vector2i size) {
 	Assert(getPixelFormat() == bitmap->getPixelFormat() &&
@@ -590,6 +636,59 @@ void Bitmap::accumulate(const Bitmap *bitmap, Point2i sourceOffset,
 		source += sourceStride;
 		target += targetStride;
 	}
+}
+
+Spectrum Bitmap::average() const {
+	if (m_gamma != 1 || (m_componentFormat != EFloat16 &&
+				m_componentFormat != EFloat32 && m_componentFormat != EFloat64))
+		Log(EError, "Bitmap::average() assumes a floating point image with linear gamma!");
+
+	size_t pixelCount = (size_t) m_size.x * (size_t) m_size.y;
+	Float *accum = new Float[m_channelCount];
+	memset(accum, 0, sizeof(Float) * m_channelCount);
+
+	switch (m_componentFormat) {
+		case EFloat16: {
+				const half *ptr = getFloat16Data();
+				for (size_t i=0; i<pixelCount; ++i)
+					for (int ch=0; ch<m_channelCount; ++ch)
+						accum[ch] += (Float) *ptr++;
+			}
+			break;
+
+		case EFloat32: {
+				const float *ptr = getFloat32Data();
+				for (size_t i=0; i<pixelCount; ++i)
+					for (int ch=0; ch<m_channelCount; ++ch)
+						accum[ch] += (Float) *ptr++;
+			}
+			break;
+
+		case EFloat64: {
+				const double *ptr = getFloat64Data();
+				for (size_t i=0; i<pixelCount; ++i)
+					for (int ch=0; ch<m_channelCount; ++ch)
+						accum[ch] += (Float) *ptr++;
+			}
+			break;
+
+		default:
+			Log(EError, "average(): Unsupported component format!");
+	}
+
+	for (int ch=0; ch<m_channelCount; ++ch)
+		accum[ch] /= pixelCount;
+
+	const FormatConverter *cvt = FormatConverter::getInstance(
+		std::make_pair(EFloat, EFloat)
+	);
+
+	Spectrum result;
+	cvt->convert(m_pixelFormat, 1.0f, accum,
+		ESpectrum, 1.0f, &result, 1);
+
+	delete[] accum;
+	return result;
 }
 
 #if defined(MTS_HAS_FFTW)
@@ -3020,7 +3119,7 @@ void Bitmap::writeRGBE(Stream *stream) const {
 	stream->writeLine("#?RGBE");
 
 	std::vector<std::string> keys = m_metadata.getPropertyNames();
-	for (std::vector<std::string>::const_iterator it = keys.begin(); it != keys.end(); ) {
+	for (std::vector<std::string>::const_iterator it = keys.begin(); it != keys.end(); ++it) {
 		stream->writeLine(formatString("# Metadata [%s]:", it->c_str()));
 		std::istringstream iss(m_metadata.getAsString(*it));
 		std::string buf;
@@ -3223,6 +3322,56 @@ ref<Bitmap> Bitmap::expand() {
 	}
 
 	return output;
+}
+
+void Bitmap::drawWorkUnit(const Point2i &offset, const Vector2i &size, int worker) {
+	int ox = offset.x, oy = offset.y,
+		ex = ox + size.x, ey = oy + size.y;
+	if (size.x < 3 || size.y < 3)
+		return;
+
+	const float *color = NULL;
+
+	/* Use desaturated colors to highlight the worker
+	   responsible for rendering the current image */
+	const float white[]     = { 1.0f, 1.0f, 1.0f };
+	const float red[]       = { 1.0f, 0.3f, 0.3f };
+	const float green[]     = { 0.3f, 1.0f, 0.3f };
+	const float blue[]      = { 0.3f, 0.3f, 1.0f };
+	const float gray[]      = { 0.5f, 0.5f, 0.5f };
+	const float yellow[]    = { 1.0f, 1.0f, 0.0f };
+	const float magenta[]   = { 1.0f, 0.3f, 1.0f };
+	const float turquoise[] = { 0.3f, 1.0f, 1.0f };
+
+	switch (worker % 8) {
+		case 1: color = green; break;
+		case 2: color = yellow; break;
+		case 3: color = blue; break;
+		case 4: color = gray; break;
+		case 5: color = red; break;
+		case 6: color = magenta; break;
+		case 7: color = turquoise; break;
+		case 0:
+		default:
+			color = white;
+			break;
+	}
+
+	float scale = .7f * (color[0] * 0.212671f + color[1] * 0.715160f + color[2] * 0.072169f);
+
+	Spectrum spec;
+	spec.fromLinearRGB(color[0]*scale,
+		color[1]*scale,
+		color[2]*scale);
+
+	drawHLine(oy, ox, ox + 3, spec);
+	drawHLine(oy, ex - 4, ex - 1, spec);
+	drawHLine(ey - 1, ox, ox + 3, spec);
+	drawHLine(ey - 1, ex - 4, ex - 1, spec);
+	drawVLine(ox, oy, oy + 3, spec);
+	drawVLine(ex - 1, oy, oy + 3, spec);
+	drawVLine(ex - 1, ey - 4, ey - 1, spec);
+	drawVLine(ox, ey - 4, ey - 1, spec);
 }
 
 std::ostream &operator<<(std::ostream &os, const Bitmap::EPixelFormat &value) {

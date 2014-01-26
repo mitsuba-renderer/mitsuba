@@ -105,6 +105,10 @@ public:
 		return Spectrum(1.0f);
 	}
 
+	bool isMonochromatic() const {
+		return false;
+	}
+
 	bool isConstant() const {
 		return false;
 	}

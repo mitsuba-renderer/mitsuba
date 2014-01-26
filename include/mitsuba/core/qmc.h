@@ -24,8 +24,10 @@
 
 MTS_NAMESPACE_BEGIN
 
-/*! \addtogroup libcore */
-/*! @{ */
+/** \addtogroup libcore
+ *  \addtogroup libpython
+ *  @{
+ */
 
 // -----------------------------------------------------------------------
 //! @{ \name Elementary Quasi-Monte Carlo number sequences
@@ -153,8 +155,52 @@ inline uint64_t sampleTEA(uint32_t v0, uint32_t v1, int rounds = 4) {
 	return ((uint64_t) v1 << 32) + v0;
 }
 
-#if defined(DOUBLE_PRECISION)
-inline Float sampleTEAFloat(uint32_t v0, uint32_t v1, int rounds = 4) {
+/**
+ * \brief Generate fast and reasonably good pseudorandom numbers using the
+ * Tiny Encryption Algorithm (TEA) by David Wheeler and Roger Needham.
+ *
+ * This function uses \ref sampleTEA to return single precision floating point
+ * numbers on the interval <tt>[0, 1)</tt>
+ *
+ * \param v0
+ *     First input value to be encrypted (could be the sample index)
+ * \param v1
+ *     Second input value to be encrypted (e.g. the requested random number dimension)
+ * \param rounds
+ *     How many rounds should be executed? The default for random number
+ *     generation is 4.
+ * \return
+ *     A uniformly distributed floating point number on the interval <tt>[0, 1)</tt>
+ */
+inline float sampleTEASingle(uint32_t v0, uint32_t v1, int rounds = 4) {
+	/* Trick from MTGP: generate an uniformly distributed
+	   single precision number in [1,2) and subtract 1. */
+	union {
+		uint32_t u;
+		float f;
+	} x;
+	x.u = ((sampleTEA(v0, v1, rounds) & 0xFFFFFFFF) >> 9) | 0x3f800000UL;
+	return x.f - 1.0f;
+}
+
+/**
+ * \brief Generate fast and reasonably good pseudorandom numbers using the
+ * Tiny Encryption Algorithm (TEA) by David Wheeler and Roger Needham.
+ *
+ * This function uses \ref sampleTEA to return single precision floating point
+ * numbers on the interval <tt>[0, 1)</tt>
+ *
+ * \param v0
+ *     First input value to be encrypted (could be the sample index)
+ * \param v1
+ *     Second input value to be encrypted (e.g. the requested random number dimension)
+ * \param rounds
+ *     How many rounds should be executed? The default for random number
+ *     generation is 4.
+ * \return
+ *     A uniformly distributed floating point number on the interval <tt>[0, 1)</tt>
+ */
+inline double sampleTEADouble(uint32_t v0, uint32_t v1, int rounds = 4) {
 	/* Trick from MTGP: generate an uniformly distributed
 	   single precision number in [1,2) and subtract 1. */
 	union {
@@ -165,16 +211,15 @@ inline Float sampleTEAFloat(uint32_t v0, uint32_t v1, int rounds = 4) {
 	return x.f - 1.0;
 }
 
-#else
+#if defined(SINGLE_PRECISION)
+/// Alias to \ref sampleTEASingle or \ref sampleTEADouble based on compilation flags
 inline Float sampleTEAFloat(uint32_t v0, uint32_t v1, int rounds = 4) {
-	/* Trick from MTGP: generate an uniformly distributed
-	   single precision number in [1,2) and subtract 1. */
-	union {
-		uint32_t u;
-		float f;
-	} x;
-	x.u = ((sampleTEA(v0, v1, rounds) & 0xFFFFFFFF) >> 9) | 0x3f800000UL;
-	return x.f - 1.0f;
+	return sampleTEASingle(v0, v1, rounds);
+}
+#else
+/// Alias to \ref sampleTEASingle or \ref sampleTEADouble based on compilation flags
+inline Float sampleTEAFloat(uint32_t v0, uint32_t v1, int rounds = 4) {
+	return sampleTEADouble(v0, v1, rounds);
 }
 #endif
 
@@ -196,6 +241,8 @@ extern MTS_EXPORT_CORE Float radicalInverse(int base, uint64_t index);
  * radical inverse function \ref radicalInverse(), except that every digit
  * is run through an extra scrambling permutation specified as array
  * of size \c base.
+ *
+ * \remark This function is not available in the Python API
  */
 extern MTS_EXPORT_CORE Float scrambledRadicalInverse(int base,
 	uint64_t index, uint16_t *perm);
@@ -231,6 +278,8 @@ extern MTS_EXPORT_CORE Float radicalInverseFast(uint16_t baseIndex, uint64_t ind
  * Halton and Hammersley sequence variants. It works like the fast
  * radical inverse function \ref radicalInverseFast(), except that every
  * digit is run through an extra scrambling permutation.
+ *
+ * \remark This function is not available in the Python API
  */
 extern MTS_EXPORT_CORE Float scrambledRadicalInverseFast(uint16_t baseIndex,
 		uint64_t index, uint16_t *perm);

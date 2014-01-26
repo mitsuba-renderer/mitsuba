@@ -15,16 +15,47 @@
 #include <mitsuba/core/sched_remote.h>
 #include <mitsuba/core/netobject.h>
 #include <mitsuba/core/sstream.h>
+#include <mitsuba/core/mstream.h>
 #include <mitsuba/core/cstream.h>
 #include <mitsuba/core/qmc.h>
+#include <mitsuba/core/shvector.h>
 #include <mitsuba/core/sshstream.h>
 #include <mitsuba/render/scenehandler.h>
 #include <mitsuba/render/scene.h>
 #include <boost/algorithm/string.hpp>
+#include <boost/python/tuple.hpp>
 
 using namespace mitsuba;
 
-void initializeFramework() {
+bool check_python_exception() {
+    AcquireGIL gil;
+
+	PyObject *exception_ = NULL, *value_ = NULL, *traceback_ = NULL;
+	PyErr_Fetch(&exception_, &value_, &traceback_);
+
+	if (!exception_)
+		return false;
+
+	PyErr_NormalizeException(&exception_, &value_, &traceback_);
+
+	bp::object exception(bp::handle<>(bp::allow_null(exception_)));
+	bp::object value(bp::handle<>(bp::allow_null(value_)));
+	bp::object traceback(bp::handle<>(bp::allow_null(traceback_)));
+
+	PyErr_Clear();
+
+	bp::object traceback_package(bp::import("traceback"));
+	bp::object format_exception = traceback_package.attr("format_exception");
+	bp::object formatted_list = format_exception(exception, value, traceback);
+	bp::object formatted = bp::str("\n").join(formatted_list);
+
+	SLog(EWarn, "Caught a Python exception: %s",
+		bp::extract<std::string>(formatted)().c_str());
+
+	return true;
+}
+
+static void initializeFramework() {
 	/* Initialize the core framework */
 	Class::staticInitialization();
 	Object::staticInitialization();
@@ -38,9 +69,10 @@ void initializeFramework() {
 	Scheduler::staticInitialization();
 	SHVector::staticInitialization();
 	SceneHandler::staticInitialization();
+	Thread::registerCrashHandler(&check_python_exception);
 }
 
-void shutdownFramework() {
+static void shutdownFramework() {
 	/* Shutdown the core framework */
 	SceneHandler::staticShutdown();
 	SHVector::staticShutdown();
@@ -99,6 +131,8 @@ public:
 				return bp::object(props.getPoint(name));
 			case Properties::ETransform:
 				return bp::object(props.getTransform(name));
+			case Properties::EAnimatedTransform:
+				return bp::object(props.getAnimatedTransform(name));
 			case Properties::ESpectrum:
 				return bp::object(props.getSpectrum(name));
 			default:
@@ -116,6 +150,7 @@ public:
 		bp::extract<Point> extractPoint(value);
 		bp::extract<Transform> extractTransform(value);
 		bp::extract<Spectrum> extractSpectrum(value);
+		bp::extract<AnimatedTransform *> extractAnimatedTransform(value);
 
 		if (extractString.check()){
 			props.setString(name, extractString());
@@ -131,6 +166,8 @@ public:
 			props.setVector(name, extractVector());
 		} else if (extractTransform.check()) {
 			props.setTransform(name, extractTransform());
+		} else if (extractAnimatedTransform.check()) {
+			props.setAnimatedTransform(name, extractAnimatedTransform());
 		} else if (extractSpectrum.check()) {
 			props.setSpectrum(name, extractSpectrum());
 		} else {
@@ -141,8 +178,8 @@ public:
 
 struct path_to_python_str {
 	static PyObject* convert(fs::path const& path) {
-		return boost::python::incref(
-			boost::python::object(path.string()).ptr());
+		return bp::incref(
+			bp::object(path.string()).ptr());
 	}
 };
 
@@ -151,6 +188,28 @@ struct TSpectrum_to_Spectrum {
 		return bp::incref(bp::object(Spectrum(spectrum)).ptr());
 	}
 };
+
+static Matrix4x4 *Matrix4x4_fromList(bp::list list) {
+	if (bp::len(list) == 4) {
+		Float buf[4][4];
+		for (int i=0; i<4; ++i) {
+			bp::list subList = bp::extract<bp::list>(list[i]);
+			if (bp::len(subList) != 4)
+				SLog(EError, "Matrix4x4 list constructor: invalid argument");
+			for (int j=0; j<4; ++j)
+				buf[i][j] = bp::extract<Float>(subList[j]);
+		}
+		return new Matrix4x4(buf);
+	} else if (bp::len(list) == 16) {
+		Float buf[16];
+		for (int i=0; i<16; ++i)
+			buf[i] = bp::extract<Float>(list[i]);
+		return new Matrix4x4(buf);
+	} else {
+		SLog(EError, "Matrix4x4 list constructor: invalid argument");
+		return NULL;
+	}
+}
 
 static void Matrix4x4_setItem(Matrix4x4 *matrix, bp::tuple tuple, Float value) {
 	if (bp::len(tuple) != 2)
@@ -176,15 +235,97 @@ static Float Matrix4x4_getItem(Matrix4x4 *matrix, bp::tuple tuple) {
 	return matrix->operator()(i, j);
 }
 
-Class *object_getClass(Object *object) {
+static Matrix4x4 Matrix4x4_transpose(Matrix4x4 *matrix) {
+	Matrix4x4 result;
+	matrix->transpose(result);
+	return result;
+}
+
+static Matrix4x4 Matrix4x4_invert(Matrix4x4 *matrix) {
+	Matrix4x4 result;
+	matrix->invert(result);
+	return result;
+}
+
+static bp::tuple Matrix4x4_symEig(Matrix4x4 *matrix) {
+	Matrix4x4 Q;
+	Float d[4];
+	matrix->symEig(Q, d);
+
+	bp::list list;
+	for (int i=0; i<4; ++i)
+		list.append(d[i]);
+
+	return bp::make_tuple(Q, list);
+}
+
+static bp::tuple Matrix4x4_lu(Matrix4x4 *matrix) {
+	Matrix4x4 LU;
+	int piv[4];
+	int pivsign;
+	matrix->lu(LU, piv, pivsign);
+
+	bp::list list;
+	for (int i=0; i<4; ++i)
+		list.append(piv[i]);
+
+	return bp::make_tuple(LU, list, pivsign);
+}
+
+static Vector4 Matrix4x4_cholSolve(Matrix4x4 *matrix, Vector B) {
+	typedef Matrix<4, 1, Float> Matrix4x1;
+	Vector4 X;
+	matrix->cholSolve<1>((Matrix4x1 &) B, (Matrix4x1 &) X);
+	return X;
+}
+
+static Vector4 Matrix4x4_luSolve(Matrix4x4 *matrix, Vector B, bp::list pivList) {
+	typedef Matrix<4, 1, Float> Matrix4x1;
+	Vector4 X;
+	int piv[4];
+
+	if (bp::len(pivList) != 4)
+		SLog(EError, "Matrix4x4 list constructor: invalid argument");
+	for (int i=0; i<4; ++i)
+		piv[i] = bp::extract<Float>(pivList[i]);
+
+	matrix->luSolve<1>((Matrix4x1 &) B, (Matrix4x1 &) X, piv);
+	return X;
+}
+
+static void SHVector_setItem(SHVector *v, bp::tuple tuple, Float value) {
+	if (bp::len(tuple) != 2)
+		SLog(EError, "Invalid v indexing operation, required a tuple of length 2");
+	int i = bp::extract<int>(tuple[0]);
+	int j = bp::extract<int>(tuple[1]);
+
+	if (i < 0 || i >= v->getBands() || i < -i || j > i)
+		SLog(EError, "Index (%i, %i) is out of bounds!", i, j);
+
+	v->operator()(i, j) = value;
+}
+
+static Float SHVector_getItem(SHVector *v, bp::tuple tuple) {
+	if (bp::len(tuple) != 2)
+		SLog(EError, "Invalid v indexing operation, required a tuple of length 2");
+	int i = bp::extract<int>(tuple[0]);
+	int j = bp::extract<int>(tuple[1]);
+
+	if (i < 0 || i >= v->getBands() || i < -i || j > i)
+		SLog(EError, "Index (%i, %i) is out of bounds!", i, j);
+
+	return v->operator()(i, j);
+}
+
+static Class *object_getClass(Object *object) {
 	return const_cast<Class *>(object->getClass());
 }
 
-Class *class_forName(const char *name) {
+static Class *class_forName(const char *name) {
 	return const_cast<Class *>(Class::forName(name));
 }
 
-Class *class_getSuperClass(Class *theClass) {
+static Class *class_getSuperClass(Class *theClass) {
 	return const_cast<Class *>(theClass->getSuperClass());
 }
 
@@ -197,12 +338,12 @@ void appender_logProgress(Appender *appender, Float progress, const std::string 
 	appender->logProgress(progress, name, formatted, eta, NULL);
 }
 
-void logger_logProgress(Logger *logger, Float progress, const std::string &name,
+static void logger_logProgress(Logger *logger, Float progress, const std::string &name,
 	const std::string &formatted, const std::string &eta) {
 	logger->logProgress(progress, name, formatted, eta, NULL);
 }
 
-void mts_log(ELogLevel level, const std::string &msg) {
+static void mts_log(ELogLevel level, const std::string &msg) {
 	bp::object traceback(bp::import("traceback"));
 	bp::object extract_stack(traceback.attr("extract_stack"));
 	bp::object stack = extract_stack();
@@ -217,11 +358,15 @@ void mts_log(ELogLevel level, const std::string &msg) {
 
 class FormatterWrapper : public Formatter {
 public:
-	FormatterWrapper(PyObject *self) : m_self(self) { Py_INCREF(m_self); }
+	FormatterWrapper(PyObject *self) : m_self(self), m_locked(false) { Py_INCREF(m_self); }
 
 	std::string format(ELogLevel logLevel, const Class *theClass,
 			const Thread *thread, const std::string &text,
 			const char *file, int line) {
+        if (m_locked)
+            return "";
+        AcquireGIL gil;
+        TrivialScopedLock lock(m_locked);
 		return bp::call_method<std::string>(m_self, "format", logLevel,
 				bp::ptr(const_cast<Class *>(theClass)),
 				bp::ptr(const_cast<Thread *>(thread)), text, file, line);
@@ -232,20 +377,23 @@ public:
 	}
 private:
 	PyObject *m_self;
+    bool m_locked;
 };
 
 class AppenderWrapper : public Appender {
 public:
-	AppenderWrapper(PyObject *self) : m_self(self) { Py_INCREF(m_self); }
+	AppenderWrapper(PyObject *self) : m_self(self), m_locked(false) { Py_INCREF(m_self); }
 
 	void append(ELogLevel level, const std::string &text) {
+        CALLBACK_SYNC_GIL();
 		bp::call_method<void>(m_self, "append", level, text);
 	}
 
 	void logProgress(Float progress, const std::string &name,
 		const std::string &formatted, const std::string &eta,
 		const void *ptr) {
-		bp::call_method<void>(m_self, "logProgress", name, formatted, eta);
+        CALLBACK_SYNC_GIL();
+		bp::call_method<void>(m_self, "logProgress", progress, name, formatted, eta);
 	}
 
 	virtual ~AppenderWrapper() {
@@ -253,6 +401,7 @@ public:
 	}
 private:
 	PyObject *m_self;
+    bool m_locked;
 };
 
 static Spectrum *spectrum_array_constructor(bp::list list) {
@@ -294,7 +443,7 @@ static bp::tuple spectrum_toIPT(const Spectrum &s) {
 	return bp::make_tuple(I, P, T);
 }
 
-bp::object bsphere_rayIntersect(BSphere *bsphere, const Ray &ray) {
+static bp::object bsphere_rayIntersect(BSphere *bsphere, const Ray &ray) {
 	Float nearT, farT;
 	if (bsphere->rayIntersect(ray, nearT, farT))
 		return bp::make_tuple(nearT, farT);
@@ -303,7 +452,7 @@ bp::object bsphere_rayIntersect(BSphere *bsphere, const Ray &ray) {
 
 }
 
-bp::object aabb_rayIntersect(AABB *aabb, const Ray &ray) {
+static bp::object aabb_rayIntersect(AABB *aabb, const Ray &ray) {
 	Float nearT, farT;
 	if (aabb->rayIntersect(ray, nearT, farT))
 		return bp::make_tuple(nearT, farT);
@@ -312,7 +461,7 @@ bp::object aabb_rayIntersect(AABB *aabb, const Ray &ray) {
 
 }
 
-bp::object logger_readLog(Logger *logger) {
+static bp::object logger_readLog(Logger *logger) {
 	std::string string;
 	if (logger->readLog(string))
 		return bp::object(string);
@@ -320,7 +469,7 @@ bp::object logger_readLog(Logger *logger) {
 		return bp::object();
 }
 
-bp::object aabb_rayIntersect2(AABB *aabb, const Ray &ray, Float nearT, Float farT) {
+static bp::object aabb_rayIntersect2(AABB *aabb, const Ray &ray, Float nearT, Float farT) {
 	Point nearP, farP;
 	if (aabb->rayIntersect(ray, nearT, farT, nearP, farP))
 		return bp::make_tuple(nearT, farT, nearP, farP);
@@ -328,12 +477,17 @@ bp::object aabb_rayIntersect2(AABB *aabb, const Ray &ray, Float nearT, Float far
 		return bp::object();
 }
 
-Vector transform_mul_vector(Transform *transform, const Vector &vector) { return transform->operator()(vector); }
-Vector4 transform_mul_vector4(Transform *transform, const Vector4 &vector) { return transform->operator()(vector); }
-Normal transform_mul_normal(Transform *transform, const Normal &normal) { return transform->operator()(normal); }
-Point transform_mul_point(Transform *transform, const Point &point) { return transform->operator()(point); }
-Ray transform_mul_ray(Transform *transform, const Ray &ray) { return transform->operator()(ray); }
-Transform transform_mul_transform(Transform *transform, const Transform &other) { return *transform * other; }
+static void thread_join(Thread *thread) {
+	ReleaseGIL gil;
+	thread->join();
+}
+
+static Vector transform_mul_vector(Transform *transform, const Vector &vector) { return transform->operator()(vector); }
+static Vector4 transform_mul_vector4(Transform *transform, const Vector4 &vector) { return transform->operator()(vector); }
+static Normal transform_mul_normal(Transform *transform, const Normal &normal) { return transform->operator()(normal); }
+static Point transform_mul_point(Transform *transform, const Point &point) { return transform->operator()(point); }
+static Ray transform_mul_ray(Transform *transform, const Ray &ray) { return transform->operator()(ray); }
+static Transform transform_mul_transform(Transform *transform, const Transform &other) { return *transform * other; }
 
 bp::object cast(ConfigurableObject *obj) {
 	const Class *cls = obj->getClass();
@@ -359,15 +513,15 @@ bp::object cast(ConfigurableObject *obj) {
 	return bp::object();
 }
 
-bp::object pluginmgr_createobject_1(PluginManager *mgr, const Properties &props) {
+static bp::object pluginmgr_createobject_1(PluginManager *mgr, const Properties &props) {
 	return cast(mgr->createObject(props));
 }
 
-bp::object pluginmgr_createobject_2(PluginManager *mgr, const Class *cls, const Properties &props) {
+static bp::object pluginmgr_createobject_2(PluginManager *mgr, const Class *cls, const Properties &props) {
 	return cast(mgr->createObject(cls, props));
 }
 
-ConfigurableObject *pluginmgr_create(PluginManager *manager, bp::dict dict) {
+static ConfigurableObject *pluginmgr_create(PluginManager *manager, bp::dict dict) {
 	Properties properties;
 	bp::list list = dict.items();
 	std::map<std::string, ConfigurableObject *> children;
@@ -393,47 +547,51 @@ ConfigurableObject *pluginmgr_create(PluginManager *manager, bp::dict dict) {
 		}
 	}
 
-	ConfigurableObject *object = manager->createObject(properties);
+	ConfigurableObject *object;
+	if (properties.getPluginName() == "scene")
+		object = new Scene(properties);
+	else
+		object = manager->createObject(properties);
+
 	for (std::map<std::string, ConfigurableObject *>::iterator it = children.begin();
-		it != children.end(); ++it)
+		it != children.end(); ++it) {
 		object->addChild(it->first, it->second);
+		it->second->setParent(object);
+	}
+
 	object->configure();
 	return object;
 }
 
-bp::tuple mkCoordinateSystem(const Vector &n) {
+static bp::tuple mkCoordinateSystem(const Vector &n) {
 	Vector s, t;
 	coordinateSystem(n, s, t);
 
 	return bp::make_tuple(s, t);
 }
 
-bp::tuple fresnelDielectricExt1(Float cosThetaI, Float eta) {
+static bp::tuple fresnelDielectricExt1(Float cosThetaI, Float eta) {
 	Float cosThetaT;
 	Float result = fresnelDielectricExt(cosThetaI, cosThetaT, eta);
 
 	return bp::make_tuple(result, cosThetaT);
 }
 
-Float fresnelDielectricExt2(Float cosThetaI, Float eta) {
+static Float fresnelDielectricExt2(Float cosThetaI, Float eta) {
 	return fresnelDielectricExt(cosThetaI, eta);
 }
 
-Vector refract1(const Vector &wi, const Normal &n, Float eta, Float cosThetaT) {
+static Vector refract1(const Vector &wi, const Normal &n, Float eta, Float cosThetaT) {
 	return refract(wi, n, eta, cosThetaT);
 }
 
-bp::tuple refract2(const Vector &wi, const Normal &n, Float eta) {
+static bp::tuple refract2(const Vector &wi, const Normal &n, Float eta) {
 	Float cosThetaT, F;
 	Vector result = refract(wi, n, eta, cosThetaT, F);
 	return bp::make_tuple(result, cosThetaT, F);
 }
 
-Vector refract3(const Vector &wi, const Normal &n, Float eta) {
-	return refract(wi, n, eta);
-}
-
-void bitmap_applyMatrix(Bitmap *bitmap, bp::list list) {
+static void bitmap_applyMatrix(Bitmap *bitmap, bp::list list) {
 	int length = bp::len(list);
 	if (length != 9)
 		SLog(EError, "Require a color matrix specified as a list with 9 entries!");
@@ -448,30 +606,30 @@ void bitmap_applyMatrix(Bitmap *bitmap, bp::list list) {
 	bitmap->applyMatrix(matrix);
 }
 
-void bitmap_write(Bitmap *bitmap, Bitmap::EFileFormat fmt, Stream *stream) {
+static void bitmap_write(Bitmap *bitmap, Bitmap::EFileFormat fmt, Stream *stream) {
 	bitmap->write(fmt, stream);
 }
 
-ref<Bitmap> bitmap_convert_1(Bitmap *bitmap, Bitmap::EPixelFormat pixelFormat, Bitmap::EComponentFormat componentFormat,
+static ref<Bitmap> bitmap_convert_1(Bitmap *bitmap, Bitmap::EPixelFormat pixelFormat, Bitmap::EComponentFormat componentFormat,
 		Float gamma, Float multiplier, Spectrum::EConversionIntent intent) {
 	return bitmap->convert(pixelFormat, componentFormat, gamma, multiplier, intent);
 }
 
-ref<Bitmap> bitmap_convert_2(Bitmap *bitmap, Bitmap::EPixelFormat pixelFormat, Bitmap::EComponentFormat componentFormat,
+static ref<Bitmap> bitmap_convert_2(Bitmap *bitmap, Bitmap::EPixelFormat pixelFormat, Bitmap::EComponentFormat componentFormat,
 		Float gamma, Float multiplier) {
 	return bitmap->convert(pixelFormat, componentFormat, gamma, multiplier);
 }
 
-ref<Bitmap> bitmap_convert_3(Bitmap *bitmap, Bitmap::EPixelFormat pixelFormat, Bitmap::EComponentFormat componentFormat,
+static ref<Bitmap> bitmap_convert_3(Bitmap *bitmap, Bitmap::EPixelFormat pixelFormat, Bitmap::EComponentFormat componentFormat,
 		Float gamma) {
 	return bitmap->convert(pixelFormat, componentFormat, gamma);
 }
 
-ref<Bitmap> bitmap_convert_4(Bitmap *bitmap, Bitmap::EPixelFormat pixelFormat, Bitmap::EComponentFormat componentFormat) {
+static ref<Bitmap> bitmap_convert_4(Bitmap *bitmap, Bitmap::EPixelFormat pixelFormat, Bitmap::EComponentFormat componentFormat) {
 	return bitmap->convert(pixelFormat, componentFormat);
 }
 
-void bitmap_fromByteArray(Bitmap *bitmap, bp::object obj) {
+static void bitmap_fromByteArray(Bitmap *bitmap, bp::object obj) {
 	if (PyByteArray_Check(obj.ptr())) {
 		uint8_t *ptr = (uint8_t *) PyByteArray_AsString(obj.ptr());
 		size_t size = PyByteArray_Size(obj.ptr());
@@ -483,7 +641,7 @@ void bitmap_fromByteArray(Bitmap *bitmap, bp::object obj) {
 	}
 }
 
-void bitmap_toByteArray_1(const Bitmap *bitmap, bp::object obj) {
+static void bitmap_toByteArray_1(const Bitmap *bitmap, bp::object obj) {
 	if (PyByteArray_Check(obj.ptr())) {
 		uint8_t *ptr = (uint8_t *) PyByteArray_AsString(obj.ptr());
 		size_t size = PyByteArray_Size(obj.ptr());
@@ -495,17 +653,17 @@ void bitmap_toByteArray_1(const Bitmap *bitmap, bp::object obj) {
 	}
 }
 
-bp::object bitmap_toByteArray_2(const Bitmap *bitmap) {
+static bp::object bitmap_toByteArray_2(const Bitmap *bitmap) {
 	return bp::object(bp::handle<>(PyByteArray_FromStringAndSize(
 			(char *) bitmap->getUInt8Data(), bitmap->getBufferSize())));
 }
 
-bp::tuple bitmap_tonemapReinhard(Bitmap *bitmap, Float logAvgLuminance, Float maxLuminance, Float key, Float burn) {
+static bp::tuple bitmap_tonemapReinhard(Bitmap *bitmap, Float logAvgLuminance, Float maxLuminance, Float key, Float burn) {
 	bitmap->tonemapReinhard(logAvgLuminance, maxLuminance, key, burn);
 	return bp::make_tuple(logAvgLuminance, maxLuminance);
 }
 
-bp::object bitmap_join(Bitmap::EPixelFormat fmt, bp::list list) {
+static bp::object bitmap_join(Bitmap::EPixelFormat fmt, bp::list list) {
 	std::vector<Bitmap *> bitmaps(bp::len(list));
 
 	for (int i=0; i<bp::len(list); ++i)
@@ -514,17 +672,17 @@ bp::object bitmap_join(Bitmap::EPixelFormat fmt, bp::list list) {
 	return bp::object(Bitmap::join(fmt, bitmaps));
 }
 
-Transform transform_glOrthographic1(Float clipNear, Float clipFar) {
+static Transform transform_glOrthographic1(Float clipNear, Float clipFar) {
 	return Transform::glOrthographic(clipNear, clipFar);
 }
 
-Transform transform_glOrthographic2(Float clipLeft, Float clipRight,
+static Transform transform_glOrthographic2(Float clipLeft, Float clipRight,
 		Float clipBottom, Float clipTop, Float clipNear, Float clipFar) {
 	return Transform::glOrthographic(clipLeft, clipRight,
 		clipBottom, clipTop, clipNear, clipFar);
 }
 
-bp::list fileresolver_resolveAll(const FileResolver *fres, const fs::path &path) {
+static bp::list fileresolver_resolveAll(const FileResolver *fres, const fs::path &path) {
 	bp::list result;
 	std::vector<fs::path> paths = fres->resolveAll(path);
 
@@ -534,14 +692,134 @@ bp::list fileresolver_resolveAll(const FileResolver *fres, const fs::path &path)
 	return result;
 }
 
+static bp::tuple DiscreteDistribution_sample(DiscreteDistribution *d, Float sampleValue) {
+	Float pdf;
+	size_t index = d->sample(sampleValue, pdf);
+	return bp::make_tuple(index, pdf);
+}
+
+static bp::tuple DiscreteDistribution_sampleReuse(DiscreteDistribution *d, Float sampleValue) {
+	Float pdf;
+	size_t index = d->sampleReuse(sampleValue, pdf);
+	return bp::make_tuple(index, pdf, sampleValue);
+}
+
+static Float DiscreteDistribution_getitem(DiscreteDistribution *d, int i) {
+	if (i < 0 || i >= (int) d->size()) {
+		SLog(EError, "Index %i is out of range!", i);
+		return 0.0f;
+	}
+	return d->operator[](i);
+}
+
+static bp::tuple legendrePD_double(int l, double x) {
+	std::pair<double, double> result = legendrePD(l, x);
+	return bp::make_tuple(result.first, result.second);
+}
+
+static bp::tuple gaussLegendre_(int n) {
+	Float *nodes  = new Float[n];
+	Float *weights= new Float[n];
+	gaussLegendre(n, nodes, weights);
+
+	bp::list nodeList, weightList;
+	for (int i=0; i<n; ++i) {
+		nodeList.append(nodes[i]);
+		weightList.append(weights[i]);
+	}
+
+	delete[] nodes;
+	delete[] weights;
+	return bp::make_tuple(nodeList, weightList);
+}
+
+static bp::tuple gaussLobatto_(int n) {
+	Float *nodes  = new Float[n];
+	Float *weights= new Float[n];
+	gaussLobatto(n, nodes, weights);
+
+	bp::list nodeList, weightList;
+	for (int i=0; i<n; ++i) {
+		nodeList.append(nodes[i]);
+		weightList.append(weights[i]);
+	}
+
+	delete[] nodes;
+	delete[] weights;
+	return bp::make_tuple(nodeList, weightList);
+}
+
+/**
+ * \brief Computes the nodes and weights of a Gauss-Lobatto quadrature
+ * rule with the given number of evaluations.
+ *
+ * Integration is over the interval \f$[-1, 1]\f$. Gauss-Lobatto quadrature
+ * is preferable to Gauss-Legendre quadrature whenever the endpoints of the
+ * integration domain should explicitly be included. It maximizes the order
+ * of exactly integrable polynomials subject to this constraint and achieves
+ * this up to degree \f$2n-3\f$ (where \f$n\f$ is the number of function
+ * evaluations).
+ *
+ * This method is numerically well-behaved until about \f$n=200\f$
+ * and then becomes progressively less accurate. It is generally not a
+ * good idea to go much higher---in any case, a composite or
+ * adaptive integration scheme will be superior for large \f$n\f$.
+ *
+ * \param n
+ *     Desired number of evalution points
+ * \param nodes
+ *     Length-\c n array used to store the nodes of the quadrature rule
+ * \param nodes
+ *     Length-\c n array used to store the weights of the quadrature rule
+ */
+extern MTS_EXPORT_CORE void gaussLobatto(int n, Float *nodes, Float *weights);
+
 struct NativeBuffer {
 	ref<Object> owner;
 	void *ptr;
-	Py_ssize_t count;
 	Bitmap::EComponentFormat format;
+	int ndim;
+	Py_ssize_t shape[3], strides[4];
+	const char* formatString;
 
-	NativeBuffer(Object *owner, void *ptr, size_t count, Bitmap::EComponentFormat format)
-		: owner(owner), ptr(ptr), count((Py_ssize_t) count), format(format) { }
+	NativeBuffer(Object *owner, void *ptr, Bitmap::EComponentFormat format, int ndim,
+			Py_ssize_t shape[3]) : owner(owner), ptr(ptr), format(format), ndim(ndim) {
+		size_t itemSize = 0;
+		switch (format) {
+			case Bitmap::EUInt8:   formatString = "B"; itemSize = 1; break;
+			case Bitmap::EUInt16:  formatString = "H"; itemSize = 2; break;
+			case Bitmap::EUInt32:  formatString = "I"; itemSize = 4; break;
+			case Bitmap::EFloat16: formatString = "e"; itemSize = 2; break;
+			case Bitmap::EFloat32: formatString = "f"; itemSize = 4; break;
+			case Bitmap::EFloat64: formatString = "d"; itemSize = 8; break;
+			default:
+				SLog(EError, "Unsupported bufer format!");
+		}
+		strides[ndim] = itemSize;
+
+		for (int i=ndim-1; i>=0; --i) {
+			this->shape[i] = shape[i];
+			strides[i] = strides[i+1] * shape[i];
+		}
+	}
+
+	std::string toString() const {
+		std::ostringstream oss;
+		oss << "NativeBuffer[ndim=" << ndim << ", shape=[";
+		for (int i=0; i<ndim; ++i) {
+			oss << shape[i];
+			if (i+1 < ndim)
+				oss << ", ";
+		}
+		oss << "], strides=[";
+		for (int i=0; i<=ndim; ++i) {
+			oss << strides[i];
+			if (i+1 <= ndim)
+				oss << ", ";
+		}
+		oss << "], format=" << format << ", size=" << memString(strides[0]) << "]";
+		return oss.str();
+	}
 
 	static int getbuffer(PyObject *obj, Py_buffer *view, int flags) {
 		bp::extract<NativeBuffer&> b(obj);
@@ -566,37 +844,28 @@ struct NativeBuffer {
 			Py_INCREF(view->obj);
 		buf.owner->incRef();
 
-		char *format = NULL;
-		int itemSize = 0;
-		switch (buf.format) {
-			case Bitmap::EUInt8:   format = (char *)"B"; itemSize = 1; break;
-			case Bitmap::EUInt16:  format = (char *)"H"; itemSize = 2; break;
-			case Bitmap::EUInt32:  format = (char *)"I"; itemSize = 4; break;
-			case Bitmap::EFloat32: format = (char *)"f"; itemSize = 4; break;
-			case Bitmap::EFloat64: format = (char *)"d"; itemSize = 8; break;
-			default:
-				PyErr_SetString(PyExc_BufferError, "Unsupported buffer format!");
-				view->obj = NULL;
-				return -1;
-		}
-
-
-		view->buf = buf.ptr;
-		view->len = itemSize * buf.count;
-		view->readonly = false;
-		view->itemsize = itemSize;
-		view->format = NULL;
-		if ((flags & PyBUF_FORMAT) == PyBUF_FORMAT)
-			view->format = format;
 		view->ndim = 1;
+		view->buf = buf.ptr;
+		view->format = NULL;
 		view->shape = NULL;
-		if ((flags & PyBUF_ND) == PyBUF_ND)
-			view->shape = &buf.count;
-		view->strides = NULL;
-		if ((flags & PyBUF_STRIDES) == PyBUF_STRIDES)
-			view->strides = &(view->itemsize);
 		view->suboffsets = NULL;
 		view->internal = NULL;
+		view->strides = NULL;
+		view->len = buf.strides[0];
+		view->readonly = false;
+		view->itemsize = buf.strides[buf.ndim];
+
+		if ((flags & PyBUF_FORMAT) == PyBUF_FORMAT)
+			view->format = const_cast<char *>(buf.formatString);
+
+		if ((flags & PyBUF_STRIDES) == PyBUF_STRIDES)
+			view->strides = &buf.strides[1];
+
+		if ((flags & PyBUF_ND) == PyBUF_ND) {
+			view->ndim = buf.ndim;
+			view->shape = &buf.shape[0];
+		}
+
 		return 0;
 	}
 
@@ -616,7 +885,8 @@ struct NativeBuffer {
 			PyErr_SetString(PyExc_BufferError, "Native buffer is invalid!");
 			return -1;
 		}
-		return b().count;
+		NativeBuffer &buf = b();
+		return buf.strides[0] / buf.strides[buf.ndim];
 	}
 
 	static PyObject* item(PyObject *obj, Py_ssize_t idx) {
@@ -632,6 +902,7 @@ struct NativeBuffer {
 			case Bitmap::EUInt8:   result = bp::object(((uint8_t *) buf.ptr)[idx]); break;
 			case Bitmap::EUInt16:  result = bp::object(((uint16_t *) buf.ptr)[idx]); break;
 			case Bitmap::EUInt32:  result = bp::object(((uint32_t *) buf.ptr)[idx]); break;
+			case Bitmap::EFloat16: result = bp::object((float) ((half *) buf.ptr)[idx]); break;
 			case Bitmap::EFloat32: result = bp::object(((float *) buf.ptr)[idx]); break;
 			case Bitmap::EFloat64: result = bp::object(((double *) buf.ptr)[idx]); break;
 			default:
@@ -639,12 +910,19 @@ struct NativeBuffer {
 				return 0;
 		}
 
-		return boost::python::incref(result.ptr());
+		return bp::incref(result.ptr());
 	}
 };
 
-NativeBuffer bitmap_getNativeBuffer(Bitmap *bitmap) {
-	return NativeBuffer(bitmap, bitmap->getFloat32Data(), bitmap->getPixelCount() * bitmap->getChannelCount(), bitmap->getComponentFormat());
+static NativeBuffer bitmap_getNativeBuffer(Bitmap *bitmap) {
+	int ndim = bitmap->getChannelCount() == 1 ? 2 : 3;
+	Py_ssize_t shape[3] = {
+		(Py_ssize_t) bitmap->getHeight(),
+		(Py_ssize_t) bitmap->getWidth(),
+		(Py_ssize_t) bitmap->getChannelCount()
+	};
+
+	return NativeBuffer(bitmap, bitmap->getUInt8Data(), bitmap->getComponentFormat(), ndim, shape);
 }
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(fromLinearRGB_overloads, fromLinearRGB, 3, 4)
@@ -662,10 +940,56 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(fromIPT_overloads, fromIPT, 3, 4)
 		.def("getValue", &Name::getValue, BP_RETURN_VALUE) \
 		.def("append", &Name::append)
 
+struct PythonIntegrand {
+	PythonIntegrand(bp::object integrand) : integrand(integrand) {}
+
+	Float operator()(Float value) {
+		bp::object obj = integrand(value);
+		bp::extract<Float> extract(obj);
+		return (Float) extract();
+	}
+
+	bp::object integrand;
+};
+
+struct PythonIntegrandFromPythonCallable {
+	PythonIntegrandFromPythonCallable() {
+		bp::converter::registry::push_back(&convertible,
+				&construct, bp::type_id<GaussLobattoIntegrator::Integrand>());
+	}
+
+	static void* convertible(PyObject* obj) {
+		if(!PyCallable_Check(obj))
+			return 0;
+		return obj;
+	}
+
+	static void construct(PyObject* obj, bp::converter::rvalue_from_python_stage1_data* data) {
+		bp::object callable(bp::handle<>(bp::borrowed(obj)));
+		void* storage = ((bp::converter::rvalue_from_python_storage<GaussLobattoIntegrator::Integrand>*) data)->storage.bytes;
+		new (storage) GaussLobattoIntegrator::Integrand(PythonIntegrand(callable));
+		data->convertible = storage;
+	}
+};
+
+static bp::tuple GaussLobattoIntegrator_integrate(GaussLobattoIntegrator *integrator,
+		const GaussLobattoIntegrator::Integrand &integrand, Float a, Float b) {
+	size_t nEvals = 0;
+	Float result = integrator->integrate(integrand, a, b, &nEvals);
+	return bp::make_tuple(result, nEvals);
+}
+
+static std::string memString1(size_t size) { return mitsuba::memString(size); }
+static std::string memString2(size_t size, bool precise) { return mitsuba::memString(size, precise); }
+static std::string timeString1(Float size) { return mitsuba::timeString(size); }
+static std::string timeString2(Float size, bool precise) { return mitsuba::timeString(size, precise); }
+
 void export_core() {
 	bp::to_python_converter<fs::path, path_to_python_str>();
 	bp::to_python_converter<TSpectrum<Float, SPECTRUM_SAMPLES>, TSpectrum_to_Spectrum>();
 	bp::implicitly_convertible<std::string, fs::path>();
+
+	PythonIntegrandFromPythonCallable();
 
 	bp::object coreModule(
 		bp::handle<>(bp::borrowed(PyImport_AddModule("mitsuba.core"))));
@@ -673,6 +997,8 @@ void export_core() {
 	PyObject *oldScope = bp::detail::current_scope;
 
 	BP_SETSCOPE(coreModule);
+
+	coreModule.attr("__path__") = "mitsuba.core";
 
 	/* Basic STL containers */
 	bp::class_<StringVector>("StringVector")
@@ -692,9 +1018,9 @@ void export_core() {
 	bp::def("Log", &mts_log);
 
 	/* Basic constants */
-	boost::python::scope().attr("Epsilon") = Epsilon;
-	boost::python::scope().attr("ShadowEpsilon") = ShadowEpsilon;
-	boost::python::scope().attr("DeltaEpsilon") = DeltaEpsilon;
+	coreModule.attr("Epsilon") = Epsilon;
+	coreModule.attr("ShadowEpsilon") = ShadowEpsilon;
+	coreModule.attr("DeltaEpsilon") = DeltaEpsilon;
 
 	bp::class_<Class, boost::noncopyable>("Class", bp::no_init)
 		.def("getName", &Class::getName, BP_RETURN_CONSTREF)
@@ -769,7 +1095,9 @@ void export_core() {
 				BP_RETURN_CONSTREF)
 		.def("open", &FileStream::open)
 		.def("close", &FileStream::close)
-		.def("remove", &FileStream::remove);
+		.def("remove", &FileStream::remove)
+		.def("createTemporary", &FileStream::createTemporary)
+		.staticmethod("createTemporary");
 
 	BP_CLASS(SocketStream, Stream, (bp::init<std::string, int>()))
 		.def("getPeer", &SocketStream::getPeer, BP_RETURN_CONSTREF)
@@ -796,6 +1124,9 @@ void export_core() {
 		.value("EAppendReadWrite", FileStream::EAppendReadWrite)
 		.export_values();
 	BP_SETSCOPE(coreModule);
+
+	BP_CLASS(MemoryStream, Stream, (bp::init<bp::optional<size_t> >()))
+		.def("reset", &MemoryStream::reset);
 
 	BP_CLASS(SerializableObject, Object, bp::no_init)
 		.def("serialize", &SerializableObject::serialize);
@@ -836,7 +1167,7 @@ void export_core() {
 		.def("registerUnmanagedThread", &Thread::registerUnmanagedThread, BP_RETURN_VALUE)
 		.def("sleep", &Thread::sleep)
 		.def("detach", &Thread::detach)
-		.def("join", &Thread::join)
+		.def("join", thread_join)
 		.def("start", &Thread::start)
 		.staticmethod("sleep")
 		.staticmethod("getThread")
@@ -908,6 +1239,9 @@ void export_core() {
 	void (Bitmap::*accumulate_1)(const Bitmap *bitmap, Point2i sourceOffset, Point2i targetOffset, Vector2i size) = &Bitmap::accumulate;
 	void (Bitmap::*accumulate_2)(const Bitmap *bitmap, Point2i targetOffset) = &Bitmap::accumulate;
 	void (Bitmap::*accumulate_3)(const Bitmap *bitmap) = &Bitmap::accumulate;
+	void (Bitmap::*copyFrom_1)(const Bitmap *bitmap, Point2i sourceOffset, Point2i targetOffset, Vector2i size) = &Bitmap::copyFrom;
+	void (Bitmap::*copyFrom_2)(const Bitmap *bitmap, Point2i targetOffset) = &Bitmap::copyFrom;
+	void (Bitmap::*copyFrom_3)(const Bitmap *bitmap) = &Bitmap::copyFrom;
 	const Properties &(Bitmap::*get_metadata)() const = &Bitmap::getMetadata;
 
 	void (Bitmap::*resample_1)(const ReconstructionFilter *,
@@ -925,6 +1259,7 @@ void export_core() {
 		.def("getComponentFormat", &Bitmap::getComponentFormat)
 		.def("getSize", &Bitmap::getSize, BP_RETURN_VALUE)
 		.def("getPixelCount", &Bitmap::getPixelCount)
+		.def("average", &Bitmap::average)
 		.def("getWidth", &Bitmap::getWidth)
 		.def("getHeight", &Bitmap::getHeight)
 		.def("getChannelCount", &Bitmap::getChannelCount)
@@ -955,6 +1290,9 @@ void export_core() {
 		.def("accumulate", accumulate_1)
 		.def("accumulate", accumulate_2)
 		.def("accumulate", accumulate_3)
+		.def("copyFrom", copyFrom_1)
+		.def("copyFrom", copyFrom_2)
+		.def("copyFrom", copyFrom_3)
 		.def("convolve", &Bitmap::convolve)
 		.def("arithmeticOperation", &Bitmap::arithmeticOperation, BP_RETURN_VALUE)
 		.def("resample", resample_1)
@@ -967,6 +1305,7 @@ void export_core() {
 		.def("getMetadata", get_metadata, BP_RETURN_VALUE)
 		.def("drawRect", &Bitmap::drawRect)
 		.def("fillRect", &Bitmap::fillRect)
+		.def("drawWorkUnit", &Bitmap::drawWorkUnit)
 		.def("convert", &bitmap_convert_1, BP_RETURN_VALUE)
 		.def("convert", &bitmap_convert_2, BP_RETURN_VALUE)
 		.def("convert", &bitmap_convert_3, BP_RETURN_VALUE)
@@ -1042,6 +1381,37 @@ void export_core() {
 
 	BP_SETSCOPE(coreModule);
 
+	/* Native buffers for bitmaps */
+	bp::class_<NativeBuffer>("NativeBuffer", bp::no_init)
+		.def("__repr__", &NativeBuffer::toString);
+
+	const bp::converter::registration& fb_reg(
+		bp::converter::registry::lookup(bp::type_id<NativeBuffer>()));
+	PyTypeObject* fb_type = fb_reg.get_class_object();
+
+	static PyBufferProcs NativeBuffer_buffer_procs = {
+		#if PY_MAJOR_VERSION < 3
+			NULL, NULL, NULL, NULL,
+		#endif
+		&NativeBuffer::getbuffer,
+		&NativeBuffer::releasebuffer
+	};
+
+	// partial sequence protocol support
+	static PySequenceMethods NativeBuffer_as_sequence = {
+		&NativeBuffer::len,
+		NULL,
+		NULL,
+		&NativeBuffer::item
+	};
+
+	fb_type->tp_as_sequence = &NativeBuffer_as_sequence;
+	fb_type->tp_as_buffer = &NativeBuffer_buffer_procs;
+
+	#if PY_MAJOR_VERSION < 3
+		fb_type->tp_flags |= Py_TPFLAGS_HAVE_NEWBUFFER;
+	#endif
+
 	BP_CLASS(FileResolver, Object, bp::init<>())
 		.def("getPathCount", &FileResolver::getPathCount)
 		.def("getPath", &FileResolver::getPath, BP_RETURN_VALUE)
@@ -1066,6 +1436,7 @@ void export_core() {
 		.def("nextUInt", &Random::nextUInt)
 		.def("nextSize", &Random::nextSize)
 		.def("nextFloat", &Random::nextFloat)
+		.def("nextStandardNormal", &Random::nextStandardNormal)
 		.def("serialize", &Random::serialize);
 
 	BP_CLASS(PluginManager, Object, bp::no_init)
@@ -1164,6 +1535,8 @@ void export_core() {
 		.def("getTime", &AbstractAnimationTrack::getTime)
 		.def("getSize", &AbstractAnimationTrack::getSize)
 		.def("clone", &AbstractAnimationTrack::clone, BP_RETURN_VALUE);
+
+	BP_CLASS_DECL(StreamBackend, Thread, (bp::init<const std::string, Scheduler *, const std::string &, Stream *, bool>()));
 
 	IMPLEMENT_ANIMATION_TRACK(FloatTrack);
 	IMPLEMENT_ANIMATION_TRACK(VectorTrack);
@@ -1356,7 +1729,7 @@ void export_core() {
 		.def_readwrite("y", &Vector3::y)
 		.def_readwrite("z", &Vector3::z);
 
-	BP_STRUCT(Normal, bp::init<>())
+	BP_SUBSTRUCT(Normal, Vector3, bp::init<>())
 		.def(bp::init<Float, Float, Float>())
 		.def(bp::init<Vector>())
 		.def_readwrite("x", &Normal::x)
@@ -1478,17 +1851,34 @@ void export_core() {
 	bp::def("normalize", normalize4);
 	bp::def("cross", cross3);
 
-	bp::scope().attr("Vector") = bp::scope().attr("Vector3");
-	bp::scope().attr("Point") = bp::scope().attr("Point3");
+	coreModule.attr("Vector") = coreModule.attr("Vector3");
+	coreModule.attr("Point") = coreModule.attr("Point3");
 
-	bp::class_<Matrix4x4>("Matrix4x4", bp::init<Float>())
+	bp::class_<Matrix4x4>("Matrix4x4", bp::init<>())
+		.def(bp::init<Float>())
+		.def(bp::init<Stream *>())
+		.def(bp::init<Matrix4x4>())
+		.def(bp::init<Vector4, Vector4, Vector4, Vector4>())
+		.def("__init__", bp::make_constructor(Matrix4x4_fromList))
 		.def(bp::init<Stream *>())
 		.def("__setitem__", &Matrix4x4_setItem)
 		.def("__getitem__", &Matrix4x4_getItem)
 		.def("setIdentity", &Matrix4x4::setIdentity)
+		.def("setZero", &Matrix4x4::setZero)
 		.def("isZero", &Matrix4x4::isZero)
+		.def("isIdentity", &Matrix4x4::isIdentity)
 		.def("trace", &Matrix4x4::trace)
+		.def("frob", &Matrix4x4::frob)
 		.def("det", &Matrix4x4::det)
+		.def("cholDet", &Matrix4x4::cholDet)
+		.def("luDet", &Matrix4x4::luDet)
+		.def("chol", &Matrix4x4::chol)
+		.def("symEig", &Matrix4x4_symEig)
+		.def("lu", &Matrix4x4_lu)
+		.def("cholSolve", &Matrix4x4_cholSolve)
+		.def("luSolve", &Matrix4x4_luSolve)
+		.def("transpose", &Matrix4x4_transpose)
+		.def("invert", &Matrix4x4_invert)
 		.def("serialize", &Matrix4x4::serialize)
 		.def(bp::self != bp::self)
 		.def(bp::self == bp::self)
@@ -1510,6 +1900,19 @@ void export_core() {
 		.def(bp::self /= Float())
 		.def("__repr__", &Matrix4x4::toString);
 
+	bp::class_<DiscreteDistribution>("DiscreteDistribution", bp::init<bp::optional<size_t> >())
+		.def("clear", &DiscreteDistribution::clear)
+		.def("reserve", &DiscreteDistribution::reserve)
+		.def("append", &DiscreteDistribution::append)
+		.def("isNormalized", &DiscreteDistribution::isNormalized)
+		.def("getSum", &DiscreteDistribution::getSum)
+		.def("normalize", &DiscreteDistribution::normalize)
+		.def("size", &DiscreteDistribution::size)
+		.def("sample", &DiscreteDistribution_sample)
+		.def("sampleReuse", &DiscreteDistribution_sampleReuse)
+		.def("__getitem__", &DiscreteDistribution_getitem)
+		.def("__repr__", &DiscreteDistribution::toString);
+
 	bp::class_<Ray>("Ray", bp::init<>())
 		.def(bp::init<Ray &>())
 		.def(bp::init<Ray &, Float, Float>())
@@ -1526,6 +1929,18 @@ void export_core() {
 		.def("setTime", &Ray::setTime)
 		.def("eval", &ray_eval, BP_RETURN_VALUE)
 		.def("__repr__", &Ray::toString);
+
+	bp::class_<RayDifferential, bp::bases<Ray> >("RayDifferential", bp::init<>())
+		.def(bp::init<Ray &>())
+		.def(bp::init<RayDifferential &>())
+		.def(bp::init<Point, Vector, Float>())
+		.def_readwrite("rxOrigin", &RayDifferential::rxOrigin)
+		.def_readwrite("ryOrigin", &RayDifferential::ryOrigin)
+		.def_readwrite("rxDirection", &RayDifferential::rxDirection)
+		.def_readwrite("ryDirection", &RayDifferential::ryDirection)
+		.def_readwrite("hasDifferentials", &RayDifferential::hasDifferentials)
+		.def("scaleDifferential", &RayDifferential::scaleDifferential)
+		.def("__repr__", &RayDifferential::toString);
 
 	bp::class_<BSphere>("BSphere", bp::init<>())
 		.def(bp::init<BSphere>())
@@ -1645,7 +2060,7 @@ void export_core() {
 	Spectrum (*fresnelConductorApprox2)(Float, const Spectrum &, const Spectrum &) = &fresnelConductorApprox;
 	Spectrum (*fresnelConductorExact2)(Float, const Spectrum &, const Spectrum &) = &fresnelConductorExact;
 
-	/* Functions from utility.h */
+	/* Functions from util.h */
 	bp::def("fresnelDielectric", &fresnelDielectric);
 	bp::def("fresnelDielectricExt", &fresnelDielectricExt1);
 	bp::def("fresnelDielectricExt", &fresnelDielectricExt2);
@@ -1657,8 +2072,18 @@ void export_core() {
 	bp::def("reflect", &reflect);
 	bp::def("refract", &refract1);
 	bp::def("refract", &refract2);
-	bp::def("refract", &refract3);
 	bp::def("coordinateSystem", &mkCoordinateSystem);
+	bp::def("memString", &memString1);
+	bp::def("memString", &memString2);
+	bp::def("timeString", &timeString1);
+	bp::def("timeString", &timeString2);
+	bp::def("getCoreCount", &getCoreCount);
+	bp::def("getHostName", &getHostName);
+	bp::def("getPrivateMemoryUsage", &getPrivateMemoryUsage);
+	bp::def("getTotalSystemMemory", &getTotalSystemMemory);
+	bp::def("getFQDN", &getFQDN);
+	bp::def("rdtsc", &rdtsc);
+	bp::def("hypot2", &hypot2);
 
 	/* Functions from qmc.h */
 	bp::def("radicalInverse2Single", radicalInverse2Single);
@@ -1667,44 +2092,170 @@ void export_core() {
 	bp::def("sobol2Single", sobol2Single);
 	bp::def("sobol2Double", sobol2Double);
 	bp::def("sobol2", sobol2Double);
+	bp::def("sample02Single", sample02Single);
+	bp::def("sample02Double", sample02Double);
+	bp::def("sample02", sample02);
 	bp::def("sampleTEA", sampleTEA);
+	bp::def("sampleTEAFloat", sampleTEAFloat);
 	bp::def("radicalInverse", radicalInverse);
 	bp::def("radicalInverseFast", radicalInverseFast);
 	bp::def("radicalInverseIncremental", radicalInverseIncremental);
 
-	bp::class_<NativeBuffer>("NativeBuffer", bp::no_init);
+	/* Functions from quad.h */
+	double (*legendreP1)(int, double) = &legendreP;
+	double (*legendreP2)(int, int, double) = &legendreP;
 
-	const bp::converter::registration& fb_reg(
-		bp::converter::registry::lookup(bp::type_id<NativeBuffer>()));
-	PyTypeObject* fb_type = fb_reg.get_class_object();
+	bp::def("legendreP", legendreP1);
+	bp::def("legendreP", legendreP2);
+	bp::def("legendrePD", legendrePD_double);
+	bp::def("gaussLegendre", gaussLegendre_);
+	bp::def("gaussLobatto", gaussLobatto_);
 
-	static PyBufferProcs NativeBuffer_buffer_procs = {
-		#if PY_MAJOR_VERSION < 3
-			NULL, NULL, NULL, NULL,
-		#endif
-		&NativeBuffer::getbuffer,
-		&NativeBuffer::releasebuffer
-	};
+	bp::class_<GaussLobattoIntegrator>("GaussLobattoIntegrator", (bp::init<size_t, bp::optional<Float, Float, bool, bool> >()))
+		.def("integrate", GaussLobattoIntegrator_integrate);
 
-	// partial sequence protocol support
-	static PySequenceMethods NativeBuffer_as_sequence = {
-		&NativeBuffer::len,
-		NULL,
-		NULL,
-		&NativeBuffer::item
-	};
+	BP_STRUCT(Quaternion, bp::init<>())
+		.def(bp::init<Vector, Float>())
+		.def(bp::init<Stream *>())
+		.def_readwrite("v", &Quaternion::v)
+		.def_readwrite("w", &Quaternion::w)
+		.def(bp::self != bp::self)
+		.def(bp::self == bp::self)
+		.def(-bp::self)
+		.def(bp::self + bp::self)
+		.def(bp::self += bp::self)
+		.def(bp::self - bp::self)
+		.def(bp::self -= bp::self)
+		.def(bp::self *= Float())
+		.def(bp::self * Float())
+		.def(bp::self *= bp::self)
+		.def(bp::self * bp::self)
+		.def(bp::self *= bp::self)
+		.def(bp::self * bp::self)
+		.def(bp::self / Float())
+		.def(bp::self /= Float())
+		.def("isIdentity", &Quaternion::isIdentity)
+		.def("axis", &Quaternion::axis)
+		.def("angle", &Quaternion::angle)
+		.def("exp", &Quaternion::exp)
+		.def("log", &Quaternion::log)
+		.def("toTransform", &Quaternion::toTransform)
+		.def("serialize", &Quaternion::serialize)
+		.def("fromAxisAngle", &Quaternion::fromAxisAngle)
+		.def("fromTransform", &Quaternion::fromTransform)
+		.def("fromDirectionPair", &Quaternion::fromDirectionPair)
+		.def("fromMatrix", &Quaternion::fromMatrix)
+		.def("fromEulerAngles", &Quaternion::fromEulerAngles)
+		.def("__repr__", &Quaternion::toString)
+		.staticmethod("fromAxisAngle")
+		.staticmethod("fromDirectionPair")
+		.staticmethod("fromTransform")
+		.staticmethod("fromMatrix")
+		.staticmethod("fromEulerAngles");
 
-	fb_type->tp_as_sequence = &NativeBuffer_as_sequence;
-	fb_type->tp_as_buffer = &NativeBuffer_buffer_procs;
+	BP_SETSCOPE(Quaternion_struct);
 
-	#if PY_MAJOR_VERSION < 3
-		fb_type->tp_flags |= Py_TPFLAGS_HAVE_NEWBUFFER;
-	#endif
+	bp::enum_<Quaternion::EEulerAngleConvention>("EEulerAngleConvention")
+		.value("EEulerXYZ", Quaternion::EEulerXYZ)
+		.value("EEulerXZY", Quaternion::EEulerXZY)
+		.value("EEulerYXZ", Quaternion::EEulerYXZ)
+		.value("EEulerYZX", Quaternion::EEulerYZX)
+		.value("EEulerZXY", Quaternion::EEulerZXY)
+		.value("EEulerZYX", Quaternion::EEulerZYX)
+		.export_values();
+	BP_SETSCOPE(coreModule);
+
+	Float (*dotQ)(const Quaternion &, const Quaternion &) = &dot;
+	Quaternion (*normalizeQ)(const Quaternion &) = &normalize;
+	Quaternion (*slerpQ)(const Quaternion &, const Quaternion &, Float) = &slerp;
+
+	bp::def("dot", dotQ);
+	bp::def("normalize", normalizeQ);
+	bp::def("slerp", slerpQ);
+
+	BP_CLASS(ReconstructionFilter, ConfigurableObject, bp::no_init)
+		.def("eval", &ReconstructionFilter::eval)
+		.def("evalDiscretized", &ReconstructionFilter::evalDiscretized)
+		.def("getRadius", &ReconstructionFilter::getRadius)
+		.def("getBorderSize", &ReconstructionFilter::getBorderSize);
+
+	BP_SETSCOPE(ReconstructionFilter_class);
+	bp::enum_<ReconstructionFilter::EBoundaryCondition>("EBoundaryCondition")
+		.value("EClamp", ReconstructionFilter::EClamp)
+		.value("ERepeat", ReconstructionFilter::ERepeat)
+		.value("EMirror", ReconstructionFilter::EMirror)
+		.value("EZero", ReconstructionFilter::EZero)
+		.value("EOne", ReconstructionFilter::EOne)
+		.export_values();
+	BP_SETSCOPE(coreModule);
+
+	Float (SHVector::*shvector_eval1)(Float, Float) const = &SHVector::eval;
+	Float (SHVector::*shvector_eval2)(const Vector &) const = &SHVector::eval;
+	Float (SHVector::*shvector_evalAzimuthallyInvariant1)(Float, Float) const = &SHVector::evalAzimuthallyInvariant;
+	Float (SHVector::*shvector_evalAzimuthallyInvariant2)(const Vector &) const = &SHVector::evalAzimuthallyInvariant;
+
+	BP_STRUCT(SHVector, bp::init<>())
+		.def(bp::init<int>())
+		.def(bp::init<const SHVector &>())
+		.def(bp::init<Stream *>())
+		.def(bp::self != bp::self)
+		.def(bp::self == bp::self)
+		.def(-bp::self)
+		.def(bp::self + bp::self)
+		.def(bp::self += bp::self)
+		.def(bp::self - bp::self)
+		.def(bp::self -= bp::self)
+		.def(bp::self *= Float())
+		.def(bp::self * Float())
+		.def(bp::self / Float())
+		.def(bp::self /= Float())
+		.def("getBands", &SHVector::getBands)
+		.def("serialize", &SHVector::serialize)
+		.def("energy", &SHVector::energy)
+		.def("eval", shvector_eval1)
+		.def("eval", shvector_eval2)
+		.def("evalAzimuthallyInvariant", shvector_evalAzimuthallyInvariant1)
+		.def("evalAzimuthallyInvariant", shvector_evalAzimuthallyInvariant2)
+		.def("normalize", &SHVector::normalize)
+		.def("mu2", &SHVector::mu2)
+		.def("findMinimum", &SHVector::findMinimum)
+		.def("addOffset", &SHVector::addOffset)
+		.def("convolve", &SHVector::convolve)
+		.def("__repr__", &SHVector::toString)
+		.def("__getitem__", SHVector_getItem)
+		.def("__setitem__", SHVector_setItem)
+		.def("rotation", &SHVector::rotation)
+		.staticmethod("rotation");
+
+	Float (*dotSH)(const SHVector &, const SHVector &) = &mitsuba::dot;
+	bp::def("dot", dotSH);
+
+	BP_CLASS(SHSampler, Object, (bp::init<int, int>()))
+		.def("warp", &SHSampler::warp);
+
+	BP_STRUCT(SHRotation, bp::init<int>())
+		.def("__call__", &SHRotation::operator());
+
+	BP_CLASS(Timer, Object, bp::init<bp::optional<bool> >())
+		.def("start", &Timer::start)
+		.def("reset", &Timer::reset)
+		.def("stop", &Timer::stop)
+		.def("lap", &Timer::lap)
+		.def("getNanoseconds", &Timer::getNanoseconds)
+		.def("getMicroseconds", &Timer::getMicroseconds)
+		.def("getMilliseconds", &Timer::getMilliseconds)
+		.def("getSeconds", &Timer::getSeconds)
+		.def("getNanosecondsSinceStart", &Timer::getNanosecondsSinceStart)
+		.def("getMicrosecondsSinceStart", &Timer::getMicrosecondsSinceStart)
+		.def("getMillisecondsSinceStart", &Timer::getMillisecondsSinceStart)
+		.def("getSecondsSinceStart", &Timer::getSecondsSinceStart);
 
 	bp::detail::current_scope = oldScope;
 }
 
 BOOST_PYTHON_MODULE(mitsuba) {
+	PyEval_InitThreads();
+
 	bp::object package = bp::scope();
 	package.attr("__path__") = "mitsuba";
 

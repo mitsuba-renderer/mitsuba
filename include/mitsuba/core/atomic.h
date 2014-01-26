@@ -189,6 +189,45 @@ inline int64_t atomicAdd(volatile int64_t *dst, int64_t delta) {
 #endif
 }
 
+/**
+ * \brief Atomically set \c dst to the maximum of itself and \c value
+ * \return The maximum value now stored in \c dst
+ */
+
+inline int64_t atomicMaximum(volatile int64_t *dst, int64_t value) {
+	int64_t current;
+	do {
+		current = *dst;
+		if (value <= current)
+			return current;
+		#if (defined(__i386__) || defined(__amd64__))
+			__asm__ __volatile__ ("pause\n");
+		#endif
+	} while (!atomicCompareAndExchange(dst, value, current));
+
+	return value;
+}
+
+/*
+ * \brief Atomically set \c dst to the maximum of itself and \c value
+ * \return The maximum value now stored in \c dst
+ */
+
+inline int32_t atomicMaximum(volatile int32_t *dst, int32_t value) {
+	int32_t current;
+	do {
+		current = *dst;
+		if (value <= current)
+			return current;
+		#if (defined(__i386__) || defined(__amd32__))
+			__asm__ __volatile__ ("pause\n");
+		#endif
+	} while (!atomicCompareAndExchange(dst, value, current));
+
+	return value;
+}
+
+
 /*! }@ */
 
 MTS_NAMESPACE_END

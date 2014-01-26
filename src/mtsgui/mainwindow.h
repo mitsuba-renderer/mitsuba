@@ -58,7 +58,7 @@ public:
 	}
 
 	/// Called when work has finished in a rectangular image region
-	inline void workEndEvent(const RenderJob *job, const ImageBlock *wr) {
+	inline void workEndEvent(const RenderJob *job, const ImageBlock *wr, bool cancelled) {
 		emit workEnd(job, wr);
 	}
 
@@ -120,7 +120,7 @@ public:
 	void loadFile(QString filename);
 	void adjustSize();
 	bool isActive();
-	void initWorkers();
+	bool initWorkersProcessArgv();
 
 protected:
 	SceneContext *loadScene(const QString &filename);
@@ -202,6 +202,7 @@ private slots:
 	void on_glView_crop(int type, int x=0, int y=0,
 		int width=0, int height=0);
 	void onSelectionChanged();
+	void onSwitchTab(int rel);
 
 private:
 	void exportImage(const QString &fileName);

@@ -135,6 +135,10 @@ public:
 	 *    An importance weight associated with the sampled ray.
 	 *    This accounts for the difference between the sensor response
 	 *    and the sampling density function.
+	 *
+	 * \remark
+	 *    In the Python API, the signature of this function is
+	 *    <tt>spectrum, ray = sensor.sampleRay(samplePosition, apertureSample)</tt>
 	 */
 	virtual Spectrum sampleRay(Ray &ray,
 		const Point2 &samplePosition,
@@ -183,6 +187,10 @@ public:
 	 *    An importance weight associated with the sampled ray.
 	 *    This accounts for the difference between the sensor response
 	 *    and the sampling density function.
+	 *
+	 * \remark
+	 *    In the Python API, the signature of this function is
+	 *    <tt>spectrum, ray = sensor.sampleRayDifferential(samplePosition, apertureSample)</tt>
 	 */
 	virtual Spectrum sampleRayDifferential(RayDifferential &ray,
 		const Point2 &samplePosition,
@@ -230,6 +238,10 @@ public:
 	 *
 	 * \return
 	 *    The emitted importance
+	 *
+	 * \remark
+	 *    In the Python API, the signature of this function is
+	 *    <tt>spectrum, samplePos = sensor.eval(its, d)</tt>
 	 */
 	virtual Spectrum eval(const Intersection &its, const Vector &d,
 			Point2 &samplePos) const;
@@ -245,6 +257,10 @@ public:
 	 *    A position sampling record, which specifies the query position
 	 *
 	 * \return \c true if the specified ray is visible by the camera
+	 *
+	 * \remark
+	 *    In the Python API, the signature of this function is
+	 *    <tt>visible, position = sensor.getSamplePosition(pRec, dRec)</tt>
 	 */
 	virtual bool getSamplePosition(const PositionSamplingRecord &pRec,
 			const DirectionSamplingRecord &dRec, Point2 &position) const;

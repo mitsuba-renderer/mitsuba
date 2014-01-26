@@ -446,6 +446,12 @@ public:
 	/// Draw a filled rectangle with the specified position and size
 	void fillRect(Point2i offset, Vector2i size, const Spectrum &value);
 
+	/**
+	 * \brief Convenience function to visually indicate that a thread is
+	 * working on a certain part of an image
+	 */
+	void drawWorkUnit(const Point2i &offset, const Vector2i &size, int worker);
+
 	/// Bitmap equality operator (useful for unit-tests etc.)
 	bool operator==(const Bitmap &bitmap) const;
 
@@ -732,6 +738,9 @@ public:
 	/// Vertically flip the image contents
 	void flipVertically();
 
+	/// Compute the average value of the bitmap
+	Spectrum average() const;
+
 	/// Perform the specified rotatation & flip operation
 	ref<Bitmap> rotateFlip(ERotateFlipType type) const;
 
@@ -763,8 +772,57 @@ public:
 	void applyMatrix(Float matrix[3][3]);
 
 	/**
+	 * \brief Copy the contents of another bitmap into the
+	 * region with the specified offset
+	 *
+	 * Out-of-bounds regions are ignored. It is assumed that
+	 * <tt>bitmap != this</tt>.
+	 *
+	 * \remark This function throws an exception when the bitmaps
+	 * use different component formats or channels, or when the
+	 * component format is \ref EBitmask.
+	 */
+	void copyFrom(const Bitmap *bitmap, Point2i sourceOffset,
+			Point2i targetOffset, Vector2i size);
+
+	/**
+	 * \brief Copy the contents of another bitmap into the
+	 * region with the specified offset
+	 *
+	 * This convenience function calls the main <tt>copyFrom()</tt>
+	 * implementation with <tt>size</tt> set to <tt>bitmap->getSize()</tt>
+	 * and <tt>sourceOffset</tt> set to zero. Out-of-bounds regions are
+	 * ignored. It is assumed that <tt>bitmap != this</tt>.
+	 *
+	 * \remark This function throws an exception when the bitmaps
+	 * use different component formats or channels, or when the
+	 * component format is \ref EBitmask.
+	 */
+	inline void copyFrom(const Bitmap *bitmap, Point2i targetOffset) {
+		copyFrom(bitmap, Point2i(0), targetOffset, bitmap->getSize());
+	}
+
+	/**
+	 * \brief Copy the contents of another bitmap into the
+	 * region with the specified offset
+	 *
+	 * This convenience function calls the main <tt>copyFrom()</tt>
+	 * implementation with <tt>size</tt> set to <tt>bitmap->getSize()</tt>
+	 * and <tt>sourceOffset</tt> and <tt>targetOffset</tt>tt> set to zero.
+	 * Out-of-bounds regions are ignored. It is assumed
+	 * that <tt>bitmap != this</tt>.
+	 *
+	 * \remark This function throws an exception when the bitmaps
+	 * use different component formats or channels, or when the
+	 * component format is \ref EBitmask.
+	 */
+	inline void copyFrom(const Bitmap *bitmap) {
+		copyFrom(bitmap, Point2i(0), Point2i(0), bitmap->getSize());
+	}
+
+	/**
 	 * \brief Accumulate the contents of another bitmap into the
-	 * region of the specified offset
+	 * region with the specified offset
 	 *
 	 * Out-of-bounds regions are ignored. It is assumed that
 	 * <tt>bitmap != this</tt>.
@@ -775,9 +833,10 @@ public:
 	 */
 	void accumulate(const Bitmap *bitmap, Point2i sourceOffset,
 			Point2i targetOffset, Vector2i size);
+
 	/**
 	 * \brief Accumulate the contents of another bitmap into the
-	 * region of the specified offset
+	 * region with the specified offset
 	 *
 	 * This convenience function calls the main <tt>accumulate()</tt>
 	 * implementation with <tt>size</tt> set to <tt>bitmap->getSize()</tt>
@@ -794,7 +853,7 @@ public:
 
 	/**
 	 * \brief Accumulate the contents of another bitmap into the
-	 * region of the specified offset
+	 * region with the specified offset
 	 *
 	 * This convenience function calls the main <tt>accumulate()</tt>
 	 * implementation with <tt>size</tt> set to <tt>bitmap->getSize()</tt>

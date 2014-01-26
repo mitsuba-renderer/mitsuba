@@ -214,7 +214,7 @@ public:
 		uint8_t *targetData = target->getUInt8Data()
 			+ (targetOffset.x + targetOffset.y * target->getWidth()) * targetBpp;
 
-		if (size.x == m_cropSize.x) {
+		if (size.x == m_cropSize.x && target->getWidth() == m_storage->getWidth()) {
 			/* Develop a connected part of the underlying buffer */
 			cvt->convert(source->getPixelFormat(), 1.0f, sourceData,
 				target->getPixelFormat(), target->getGamma(), targetData,

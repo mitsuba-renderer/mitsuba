@@ -196,25 +196,9 @@ private:
  */
 class MTS_EXPORT_CORE StreamBackend : public Thread {
 	friend class RemoteProcess;
+	friend class RemoteWorker;
+	friend class RemoteWorkerReader;
 public:
-	enum EMessage {
-		EUnknown = 0,
-		ENewProcess,
-		ENewResource,
-		ENewMultiResource,
-		EBindResource,
-		EWorkUnit,
-		EWorkResult,
-		ECancelledWorkResult,
-		EProcessTerminated,
-		EProcessCancelled,
-		EEnsurePluginLoaded,
-		EResourceExpired,
-		EQuit,
-		EIncompatible,
-		EHello = 0x1bcd
-	};
-
 	/**
 	 * \brief Create a new stream backend
 	 *
@@ -234,6 +218,24 @@ public:
 
 	MTS_DECLARE_CLASS()
 protected:
+	enum EMessage {
+		EUnknown = 0,
+		ENewProcess,
+		ENewResource,
+		ENewMultiResource,
+		EBindResource,
+		EWorkUnit,
+		EWorkResult,
+		ECancelledWorkResult,
+		EProcessTerminated,
+		EProcessCancelled,
+		EEnsurePluginLoaded,
+		EResourceExpired,
+		EQuit,
+		EIncompatible,
+		EHello = 0x1bcd
+	};
+
 	/// Virtual destructor
 	virtual ~StreamBackend();
 	virtual void run();

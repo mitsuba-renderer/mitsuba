@@ -43,7 +43,7 @@ for file in os.listdir(env.GetBuildPath('#data/microfacet')):
 	if fnmatch.fnmatch(file, '*.dat'):
 		installTargets += env.Install(os.path.join(distDir, 'data/microfacet'), '#data/microfacet/' + file)
 
-if sys.platform == 'linux2':
+if 'linux' in sys.platform:
 	for plugin in plugins:
 		installTargets += env.Install(os.path.join(distDir, 'plugins'), plugin)
 	install(distDir, ['libcore/libmitsuba-core.so', 'libhw/libmitsuba-hw.so',
@@ -164,5 +164,5 @@ if dist:
 	elif sys.platform == 'darwin':
 		distTarget = env.Command("Mitsuba %s.dmg" % MTS_VERSION, [], "#data/darwin/build-dmg.sh %s" % MTS_VERSION)
 		Depends(distTarget, installTargets)
-	elif sys.platform == 'linux2':
+	elif 'linux' in sys.platform:
 		env.Command("mitsuba-%s.tar.gz" % MTS_VERSION, [], "#data/linux/build-sourcedist.sh %s" % MTS_VERSION)

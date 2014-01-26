@@ -105,6 +105,11 @@ public:
 		return false;
 	}
 
+	bool isMonochromatic() const {
+		return Spectrum(m_color0[0]) == m_color0
+			&& Spectrum(m_color1[0]) == m_color1;
+	}
+
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "Checkerboard[" << endl

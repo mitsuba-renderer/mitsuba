@@ -33,20 +33,20 @@ MTS_NAMESPACE_BEGIN
 class MTS_EXPORT_RENDER RenderListener : public Object {
 public:
 	/// Called when work has begun in a rectangular image region
-	virtual void workBeginEvent(const RenderJob *job, const RectangularWorkUnit *wu, int worker) = 0;
+	virtual void workBeginEvent(const RenderJob *job, const RectangularWorkUnit *wu, int worker);
 
 	/// Called when work has finished in a rectangular image region
-	virtual void workEndEvent(const RenderJob *job, const ImageBlock *wr) = 0;
+	virtual void workEndEvent(const RenderJob *job, const ImageBlock *wr, bool cancelled);
 
 	/// Called when work has been canceled in a rectangular image region
 	virtual void workCanceledEvent(const RenderJob *job, const Point2i &offset,
-			const Vector2i &size) = 0;
+			const Vector2i &size);
 
 	/// Called when the whole target image has been altered in some way.
-	virtual void refreshEvent(const RenderJob *job) = 0;
+	virtual void refreshEvent(const RenderJob *job);
 
 	/// Called when a render job has completed successfully or unsuccessfully
-	virtual void finishJobEvent(const RenderJob *job, bool cancelled) = 0;
+	virtual void finishJobEvent(const RenderJob *job, bool cancelled);
 
 	MTS_DECLARE_CLASS()
 protected:
@@ -99,7 +99,7 @@ public:
 
 	/* Event distribution */
 	void signalWorkBegin(const RenderJob *job, const RectangularWorkUnit *wu, int worker);
-	void signalWorkEnd(const RenderJob *job, const ImageBlock *block);
+	void signalWorkEnd(const RenderJob *job, const ImageBlock *block, bool cancelled);
 	void signalWorkCanceled(const RenderJob *job, const Point2i &offset, const Vector2i &size);
 	void signalFinishJob(const RenderJob *job, bool cancelled);
 	void signalRefresh(const RenderJob *job);

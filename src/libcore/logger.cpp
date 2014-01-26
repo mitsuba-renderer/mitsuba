@@ -23,7 +23,7 @@
 
 #if defined(__OSX__)
 # include <sys/sysctl.h>
-#elif defined(WIN32)
+#elif defined(__WINDOWS__)
 # include <windows.h>
 #endif
 
@@ -62,7 +62,7 @@ void Logger::log(ELogLevel level, const Class *theClass,
 	char tmp[512], *msg = tmp;
 	va_list iterator;
 
-#if defined(WIN32)
+#if defined(__WINDOWS__)
 	va_start(iterator, fmt);
 	size_t size = _vscprintf(fmt, iterator) + 1;
 
@@ -133,7 +133,7 @@ void Logger::log(ELogLevel level, const Class *theClass,
 
 		if (runningInDebugger)
 			__asm__ ("int $3");
-#elif defined(WIN32)
+#elif defined(__WINDOWS__)
 		if (IsDebuggerPresent())
 			__debugbreak();
 #endif

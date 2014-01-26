@@ -158,7 +158,7 @@ private:
 		ELookAt, EScale, EMatrix, EPoint,
 		EVector, ERGB, ESRGB, EBlackBody,
 		ESpectrum, ETransform, EAnimation,
-		EInclude, EAlias
+		EInclude, EAlias, EDefault
 	};
 
 	typedef std::pair<ETag, const Class *> TagEntry;

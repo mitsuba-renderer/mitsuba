@@ -80,6 +80,10 @@ public:
 		return false;
 	}
 
+	bool isMonochromatic() const {
+		return false; /* No way to tell from here, really .. */
+	}
+
 	std::string toString() const {
 		return "VertexColors[]";
 	}

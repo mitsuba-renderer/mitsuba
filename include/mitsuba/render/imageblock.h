@@ -51,9 +51,11 @@ public:
 	 * \param channels
 	 *    Specifies the number of output channels. This is only necessary
 	 *    when \ref Bitmap::EMultiChannel is chosen as the pixel format
+	 * \param warn
+	 *    Warn when writing bad sample values?
 	 */
 	ImageBlock(Bitmap::EPixelFormat fmt, const Vector2i &size,
-			const ReconstructionFilter *filter = NULL, int channels = -1);
+			const ReconstructionFilter *filter = NULL, int channels = -1, bool warn = true);
 
 	/// Set the current block offset
 	inline void setOffset(const Point2i &offset) { m_offset = offset; }
@@ -72,6 +74,12 @@ public:
 
 	/// Return the bitmap's height in pixels
 	inline int getHeight() const { return m_size.y; }
+
+	/// Warn when writing bad sample values?
+	inline bool getWarn() const { return m_warn; }
+
+	/// Warn when writing bad sample values?
+	inline void setWarn(bool warn) { m_warn = warn; }
 
 	/// Return the border region used by the reconstruction filter
 	inline int getBorderSize() const { return m_borderSize; }
@@ -178,7 +186,7 @@ public:
 		return true;
 
 		bad_sample:
-		{
+		if (m_warn) {
 			std::ostringstream oss;
 			oss << "Invalid sample value : [";
 			for (int i=0; i<channels; ++i) {
@@ -205,6 +213,7 @@ public:
 		memcpy(copy->getBitmap()->getUInt8Data(), m_bitmap->getUInt8Data(), m_bitmap->getBufferSize());
 		copy->m_size = m_size;
 		copy->m_offset = m_offset;
+		copy->m_warn = m_warn;
 	}
 
 	// ======================================================================
@@ -229,6 +238,7 @@ protected:
 	int m_borderSize;
 	const ReconstructionFilter *m_filter;
 	Float *m_weightsX, *m_weightsY;
+	bool m_warn;
 };
 
 

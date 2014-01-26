@@ -195,7 +195,7 @@ void gaussLegendre(int n, Float *nodes, Float *weights) {
 
 		while (true) {
 			if (++it > 20)
-				SLog(EError, "gaussLegendre(): did not converge after 20 iterations!");
+				SLog(EError, "gaussLegendre(%i): did not converge after 20 iterations!", n);
 
 			/* Search for the interior roots of P_{n+1}(x) using Newton's method. */
 			std::pair<double, double> L = legendrePD(n+1, x);
@@ -219,7 +219,6 @@ void gaussLegendre(int n, Float *nodes, Float *weights) {
 	}
 }
 
-
 void gaussLobatto(int n, Float *nodes, Float *weights) {
 	if (n-- < 2)
 		SLog(EError, "gaussLobatto(): n must be >= 2");
@@ -238,7 +237,7 @@ void gaussLobatto(int n, Float *nodes, Float *weights) {
 
 		while (true) {
 			if (++it > 20)
-				SLog(EError, "gaussLobatto(): did not converge after 20 iterations!");
+				SLog(EError, "gaussLobatto(%i): did not converge after 20 iterations!", n);
 
 			/* Search for the interior roots of P_n'(x) using Newton's method. The same
 			   roots are also shared by P_{n+1}-P_{n-1}, which is nicer to evaluate. */

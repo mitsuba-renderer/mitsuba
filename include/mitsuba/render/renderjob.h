@@ -92,6 +92,21 @@ public:
 	 */
 	inline bool isInteractive() const { return m_interactive; }
 
+	/// Get a pointer to the underlying scene
+	inline Scene *getScene() { return m_scene.get(); }
+
+	/// Get a pointer to the underlying scene (const version)
+	inline const Scene *getScene() const { return m_scene.get(); }
+
+	/// Get a pointer to the underlying render queue
+	inline RenderQueue *getRenderQueue() { return m_queue.get(); }
+
+	/// Get a pointer to the underlying render queue (const version)
+	inline const RenderQueue *getRenderQueue() const { return m_queue.get(); }
+
+	/// Return the amount of time spent rendering the given job (in seconds)
+	inline Float getRenderTime() const { return m_queue->getRenderTime(this); }
+
 	MTS_DECLARE_CLASS()
 protected:
 	/// Virtual destructor

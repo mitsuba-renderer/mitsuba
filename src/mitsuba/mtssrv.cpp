@@ -293,15 +293,15 @@ int mtssrv(int argc, char **argv) {
 			/* Allocate a socket */
 			sock = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
 			if (sock == -1)
-				SocketStream::handleError("socket");
+				SocketStream::handleError("none", "socket");
 
 			/* Avoid "bind: socket already in use" */
 			if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char *) &one, sizeof(int)) < 0)
-				SocketStream::handleError("setsockopt");
+				SocketStream::handleError("none", "setsockopt");
 
 			/* Bind the socket to the port number */
 			if (bind(sock, p->ai_addr, (socklen_t) p->ai_addrlen) == -1) {
-				SocketStream::handleError(formatString("bind(%s:%i)", hostName.c_str(), listenPort), EError);
+				SocketStream::handleError("none", formatString("bind(%s:%i)", hostName.c_str(), listenPort), EError);
 #if defined(__WINDOWS__)
 				closesocket(sock);
 #else
@@ -317,7 +317,7 @@ int mtssrv(int argc, char **argv) {
 		freeaddrinfo(servinfo);
 
 		if (listen(sock, CONN_BACKLOG) == -1)
-			SocketStream::handleError("bind");
+			SocketStream::handleError("none", "bind");
 		SLog(EInfo, "Enter mtssrv -h for more options");
 
 #if defined(__WINDOWS__)
@@ -339,6 +339,10 @@ int mtssrv(int argc, char **argv) {
 			SLog(EError, "Error in sigaction(): %s!", strerror(errno));
 		if (sigaction(SIGINT, &sa, NULL) == -1)
 			SLog(EError, "Error in sigaction(): %s!", strerror(errno));
+
+		/* Ignore SIGPIPE */
+		signal(SIGPIPE, SIG_IGN);
+
 		SLog(EInfo, "%s: Listening on port %i.. Send Ctrl-C or SIGTERM to stop.", hostName.c_str(), listenPort);
 #endif
 
@@ -358,7 +362,7 @@ int mtssrv(int argc, char **argv) {
 				if (errno == EINTR)
 					continue;
 #endif
-				SocketStream::handleError("accept", EWarn);
+				SocketStream::handleError("none", "accept", EWarn);
 				continue;
 			}
 

@@ -63,8 +63,15 @@ public:
 	/// Return the resolution in pixels, if applicable
 	virtual Vector3i getResolution() const;
 
-	/// Return whether the texture takes on a single constant value
+	/// Return whether the texture takes on a constant value everywhere
 	virtual bool isConstant() const;
+
+	/**
+	 * \brief Return whether the texture is monochromatic / spectrally uniform
+	 *
+	 * The implementation may conservatively return \c false if it is not sure.
+	 */
+	virtual bool isMonochromatic() const;
 
 	/**
 	 * \brief Does this texture perform any pre-filtering when

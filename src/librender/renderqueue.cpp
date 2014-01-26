@@ -21,6 +21,12 @@
 
 MTS_NAMESPACE_BEGIN
 
+void RenderListener::workBeginEvent(const RenderJob *job, const RectangularWorkUnit *wu, int worker) { }
+void RenderListener::workEndEvent(const RenderJob *job, const ImageBlock *wr, bool cancelled) { }
+void RenderListener::workCanceledEvent(const RenderJob *job, const Point2i &offset, const Vector2i &size) { }
+void RenderListener::refreshEvent(const RenderJob *job) { }
+void RenderListener::finishJobEvent(const RenderJob *job, bool cancelled) { }
+
 RenderQueue::RenderQueue() {
 	m_mutex = new Mutex();
 	m_joinMutex = new Mutex();
@@ -76,9 +82,6 @@ void RenderQueue::removeJob(RenderJob *job, bool cancelled) {
 	std::map<RenderJob *, JobRecord>::iterator it = m_jobs.find(job);
 	if (it == m_jobs.end())
 		Log(EError, "RenderQueue::removeRenderJob() - job not found!");
-	JobRecord &rec = (*it).second;
-	unsigned int ms = m_timer->getMilliseconds() - rec.startTime;
-	Log(EInfo, "Render time: %s", timeString(ms/1000.0f, true).c_str());
 	m_jobs.erase(job);
 	m_cond->broadcast();
 	{
@@ -113,10 +116,10 @@ void RenderQueue::signalWorkBegin(const RenderJob *job, const RectangularWorkUni
 		m_listeners[i]->workBeginEvent(job, wu, worker);
 }
 
-void RenderQueue::signalWorkEnd(const RenderJob *job, const ImageBlock *wr) {
+void RenderQueue::signalWorkEnd(const RenderJob *job, const ImageBlock *wr, bool cancelled) {
 	LockGuard lock(m_mutex);
 	for (size_t i=0; i<m_listeners.size(); ++i)
-		m_listeners[i]->workEndEvent(job, wr);
+		m_listeners[i]->workEndEvent(job, wr, cancelled);
 }
 
 void RenderQueue::signalWorkCanceled(const RenderJob *job, const Point2i &offset, const Vector2i &size) {
@@ -138,5 +141,5 @@ void RenderQueue::signalRefresh(const RenderJob *job) {
 }
 
 MTS_IMPLEMENT_CLASS(RenderQueue, false, Object)
-MTS_IMPLEMENT_CLASS(RenderListener, true, Object)
+MTS_IMPLEMENT_CLASS(RenderListener, false, Object)
 MTS_NAMESPACE_END

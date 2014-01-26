@@ -57,15 +57,15 @@ void ServerThread::run() {
 		/* Allocate a socket */
 		m_socket = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
 		if (m_socket == -1)
-			SocketStream::handleError("socket");
+			SocketStream::handleError("none", "socket");
 
 		/* Avoid "bind: socket already in use" */
 		if (setsockopt(m_socket, SOL_SOCKET, SO_REUSEADDR, (char *) &one, sizeof(int)) < 0)
-			SocketStream::handleError("setsockopt");
+			SocketStream::handleError("none", "setsockopt");
 
 		/* Bind the socket to the port number */
 		if (bind(m_socket, p->ai_addr, (socklen_t) p->ai_addrlen) == -1) {
-			SocketStream::handleError(formatString("bind(%s:%i)", m_nodeName.c_str(), m_listenPort), EError);
+			SocketStream::handleError("none", formatString("bind(%s:%i)", m_nodeName.c_str(), m_listenPort), EError);
 #if defined(__WINDOWS__)
 			closesocket(m_socket);
 #else
@@ -81,7 +81,7 @@ void ServerThread::run() {
 	freeaddrinfo(servinfo);
 
 	if (listen(m_socket, CONN_BACKLOG) == -1)
-		SocketStream::handleError("bind");
+		SocketStream::handleError("none", "bind");
 
 	SLog(EInfo, "%s: Listening on port %i.. Close the window to stop.",
 		m_nodeName.c_str(), m_listenPort);
@@ -114,7 +114,7 @@ void ServerThread::run() {
 			if (errno == EINTR)
 				continue;
 #endif
-			SocketStream::handleError("accept", EWarn);
+			SocketStream::handleError("none", "accept", EWarn);
 			continue;
 		}
 

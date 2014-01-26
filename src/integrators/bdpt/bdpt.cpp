@@ -127,7 +127,7 @@ MTS_NAMESPACE_BEGIN
  *    \item This integrator does not work with dipole-style subsurface
  *    scattering models.
  *    \item This integrator does not yet work with certain non-reciprocal BSDFs (i.e.
- *          \pluginref{bump}, but this will be addressed in the future
+ *          \pluginref{bumpmap}, but this will be addressed in the future
  * }
  */
 class BDPTIntegrator : public Integrator {

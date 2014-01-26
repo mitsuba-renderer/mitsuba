@@ -25,6 +25,8 @@
 #include <mitsuba/render/trimesh.h>
 #include <mitsuba/render/texture.h>
 #include <mitsuba/core/bitmap.h>
+#include <mitsuba/core/fresolver.h>
+#include <mitsuba/core/fstream.h>
 #include <mitsuba/core/statistics.h>
 #include <mitsuba/core/timer.h>
 
@@ -81,6 +83,13 @@ namespace {
  *       this parameter specifies the resolution at which it should
  *       be rasterized to create a height field made of bilinear patches.
  *	   }
+ *	   \parameter{scale}{\Float}{Scale factor that is applied to the height field
+ *	     values\default{No scaling, i.e. \code{1}}
+ *	   }
+ *	   \parameter{filename}{\String}{
+ *	     File name of an image file containing height field values. Alternatively,
+ *	     a nested texture can be provided (see below).
+ *	   }
  *     \parameter{\Unnamed}{\Texture}{
  *	     A nested texture that specifies the height field values. This
  *	     could be a bitmap-backed texture or one that is procedurally defined.
@@ -104,13 +113,8 @@ namespace {
  *
  * \begin{xml}[caption={Declaring a height field from a monochromatic scaled bitmap texture}, label=lst:heightfield-bitmap]
  * <shape type="heightfield">
- *     <texture type="scale">
- *         <float name="scale" value="0.5"/>
- *         <texture type="bitmap">
- *             <float name="gamma" value="1"/>
- *             <string name="filename" value="mountain_profile.png"/>
- *         </texture>
- *     </texture>
+ *     <string name="filename" value="mountain_profile.exr"/>
+ *     <float name="scale" value="0.5"/>
  * </shape>
  * \end{xml}
  */
@@ -126,6 +130,11 @@ public:
 		m_objectToWorld = props.getTransform("toWorld", Transform());
 		m_shadingNormals = props.getBoolean("shadingNormals", true);
 		m_flipNormals = props.getBoolean("flipNormals", false);
+		m_scale = props.getFloat("scale", 1);
+
+		m_filename = props.getString("filename", "");
+		if (!m_filename.empty())
+			m_filename = Thread::getThread()->getFileResolver()->resolve(m_filename);
 	}
 
 	Heightfield(Stream *stream, InstanceManager *manager)
@@ -134,11 +143,13 @@ public:
 		m_objectToWorld = Transform(stream);
 		m_shadingNormals = stream->readBool();
 		m_flipNormals = stream->readBool();
+		m_scale = stream->readFloat();
+		m_filename = stream->readString();
 		m_dataSize = Vector2i(stream);
 		size_t size = (size_t) m_dataSize.x * (size_t) m_dataSize.y;
 		m_data = (Float *) allocAligned(size * sizeof(Float));
 		stream->readFloatArray(m_data, size);
-		buildInternal();
+		configure();
 	}
 
 	~Heightfield() {
@@ -162,6 +173,8 @@ public:
 		m_objectToWorld.serialize(stream);
 		stream->writeBool(m_shadingNormals);
 		stream->writeBool(m_flipNormals);
+		stream->writeFloat(m_scale);
+		stream->writeString(m_filename.string());
 		m_dataSize.serialize(stream);
 		stream->writeFloatArray(m_data, (size_t) m_dataSize.x * (size_t) m_dataSize.y);
 	}
@@ -462,39 +475,60 @@ public:
 			if (m_data != NULL)
 				Log(EError, "Attempted to attach multiple textures to a height field shape!");
 
-			ref<Bitmap> bitmap = static_cast<Texture *>(child)->getBitmap(m_sizeHint);
+			m_bitmap = static_cast<Texture *>(child)->getBitmap(m_sizeHint);
+		} else if (cClass->derivesFrom(ReconstructionFilter::m_theClass)) {
+			if (m_rfilter != NULL)
+				Log(EError, "Attempted to attach multiple reconstruction filters to a height field shape!");
 
-			m_dataSize = bitmap->getSize();
-			if (m_dataSize.x < 2) m_dataSize.x = 2;
-			if (m_dataSize.y < 2) m_dataSize.y = 2;
-			if (!isPowerOfTwo(m_dataSize.x - 1)) m_dataSize.x = (int) roundToPowerOfTwo((uint32_t) m_dataSize.x - 1) + 1;
-			if (!isPowerOfTwo(m_dataSize.y - 1)) m_dataSize.y = (int) roundToPowerOfTwo((uint32_t) m_dataSize.y - 1) + 1;
-
-			if (bitmap->getSize() != m_dataSize) {
-				Log(EInfo, "Resampling heightfield texture from %ix%i to %ix%i ..",
-					bitmap->getWidth(), bitmap->getHeight(), m_dataSize.x, m_dataSize.y);
-
-				bitmap = bitmap->resample(NULL, ReconstructionFilter::EClamp,
-					ReconstructionFilter::EClamp, m_dataSize,
-					-std::numeric_limits<Float>::infinity(),
-					std::numeric_limits<Float>::infinity());
-			}
-
-			size_t size = (size_t) m_dataSize.x * (size_t) m_dataSize.y * sizeof(Float);
-			m_data = (Float *) allocAligned(size);
-			bitmap->convert(m_data, Bitmap::ELuminance, Bitmap::EFloat);
-
-			m_objectToWorld = m_objectToWorld * Transform::translate(Vector(-1, -1, 0)) * Transform::scale(Vector(
-				(Float) 2 / (m_dataSize.x-1),
-				(Float) 2 / (m_dataSize.y-1), 1));
-
-			buildInternal();
+			m_rfilter = static_cast<ReconstructionFilter *>(child);
 		} else {
 			Shape::addChild(name, child);
 		}
 	}
 
-	void buildInternal() {
+	void configure() {
+		Shape::configure();
+
+		if (m_minmax)
+			return;
+
+		if (!m_filename.empty()) {
+			if (m_bitmap.get())
+				Log(EError, "Cannot specify a file name and a nested texture at the same time!");
+			ref<FileStream> fs = new FileStream(m_filename, FileStream::EReadOnly);
+			m_bitmap = new Bitmap(Bitmap::EAuto, fs);
+		} else if (!m_bitmap.get()) {
+			Log(EError, "A height field texture must be specified (either as a nested texture, or using the 'filename' parameter)");
+		}
+
+		m_dataSize = m_bitmap->getSize();
+		if (m_dataSize.x < 2) m_dataSize.x = 2;
+		if (m_dataSize.y < 2) m_dataSize.y = 2;
+		if (!isPowerOfTwo(m_dataSize.x - 1)) m_dataSize.x = (int) roundToPowerOfTwo((uint32_t) m_dataSize.x - 1) + 1;
+		if (!isPowerOfTwo(m_dataSize.y - 1)) m_dataSize.y = (int) roundToPowerOfTwo((uint32_t) m_dataSize.y - 1) + 1;
+
+		if (m_bitmap->getSize() != m_dataSize) {
+			m_bitmap = m_bitmap->convert(Bitmap::ELuminance, Bitmap::EFloat);
+
+			Log(EInfo, "Resampling heightfield texture from %ix%i to %ix%i ..",
+				m_bitmap->getWidth(), m_bitmap->getHeight(), m_dataSize.x, m_dataSize.y);
+
+			m_bitmap = m_bitmap->resample(m_rfilter, ReconstructionFilter::EClamp,
+				ReconstructionFilter::EClamp, m_dataSize,
+				-std::numeric_limits<Float>::infinity(),
+				std::numeric_limits<Float>::infinity());
+		}
+
+		size_t size = (size_t) m_dataSize.x * (size_t) m_dataSize.y * sizeof(Float);
+		m_data = (Float *) allocAligned(size);
+		m_bitmap->convert(m_data, Bitmap::ELuminance, Bitmap::EFloat, 1.0f, m_scale);
+
+		m_objectToWorld = m_objectToWorld * Transform::translate(Vector(-1, -1, 0)) * Transform::scale(Vector(
+			(Float) 2 / (m_dataSize.x-1),
+			(Float) 2 / (m_dataSize.y-1), 1));
+
+		m_bitmap = NULL;
+
 		size_t storageSize = (size_t) m_dataSize.x * (size_t) m_dataSize.y * sizeof(Float);
 		Log(EInfo, "Building acceleration data structure for %ix%i height field ..", m_dataSize.x, m_dataSize.y);
 
@@ -513,7 +547,8 @@ public:
 		m_blockSizeF[0] = Vector2(1, 1);
 		m_invSize = Vector2((Float) 1 / m_levelSize[0].x, (Float) 1 / m_levelSize[0].y);
 		m_surfaceArea = 0;
-		size_t size = (size_t) m_levelSize[0].x * (size_t) m_levelSize[0].y * sizeof(Interval);
+
+		size = (size_t) m_levelSize[0].x * (size_t) m_levelSize[0].y * sizeof(Interval);
 		m_minmax[0] = (Interval *) allocAligned(size);
 		storageSize += size;
 
@@ -705,11 +740,15 @@ public:
 
 	MTS_DECLARE_CLASS()
 private:
+	ref<ReconstructionFilter> m_rfilter;
+	ref<Bitmap> m_bitmap;
 	Transform m_objectToWorld;
 	Vector2i m_sizeHint;
 	AABB m_dataAABB;
 	bool m_shadingNormals;
 	bool m_flipNormals;
+	Float m_scale;
+	fs::path m_filename;
 
 	/* Height field data */
 	Float *m_data;

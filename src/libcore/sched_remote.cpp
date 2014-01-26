@@ -73,6 +73,9 @@ RemoteWorker::RemoteWorker(const std::string &name, Stream *stream) : Worker(nam
 
 RemoteWorker::~RemoteWorker() {
 	Log(EDebug, "Shutting down");
+	if (!m_reader || !m_mutex || !m_memStream)
+		return;
+
 	LockGuard lock(m_mutex);
 	m_reader->shutdown();
 	m_memStream->writeShort(StreamBackend::EQuit);

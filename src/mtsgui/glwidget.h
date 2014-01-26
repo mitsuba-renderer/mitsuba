@@ -90,6 +90,7 @@ signals:
 	void loadFileRequest(const QString &fileName);
 	void crop(int type, int x, int y, int width, int height);
 	void selectionChanged();
+	void switchTab(int rel);
 
 public slots:
 	void timerImpulse();
@@ -126,6 +127,7 @@ protected:
 	Point2i upperLeft(bool flipY = false) const;
 	void reveal(const AABB &aabb);
 	Float autoFocus() const;
+	bool askReallyCancelRendering();
 
 	inline ProjectiveCamera *getProjectiveCamera() {
 		Sensor *sensor = m_context->scene->getSensor();

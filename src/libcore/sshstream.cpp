@@ -19,7 +19,7 @@
 #include <mitsuba/core/sshstream.h>
 #include <mitsuba/core/statistics.h>
 
-#if !defined(WIN32)
+#if !defined(__WINDOWS__)
 # include <unistd.h>
 #else
 # include <windows.h>
@@ -33,7 +33,7 @@ struct SSHStream::SSHStreamPrivate
 	const std::string userName, hostName;
 	const int port, timeout;
 	size_t received, sent;
-#if defined(WIN32)
+#if defined(__WINDOWS__)
 	HANDLE childInRd,  childInWr;
 	HANDLE childOutRd, childOutWr;
 #else
@@ -44,7 +44,7 @@ struct SSHStream::SSHStreamPrivate
 	SSHStreamPrivate(const std::string& uname, const std::string& hname,
 		int p, int tm) :
 	userName(uname), hostName(hname), port(p), timeout(tm), received(0), sent(0),
-#if defined(WIN32)
+#if defined(__WINDOWS__)
 	childInRd(0), childInWr(0), childOutRd(0), childOutWr(0)
 #else
 	infd(-1), outfd(-1), input(0), output(0)
@@ -60,7 +60,7 @@ SSHStream::SSHStream(const std::string &userName,
 	Log(EInfo, "Establishing a SSH connection to \"%s@%s\"",
 		userName.c_str(), hostName.c_str());
 
-#if defined(WIN32)
+#if defined(__WINDOWS__)
 	/* Inherit pipe handles */
 	SECURITY_ATTRIBUTES sAttr;
 	sAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
@@ -173,7 +173,7 @@ SSHStream::SSHStream(const std::string &userName,
 
 SSHStream::~SSHStream() {
 	Log(EDebug, "Closing SSH connection");
-#if defined(WIN32)
+#if defined(__WINDOWS__)
 	CloseHandle(d->childInWr);
 	CloseHandle(d->childOutRd);
 #else
@@ -225,7 +225,7 @@ void SSHStream::truncate(size_t size) {
 }
 
 void SSHStream::flush() {
-#if defined(WIN32)
+#if defined(__WINDOWS__)
 	// No-op
 #else
 	if (fflush(d->output) == EOF)
@@ -235,7 +235,7 @@ void SSHStream::flush() {
 
 void SSHStream::read(void *ptr, size_t size) {
 	static StatsCounter bytesRcvd("Network", "Bytes received (SSH)");
-#if defined(WIN32)
+#if defined(__WINDOWS__)
 	size_t left = size;
 	char *data = (char *) ptr;
 	while (left > 0) {
@@ -260,7 +260,7 @@ void SSHStream::read(void *ptr, size_t size) {
 
 void SSHStream::write(const void *ptr, size_t size) {
 	static StatsCounter bytesSent("Network", "Bytes sent (SSH)");
-#if defined(WIN32)
+#if defined(__WINDOWS__)
 	size_t left = size;
 	char *data = (char *) ptr;
 	while (left > 0) {

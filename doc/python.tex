@@ -433,7 +433,33 @@ mesh.configure()
 sensor.addChild(mesh)
 \end{python}
 
-\subsubsection{PyQt/PySide interaction with Mitsuba}
+
+\subsubsection{Calling Mitsuba functions from a multithread Python program}
+By default, Mitsuba assumes that threads accessing Mitsuba-internal
+data structures were created by (or at least registered with) Mitsuba. This is the
+case for the main thread and subclasses of \code{mitsuba.core.Thread}. When a
+Mitsuba function is called from an event dispatch thread of a multithreaded
+Python application that is not known to Mitsuba, an exception or crash will result.
+
+To avoid this, get a reference to the main thread right after loading the Mitsuba plugin
+and save some related state (the attached \code{FileResolver} and \code{Logger} instances).
+\begin{python}
+mainThread = Thread.getThead()
+saved_fresolver = mainThread.getFileResolver()
+saved_logger = mainThread.getLogger()
+\end{python}
+
+Later when accessed from an unregister thread, execute the following:
+\begin{python}
+# This rendering thread was not created by Mitsuba -- register it
+newThread = Thread.registerUnmanagedThread('render')
+newThread.setFileResolver(saved_fresolver)
+newThread.setLogger(saved_logger)
+\end{python}
+It is fine to execute this several times (\code{registerUnmanagedThread} just returns
+a reference to the associated \code{Thread} instance if it was already registered).
+
+\subsubsection{Mitsuba interaction with PyQt/PySide (simple version)}
 The following listing contains a complete program that
 renders a sphere and efficiently displays it in a PyQt window
 (to make this work in PySide, change all occurrences of \code{PyQt4} to \code{PySide} in the
@@ -453,7 +479,7 @@ from PyQt4.QtGui import QApplication, QMainWindow, QPainter, QImage
 class MitsubaView(QMainWindow):
     def __init__(self):
         super(MitsubaView, self).__init__()
-        self.setWindowTitle('Mitsuba/Qt demo')
+        self.setWindowTitle('Mitsuba/PyQt demo')
         self.initializeMitsuba()
         self.image = self.render(self.createScene())
         self.resize(self.image.width(), self.image.height())
@@ -501,19 +527,19 @@ class MitsubaView(QMainWindow):
         bitmap.write(Bitmap.EPNG, outFile)
         outFile.close()
         # Also create a QImage (using a fast memory copy in C++)
-        image = QImage(bitmap.getNativeBuffer(),
+        return QImage(bitmap.getNativeBuffer(),
             size.x, size.y, QImage.Format_RGB888)
-        return image
 
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.drawImage(QPoint(0, 0), self.image)
-        del painter
+        painter.end()
 
 def main():
     app = QApplication(sys.argv)
     view = MitsubaView()
     view.show()
+    view.raise_()
     retval = app.exec_()
     view.shutdownMitsuba()
     sys.exit(retval)
@@ -522,27 +548,259 @@ if __name__ == '__main__':
     main()
 \end{python}
 
-\subsubsection{Calling Mitsuba functions from a multithread Python program}
-By default, Mitsuba assumes that threads accessing Mitsuba-internal
-data structures were created by (or at least registered with) Mitsuba. This is the
-case for the main thread and subclasses of \code{mitsuba.core.Thread}. When a
-Mitsuba function is called from an event dispatch thread of a multithreaded
-Python application that is not known to Mitsuba, an exception or crash will result.
-
-To avoid this, get a reference to the main thread right after loading the Mitsuba plugin
-and save some related state (the attached \code{FileResolver} and \code{Logger} instances).
+\subsubsection{Mitsuba interaction with PyQt/PySide (fancy)}
+The following snippet is a much fancier version of the previous PyQt/PySide example.
+Instead of waiting for the rendering to finish and then displaying it, this example launches the
+rendering in the background and uses Mitsuba's \code{RenderListener} interface to update the
+view and show image blocks as they are being rendered.
+As before, some changes will be necessary to get this to run on PySide.
+\begin{center}
+    \includegraphics[width=10cm]{images/python_demo.jpg}
+\end{center}
+When using this snippet, please be wary of threading-related issues; the key thing to remember is that
+in Qt, only the main thread is allowed to modify Qt widgets. On the other hand, rendering and logging-related
+callbacks will be invoked from different Mitsuba-internal threads---this means that it's not possible to e.g.
+directly update the status bar message from the callback \code{finishJobEvent}. To do this, we must use
+use Qt's \code{QueuedConnection} to communicate this event to the main thread via signals and slots. See the
+code that updates the status and progress bar for more detail.
 \begin{python}
-mainThread = Thread.getThead()
-saved_fresolver = mainThread.getFileResolver()
-saved_logger = mainThread.getLogger()
+import mitsuba, multiprocessing, sys, time
+
+from mitsuba.core import Scheduler, PluginManager, Thread, Vector, Point2i, \
+    Vector2i, LocalWorker, Properties, Bitmap, Spectrum, Appender, EWarn, \
+    Transform, FileStream
+from mitsuba.render import RenderQueue, RenderJob, Scene, RenderListener
+from PyQt4.QtCore import Qt, QPoint, QSize, QRect, pyqtSignal
+from PyQt4.QtGui import QApplication, QMainWindow, QPainter, QImage, \
+    QProgressBar, QWidget, QSizePolicy
+
+Signal = pyqtSignal
+
+class MitsubaRenderBuffer(RenderListener):
+    """
+    Implements the Mitsuba callback interface to capture notifications about
+    rendering progress. Partially completed image blocks are efficiently
+    tonemapped into a local 8-bit Mitsuba Bitmap instance and exposed as a QImage.
+    """
+    RENDERING_FINISHED  = 0
+    RENDERING_CANCELLED = 1
+    RENDERING_UPDATED   = 2
+
+    def __init__(self, queue, callback):
+        super(MitsubaRenderBuffer, self).__init__()
+        self.bitmap = self.qimage = None
+        self.callback = callback
+        self.time = 0
+        self.size = Vector2i(0, 0)
+        queue.registerListener(self)
+
+    def workBeginEvent(self, job, wu, thr):
+        """ Callback: a worker thread started rendering an image block.
+            Draw a rectangle to highlight this """
+        _ = self._get_film_ensure_initialized(job)
+        self.bitmap.drawWorkUnit(wu.getOffset(), wu.getSize(), thr)
+        self._potentially_send_update()
+
+    def workEndEvent(self, job, wr, cancelled):
+        """ Callback: a worker thread finished rendering an image block.
+            Tonemap the associated pixels and store them in 'self.bitmap' """
+        film = self._get_film_ensure_initialized(job)
+        film.develop(wr.getOffset(), wr.getSize(), wr.getOffset(), self.bitmap)
+        self._potentially_send_update()
+
+    def refreshEvent(self, job):
+        """ Callback: the entire image changed (some rendering techniques
+            do this occasionally). Hence, tonemap the full film. """
+        film = self._get_film_ensure_initialized(job)
+        film.develop(Point2i(0), self.size, Point2i(0), self.bitmap)
+        self._potentially_send_update(force=True)
+
+    def finishJobEvent(self, job, cancelled):
+        """ Callback: the rendering job has finished or was cancelled.
+            Re-develop the image once more for the final result. """
+        film = self._get_film_ensure_initialized(job)
+        film.develop(Point2i(0), self.size, Point2i(0), self.bitmap)
+        self.callback(MitsubaRenderBuffer.RENDERING_CANCELLED if cancelled
+                      else MitsubaRenderBuffer.RENDERING_FINISHED)
+
+    def _get_film_ensure_initialized(self, job):
+        """ Ensure that all internal data structure are set up to deal
+            with the given rendering job """
+        film = job.getScene().getFilm()
+        size = film.getSize()
+
+        if self.size != size:
+            self.size = size
+
+            # Round the buffer size to the next power of 4 to ensure 32-bit
+            # aligned scanlines in the underlying buffer. This is needed so
+            # that QtGui.QImage and mitsuba.Bitmap have exactly the same
+            # in-memory representation.
+            bufsize = Vector2i((size.x + 3) // 4 * 4, (size.y + 3) // 4 * 4)
+
+            # Create an 8-bit Mitsuba bitmap that will store tonemapped pixels
+            self.bitmap = Bitmap(Bitmap.ERGB, Bitmap.EUInt8, bufsize)
+            self.bitmap.clear()
+
+            # Create a QImage that is backed by the Mitsuba Bitmap instance
+            # (i.e. without doing unnecessary bitmap copy operations)
+            self.qimage = QImage(self.bitmap.getNativeBuffer(), self.size.x,
+                                 self.size.y, QImage.Format_RGB888)
+        return film
+
+    def _potentially_send_update(self, force = False):
+        """ Send an update request to any attached widgets, but not too often """
+        now = time.time()
+        if now - self.time > .25 or force:
+            self.time = now
+            self.callback(MitsubaRenderBuffer.RENDERING_UPDATED)
+
+class RenderWidget(QWidget):
+    """ This simple widget attaches itself to a Mitsuba RenderQueue instance
+        and displays the progress of everything that's being rendered """
+    renderingUpdated = Signal(int)
+
+    def __init__(self, parent, queue):
+        QWidget.__init__(self, parent)
+        self.buffer = MitsubaRenderBuffer(queue, self.renderingUpdated.emit)
+        # Need a queued conn. to avoid threading issues between Qt and Mitsuba
+        self.renderingUpdated.connect(self._handle_update, Qt.QueuedConnection)
+        self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+
+    def sizeHint(self):
+        return QSize(self.buffer.size.x, self.buffer.size.y)
+
+    def _handle_update(self, event):
+        image = self.buffer.qimage
+        # Detect when an image of different resolution is being rendered
+        if image.width() < self.width() or image.height() < self.height():
+            self.updateGeometry()
+        self.repaint()
+
+    def paintEvent(self, event):
+        """ When there is more space then necessary, display the image centered
+            on a black background, surrounded by a light gray border """
+        QWidget.paintEvent(self, event)
+        qp = QPainter(self)
+        qp.fillRect(self.rect(), Qt.black)
+
+        image = self.buffer.qimage
+        if image is not None:
+            offset = QPoint((self.width() - image.width()) / 2,
+                (self.height() - image.height()) / 2)
+            qp.setPen(Qt.lightGray)
+            qp.drawRect(QRect(offset - QPoint(1, 1), image.size() + QSize(1, 1)))
+            qp.drawImage(offset, image)
+        qp.end()
+
+class MitsubaDemo(QMainWindow):
+    renderProgress = Signal(int)
+
+    def __init__(self):
+        super(MitsubaDemo, self).__init__()
+
+        # Initialize Mitsuba
+        self.initializeMitsuba()
+        self.job = self.createRenderJob()
+
+        # Initialize the user interface
+        status = self.statusBar()
+        self.rwidget = RenderWidget(self, self.queue)
+        progress = QProgressBar(status)
+        status.setContentsMargins(0,0,5,0)
+        status.addPermanentWidget(progress)
+        status.setSizeGripEnabled(False)
+        self.setWindowTitle('Mitsuba/PyQt demo')
+        self.setCentralWidget(self.rwidget)
+
+        # Hide the scroll bar once the rendering is done
+        def renderingUpdated(event):
+            if event == MitsubaRenderBuffer.RENDERING_FINISHED:
+                status.showMessage("Done.")
+                progress.hide()
+
+        self.renderProgress.connect(progress.setValue, Qt.QueuedConnection)
+        self.rwidget.renderingUpdated.connect(renderingUpdated,
+            Qt.QueuedConnection)
+
+        # Start the rendering process
+        status.showMessage("Rendering ..")
+        self.job.start()
+
+    def initializeMitsuba(self):
+        # Start up the scheduling system with one worker per local core
+        self.scheduler = Scheduler.getInstance()
+        for i in range(0, multiprocessing.cpu_count()):
+            self.scheduler.registerWorker(LocalWorker(i, 'wrk%i' % i))
+        self.scheduler.start()
+        # Create a queue for tracking render jobs
+        self.queue = RenderQueue()
+        # Get a reference to the plugin manager
+        self.pmgr = PluginManager.getInstance()
+
+        # Process Mitsuba log and progress messages within Python
+        class CustomAppender(Appender):
+            def append(self2, logLevel, message):
+                print(message)
+            def logProgress(self2, progress, name, formatted, eta):
+                # Asynchronously notify the main thread
+                self.renderProgress.emit(progress)
+
+        logger = Thread.getThread().getLogger()
+        logger.setLogLevel(EWarn) # Display warning & error messages
+        logger.clearAppenders()
+        logger.addAppender(CustomAppender())
+
+    def closeEvent(self, e):
+        self.job.cancel()
+        self.queue.join()
+        self.scheduler.stop()
+
+    def createRenderJob(self):
+        self.scene = self.pmgr.create({
+            'type' : 'scene',
+            'sphere' : {
+                'type' : 'sphere',
+            },
+            'envmap' : {
+                'type' : 'sunsky'
+            },
+            'sensor' : {
+                'type' : 'perspective',
+                'toWorld' : Transform.translate(Vector(0, 0, -5)),
+                'sampler' : {
+                    'type' : 'halton',
+                    'sampleCount' : 64
+                }
+            }
+        })
+
+        return RenderJob('rjob', self.scene, self.queue)
+
+    def keyPressEvent(self, e):
+        if e.key() == Qt.Key_Escape:
+            self.close()
+
+def main():
+    import signal
+    # Stop the program upon Ctrl-C (SIGINT)
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
+
+    app = QApplication(sys.argv)
+    demo = MitsubaDemo()
+    demo.show()
+    demo.raise_()
+    retval = app.exec_()
+    sys.exit(retval)
+
+if __name__ == '__main__':
+    main()
 \end{python}
 
-Later when accessed from an unregister thread, execute the following:
+
+\subsubsection{Mitsuba interaction with NumPy}
+Suppose that \code{bitmap} contains a \code{mitsuba.core.Bitmap} instance (e.g. a rendering). Then the following snippet efficiently turns the image into a NumPy array:
 \begin{python}
-# This rendering thread was not created by Mitsuba -- register it
-newThread = Thread.registerUnmanagedThread('render')
-newThread.setFileResolver(saved_fresolver)
-newThread.setLogger(saved_logger)
+import numpy as np
+array = np.array(bitmap.getNativeBuffer())
 \end{python}
-It is fine to execute this several times (\code{registerUnmanagedThread} just returns
-a reference to the associated \code{Thread} instance if it was already registered).
