@@ -97,6 +97,7 @@ StatsCounter::StatsCounter(const std::string &cat, const std::string &name, ESta
 	m_value[0].value = initial;
 	m_base[0].value = base;
 #endif
+	assert(Statistics::getInstance() != NULL);
 	Statistics::getInstance()->registerCounter(this);
 }
 
