@@ -46,7 +46,7 @@ else()
   set (COLLADADOM_VERSION    "14")
   set (COLLADADOM_VERSION_PT "1.4")
 endif()
-set(COLLADA_VERSIONS "2.4" 24 23 22 21 20 2)
+set(COLLADA_VERSIONS 24 "2.4" 23 22 21 20 2)
 
 
 # Default search paths
@@ -203,15 +203,15 @@ set(Collada_library_paths
 
 # Construct the possible names for the DOM library
 set(COLLADADOM_NAMES
-  collada-dom
   collada${COLLADADOM_VERSION}dom
   Collada${COLLADADOM_VERSION}Dom
+  collada-dom
 )
 if (MSVC)
-  set(COLLADADOM_NAMES ${COLLADADOM_NAMES}
-    libcollada-dom
+  list(APPEND COLLADADOM_NAMES
     libCollada${COLLADADOM_VERSION}Dom
     libcollada${COLLADADOM_VERSION}dom
+    libcollada-dom
   )
 endif()
 
@@ -227,11 +227,11 @@ endif()
 set(COLLADADOM_NAMES_BASE ${COLLADADOM_NAMES})
 foreach(name ${COLLADADOM_NAMES_BASE})
   foreach(version ${COLLADA_VERSIONS})
-    list(APPEND COLLADADOM_NAMES "${name}${version}-dp" "${name}${version}")
+    list(APPEND COLLADADOM_NAMES "${name}${version}" "${name}${version}-dp")
     if(MSVC)
       foreach(vc_suffix ${VC_SUFFIXES})
-        list(APPEND COLLADADOM_NAMES "${name}${version}-dp-${vc_suffix}"
-          "${name}${version}-${vc_suffix}")
+        list(APPEND COLLADADOM_NAMES "${name}${version}-${vc_suffix}"
+          "${name}${version}-dp-${vc_suffix}")
       endforeach()
     endif()
   endforeach()
