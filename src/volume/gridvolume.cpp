@@ -300,7 +300,7 @@ public:
 		}
 
 		inline float3 operator*(Float v) const {
-			return float3(value[0]*v, value[1]*v, value[2]*v);
+			return float3((float) (value[0]*v), (float) (value[1]*v), (float) (value[2]*v));
 		}
 
 		inline float3 operator+(const float3 &f2) const {

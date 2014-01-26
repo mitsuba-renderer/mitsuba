@@ -68,9 +68,9 @@ public:
 					half *bData = bBitmap->getFloat16Data();
 					half *outData = outBitmap->getFloat16Data();
 					for (size_t i=0; i<nEntries; ++i)
-						*outData++ = (half) std::max((Float) 0,
+						*outData++ = (half) ((float) std::max((Float) 0,
 								weight1 * (Float) (*aData++) +
-								weight2 * (Float) (*bData++));
+								weight2 * (Float) (*bData++)));
 				}
 				break;
 
