@@ -136,14 +136,14 @@ macro (COLLADA_CHECK_NAMESPACE)
 #endif
 #include <dae.h>
 int main(int argc, char** argv) {
-    DAE dae;
+    DAE* dae = 0;
     int result = 0;
 #ifdef COLLADA_DOM_SUPPORT141
-    ColladaDOM141::domCOLLADA* root1 = dae.getRoot141(argv[0]);
+    ColladaDOM141::domCOLLADA* root1 = dae->getRoot141(argv[0]);
     result += ((int*)root1)[argc];
 #endif
 #ifdef COLLADA_DOM_SUPPORT150
-    ColladaDOM150::domCOLLADA* root2 = dae.getRoot150(argv[0]);
+    ColladaDOM150::domCOLLADA* root2 = dae->getRoot150(argv[0]);
     result += ((int*)root2)[argc];
 #endif
     return result;
