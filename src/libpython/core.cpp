@@ -928,6 +928,7 @@ static NativeBuffer bitmap_getNativeBuffer(Bitmap *bitmap) {
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(fromLinearRGB_overloads, fromLinearRGB, 3, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(fromXYZ_overloads, fromXYZ, 3, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(fromIPT_overloads, fromIPT, 3, 4)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(reset_overloads, reset, 0, 1)
 
 #define IMPLEMENT_ANIMATION_TRACK(Name) \
 	BP_CLASS(Name, AbstractAnimationTrack, (bp::init<AbstractAnimationTrack::EType, size_t>())) \
@@ -2238,7 +2239,7 @@ void export_core() {
 
 	BP_CLASS(Timer, Object, bp::init<bp::optional<bool> >())
 		.def("start", &Timer::start)
-		.def("reset", &Timer::reset)
+		.def("reset", &Timer::reset, reset_overloads())
 		.def("stop", &Timer::stop)
 		.def("lap", &Timer::lap)
 		.def("getNanoseconds", &Timer::getNanoseconds)
