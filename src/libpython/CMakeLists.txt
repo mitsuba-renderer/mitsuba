@@ -35,9 +35,9 @@ set(SRCS
 
 add_definitions(-DMTS_BUILD_MODULE=MTS_MODULE_PYTHON)
 
-# core.cpp is currently too large
+# core.cpp and render.cpp are too large
 if (MSVC)
-  set_property (SOURCE core.cpp APPEND PROPERTY COMPILE_FLAGS "/bigobj")
+  set_property (SOURCE core.cpp render.cpp APPEND PROPERTY COMPILE_FLAGS "/bigobj")
 endif ()
 
 
