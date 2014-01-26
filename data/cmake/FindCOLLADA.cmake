@@ -46,7 +46,7 @@ else()
   set (COLLADADOM_VERSION    "14")
   set (COLLADADOM_VERSION_PT "1.4")
 endif()
-set(COLLADA_VERSIONS "2.5" 25 "2.4" 24 23 22 21 20 2)
+set(COLLADA_VERSIONS "2.4" 24 23 22 21 20 2)
 
 
 # Default search paths
