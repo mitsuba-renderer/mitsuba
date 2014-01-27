@@ -135,7 +135,18 @@ void Statistics::logPlugin(const std::string &name, const std::string &descr) {
 }
 
 void Statistics::printStats() {
-	SLog(EInfo, "Statistics:\n%s", getStats().c_str());
+	mitsuba::Logger *logger = Thread::getThread()->getLogger();
+	LockGuard guard(logger->m_mutex);
+	ELogLevel curLevel = logger->getLogLevel();
+	logger->setLogLevel(EInfo);
+	logger->log(EInfo, NULL, __FILE__, __LINE__, "Statistics:\n%s", getStats().c_str());
+	logger->setLogLevel(curLevel);
+}
+
+void Statistics::resetAll() {
+	LockGuard lock(m_mutex);
+	for (size_t i=0; i<m_counters.size(); ++i)
+		const_cast<StatsCounter *>(m_counters[i])->reset();
 }
 
 std::string Statistics::getStats() {
