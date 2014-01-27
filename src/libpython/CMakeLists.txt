@@ -3,13 +3,13 @@ if (NOT MTS_VERSION)
   message(FATAL_ERROR "Use the top level configuration file")
 endif()
 
-# The Mitsuba provided dependencies on OS X add a version suffix to
+# The Mitsuba provided dependencies on OS X and Windows add a version suffix to
 # boost-python to provide support for multiple version in the same
 # distribution. CMake does not know how to handle this, requiring a little hack
 set(mts_python "python")
-if(APPLE AND MTS_DEPENDENCIES)
+if((APPLE OR WIN32) AND MTS_DEPENDENCIES)
   # Try to guess the suffix from the library version
-  if (PYTHON_LIBRARY MATCHES ".+python([23])\\.?([0-9]).+dylib$")
+  if (PYTHON_LIBRARY MATCHES ".+python([23])\\.?([0-9])\\.[^.]+$")
     set(mts_python "python${CMAKE_MATCH_1}${CMAKE_MATCH_2}")
   endif()
 endif()
@@ -35,9 +35,9 @@ set(SRCS
 
 add_definitions(-DMTS_BUILD_MODULE=MTS_MODULE_PYTHON)
 
-# core.cpp is currently too large
+# core.cpp and render.cpp are too large
 if (MSVC)
-  set_property (SOURCE core.cpp APPEND PROPERTY COMPILE_FLAGS "/bigobj")
+  set_property (SOURCE core.cpp render.cpp APPEND PROPERTY COMPILE_FLAGS "/bigobj")
 endif ()
 
 

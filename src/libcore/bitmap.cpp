@@ -67,6 +67,17 @@ extern "C" {
 
 MTS_NAMESPACE_BEGIN
 
+namespace
+{
+// Safely convert between scalar types avoiding downcasting warning
+template <typename T, typename S> inline T safe_cast(S a) {
+	return static_cast<T>(a);
+}
+template <> inline half safe_cast(double a) {
+	return static_cast<half>(static_cast<float>(a));
+}
+}
+
 #if defined(MTS_HAS_OPENEXR)
 /* ========================== *
  *     EXR helper classes     *
@@ -869,7 +880,7 @@ void Bitmap::convolve(const Bitmap *_kernel) {
 											* (double) input[(xs+ys*width)*m_channelCount+ch];
 								}
 							}
-							output[(x+y*width)*m_channelCount+ch] = (half) result;
+							output[(x+y*width)*m_channelCount+ch] = safe_cast<half>(result);
 						}
 					}
 				}
@@ -982,7 +993,7 @@ void Bitmap::scale(Float value) {
 					half *data = (half *) m_data;
 					for (size_t i=0; i<nPixels; ++i) {
 						for (size_t j=0; j<nChannels-1; ++j) {
-							*data = (half) (*data * value); ++data;
+							*data = safe_cast<half> (*data * value); ++data;
 						}
 						++data;
 					}
@@ -1046,7 +1057,7 @@ void Bitmap::scale(Float value) {
 			case EFloat16: {
 					half *data = (half *) m_data;
 					for (size_t i=0; i<nEntries; ++i)
-						data[i] = (half) (data[i] * value);
+						data[i] = safe_cast<half> (data[i] * value);
 				}
 				break;
 
@@ -1504,9 +1515,9 @@ template <typename T> void tonemapReinhard(T *data, size_t pixels, Bitmap::EPixe
 			Z = ratio * ((Float) 1.0f - x - y);
 
 			/* Convert from XYZ tristimulus values to ITU-R Rec. BT.709 linear RGB */
-			data[0] = (T)(  3.240479f * X + -1.537150f * Y + -0.498535f * Z);
-			data[1] = (T)( -0.969256f * X +  1.875991f * Y +  0.041556f * Z);
-			data[2] = (T)(  0.055648f * X + -0.204043f * Y +  1.057311f * Z);
+			data[0] = safe_cast<T>(  3.240479f * X + -1.537150f * Y + -0.498535f * Z);
+			data[1] = safe_cast<T>( -0.969256f * X +  1.875991f * Y +  0.041556f * Z);
+			data[2] = safe_cast<T>(  0.055648f * X + -0.204043f * Y +  1.057311f * Z);
 
 			data += channels;
 		}
@@ -1531,9 +1542,9 @@ template <typename T> void tonemapReinhard(T *data, size_t pixels, Bitmap::EPixe
 			X = ratio * x;
 			Z = ratio * ((Float) 1.0f - x - y);
 
-			data[0] = (T) X;
-			data[1] = (T) Y;
-			data[2] = (T) Z;
+			data[0] = safe_cast<T>(X);
+			data[1] = safe_cast<T>(Y);
+			data[2] = safe_cast<T>(Z);
 
 			data += channels;
 		}
@@ -1544,7 +1555,7 @@ template <typename T> void tonemapReinhard(T *data, size_t pixels, Bitmap::EPixe
 			Float Lp = (Float) *data * scale;
 
 			/* Apply the tonemapping transformation */
-			*data = (T) (Lp * (1.0f + Lp*invWp2) / (1.0f + Lp));
+			*data = safe_cast<T> (Lp * (1.0f + Lp*invWp2) / (1.0f + Lp));
 
 			data += channels;
 		}
@@ -1795,7 +1806,7 @@ template <typename Scalar> static void resample(ref<const ReconstructionFilter> 
 				+ y * target->getWidth() * channels;
 
 			r.resampleAndClamp(srcPtr, 1, trgPtr, 1, channels,
-					(Scalar) minValue, (Scalar) maxValue);
+					safe_cast<Scalar>(minValue), safe_cast<Scalar>(maxValue));
 		}
 
 		/* Now, read from the temporary bitmap */
@@ -1814,7 +1825,7 @@ template <typename Scalar> static void resample(ref<const ReconstructionFilter> 
 			Scalar *trgPtr = (Scalar *) target->getUInt8Data() + x * channels;
 
 			r.resampleAndClamp(srcPtr, source->getWidth(), trgPtr, target->getWidth(),
-				channels, (Scalar) minValue, (Scalar) maxValue);
+				channels, safe_cast<Scalar>(minValue), safe_cast<Scalar>(maxValue));
 		}
 	}
 }
@@ -3228,7 +3239,7 @@ void Bitmap::readPFM(Stream *stream) {
 	}
 
 	stream->setByteOrder(backup);
-	Float scale = std::abs(scaleAndOrder);
+	const float scale = std::abs(scaleAndOrder);
 	if (scale != 1) {
 		for (size_t i=0; i<size; ++i)
 			data[i] *= scale;

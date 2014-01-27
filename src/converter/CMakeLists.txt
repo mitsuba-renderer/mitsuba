@@ -15,7 +15,7 @@ set(SRCS
 
 # COLLADA-DOM 2.4 introduces namespaces, which are not source-compatible
 if (COLLADA_NAMESPACE)
-  add_definitions(${COLLADA_DEFINITIONS} -DCOLLADA_DOM_USING_141)
+  add_definitions(${COLLADA_DEFINITIONS} -DCOLLADA_DOM_2_4)
 endif()
 
 # Create a static library which is also used by mtsgui. Adding the dependent

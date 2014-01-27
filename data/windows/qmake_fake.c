@@ -8,7 +8,7 @@ MSVC Compile flags:
 */
 
 /* Qt version currently provided in the Mitsuba dependencies */
-#define QT_VERSION "4.8.2"
+#define QT_VERSION "4.8.5"
 
 void printUsage(FILE* out)
 {

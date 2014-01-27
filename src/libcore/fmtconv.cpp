@@ -68,13 +68,14 @@ namespace detail {
 	};
 
 	// Safely convert from size_t to other types, avoiding downcasting warning
-	template <typename T> inline T safe_cast(size_t a) {
+	template <typename T, typename S> inline T safe_cast(S a) {
 		return static_cast<T>(a);
 	}
-
 	template <> inline half safe_cast(size_t a) {
-		float tmp = static_cast<float>(a);
-		return static_cast<half>(tmp);
+		return static_cast<half>(static_cast<float>(a));
+	}
+	template <> inline half safe_cast(double a) {
+		return static_cast<half>(static_cast<float>(a));
 	}
 }
 
@@ -1140,10 +1141,10 @@ private:
 			value = applyGamma(value, invDestGamma);
 
 		if (format_traits<DestFmt>::is_float)
-			return (DestFmt) value;
+			return detail::safe_cast<DestFmt> (value);
 		else /* Round to nearest value and clamp to representable range */
-			return (DestFmt) std::min(static_cast<Float>(std::numeric_limits<DestFmt>::max()),
-				std::max((Float) 0, value * (Float) std::numeric_limits<DestFmt>::max() + (Float) 0.5f));
+			return detail::safe_cast<DestFmt> (std::min(static_cast<Float>(std::numeric_limits<DestFmt>::max()),
+				std::max((Float) 0, value * (Float) std::numeric_limits<DestFmt>::max() + (Float) 0.5f)));
 	}
 };
 

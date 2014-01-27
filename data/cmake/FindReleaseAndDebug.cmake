@@ -99,30 +99,36 @@ macro(FIND_RELEASE_AND_DEBUG)
     message(FATAL_ERROR "Missing custom debug suffixes")
   endif()
 
- 
-  # List with the debug suffixes to use
+  # CMake hangs if the list of library names is too long. As of CMake 2.8.11
+  # it is far faster to call find_library many times with a single library name
+  foreach(name ${LIBRELDBG_NAMES})
+    find_library(${LIBPREFIX}_LIBRARY_RELEASE "${name}"
+      HINTS ${LIBRELDBG_PATHS}
+      PATHS ${LIBRELDBG_FIXED_PATHS}
+      PATH_SUFFIXES lib)
+  endforeach()
   
-
-  # Construct the possible debug names {names}x{suffixes}
-  set(LIBRELDBG_NAMES_DEBUG "")
+  # Use a single debug name is the release version has been found
+  if (${LIBPREFIX}_LIBRARY_RELEASE)
+    get_filename_component(${LIBPREFIX}_LIBRARY_RELEASE_NAME
+      "${${LIBPREFIX}_LIBRARY_RELEASE}" NAME)
+    if ("${${LIBPREFIX}_LIBRARY_RELEASE_NAME}" MATCHES "(lib)?(.+)\\.[^.]+$")
+      set(LIBRELDBG_NAMES "${CMAKE_MATCH_2}")
+      if (WIN32 AND CMAKE_MATCH_1)
+        list(APPEND LIBRELDBG_NAMES "${CMAKE_MATCH_1}${CMAKE_MATCH_2}")
+      endif()
+    endif()
+  endif()
+  
+  # Idem
   foreach(suffix ${LIBRELDBG_DBG_SUFFIXES})
     foreach(name ${LIBRELDBG_NAMES})
-      set(LIBRELDBG_NAMES_DEBUG ${LIBRELDBG_NAMES_DEBUG} "${name}${suffix}")
+        find_library(${LIBPREFIX}_LIBRARY_DEBUG "${name}${suffix}"
+          HINTS ${LIBRELDBG_PATHS}
+          PATHS ${LIBRELDBG_FIXED_PATHS}
+          PATH_SUFFIXES lib)
     endforeach()
   endforeach()
-
-  find_library(${LIBPREFIX}_LIBRARY_RELEASE
-    NAMES ${LIBRELDBG_NAMES}
-    HINTS ${LIBRELDBG_PATHS}
-    PATHS ${LIBRELDBG_FIXED_PATHS}
-    PATH_SUFFIXES lib
-  )
-  find_library(${LIBPREFIX}_LIBRARY_DEBUG
-    NAMES ${LIBRELDBG_NAMES_DEBUG}
-    HINTS ${LIBRELDBG_PATHS}
-    PATHS ${LIBRELDBG_FIXED_PATHS}
-    PATH_SUFFIXES lib
-  )
 
   SELECT_LIBRARY_CONFIGURATIONS(${LIBPREFIX})
 

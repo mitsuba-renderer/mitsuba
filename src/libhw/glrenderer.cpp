@@ -748,11 +748,11 @@ void GLRenderer::blitQuad(bool flipVertically) {
 	glTexCoord2f(0.0f, flipVertically ? 1.0f : 0.0f);
 	glVertex3f(0.0f, 0.0f, zDepth);
 	glTexCoord2f(1.0f, flipVertically ? 1.0f : 0.0f);
-	glVertex3f(scrSize.x, 0.0f, zDepth);
+	glVertex3f((GLfloat) scrSize.x, 0.0f, zDepth);
 	glTexCoord2f(1.0f, flipVertically ? 0.0f : 1.0f);
-	glVertex3f(scrSize.x, scrSize.y, zDepth);
+	glVertex3f((GLfloat) scrSize.x, (GLfloat) scrSize.y, zDepth);
 	glTexCoord2f(0.0f, flipVertically ? 0.0f : 1.0f);
-	glVertex3f(0.0f, scrSize.y, zDepth);
+	glVertex3f(0.0f, (GLfloat) scrSize.y, zDepth);
 	glEnd();
 	glPopMatrix();
 	glMatrixMode(GL_PROJECTION);
@@ -817,7 +817,7 @@ void GLRenderer::drawText(const Point2i &_pos,
 }
 
 void GLRenderer::setPointSize(Float size) {
-	glPointSize(size);
+	glPointSize((GLfloat) size);
 }
 
 void GLRenderer::drawPoint(const Point &p) {
@@ -898,18 +898,18 @@ void GLRenderer::drawFilledRectangle(const Point2i &a, const Point2i &b) {
 void GLRenderer::drawEllipse(const Point &center,
 		const Vector &axis1, const Vector &axis2) {
 	const int nSteps = 100;
-	const float stepSize = 2*M_PI/nSteps;
+	const float stepSize = (float) (2*M_PI/nSteps);
 	glBegin(GL_LINE_LOOP);
 	for (int i=0; i<100; ++i) {
 		Point p = center + axis1 * std::cos(i*stepSize)
 			+ axis2 * std::sin(i*stepSize);
-		glVertex3f(p.x, p.y, p.z);
+		glVertex3f((GLfloat) p.x, (GLfloat) p.y, (GLfloat) p.z);
 	}
 	glEnd();
 }
 
 void GLRenderer::drawAABB(const AABB &aabb) {
-	#define V(a,b,c) glVertex3f(aabb.a.x, aabb.b.y, aabb.c.z)
+	#define V(a,b,c) glVertex3f((GLfloat) aabb.a.x, (GLfloat) aabb.b.y, (GLfloat) aabb.c.z)
 	glBegin(GL_LINE_LOOP); V(max,min,max); V(max,min,min); V(max,max,min); V(max,max,max); glEnd();
 	glBegin(GL_LINE_LOOP); V(max,max,max); V(max,max,min); V(min,max,min); V(min,max,max); glEnd();
 	glBegin(GL_LINE_LOOP); V(max,max,max); V(min,max,max); V(min,min,max); V(max,min,max); glEnd();
@@ -982,13 +982,13 @@ void GLRenderer::finish() {
 }
 
 void GLRenderer::setColor(const Color3 &col, Float alpha) {
-	glColor4f((GLfloat) col[0], (GLfloat) col[1], (GLfloat) col[2], alpha);
+	glColor4f((GLfloat) col[0], (GLfloat) col[1], (GLfloat) col[2], (GLfloat) alpha);
 }
 
 void GLRenderer::setColor(const Spectrum &spec, Float alpha) {
 	Float r, g, b;
 	spec.toLinearRGB(r, g, b);
-	glColor4f((GLfloat) r, (GLfloat) g, (GLfloat) b, alpha);
+	glColor4f((GLfloat) r, (GLfloat) g, (GLfloat) b, (GLfloat) alpha);
 }
 
 void GLRenderer::setClearDepth(Float depth) {

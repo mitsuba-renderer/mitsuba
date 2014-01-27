@@ -143,6 +143,12 @@ include_directories(
 set(LIBS ${ZLIB_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES}
   ${ILMBASE_LIBRARIES} ${OPENEXR_LIBRARIES}
   ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${CMAKE_DL_LIBS})
+  
+if(MTS_FFTW)
+  include_directories(${FFTW3_INCLUDE_DIRS})
+  list(APPEND LIBS ${FFTW3_LIBRARIES})
+endif()
+  
 if(WIN32)
   list(APPEND LIBS ws2_32 psapi)
 elseif (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")

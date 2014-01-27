@@ -195,7 +195,7 @@ void ShadowMapGenerator::render(Renderer *renderer, GPUTexture *shadowMap,
 		Log(EError, "Cannot render shadow map (the "
 			"graphics card has insufficient capabilities)");
 
-	float invDepthRange = 1.0f / (maxDepth - minDepth);
+	float invDepthRange = (float) (1.0f / (maxDepth - minDepth));
 	shadowMap->activateTarget();
 	renderer->setDepthTest(true);
 	prog->bind();

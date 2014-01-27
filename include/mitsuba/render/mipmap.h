@@ -614,8 +614,8 @@ public:
 		const Value p11 = evalTexel(level, xPos+1, yPos+1);
 		Value tmp = p01 + p10 - p11;
 
-		gradient[0] = (p10 + p00*(dy-1) - tmp*dy) * size.x;
-		gradient[1] = (p01 + p00*(dx-1) - tmp*dx) * size.y;
+		gradient[0] = (p10 + p00*(dy-1) - tmp*dy) * static_cast<Float> (size.x);
+		gradient[1] = (p01 + p00*(dx-1) - tmp*dx) * static_cast<Float> (size.y);
 	}
 
 	/// \brief Perform a filtered texture lookup using the configured method

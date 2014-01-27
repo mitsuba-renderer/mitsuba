@@ -39,9 +39,6 @@
 
 MTS_NAMESPACE_BEGIN
 
-static StatsCounter bytesRcvd("Network", "Bytes received");
-static StatsCounter bytesSent("Network", "Bytes sent");
-
 namespace
 {
 #if defined(__WINDOWS__)
@@ -158,6 +155,7 @@ SocketStream::~SocketStream() {
 }
 
 void SocketStream::read(void *ptr, size_t size) {
+	static StatsCounter bytesRcvd("Network", "Bytes received");
 	const size_t total = size;
 	char *data = (char *) ptr;
 	while (size > 0) {
@@ -184,6 +182,7 @@ void SocketStream::read(void *ptr, size_t size) {
 }
 
 void SocketStream::write(const void *ptr, size_t size) {
+	static StatsCounter bytesSent("Network", "Bytes sent");
 	const size_t total = size;
 	char *data = (char *) ptr;
 	while (size > 0) {

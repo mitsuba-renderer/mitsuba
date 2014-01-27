@@ -9,9 +9,9 @@
 #  COLLADA_NAMESPACE    - boolean to indicate whether this version contains the
 #                         namespaces and new functions introduced with
 #                         COLLADA-DOM 2.4.
-# COLLADA_NAMESPACE_141 - boolean to indicate wheter the namespace
+# COLLADA_NAMESPACE_141 - boolean to indicate whether the namespace
 #                         ColladaDOM141 is supported.
-# COLLADA_NAMESPACE_150 - boolean to indicate wheter the namespace
+# COLLADA_NAMESPACE_150 - boolean to indicate whether the namespace
 #                         ColladaDOM150 is supported.
 #  COLLADA_FOUND        - if false, do not try to use COLLADA.
 #
@@ -19,13 +19,13 @@
 # to be set before calling find_package:
 #
 #  COLLADADOM_15    - if set to a value which evaluates to true, the module
-#                     will look for the COLLADA DOM Scheva version 1.5
+#                     will look for the COLLADA DOM Schema version 1.5
 #                     components instead of the default (1.4.)
-#  COLLADA_ROOT_DIR - The prefered installation prefix for searching for
+#  COLLADA_ROOT_DIR - The preferred installation prefix for searching for
 #                     COLLADA. This corresponds to
 #                     ./configure --prefix=$COLLADA_ROOT_DIR
 #                     Set if this module has problems finding the proper
-#                     COLLADA instalation.
+#                     COLLADA installation.
 #
 
 # ============================================================================
@@ -46,7 +46,7 @@ else()
   set (COLLADADOM_VERSION    "14")
   set (COLLADADOM_VERSION_PT "1.4")
 endif()
-set(COLLADA_VERSIONS "2.5" 25 "2.4" 24 23 22 21 20 2)
+set(COLLADA_VERSIONS 24 "2.4" 23 22 21 20 2)
 
 
 # Default search paths
@@ -136,14 +136,14 @@ macro (COLLADA_CHECK_NAMESPACE)
 #endif
 #include <dae.h>
 int main(int argc, char** argv) {
-    DAE dae;
+    DAE* dae = 0;
     int result = 0;
 #ifdef COLLADA_DOM_SUPPORT141
-    ColladaDOM141::domCOLLADA* root1 = dae.getRoot141(argv[0]);
+    ColladaDOM141::domCOLLADA* root1 = dae->getRoot141(argv[0]);
     result += ((int*)root1)[argc];
 #endif
 #ifdef COLLADA_DOM_SUPPORT150
-    ColladaDOM150::domCOLLADA* root2 = dae.getRoot150(argv[0]);
+    ColladaDOM150::domCOLLADA* root2 = dae->getRoot150(argv[0]);
     result += ((int*)root2)[argc];
 #endif
     return result;
@@ -203,15 +203,15 @@ set(Collada_library_paths
 
 # Construct the possible names for the DOM library
 set(COLLADADOM_NAMES
-  collada-dom
   collada${COLLADADOM_VERSION}dom
   Collada${COLLADADOM_VERSION}Dom
+  collada-dom
 )
 if (MSVC)
-  set(COLLADADOM_NAMES ${COLLADADOM_NAMES}
-    libcollada-dom
+  list(APPEND COLLADADOM_NAMES
     libCollada${COLLADADOM_VERSION}Dom
     libcollada${COLLADADOM_VERSION}dom
+    libcollada-dom
   )
 endif()
 
@@ -227,11 +227,11 @@ endif()
 set(COLLADADOM_NAMES_BASE ${COLLADADOM_NAMES})
 foreach(name ${COLLADADOM_NAMES_BASE})
   foreach(version ${COLLADA_VERSIONS})
-    list(APPEND COLLADADOM_NAMES "${name}${version}-dp" "${name}${version}")
+    list(APPEND COLLADADOM_NAMES "${name}${version}" "${name}${version}-dp")
     if(MSVC)
       foreach(vc_suffix ${VC_SUFFIXES})
-        list(APPEND COLLADADOM_NAMES "${name}${version}-dp-${vc_suffix}"
-          "${name}${version}-${vc_suffix}")
+        list(APPEND COLLADADOM_NAMES "${name}${version}-${vc_suffix}"
+          "${name}${version}-dp-${vc_suffix}")
       endforeach()
     endif()
   endforeach()

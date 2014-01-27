@@ -17,7 +17,12 @@
 */
 
 #if defined(COLLADA_DOM_2_4)
-	#define COLLADA_DOM_SUPPORT141
+	#ifndef COLLADA_DOM_SUPPORT141
+		#define COLLADA_DOM_SUPPORT141
+	#endif
+	#ifdef COLLADA_DOM_USING_141
+		#undef COLLADA_DOM_USING_141
+	#endif
 	#define COLLADA_DOM_USING_141
 #endif
 

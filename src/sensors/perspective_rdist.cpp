@@ -115,8 +115,8 @@ public:
 			m_distortion = false;
 		} else if (kc_tokens.size() == 2) {
 			char *end_ptr0, *end_ptr1;
-			m_kc[0] = std::strtod(kc_tokens[0].c_str(), &end_ptr0);
-			m_kc[1] = std::strtod(kc_tokens[1].c_str(), &end_ptr1);
+			m_kc[0] = (Float) std::strtod(kc_tokens[0].c_str(), &end_ptr0);
+			m_kc[1] = (Float) std::strtod(kc_tokens[1].c_str(), &end_ptr1);
 			if (*end_ptr0 != '\0' || *end_ptr1 != 0)
 				Log(EError, "Invalid input to the 'kc' parameter!");
 			m_distortion = m_kc[0] != 0 || m_kc[1] != 0;

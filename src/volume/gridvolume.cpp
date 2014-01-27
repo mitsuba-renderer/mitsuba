@@ -299,8 +299,12 @@ public:
 			value[0] = a; value[1] = b; value[2] = c;
 		}
 
+		inline explicit float3(double a, double b, double c) {
+			value[0] = (float) a; value[1] = (float) b; value[2] = (float) c;
+		}
+
 		inline float3 operator*(Float v) const {
-			return float3(value[0]*v, value[1]*v, value[2]*v);
+			return float3((float) (value[0]*v), (float) (value[1]*v), (float) (value[2]*v));
 		}
 
 		inline float3 operator+(const float3 &f2) const {
