@@ -271,7 +271,7 @@ bool PathVertex::sampleNext(const Scene *scene, Sampler *sampler,
 			Float q = std::min(throughput->max(), (Float) 0.95f);
 
 			if (sampler->next1D() > q) {
-				measure = EInvalid;
+				measure = EInvalidMeasure;
 				return false;
 			} else {
 				rrWeight = 1.0f / q;
@@ -283,7 +283,7 @@ bool PathVertex::sampleNext(const Scene *scene, Sampler *sampler,
 	if (!succEdge->sampleNext(scene, sampler, this, ray, succ, mode)) {
 		/* Sampling a successor edge + vertex failed, hence the vertex
 		   is not committed to a particular measure yet -- revert. */
-		measure = EInvalid;
+		measure = EInvalidMeasure;
 		return false;
 	} else {
 		if (throughput)
@@ -368,7 +368,7 @@ int PathVertex::sampleSensor(const Scene *scene, Sampler *sampler,
 	ray.setDirection(dRec.d);
 
 	if (!e1->sampleNext(scene, sampler, v1, ray, v2, ERadiance)) {
-		v1->measure = EInvalid;
+		v1->measure = EInvalidMeasure;
 		return 1;
 	}
 
@@ -655,7 +655,7 @@ bool PathVertex::perturbDirection(const Scene *scene, const PathVertex *pred,
 	}
 
 	if (!succEdge->perturbDirection(scene, this, ray, dist, desiredType, succ, mode)) {
-		measure = EInvalid;
+		measure = EInvalidMeasure;
 		return false;
 	}
 
@@ -770,7 +770,7 @@ bool PathVertex::propagatePerturbation(const Scene *scene, const PathVertex *pre
 
 	Ray ray(its.p, wo, its.time);
 	if (!succEdge->perturbDirection(scene, this, ray, dist, desiredType, succ, mode)) {
-		measure = EInvalid;
+		measure = EInvalidMeasure;
 		return false;
 	}
 
@@ -1358,11 +1358,11 @@ bool PathVertex::connect(const Scene *scene,
 	}
 
 	vs->update(scene, pred, vt, EImportance, vsMeasure);
-	if (vs->weight[EImportance].isZero())
+	if (vs->weight[EImportance].isZero() || vs->pdf[EImportance] == 0.f)
 		return false;
 
 	vt->update(scene, succ, vs, ERadiance, vtMeasure);
-	if (vt->weight[ERadiance].isZero())
+	if (vt->weight[ERadiance].isZero() || vt->pdf[ERadiance] == 0.f)
 		return false;
 
 	return edge->connect(scene, predEdge, vs, vt, succEdge);
