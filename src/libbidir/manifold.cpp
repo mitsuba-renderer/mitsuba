@@ -387,7 +387,8 @@ bool SpecularManifold::computeTangents() {
 
 	for (int i=0; i < n - 1; ++i) {
 		m_vertices[i].u = Li * m_vertices[i].c;
-		if (!(m_vertices[i+1].b - m_vertices[i+1].a * m_vertices[i].u).invert(Li))
+		Matrix2x2 temp = m_vertices[i+1].b - m_vertices[i+1].a * m_vertices[i].u;
+		if (!temp.invert(Li))
 			return false;
 	}
 

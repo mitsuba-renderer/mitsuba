@@ -189,7 +189,7 @@ public:
 							fail = true;
 					if (fail)
 						Log(EError, "Detected an unexpected path modification outside of the "
-							"specifed range after a mutation of type %s (k=%i)!",
+							"specified range after a mutation of type %s (k=%i)!",
 							muRec.toString().c_str(), current->length());
 				}
 				backup.release(*m_pool);
