@@ -9,9 +9,9 @@
 #  COLLADA_NAMESPACE    - boolean to indicate whether this version contains the
 #                         namespaces and new functions introduced with
 #                         COLLADA-DOM 2.4.
-# COLLADA_NAMESPACE_141 - boolean to indicate wheter the namespace
+# COLLADA_NAMESPACE_141 - boolean to indicate whether the namespace
 #                         ColladaDOM141 is supported.
-# COLLADA_NAMESPACE_150 - boolean to indicate wheter the namespace
+# COLLADA_NAMESPACE_150 - boolean to indicate whether the namespace
 #                         ColladaDOM150 is supported.
 #  COLLADA_FOUND        - if false, do not try to use COLLADA.
 #
@@ -19,13 +19,13 @@
 # to be set before calling find_package:
 #
 #  COLLADADOM_15    - if set to a value which evaluates to true, the module
-#                     will look for the COLLADA DOM Scheva version 1.5
+#                     will look for the COLLADA DOM Schema version 1.5
 #                     components instead of the default (1.4.)
-#  COLLADA_ROOT_DIR - The prefered installation prefix for searching for
+#  COLLADA_ROOT_DIR - The preferred installation prefix for searching for
 #                     COLLADA. This corresponds to
 #                     ./configure --prefix=$COLLADA_ROOT_DIR
 #                     Set if this module has problems finding the proper
-#                     COLLADA instalation.
+#                     COLLADA installation.
 #
 
 # ============================================================================
