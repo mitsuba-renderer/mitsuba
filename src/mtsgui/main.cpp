@@ -45,6 +45,14 @@
 #include <winsock2.h>
 #endif
 
+#if defined(__WINDOWS__)
+// Always use the High Performance GPU on machines using NVIDIA Optimus
+// http://stackoverflow.com/questions/10535950/forcing-nvidia-gpu-programmatically-in-optimus-laptops [January 2014]
+extern "C" {
+	_declspec(dllexport) DWORD NvOptimusEnablement = 0x00000001;
+}
+#endif
+
 using namespace mitsuba;
 MainWindow *mainWindow = NULL;
 
