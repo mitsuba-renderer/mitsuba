@@ -29,6 +29,12 @@
 #include <cmath>
 #include <stdexcept>
 
+#if defined(__WINDOWS__)
+  #define __tls_decl __declspec(thread)
+#else
+  #define __tls_decl __thread
+#endif
+
 /**
  * \brief Base class of all automatic differentiation types
  *
@@ -60,11 +66,11 @@ struct DiffScalarBase {
 	/// @}
 	// ======================================================================
 
-	static __thread size_t m_variableCount;
+	static __tls_decl size_t m_variableCount;
 };
 
 #define DECLARE_DIFFSCALAR_BASE() \
-	__thread size_t DiffScalarBase::m_variableCount = 0
+	__tls_decl size_t DiffScalarBase::m_variableCount = 0
 
 /**
  * \brief Automatic differentiation scalar with first-order derivatives
