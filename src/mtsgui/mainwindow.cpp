@@ -1389,7 +1389,6 @@ void MainWindow::on_actionSettings_triggered() {
 	}
 }
 
-
 void MainWindow::on_actionStop_triggered() {
 	SceneContext *context = m_context[ui->tabBar->currentIndex()];
 	m_contextMutex.lock();
@@ -1821,9 +1820,9 @@ void MainWindow::onWorkCanceled(const RenderJob *job, const Point2i &offset, con
 	if (context == NULL)
 		return;
 	VisualWorkUnit vwu(offset, size);
+	m_contextMutex.lock();
 	if (context->workUnits.find(vwu) != context->workUnits.end())
 		context->workUnits.erase(vwu);
-	m_contextMutex.lock();
 	m_contextMutex.unlock();
 }
 

@@ -122,6 +122,7 @@ RenderSettingsDialog::RenderSettingsDialog(QWidget *parent) :
 	pal.setColor(QPalette::Text, pal.color(QPalette::Foreground));
 	pal.setColor(QPalette::Base, pal.color(QPalette::Window));
 	ui->helpViewer->setPalette(pal);
+	ui->helpViewer->setHtml("Click on any setting for documentation");
 }
 
 void RenderSettingsDialog::setDocumentation(const QString &text) {
@@ -187,12 +188,23 @@ void RenderSettingsDialog::onTreeSelectionChange(const QItemSelection &selected,
 void RenderSettingsDialog::update() {
 	int index = ui->integratorBox->currentIndex();
 	Properties integratorProps, samplerProps;
+	bool needsUpdate = false;
 
-	if (sender() == ui->samplerBox)
+	if (sender() == ui->samplerBox) {
 		m_samplerNode->putProperties(samplerProps);
+		needsUpdate = true;
+	}
 
-	if (sender() == ui->integratorBox)
+	if (sender() == ui->integratorBox) {
 		m_integratorNode->putProperties(integratorProps);
+		needsUpdate = true;
+	}
+
+	if (sender() == ui->rFilterBox ||
+		sender() == ui->icBox ||
+		sender() == ui->aiBox) {
+		needsUpdate = true;
+	}
 
 	m_integratorNode = m_model->updateClass(m_integratorNode,
 		ui->integratorBox->itemData(index).toList().at(0).toString(),
@@ -236,19 +248,21 @@ void RenderSettingsDialog::update() {
 		}
 	}
 
-	ui->treeView->expandAll();
+	if (needsUpdate) {
+		/* Make comboboxes etc editable by default */
+		for (int i = 0; i < m_model->rowCount(); ++i) {
+			QModelIndex index = m_model->index(i, 0);
 
-	#if 0
-	/* Make comboboxes etc editable by default .. does not quite work yet */
-	for (int i = 0; i < m_model->rowCount(); ++i) {
-		QModelIndex index = m_model->index(i, 0);
-
-		for (int j = 1; j < m_model->rowCount(index); ++j) {
-			ui->treeView->openPersistentEditor(
-				m_model->index(j, 1, index));
+			for (int j = 1; j < m_model->rowCount(index); ++j) {
+				QModelIndex idx = m_model->index(j, 1, index);
+				ui->treeView->openPersistentEditor(idx);
+				QAbstractSpinBox *spinBox = qobject_cast<QAbstractSpinBox *>(ui->treeView->indexWidget(idx));
+				if (spinBox)
+					spinBox->findChild<QLineEdit*>()->deselect();
+			}
 		}
 	}
-	#endif
+	ui->treeView->expandAll();
 
 	dataChanged();
 }
@@ -303,6 +317,19 @@ void RenderSettingsDialog::load(const SceneContext *ctx) {
 	m_model->setProperties(m_samplerNode, samplerProps);
 	m_model->setProperties(m_integratorNode, integratorProps);
 	ui->treeView->expandAll();
+
+	/* Make comboboxes etc editable by default */
+	for (int i = 0; i < m_model->rowCount(); ++i) {
+		QModelIndex index = m_model->index(i, 0);
+
+		for (int j = 1; j < m_model->rowCount(index); ++j) {
+			QModelIndex idx = m_model->index(j, 1, index);
+			ui->treeView->openPersistentEditor(idx);
+			QAbstractSpinBox *spinBox = qobject_cast<QAbstractSpinBox *>(ui->treeView->indexWidget(idx));
+			if (spinBox)
+				spinBox->findChild<QLineEdit*>()->deselect();
+		}
+	}
 }
 
 void RenderSettingsDialog::apply(SceneContext *ctx) {
@@ -465,19 +492,28 @@ PropertyDelegate::~PropertyDelegate() {
 }
 
 QString	PropertyDelegate::displayText(const QVariant &value, const QLocale &locale) const {
-	if (value.type() == QVariant::Bool)
-		return value.toBool() ? tr("Yes") : tr("No");
+	if (value.type() == QVariant::Bool) {
+		#if defined(BOOLEAN_AS_COMBOBOXES)
+			return value.toBool() ? tr("Yes") : tr("No");
+		#else
+			return QString("");
+		#endif
+	}
 	return QStyledItemDelegate::displayText(value, locale);
 }
 
 QWidget *PropertyDelegate::createEditor(QWidget *parent, const QStyleOptionViewItem &option,
 		const QModelIndex &index) const {
 	if (index.data().type() == QVariant::Bool) {
-		QComboBox *cbox = new QComboBox(parent);
-		/* Nicer boolean editor -- by default, Qt creates a True/False combo box */
-		cbox->addItem(tr("No"));
-		cbox->addItem(tr("Yes"));
-		return cbox;
+		#if defined(BOOLEAN_AS_COMBOBOXES)
+			QComboBox *cbox = new QComboBox(parent);
+			/* Nicer boolean editor -- by default, Qt creates a True/False combo box */
+			cbox->addItem(tr("No"));
+			cbox->addItem(tr("Yes"));
+			return cbox;
+		#else
+			return new QCheckBox(parent);
+		#endif
 	}
 	QWidget *widget = QStyledItemDelegate::createEditor(parent, option, index);
 #if defined(__OSX__)
@@ -494,8 +530,13 @@ QWidget *PropertyDelegate::createEditor(QWidget *parent, const QStyleOptionViewI
 
 void PropertyDelegate::setEditorData(QWidget *editor, const QModelIndex &index) const {
 	if (index.data().type() == QVariant::Bool) {
-		QComboBox *cbox = static_cast<QComboBox *>(editor);
-		cbox->setCurrentIndex(index.data().toBool() ? 1 : 0);
+		#if defined(BOOLEAN_AS_COMBOBOXES)
+			QComboBox *cbox = static_cast<QComboBox *>(editor);
+			cbox->setCurrentIndex(index.data().toBool() ? 1 : 0);
+		#else
+			QCheckBox *cbox = static_cast<QCheckBox *>(editor);
+			cbox->setChecked(index.data().toBool());
+		#endif
 		return;
 	}
 
@@ -505,8 +546,13 @@ void PropertyDelegate::setEditorData(QWidget *editor, const QModelIndex &index) 
 void PropertyDelegate::setModelData(QWidget *editor, QAbstractItemModel *model,
 	const QModelIndex &index) const {
 	if (index.data().type() == QVariant::Bool) {
-		QComboBox *cbox = static_cast<QComboBox *>(editor);
-		model->setData(index, QVariant(cbox->currentIndex() == 1), Qt::EditRole);
+		#if defined(BOOLEAN_AS_COMBOBOXES)
+			QComboBox *cbox = static_cast<QComboBox *>(editor);
+			model->setData(index, QVariant(cbox->currentIndex() == 1), Qt::EditRole);
+		#else
+			QCheckBox *cbox = static_cast<QCheckBox *>(editor);
+			model->setData(index, QVariant(cbox->isChecked()), Qt::EditRole);
+		#endif
 		return;
 	}
 	QStyledItemDelegate::setModelData(editor, model, index);
