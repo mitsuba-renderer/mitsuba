@@ -182,6 +182,16 @@ if (COLLADA_FOUND)
   add_definitions(-DMTS_HAS_COLLADA=1)
 endif()
 
+
+# FFTW3 (optional)
+find_package(FFTW3)
+CMAKE_DEPENDENT_OPTION(MTS_FFTW "Enable FFTW3 for fast image convolution support." ON
+  "FFTW3_FOUND" OFF)
+if (MTS_FFTW)
+  add_definitions(-DMTS_HAS_FFTW=1)
+endif()
+
+
 find_package(OpenGL REQUIRED)
 set (GLEW_MX ON)
 find_package(GLEW REQUIRED)
