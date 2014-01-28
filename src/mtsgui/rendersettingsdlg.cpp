@@ -21,6 +21,34 @@
 #include <mitsuba/core/plugin.h>
 #include <mitsuba/core/fresolver.h>
 
+class BetterDoubleSpinBox : public QDoubleSpinBox {
+public:
+	BetterDoubleSpinBox(QWidget *parent) : QDoubleSpinBox(parent) {
+		setDecimals(5);
+		setMinimum(-std::numeric_limits<double>::max());
+		setMaximum(std::numeric_limits<double>::max());
+		setFrame(false);
+	}
+
+	void morphNumericString(char *s) const {
+		char *p = strchr (s,'.');
+		if (p == NULL) {
+			strcat(s, ".0");
+			return;
+		}
+		p = &(p[strlen(p)-1]);
+		while ((p != s) && (*p == '0') && (*(p-1) != '.'))
+			*p-- = '\0';
+	}
+
+	QString textFromValue(double value) const {
+		char tmp[32];
+		snprintf(tmp, sizeof(tmp), "%f", value);
+		morphNumericString(tmp);
+		return QString::fromAscii(tmp);
+	}
+};
+
 /* ====================== Some helper routines ====================== */
 
 static void setComboBox(QComboBox *box, const std::string &pluginName) {
@@ -109,6 +137,7 @@ RenderSettingsDialog::RenderSettingsDialog(QWidget *parent) :
 	ui->treeView->setAlternatingRowColors(true);
 	ui->treeView->setUniformRowHeights(true);
 	ui->treeView->setColumnWidth(0, 270);
+	ui->treeView->setStyleSheet("QTreeView::item { padding-right: 8px; }");
 	ui->treeView->setItemDelegate(new PropertyDelegate(this));
 	connect(ui->treeView->selectionModel(), SIGNAL(selectionChanged(const QItemSelection &, const QItemSelection)),
 		SLOT(onTreeSelectionChange(const QItemSelection &, const QItemSelection &)));
@@ -249,16 +278,22 @@ void RenderSettingsDialog::update() {
 	}
 
 	if (needsUpdate) {
+		int row = 0;
 		/* Make comboboxes etc editable by default */
 		for (int i = 0; i < m_model->rowCount(); ++i) {
 			QModelIndex index = m_model->index(i, 0);
 
-			for (int j = 1; j < m_model->rowCount(index); ++j) {
+			for (int j = 0; j < m_model->rowCount(index); ++j) {
 				QModelIndex idx = m_model->index(j, 1, index);
 				ui->treeView->openPersistentEditor(idx);
 				QAbstractSpinBox *spinBox = qobject_cast<QAbstractSpinBox *>(ui->treeView->indexWidget(idx));
-				if (spinBox)
-					spinBox->findChild<QLineEdit*>()->deselect();
+				if (spinBox) {
+					QLineEdit *edit = spinBox->findChild<QLineEdit*>();
+					if (row % 2 == 0)
+						edit->setStyleSheet("background-color: palette(alternate-base);");
+					edit->deselect();
+				}
+				row++;
 			}
 		}
 	}
@@ -316,20 +351,27 @@ void RenderSettingsDialog::load(const SceneContext *ctx) {
 	m_model->setProperties(m_rFilterNode, rFilterProps);
 	m_model->setProperties(m_samplerNode, samplerProps);
 	m_model->setProperties(m_integratorNode, integratorProps);
-	ui->treeView->expandAll();
 
 	/* Make comboboxes etc editable by default */
+	int row = 0;
 	for (int i = 0; i < m_model->rowCount(); ++i) {
 		QModelIndex index = m_model->index(i, 0);
 
-		for (int j = 1; j < m_model->rowCount(index); ++j) {
+		for (int j = 0; j < m_model->rowCount(index); ++j) {
 			QModelIndex idx = m_model->index(j, 1, index);
 			ui->treeView->openPersistentEditor(idx);
 			QAbstractSpinBox *spinBox = qobject_cast<QAbstractSpinBox *>(ui->treeView->indexWidget(idx));
-			if (spinBox)
-				spinBox->findChild<QLineEdit*>()->deselect();
+			if (spinBox) {
+				QLineEdit *edit = spinBox->findChild<QLineEdit*>();
+				if (row % 2 == 0)
+					edit->setStyleSheet("background-color: palette(alternate-base);");
+				edit->deselect();
+			}
+			row++;
 		}
 	}
+
+	ui->treeView->expandAll();
 }
 
 void RenderSettingsDialog::apply(SceneContext *ctx) {
@@ -515,7 +557,11 @@ QWidget *PropertyDelegate::createEditor(QWidget *parent, const QStyleOptionViewI
 			return new QCheckBox(parent);
 		#endif
 	}
-	QWidget *widget = QStyledItemDelegate::createEditor(parent, option, index);
+	QWidget *widget;
+	if (index.data().type() == QVariant::Double)
+		widget = new BetterDoubleSpinBox(parent);
+	else
+		widget = QStyledItemDelegate::createEditor(parent, option, index);
 #if defined(__OSX__)
 	/* Don't draw focus halos on OSX, they're really distracting */
 	if (widget != NULL && widget->testAttribute(Qt::WA_MacShowFocusRect))
