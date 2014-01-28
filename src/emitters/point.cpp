@@ -48,7 +48,7 @@ MTS_NAMESPACE_BEGIN
  *     }
  * }
  *
- * This sensor plugin implements a simple point light source, which
+ * This emitter plugin implements a simple point light source, which
  * uniformly radiates illumination into all directions.
  */
 

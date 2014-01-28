@@ -55,8 +55,8 @@ MTS_NAMESPACE_BEGIN
  *
  * This class implements a flexible homogeneous participating
  * medium with support for arbitrary phase functions and various
- * medium sampling methods. It provides several ways of configuring
- * the medium properties. Either, a material preset can be loaded
+ * medium sampling methods. It provides two different ways of configuring
+ * the medium properties. One possibility is to load a material preset
  * using the \code{material} parameter---see \tblref{medium-coefficients}
  * for details. Alternatively, when specifying parameters by hand, they can either
  * be provided using the scattering and absorption coefficients, or
