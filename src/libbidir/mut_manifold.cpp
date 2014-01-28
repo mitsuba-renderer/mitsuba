@@ -739,7 +739,14 @@ Float ManifoldPerturbation::Q(const Path &source, const Path &proposal,
 			source.edge(vbEdge), proposal.edge(vbEdge));
 	}
 
-	return 1.0f / weight.getLuminance();
+	Float lum = weight.getLuminance();
+
+	if (lum <= 0 || !std::isfinite(lum)) {
+		Log(EWarn, "Internal error in manifold perturbation: luminance = %f!", lum);
+		return 0.f;
+	}
+
+	return 1.0f / lum;
 }
 
 void ManifoldPerturbation::accept(const MutationRecord &muRec) {
