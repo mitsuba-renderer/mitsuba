@@ -233,7 +233,6 @@ bool ManifoldPerturbation::sampleMutation(
 	int a, b, c, step, tries = 0;
 	while (!sampleMutationRecord(source, a, b, c, step)) {
 		if (tries++ > 1000) {
-			cout << source.toString() << endl;
 			SLog(EWarn, "Internal error -- can't decide on a mutation strategy!");
 			return false;
 		}
