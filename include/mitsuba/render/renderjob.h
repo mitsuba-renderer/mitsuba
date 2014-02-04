@@ -92,6 +92,9 @@ public:
 	 */
 	inline bool isInteractive() const { return m_interactive; }
 
+	/// Define whether or not this is an interactive job
+	inline void setInteractive(bool interactive) { m_interactive = interactive; }
+
 	/// Get a pointer to the underlying scene
 	inline Scene *getScene() { return m_scene.get(); }
 

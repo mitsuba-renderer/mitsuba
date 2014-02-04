@@ -585,6 +585,7 @@ class MitsubaRenderBuffer(RenderListener):
     RENDERING_FINISHED  = 0
     RENDERING_CANCELLED = 1
     RENDERING_UPDATED   = 2
+    GEOMETRY_CHANGED    = 3
 
     def __init__(self, queue, callback):
         super(MitsubaRenderBuffer, self).__init__()
@@ -613,7 +614,7 @@ class MitsubaRenderBuffer(RenderListener):
             do this occasionally). Hence, tonemap the full film. """
         film = self._get_film_ensure_initialized(job)
         film.develop(Point2i(0), self.size, Point2i(0), self.bitmap)
-        self._potentially_send_update(force=True)
+        self._potentially_send_update()
 
     def finishJobEvent(self, job, cancelled):
         """ Callback: the rendering job has finished or was cancelled.
@@ -646,12 +647,14 @@ class MitsubaRenderBuffer(RenderListener):
             # (i.e. without doing unnecessary bitmap copy operations)
             self.qimage = QImage(self.bitmap.getNativeBuffer(), self.size.x,
                                  self.size.y, QImage.Format_RGB888)
+
+            self.callback(MitsubaRenderBuffer.GEOMETRY_CHANGED)
         return film
 
-    def _potentially_send_update(self, force = False):
+    def _potentially_send_update(self):
         """ Send an update request to any attached widgets, but not too often """
         now = time.time()
-        if now - self.time > .25 or force:
+        if now - self.time > .25:
             self.time = now
             self.callback(MitsubaRenderBuffer.RENDERING_UPDATED)
 
@@ -660,20 +663,22 @@ class RenderWidget(QWidget):
         and displays the progress of everything that's being rendered """
     renderingUpdated = Signal(int)
 
-    def __init__(self, parent, queue):
+    def __init__(self, parent, queue, default_size = Vector2i(0, 0)):
         QWidget.__init__(self, parent)
         self.buffer = MitsubaRenderBuffer(queue, self.renderingUpdated.emit)
         # Need a queued conn. to avoid threading issues between Qt and Mitsuba
         self.renderingUpdated.connect(self._handle_update, Qt.QueuedConnection)
         self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+        self.default_size = default_size
 
     def sizeHint(self):
-        return QSize(self.buffer.size.x, self.buffer.size.y)
+        size = self.buffer.size if not self.buffer.size.isZero() else self.default_size
+        return QSize(size.x, size.y)
 
     def _handle_update(self, event):
         image = self.buffer.qimage
         # Detect when an image of different resolution is being rendered
-        if image.width() < self.width() or image.height() < self.height():
+        if image.width() > self.width() or image.height() > self.height():
             self.updateGeometry()
         self.repaint()
 
@@ -702,10 +707,11 @@ class MitsubaDemo(QMainWindow):
         # Initialize Mitsuba
         self.initializeMitsuba()
         self.job = self.createRenderJob()
+        self.job.setInteractive(True)
 
         # Initialize the user interface
         status = self.statusBar()
-        self.rwidget = RenderWidget(self, self.queue)
+        self.rwidget = RenderWidget(self, self.queue, self.scene.getFilm().getSize())
         progress = QProgressBar(status)
         status.setContentsMargins(0,0,5,0)
         status.addPermanentWidget(progress)
