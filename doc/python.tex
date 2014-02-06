@@ -1,39 +1,29 @@
 \section{Python integration}
 \label{sec:python}
 A recent feature of Mitsuba is a Python interface to the renderer API.
-While the interface is still limited at this point, it can already be
-used for many useful purposes. To access the API, start your Python
-interpreter and enter
+To use this interface, start your Python interpreter and simply enter
 \begin{python}
 import mitsuba
 \end{python}
 \paragraph{Mac OS:}
 For this to work on MacOS X, you will first have to run the ``\emph{Apple
 Menu}$\to$\emph{Command-line access}'' menu item from within Mitsuba.
-In the unlikely case that you run into shared library loading issues (this is
-taken care of by default), you may have to set the \code{LD\_LIBRARY\_PATH}
-environment variable before starting Python so that it points to where the
-Mitsuba libraries are installed (e.g. the \code{Mitsuba.app/Contents/Frameworks}
-directory).
+If you compiled Mitsuba yourself, then an alternative way of setting the appropriate
+environment variables without making changes to the system is by sourcing the
+\code{setpath.sh} script located in the main Mitsuba directory.
 
-When Python crashes directly after the \code{import mitsuba} statement,
-make sure that Mitsuba is linked against the right Python distribution
-(i.e. matching the \code{python} binary you are using). For e.g. Python
-2.7, can be done by adjusting the \code{PYTHON27INCLUDE} and
-\code{PYTHON27LIBDIR} variables in \code{config.py}. For other versions,
-adjust the numbers accordingly.
+\paragraph{Linux:}
+If you installed one of the official Mitsuba packages for your distribution, then everything should work out of the box.
+If you compiled Mitsuba yourself, you will need to source the
+\code{setpath.sh} script located in the main Mitsuba directory before starting Python.
 
-\paragraph{Windows and Linux:}
-On Windows and \emph{non-packaged} Linux builds, you may have to explicitly
-specify the required extension search path before issuing the \code{import} command, e.g.:
+\paragraph{Windows}
+On Windows it is necessary to explicitly specify the required extension search path within Python
+before issuing the \code{import} command, e.g.:
 \begin{python}
 import os, sys
 
-# Specify the extension search path on Linux/Windows (may vary depending on your
-# setup. If you compiled from  source, 'path-to-mitsuba-directory' should be the
-# 'dist' subdirectory)
-
-# NOTE: On Windows, specify these paths using FORWARD slashes (i.e. '/' instead of
+# NOTE: remember to specify paths using FORWARD slashes (i.e. '/' instead of
 # '\' to avoid pitfalls with string escaping)
 
 # Configure the search path for the Python extension module
@@ -44,17 +34,14 @@ os.environ['PATH'] = 'path-to-mitsuba-directory' + os.pathsep + os.environ['PATH
 
 import mitsuba
 \end{python}
-In rare cases when running on Linux, it may also be necessary to set the
-\code{LD\_LIBRARY\_PATH} environment variable before starting Python so that it
-points to where the Mitsuba core libraries are installed.
 
+\subsubsection*{Python API documentation}
 For an overview of the currently exposed API subset, please refer
 to the following page: \url{http://www.mitsuba-renderer.org/api/group__libpython.html}.
 
-\subsubsection*{Accessing signatures in an interactive Python shell}
-The plugin exports comprehensive Python-style docstrings, hence
-the following is an alternative and convenient way of getting information on
-classes, function, or entire namespaces when running an interactive Python shell.
+The plugin also exports comprehensive Python-style docstrings, hence
+the following is an alternative way of getting information on
+classes, function, or entire namespaces within an interactive Python shell:
 \begin{shell}
 >>> help(mitsuba.core.Bitmap) # (can be applied to namespaces, classes, functions, etc.)
 
@@ -83,12 +70,12 @@ classes, function, or entire namespaces when running an interactive Python shell
 \end{shell}
 The docstrings list the currently exported functionality, as well as C++ and Python signatures, but they
 don't document what these functions actually do. The web API documentation is
-the preferred source of this information.
+the preferred source for this information.
 
 \subsection{Basics}
 Generally, the Python API tries to mimic the C++ API as closely as possible.
 Where applicable, the Python classes and methods replicate overloaded operators,
-overridable virtual function calls, and default arguments. Under rare circumstances,
+virtual function calls (which can be overridden in Python), and default arguments. Under rare circumstances,
 some features are inherently non-portable due to fundamental differences between the
 two programming languages. In this case, the API documentation will contain further
 information.
