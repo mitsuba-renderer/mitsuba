@@ -396,6 +396,53 @@ must only take place once. Performance-wise, this compares favourably with
 running many separate rendering jobs, e.g. using the \code{mitsuba}
 command-line executable.
 
+\subsubsection{Simultaneously rendering multiple versions of a scene}
+Sometimes it is useful to be able to submit multiple scenes to the rendering scheduler
+at the same time, e.g. when rendering on a big cluster, where one image is not enough to keep all
+cores on all machines busy. This is is quite easy to do by simply launching multiple \code{RenderJob}
+instances before issuing the \code{queue.waitLeft} call.
+
+However, things go wrong when rendering multiple versions of the \emph{same} scene simultaneously (for instance
+with a slightly perturbed camera position). The reason for this is that a single \code{Scene} instance can only
+be associated with one \code{RenderJob} at a time. A simple workaround for this is to create a shallow
+copy that references the original scene, as illustrated in the following snippet:
+\begin{python}
+# <Construct scene> in some way
+scene.initialize()
+sceneResID = scheduler.registerResource(scene)
+
+for i in range(number_of_renderings):
+    destination = 'result_%03i' % i
+
+    # Create a shallow copy of the scene so that the queue can tell apart the two
+    # rendering processes. This takes almost no extra memory
+    newScene = Scene(scene)
+
+    pmgr = PluginManager.getInstance()
+    newSensor = pmgr.createObject(scene.getSensor().getProperties())
+
+    # <change the position of 'newSensor' here>
+
+    newFilm = pmgr.createObject(scene.getFilm().getProperties())
+    newFilm.configure()
+    newSensor.addChild(newFilm)
+    newSensor.configure()
+    newScene.addSensor(newSensor)
+    newScene.setSensor(newSensor)
+    newScene.setSampler(scene.getSampler())
+    newScene.setDestinationFile(destination)
+
+    # Create a render job and insert it into the queue. Note how the resource
+    # ID of the original scene is provided to avoid sending the full scene
+    # contents over the network multiple times.
+    job = RenderJob('myRenderJob' + str(i), newScene, queue, sceneResID)
+    job.start()
+
+# Wait for all jobs to finish and release resources
+queue.waitLeft(0)
+queue.join()
+\end{python}
+
 \subsubsection{Creating triangle-based shapes}
 It is possible to create new triangle-based shapes directly in Python, though
 doing so is discouraged: because Python is an interpreted programming language,
@@ -435,11 +482,11 @@ sensor.addChild(mesh)
 
 
 \subsubsection{Calling Mitsuba functions from a multithread Python program}
-By default, Mitsuba assumes that threads accessing Mitsuba-internal
-data structures were created by (or at least registered with) Mitsuba. This is the
-case for the main thread and subclasses of \code{mitsuba.core.Thread}. When a
+Mitsuba assumes that threads accessing Mitsuba-internal
+data structures were created by (or at least registered with) Mitsuba. By default,
+the main thread and subclasses of \code{mitsuba.core.Thread} satisfy this criterion. But when a
 Mitsuba function is called from an event dispatch thread of a multithreaded
-Python application that is not known to Mitsuba, an exception or crash will result.
+Python application that is not known to Mitsuba, an exception or crash will usually result.
 
 To avoid this, get a reference to the main thread right after loading the Mitsuba plugin
 and save some related state (the attached \code{FileResolver} and \code{Logger} instances).
@@ -711,7 +758,8 @@ class MitsubaDemo(QMainWindow):
 
         # Initialize the user interface
         status = self.statusBar()
-        self.rwidget = RenderWidget(self, self.queue, self.scene.getFilm().getSize())
+        self.rwidget = RenderWidget(self, self.queue,
+            self.scene.getFilm().getSize())
         progress = QProgressBar(status)
         status.setContentsMargins(0,0,5,0)
         status.addPermanentWidget(progress)
@@ -809,33 +857,4 @@ Suppose that \code{bitmap} contains a \code{mitsuba.core.Bitmap} instance (e.g. 
 \begin{python}
 import numpy as np
 array = np.array(bitmap.getNativeBuffer())
-\end{python}
-
-\subsubsection{Simultaneously rendering multiple versions of a scene}
-\begin{python}
-for i in range(2):
-    destination = 'renderedResult' + str(i)
-
-    # Create a shallow copy of the scene so that the queue can tell apart the two
-    # rendering processes. This takes almost no extra memory
-    newScene = Scene(scene)
-
-    newSensor = PluginManager.getInstance().createObject(scene.getSensor().getProperties())
-    newFilm = PluginManager.getInstance().createObject(scene.getFilm().getProperties())
-    newFilm.configure()
-    newSensor.addChild(newFilm)
-    newSensor.configure()
-    newScene.addSensor(newSensor)
-    newScene.setSensor(newSensor)
-    newScene.setSampler(scene.getSampler())
-    newScene.setDestinationFile(destination)
-
-    # Create a render job and insert it into the queue
-    job = RenderJob('myRenderJob' + str(i), newScene, queue, sceneResID)
-    job.start()
-
-# Wait for all jobs to finish and release resources
-# It works when this is moved in the loop when only one job at a time is started
-queue.waitLeft(0)
-queue.join()
 \end{python}
