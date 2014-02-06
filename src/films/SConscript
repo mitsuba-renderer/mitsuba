@@ -10,7 +10,7 @@ if filmEnv.has_key('OEXRFLAGS'):
 if filmEnv.has_key('OEXRLIB'):
 	filmEnv.Prepend(LIBS=env['OEXRLIB'])
 
-plugins += filmEnv.SharedLibrary('mfilm', ['mfilm.cpp'])
+plugins += filmEnv.SharedLibrary('mfilm', ['mfilm.cpp', 'cnpy.cpp'])
 plugins += filmEnv.SharedLibrary('ldrfilm', ['ldrfilm.cpp'])
 plugins += filmEnv.SharedLibrary('hdrfilm', ['hdrfilm.cpp'])
 
