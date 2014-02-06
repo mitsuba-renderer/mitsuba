@@ -153,7 +153,7 @@ scheduler = Scheduler.getInstance()
 
 # Start up the scheduling system with one worker per local core
 for i in range(0, multiprocessing.cpu_count()):
-	scheduler.registerWorker(LocalWorker(i, 'wrk%i' % i))
+    scheduler.registerWorker(LocalWorker(i, 'wrk%i' % i))
 scheduler.start()
 
 # Create a queue for tracking render jobs
@@ -204,9 +204,9 @@ pmgr = PluginManager.getInstance()
 # Encodes parameters on how to instantiate the 'perspective' plugin
 sensorProps = Properties('perspective')
 sensorProps['toWorld'] = Transform.lookAt(
-	Point(0, 0, -10),  # Camera origin
-	Point(0, 0, 0),    # Camera target
-	Vector(0, 1, 0)    # 'up' vector
+    Point(0, 0, -10),  # Camera origin
+    Point(0, 0, 0),    # Camera target
+    Vector(0, 1, 0)    # 'up' vector
 )
 sensorProps['fov'] = 45.0
 
@@ -243,17 +243,17 @@ from mitsuba.core import *
 
 pmgr = PluginManager.getInstance()
 sensor = pmgr.create({
-	'type' : 'perspective',
-	'toWorld' : Transform.lookAt(
-		Point(0, 0, -10),
-		Point(0, 0, 0),
-		Vector(0, 1, 0)
-	),
-	'film' : {
-		'type' : 'ldrfilm',
-		'width' : 1920,
-		'height' : 1080
-	}
+    'type' : 'perspective',
+    'toWorld' : Transform.lookAt(
+        Point(0, 0, -10),
+        Point(0, 0, 0),
+        Vector(0, 1, 0)
+    ),
+    'film' : {
+        'type' : 'ldrfilm',
+        'width' : 1920,
+        'height' : 1080
+    }
 })
 \end{python}
 This code does exactly the same as the previous snippet.
@@ -273,44 +273,44 @@ scene = Scene()
 
 # Create a sensor, film & sample generator
 scene.addChild(pmgr.create({
-	'type' : 'perspective',
-	'toWorld' : Transform.lookAt(
-		Point(0, 0, -10),
-		Point(0, 0, 0),
-		Vector(0, 1, 0)
-	),
-	'film' : {
-		'type' : 'ldrfilm',
-		'width' : 1920,
-		'height' : 1080
-	},
-	'sampler' : {
-		'type' : 'ldsampler',
-		'sampleCount' : 2
-	}
+    'type' : 'perspective',
+    'toWorld' : Transform.lookAt(
+        Point(0, 0, -10),
+        Point(0, 0, 0),
+        Vector(0, 1, 0)
+    ),
+    'film' : {
+        'type' : 'ldrfilm',
+        'width' : 1920,
+        'height' : 1080
+    },
+    'sampler' : {
+        'type' : 'ldsampler',
+        'sampleCount' : 2
+    }
 }))
 
 # Set the integrator
 scene.addChild(pmgr.create({
-	'type' : 'direct'
+    'type' : 'direct'
 }))
 
 # Add a light source
 scene.addChild(pmgr.create({
-	'type' : 'point',
-	'position' : Point(5, 0, -10),
-	'intensity' : Spectrum(100)
+    'type' : 'point',
+    'position' : Point(5, 0, -10),
+    'intensity' : Spectrum(100)
 }))
 
 # Add a shape
 scene.addChild(pmgr.create({
-	'type' : 'sphere',
-	'center' : Point(0, 0, 0),
-	'radius' : 1.0,
-	'bsdf' : {
-		'type' : 'diffuse',
-		'reflectance' : Spectrum(0.4)
-	}
+    'type' : 'sphere',
+    'center' : Point(0, 0, 0),
+    'radius' : 1.0,
+    'bsdf' : {
+        'type' : 'diffuse',
+        'reflectance' : Spectrum(0.4)
+    }
 }))
 
 scene.configure()
@@ -334,17 +334,17 @@ import mitsuba
 from mitsuba.core import *
 
 class MyFormatter(Formatter):
-	def format(self, logLevel, sourceClass, sourceThread, message, filename, line):
-		return '%s (log level: %s, thread: %s, class %s, file %s, line %i)' % \
-				(message, str(logLevel), sourceThread.getName(), sourceClass,
-				 filename, line)
+    def format(self, logLevel, sourceClass, sourceThread, message, filename, line):
+        return '%s (log level: %s, thread: %s, class %s, file %s, line %i)' % \
+                (message, str(logLevel), sourceThread.getName(), sourceClass,
+                 filename, line)
 
 class MyAppender(Appender):
-	def append(self, logLevel, message):
-		print(message)
+    def append(self, logLevel, message):
+        print(message)
 
-	def logProgress(self, progress, name, formatted, eta):
-		print('Progress message: ' + formatted)
+    def logProgress(self, progress, name, formatted, eta):
+        print('Progress message: ' + formatted)
 
 # Get the logger associated with the current thread
 logger = Thread.getThread().getLogger()
@@ -809,4 +809,33 @@ Suppose that \code{bitmap} contains a \code{mitsuba.core.Bitmap} instance (e.g. 
 \begin{python}
 import numpy as np
 array = np.array(bitmap.getNativeBuffer())
+\end{python}
+
+\subsubsection{Simultaneously rendering multiple versions of a scene}
+\begin{python}
+for i in range(2):
+    destination = 'renderedResult' + str(i)
+
+    # Create a shallow copy of the scene so that the queue can tell apart the two
+    # rendering processes. This takes almost no extra memory
+    newScene = Scene(scene)
+
+    newSensor = PluginManager.getInstance().createObject(scene.getSensor().getProperties())
+    newFilm = PluginManager.getInstance().createObject(scene.getFilm().getProperties())
+    newFilm.configure()
+    newSensor.addChild(newFilm)
+    newSensor.configure()
+    newScene.addSensor(newSensor)
+    newScene.setSensor(newSensor)
+    newScene.setSampler(scene.getSampler())
+    newScene.setDestinationFile(destination)
+
+    # Create a render job and insert it into the queue
+    job = RenderJob('myRenderJob' + str(i), newScene, queue, sceneResID)
+    job.start()
+
+# Wait for all jobs to finish and release resources
+# It works when this is moved in the loop when only one job at a time is started
+queue.waitLeft(0)
+queue.join()
 \end{python}

@@ -61,19 +61,19 @@
 \pagestyle{scrheadings}
 
 \usepackage[
-	bookmarks,
-	bookmarksnumbered,
-	colorlinks,
-	plainpages=false,
-	pdfpagelabels,
-	hypertexnames=false,
-	linkcolor=myblue,
-	urlcolor=myblue,
-	citecolor=myblue,
-	pdfpagelabels,
-	pdftitle={Mitsuba \MitsubaVersion\, Documentation},
-	pdfauthor={Wenzel Jakob},
-	pdfstartview=FitH
+    bookmarks,
+    bookmarksnumbered,
+    colorlinks,
+    plainpages=false,
+    pdfpagelabels,
+    hypertexnames=false,
+    linkcolor=myblue,
+    urlcolor=myblue,
+    citecolor=myblue,
+    pdfpagelabels,
+    pdftitle={Mitsuba \MitsubaVersion\, Documentation},
+    pdfauthor={Wenzel Jakob},
+    pdfstartview=FitH
 ]{hyperref}
 
 \definecolor{myblue}{rgb}{0,.1,.6}
@@ -85,40 +85,47 @@
 \definecolor{remark}{rgb}{1.0, 0.9, 0.9}
 \definecolor{remarkframe}{rgb}{1.0, 0.7, 0.7}
 
+% requires the latest version of package accsupp
+\usepackage[space=true]{accsupp}
+\newcommand{\copyablespace}{\BeginAccSupp{method=hex,unicode,ActualText=00A0}\ \EndAccSupp{}}
+
 % Listings settings
 \lstset{
-	basicstyle = \small\ttfamily\raggedright,
-	commentstyle=\color{lstcomment}\itshape,
-	stringstyle=\color{lstattrib},
-	mathescape = true,
-	frame = lrtb,
-	backgroundcolor = \color{lstshade},
-	rulecolor = \color{lstframe},
-	tabsize = 4,
-	columns = flexible,
-	keepspaces,
-	belowskip = \smallskipamount,
-	framerule = .7pt,
-	breaklines = true,
-	showstringspaces = false,
-	keywordstyle = \bfseries,
-	captionpos = b,
-	upquote = true
+    basicstyle = \small\ttfamily\raggedright,
+    commentstyle=\color{lstcomment}\itshape,
+    stringstyle=\color{lstattrib},
+    mathescape = true,
+    frame = lrtb,
+    backgroundcolor = \color{lstshade},
+    rulecolor = \color{lstframe},
+    tabsize = 4,
+    columns = fullflexible,
+    keepspaces,
+    belowskip = \smallskipamount,
+    framerule = .7pt,
+    breaklines = true,
+    showstringspaces = false,
+    keywordstyle = \bfseries,
+    captionpos = b,
+    upquote = true,
+    literate={*}{{\char42}}1
+             {-}{{\char45}}1
+             {\ }{{\copyablespace}}1
 }
 
 \lstdefinelanguage{xml} {
-	sensitive=true,
-	morecomment=[s][\color{lstcomment}\itshape]{<!--}{-->},
-	morecomment=[s][\color{lstcomment}]{<?}{?>},
-	string=[b]", stringstyle=\color{lstattrib},
-	keywords= [1] {
-		shape,bsdf,scene,texture,phase,integer,float,
-		string,transform,ref,rgb,srgb,spectrum,blackbody,
-		medium,film,sampler,integrator,emitter,sensor,
-		translate,rotate,scale,lookat,point,vector,matrix,
-		include,fscat,volume,alias,rfilter,boolean,
-		subsurface,animation
-	},
+    sensitive=true,
+    morecomment=[s][\color{lstcomment}\itshape]{<!--}{-->},
+    morecomment=[s][\color{lstcomment}]{<?}{?>},
+    string=[b]", stringstyle=\color{lstattrib},
+    keywords= [1] {
+        shape,bsdf,scene,texture,phase,integer,float,
+        string,transform,ref,rgb,srgb,spectrum,blackbody,
+        medium,film,sampler,integrator,emitter,sensor,
+        translate,rotate,scale,lookat,point,vector,matrix,
+        include,fscat,volume,alias,rfilter,boolean,
+        subsurface,animation
+    },
 }
 
 
@@ -133,25 +140,25 @@
 \setlength{\intextsep}{3pt}
 
 \lstnewenvironment{shell}[1][]{\lstset{#1}}
-	{}
+    {}
 \lstnewenvironment{cpp}[1][]{\lstset{language=c++, #1}}
-	{}
+    {}
 \lstnewenvironment{python}[1][]{\lstset{language=Python, #1}}
-	{}
+    {}
 \lstnewenvironment{xml}[1][]{\lstset{language=xml, #1}}
-	{}
+    {}
 \lstnewenvironment{console}[1][]{\lstset{basicstyle=\footnotesize\ttfamily, float, #1}}
-	{}
+    {}
 
 % ----- 8< ----- 8< ------
 
 \title{
-	\vspace{3cm}
-	\includegraphics[width=4cm]{images/logo_plain.pdf}\\\vspace{1.5cm}
-	\Huge
-	Mitsuba Documentation\\\vspace{4mm}
-	\LARGE Version \MitsubaVersion
-	\vspace{5mm}
+    \vspace{3cm}
+    \includegraphics[width=4cm]{images/logo_plain.pdf}\\\vspace{1.5cm}
+    \Huge
+    Mitsuba Documentation\\\vspace{4mm}
+    \LARGE Version \MitsubaVersion
+    \vspace{5mm}
 }
 \author{Wenzel Jakob}
 \date{\today}

@@ -322,10 +322,10 @@ configuration file from the \texttt{build} directory.
 \subsection{Building on Mac OS X}
 \vspace{-5mm}
 \remarks{
-	\item Unfortunately, OpenMP is not available when compiling
-	using the regular \code{clang} toolchain (it is available when using Intel XE Composer). This will cause the following parts of Mitsuba
-	to run single-threaded: bitmap resampling (i.e. MIP map generation), blue noise point generation in the \pluginref{dipole}
-	plugin, as well as the \pluginref{ppm} and \pluginref{sppm} plugins.
+    \item Unfortunately, OpenMP is not available when compiling
+    using the regular \code{clang} toolchain (it is available when using Intel XE Composer). This will cause the following parts of Mitsuba
+    to run single-threaded: bitmap resampling (i.e. MIP map generation), blue noise point generation in the \pluginref{dipole}
+    plugin, as well as the \pluginref{ppm} and \pluginref{sppm} plugins.
 }
 Compiling Mitsuba's dependencies on Mac OS is a laborious process; for convenience, there
 is a repository that provides them in precompiled form. To use this repository, clone it

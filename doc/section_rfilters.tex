@@ -72,23 +72,23 @@ Here, a high frequency function is reconstructed at low resolutions. A good filt
 resolution and attenuate the remainder to a uniform gray. The filters are ordered by their
 approximate level of success at this benchmark.
 \renderings{
-	\subfloat[A high resolution input image whose frequency decreases
-	towards the borders. If you are looking at this on a computer, you may
-	have to zoom in.]{\fbox{\includegraphics[width=0.43\textwidth]{images/rfilter_sines_input}}}
-	\hfill
+    \subfloat[A high resolution input image whose frequency decreases
+    towards the borders. If you are looking at this on a computer, you may
+    have to zoom in.]{\fbox{\includegraphics[width=0.43\textwidth]{images/rfilter_sines_input}}}
+    \hfill
 }
 \vspace{-4mm}
 \renderings{
-	\medrendering{Box filter}{rfilter_sines_box}
-	\medrendering{Tent filter}{rfilter_sines_tent}
-	\medrendering{Gaussian filter}{rfilter_sines_gaussian}
+    \medrendering{Box filter}{rfilter_sines_box}
+    \medrendering{Tent filter}{rfilter_sines_tent}
+    \medrendering{Gaussian filter}{rfilter_sines_gaussian}
 }
 \vspace{-4mm}
 \renderings{
-	\setcounter{subfigure}{3}
-	\medrendering{Mitchell-Netravali filter}{rfilter_sines_mitchell}
-	\medrendering{Catmull-Rom filter}{rfilter_sines_catmullrom}
-	\medrendering{Lanczos Sinc filter}{rfilter_sines_lanczos}
+    \setcounter{subfigure}{3}
+    \medrendering{Mitchell-Netravali filter}{rfilter_sines_mitchell}
+    \medrendering{Catmull-Rom filter}{rfilter_sines_catmullrom}
+    \medrendering{Lanczos Sinc filter}{rfilter_sines_lanczos}
 }
 \newpage
 \subsubsection{Reconstruction filter comparison 2: ringing}
@@ -97,39 +97,39 @@ image contains extreme and discontinuous brightness transitions. The
 Mitchell-Netravali, Catmull-Rom, and Lanczos Sinc filters are affected by this problem.
 Note the black fringing around the light source in the cropped Cornell box renderings below.
 \renderings{
-	\rendering{Box filter}{rfilter_cbox_box}
-	\rendering{Tent filter}{rfilter_cbox_tent}
+    \rendering{Box filter}{rfilter_cbox_box}
+    \rendering{Tent filter}{rfilter_cbox_tent}
 }
 \vspace{-4mm}
 \renderings{
-	\setcounter{subfigure}{2}
-	\rendering{Gaussian filter}{rfilter_cbox_gaussian}
-	\rendering{Mitchell-Netravali filter}{rfilter_cbox_mitchell}
+    \setcounter{subfigure}{2}
+    \rendering{Gaussian filter}{rfilter_cbox_gaussian}
+    \rendering{Mitchell-Netravali filter}{rfilter_cbox_mitchell}
 }
 \vspace{-4mm}
 \renderings{
-	\setcounter{subfigure}{4}
-	\rendering{Catmull-Rom filter}{rfilter_cbox_catmullrom}
-	\rendering{Lanczos Sinc filter}{rfilter_cbox_lanczos}
+    \setcounter{subfigure}{4}
+    \rendering{Catmull-Rom filter}{rfilter_cbox_catmullrom}
+    \rendering{Lanczos Sinc filter}{rfilter_cbox_lanczos}
 }
 \subsubsection{Specifying a reconstruction filter}
 To specify a reconstruction filter, it must be instantiated inside
 the sensor's film. Below is an example:
 \begin{xml}
 <scene version=$\MtsVer$>
-	<!-- ... scene contents ... -->
+    <!-- ... scene contents ... -->
 
-	<sensor type="... sensor type ...">
-		<!-- ... sensor parameters ... -->
+    <sensor type="... sensor type ...">
+        <!-- ... sensor parameters ... -->
 
-		<film type="... film type ...">
-			<!-- ... film parameters ... -->
+        <film type="... film type ...">
+            <!-- ... film parameters ... -->
 
-			<!-- Instantiate a Lanczos Sinc filter with two lobes -->
-			<rfilter type="lanczos">
-				<integer name="lobes" value="2"/>
-			</rfilter>
-		</film>
-	</sensor>
+            <!-- Instantiate a Lanczos Sinc filter with two lobes -->
+            <rfilter type="lanczos">
+                <integer name="lobes" value="2"/>
+            </rfilter>
+        </film>
+    </sensor>
 </scene>
 \end{xml}

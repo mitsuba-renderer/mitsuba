@@ -36,12 +36,12 @@ MTS_NAMESPACE_BEGIN
 
 class ROT13Encoder : public Utility {
 public:
-	int run(int argc, char **argv) {
-		cout << "Hello world!" << endl;
-		return 0;
-	}
+    int run(int argc, char **argv) {
+        cout << "Hello world!" << endl;
+        return 0;
+    }
 
-	MTS_DECLARE_UTILITY()
+    MTS_DECLARE_UTILITY()
 };
 
 MTS_EXPORT_UTILITY(ROT13Encoder, "Perform a ROT13 encryption of a string")
@@ -58,8 +58,8 @@ $\texttt{\$}$ mtsutil
 ..
 The following utilities are available:
 
-	addimages             Generate linear combinations of EXR images
-	rot13                 Perform a ROT13 encryption of a string
+    addimages             Generate linear combinations of EXR images
+    rot13                 Perform a ROT13 encryption of a string
 \end{shell}
 It can be executed as follows:
 \begin{shell}
@@ -82,22 +82,22 @@ For reference, here are the interfaces of \code{WorkUnit} and \code{WorkResult}:
  */
 class MTS_EXPORT_CORE WorkUnit : public Object {
 public:
-	/// Copy the content of another work unit of the same type
-	virtual void set(const WorkUnit *workUnit) = 0;
+    /// Copy the content of another work unit of the same type
+    virtual void set(const WorkUnit *workUnit) = 0;
 
-	/// Fill the work unit with content acquired from a binary data stream
-	virtual void load(Stream *stream) = 0;
+    /// Fill the work unit with content acquired from a binary data stream
+    virtual void load(Stream *stream) = 0;
 
-	/// Serialize a work unit to a binary data stream
-	virtual void save(Stream *stream) const = 0;
+    /// Serialize a work unit to a binary data stream
+    virtual void save(Stream *stream) const = 0;
 
-	/// Return a string representation
-	virtual std::string toString() const = 0;
+    /// Return a string representation
+    virtual std::string toString() const = 0;
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	/// Virtual destructor
-	virtual ~WorkUnit() { }
+    /// Virtual destructor
+    virtual ~WorkUnit() { }
 };
 /**
  * Abstract work result. Represents the information that encodes
@@ -105,60 +105,60 @@ protected:
  */
 class MTS_EXPORT_CORE WorkResult : public Object {
 public:
-	/// Fill the work result with content acquired from a binary data stream
-	virtual void load(Stream *stream) = 0;
+    /// Fill the work result with content acquired from a binary data stream
+    virtual void load(Stream *stream) = 0;
 
-	/// Serialize a work result to a binary data stream
-	virtual void save(Stream *stream) const = 0;
+    /// Serialize a work result to a binary data stream
+    virtual void save(Stream *stream) const = 0;
 
-	/// Return a string representation
-	virtual std::string toString() const = 0;
+    /// Return a string representation
+    virtual std::string toString() const = 0;
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	/// Virtual destructor
-	virtual ~WorkResult() { }
+    /// Virtual destructor
+    virtual ~WorkResult() { }
 };
 \end{cpp}
 In our case, the \code{WorkUnit} implementation then looks like this:
 \begin{cpp}
 class ROT13WorkUnit : public WorkUnit {
 public:
-	void set(const WorkUnit *workUnit) {
-		const ROT13WorkUnit *wu =
-			static_cast<const ROT13WorkUnit *>(workUnit);
-		m_char = wu->m_char;
-		m_pos = wu->m_pos;
-	}
+    void set(const WorkUnit *workUnit) {
+        const ROT13WorkUnit *wu =
+            static_cast<const ROT13WorkUnit *>(workUnit);
+        m_char = wu->m_char;
+        m_pos = wu->m_pos;
+    }
 
-	void load(Stream *stream) {
-		m_char = stream->readChar();
-		m_pos = stream->readInt();
-	}
+    void load(Stream *stream) {
+        m_char = stream->readChar();
+        m_pos = stream->readInt();
+    }
 
-	void save(Stream *stream) const {
-		stream->writeChar(m_char);
-		stream->writeInt(m_pos);
-	}
+    void save(Stream *stream) const {
+        stream->writeChar(m_char);
+        stream->writeInt(m_pos);
+    }
 
-	std::string toString() const {
-		std::ostringstream oss;
-		oss << "ROT13WorkUnit[" << endl
-			<< "  char = '" << m_char << "'," << endl
-			<< "  pos = " << m_pos << endl
-			<< "]";
-		return oss.str();
-	}
+    std::string toString() const {
+        std::ostringstream oss;
+        oss << "ROT13WorkUnit[" << endl
+            << "  char = '" << m_char << "'," << endl
+            << "  pos = " << m_pos << endl
+            << "]";
+        return oss.str();
+    }
 
-	inline char getChar() const { return m_char; }
-	inline void setChar(char value) { m_char = value; }
-	inline int getPos() const { return m_pos; }
-	inline void setPos(int value) { m_pos = value; }
+    inline char getChar() const { return m_char; }
+    inline void setChar(char value) { m_char = value; }
+    inline int getPos() const { return m_pos; }
+    inline void setPos(int value) { m_pos = value; }
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 private:
-	char m_char;
-	int m_pos;
+    char m_char;
+    int m_pos;
 };
 
 MTS_IMPLEMENT_CLASS(ROT13WorkUnit, false, WorkUnit)
@@ -175,42 +175,42 @@ remote worker nodes and replicated amongst local threads.
 \begin{cpp}
 class ROT13WorkProcessor : public WorkProcessor {
 public:
-	/// Construct a new work processor
-	ROT13WorkProcessor() : WorkProcessor() { }
+    /// Construct a new work processor
+    ROT13WorkProcessor() : WorkProcessor() { }
 
-	/// Unserialize from a binary data stream (nothing to do in our case)
-	ROT13WorkProcessor(Stream *stream, InstanceManager *manager)
-		: WorkProcessor(stream, manager) { }
+    /// Unserialize from a binary data stream (nothing to do in our case)
+    ROT13WorkProcessor(Stream *stream, InstanceManager *manager)
+        : WorkProcessor(stream, manager) { }
 
-	/// Serialize to a binary data stream (nothing to do in our case)
-	void serialize(Stream *stream, InstanceManager *manager) const {
-	}
+    /// Serialize to a binary data stream (nothing to do in our case)
+    void serialize(Stream *stream, InstanceManager *manager) const {
+    }
 
-	ref<WorkUnit> createWorkUnit() const {
-		return new ROT13WorkUnit();
-	}
+    ref<WorkUnit> createWorkUnit() const {
+        return new ROT13WorkUnit();
+    }
 
-	ref<WorkResult> createWorkResult() const {
-		return new ROT13WorkResult();
-	}
+    ref<WorkResult> createWorkResult() const {
+        return new ROT13WorkResult();
+    }
 
-	ref<WorkProcessor> clone() const {
-		return new ROT13WorkProcessor(); // No state to clone in our case
-	}
+    ref<WorkProcessor> clone() const {
+        return new ROT13WorkProcessor(); // No state to clone in our case
+    }
 
-	/// No internal state, thus no preparation is necessary
-	void prepare() { }
+    /// No internal state, thus no preparation is necessary
+    void prepare() { }
 
-	/// Do the actual computation
-	void process(const WorkUnit *workUnit, WorkResult *workResult,
-				 const bool &stop) {
-		const ROT13WorkUnit *wu
-			= static_cast<const ROT13WorkUnit *>(workUnit);
-		ROT13WorkResult *wr = static_cast<ROT13WorkResult *>(workResult);
-		wr->setPos(wu->getPos());
-		wr->setChar((std::toupper(wu->getChar()) - 'A' + 13) % 26 + 'A');
-	}
-	MTS_DECLARE_CLASS()
+    /// Do the actual computation
+    void process(const WorkUnit *workUnit, WorkResult *workResult,
+                 const bool &stop) {
+        const ROT13WorkUnit *wu
+            = static_cast<const ROT13WorkUnit *>(workUnit);
+        ROT13WorkResult *wr = static_cast<ROT13WorkResult *>(workResult);
+        wr->setPos(wu->getPos());
+        wr->setChar((std::toupper(wu->getChar()) - 'A' + 13) % 26 + 'A');
+    }
+    MTS_DECLARE_CLASS()
 };
 MTS_IMPLEMENT_CLASS_S(ROT13WorkProcessor, false, WorkProcessor)
 \end{cpp}
@@ -226,48 +226,48 @@ implementation might look as follows:
 \begin{cpp}
 class ROT13Process : public ParallelProcess {
 public:
-	ROT13Process(const std::string &input) : m_input(input), m_pos(0) {
-		m_output.resize(m_input.length());
-	}
+    ROT13Process(const std::string &input) : m_input(input), m_pos(0) {
+        m_output.resize(m_input.length());
+    }
 
-	ref<WorkProcessor> createWorkProcessor() const {
-		return new ROT13WorkProcessor();
-	}
+    ref<WorkProcessor> createWorkProcessor() const {
+        return new ROT13WorkProcessor();
+    }
 
-	std::vector<std::string> getRequiredPlugins() {
-		std::vector<std::string> result;
-		result.push_back("rot13");
-		return result;
-	}
+    std::vector<std::string> getRequiredPlugins() {
+        std::vector<std::string> result;
+        result.push_back("rot13");
+        return result;
+    }
 
-	EStatus generateWork(WorkUnit *unit, int worker /* unused */) {
-		if (m_pos >= (int) m_input.length())
-			return EFailure;
-		ROT13WorkUnit *wu = static_cast<ROT13WorkUnit *>(unit);
+    EStatus generateWork(WorkUnit *unit, int worker /* unused */) {
+        if (m_pos >= (int) m_input.length())
+            return EFailure;
+        ROT13WorkUnit *wu = static_cast<ROT13WorkUnit *>(unit);
 
-		wu->setPos(m_pos);
-		wu->setChar(m_input[m_pos++]);
+        wu->setPos(m_pos);
+        wu->setChar(m_input[m_pos++]);
 
-		return ESuccess;
-	}
+        return ESuccess;
+    }
 
-	void processResult(const WorkResult *result, bool cancelled) {
-		if (cancelled) // indicates a work unit, which was
-			return;    // cancelled partly through its execution
-		const ROT13WorkResult *wr =
-			static_cast<const ROT13WorkResult *>(result);
-		m_output[wr->getPos()] = wr->getChar();
-	}
+    void processResult(const WorkResult *result, bool cancelled) {
+        if (cancelled) // indicates a work unit, which was
+            return;    // cancelled partly through its execution
+        const ROT13WorkResult *wr =
+            static_cast<const ROT13WorkResult *>(result);
+        m_output[wr->getPos()] = wr->getChar();
+    }
 
-	inline const std::string &getOutput() {
-		return m_output;
-	}
+    inline const std::string &getOutput() {
+        return m_output;
+    }
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 public:
-	std::string m_input;
-	std::string m_output;
-	int m_pos;
+    std::string m_input;
+    std::string m_output;
+    int m_pos;
 };
 MTS_IMPLEMENT_CLASS(ROT13Process, false, ParallelProcess)
 \end{cpp}
@@ -281,25 +281,25 @@ loads the \code{ROT13*} classes at the right moment.
 To actually use the \code{ROT13} encoder, we must first launch the newly created parallel process
 from the main utility function (the `Hello World' code we wrote earlier). We can adapt it as follows:
 \begin{cpp}
-	int run(int argc, char **argv) {
-		if (argc < 2) {
-			cout << "Syntax: mtsutil rot13 <text>" << endl;
-			return -1;
-		}
+    int run(int argc, char **argv) {
+        if (argc < 2) {
+            cout << "Syntax: mtsutil rot13 <text>" << endl;
+            return -1;
+        }
 
-		ref<ROT13Process> proc = new ROT13Process(argv[1]);
-		ref<Scheduler> sched = Scheduler::getInstance();
+        ref<ROT13Process> proc = new ROT13Process(argv[1]);
+        ref<Scheduler> sched = Scheduler::getInstance();
 
-		/* Submit the encryption job to the scheduler */
-		sched->schedule(proc);
+        /* Submit the encryption job to the scheduler */
+        sched->schedule(proc);
 
-		/* Wait for its completion */
-		sched->wait(proc);
+        /* Wait for its completion */
+        sched->wait(proc);
 
-		cout << "Result: " << proc->getOutput() << endl;
+        cout << "Result: " << proc->getOutput() << endl;
 
-		return 0;
-	}
+        return 0;
+    }
 \end{cpp}
 After compiling everything using \code{scons}, a simple example
 involving the utility would be to encode a string (e.g. \code{SECUREBYDESIGN}), while

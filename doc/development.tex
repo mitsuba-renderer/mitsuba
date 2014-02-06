@@ -10,15 +10,15 @@ to become part of the main codebase.
 Mitsuba is split into four basic support libraries:
 \begin{itemize}
 \item The core library (\code{libcore}) implements basic functionality such as
-	cross-platform file and bitmap I/O, data structures, scheduling, as well as logging and plugin management.
+    cross-platform file and bitmap I/O, data structures, scheduling, as well as logging and plugin management.
 \item The rendering library (\code{librender}) contains abstractions
-	needed to load and represent scenes containing  light sources, shapes, materials, and participating media.
+    needed to load and represent scenes containing  light sources, shapes, materials, and participating media.
 \item The hardware acceleration library (\code{libhw})
-	implements a cross-platform display library, an object-oriented OpenGL
-	wrapper, as well as support for rendering interactive previews of scenes.
+    implements a cross-platform display library, an object-oriented OpenGL
+    wrapper, as well as support for rendering interactive previews of scenes.
 \item Finally, the bidirectional library (\code{libbidir})
-	contains a support layer that is used to implement bidirectional rendering algorithms such as
-	Bidirectional Path Tracing and Metropolis Light Transport.
+    contains a support layer that is used to implement bidirectional rendering algorithms such as
+    Bidirectional Path Tracing and Metropolis Light Transport.
 \end{itemize}
 A detailed reference of these APIs is available at
 \url{http://www.mitsuba-renderer.org/api}. The next sections
@@ -33,18 +33,18 @@ this way, otherwise the source code layout will look garbled.
 same line to make the best use of vertical space, i.e.
 \begin{cpp}
 if (x > y) {
-	x = y;
+    x = y;
 }
 \end{cpp}
 
 \paragraph{Placement of spaces:} Placement of spaces follows K\&R, e.g.
 \begin{cpp}
 if (x == y) {
-	..
+    ..
 } else if (x > y) {
-	..
+    ..
 } else {
-	..
+    ..
 }
 \end{cpp}
 rather than things like this
@@ -61,12 +61,12 @@ have the prefix \code{m\_}. Here is an example:
 \begin{cpp}
 class MyClass {
 public:
-	MyClass(int value) : m_value(value) { }
+    MyClass(int value) : m_value(value) { }
 
-	inline void setValue(int value) { m_value = value; }
-	inline int getValue() const { return m_value; }
+    inline void setValue(int value) { m_value = value; }
+    inline int getValue() const { return m_value; }
 private:
-	int m_value;
+    int m_value;
 };
 \end{cpp}
 
@@ -74,9 +74,9 @@ private:
 start with a capital \textbf{E}, e.g.
 \begin{cpp}
 enum ETristate {
-	ENo = 0,
-	EYes,
-	EMaybe
+    ENo = 0,
+    EYes,
+    EMaybe
 };
 \end{cpp}
 \paragraph{Constant methods and parameters:} Declare member functions and
@@ -102,8 +102,8 @@ counting. This is done using the \code{ref<>} template, e.g.
 
 \begin{cpp}
 if (..) {
-	ref<MyClass> instance = new MyClass();
-	instance->doSomething()
+    ref<MyClass> instance = new MyClass();
+    instance->doSomething()
 }   // reference expires, instance will be deallocated
 \end{cpp}
 

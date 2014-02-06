@@ -13,19 +13,19 @@ This BSDF characterizes what happens \emph{at the surface}. In the XML scene des
 the following:
 \begin{xml}
 <scene version=$\MtsVer$>
-	<shape type="... shape type ...">
-	    ... $\code{shape}$ parameters ...
+    <shape type="... shape type ...">
+        ... $\code{shape}$ parameters ...
 
-	    <bsdf type="... bsdf type ...">
-		    ... $\code{bsdf}$ parameters ..
-		</bsdf>
+        <bsdf type="... bsdf type ...">
+            ... $\code{bsdf}$ parameters ..
+        </bsdf>
 
-		<!-- Alternatively: reference a named BSDF that
-		     has been declared previously
+        <!-- Alternatively: reference a named BSDF that
+             has been declared previously
 
              <ref id="myBSDF"/>
-		-->
-	</shape>
+        -->
+    </shape>
 </scene>
 \end{xml}
 
@@ -35,24 +35,24 @@ of the shape. This informs the renderer about what happens in the region of spac
 
 \begin{xml}
 <scene version=$\MtsVer$>
-	<shape type="... shape type ...">
-	    ... $\code{shape}$ parameters ...
+    <shape type="... shape type ...">
+        ... $\code{shape}$ parameters ...
 
-		<medium name="interior" type="... medium type ...">
-		    ... $\code{medium}$ parameters ...
-		</medium>
+        <medium name="interior" type="... medium type ...">
+            ... $\code{medium}$ parameters ...
+        </medium>
 
-		<medium name="exterior" type="... medium type ...">
-		    ... $\code{medium}$ parameters ...
-		</medium>
+        <medium name="exterior" type="... medium type ...">
+            ... $\code{medium}$ parameters ...
+        </medium>
 
-		<!-- Alternatively: reference named media that
-		     have been declared previously
+        <!-- Alternatively: reference named media that
+             have been declared previously
 
              <ref name="interior" id="myMedium1"/>
              <ref name="exterior" id="myMedium2"/>
-		-->
-	</shape>
+        -->
+    </shape>
 </scene>
 \end{xml}
 
@@ -66,29 +66,29 @@ It is also possible to create \emph{index-mismatched} boundaries between media, 
 the light is affected by the boundary transition:
 \begin{xml}
 <scene version=$\MtsVer$>
-	<shape type="... shape type ...">
-	    ... $\code{shape}$ parameters ...
+    <shape type="... shape type ...">
+        ... $\code{shape}$ parameters ...
 
-	    <bsdf type="... bsdf type ...">
-		    ... $\code{bsdf}$ parameters ..
-		</bsdf>
+        <bsdf type="... bsdf type ...">
+            ... $\code{bsdf}$ parameters ..
+        </bsdf>
 
-		<medium name="interior" type="... medium type ...">
-		    ... $\code{medium}$ parameters ...
-		</medium>
+        <medium name="interior" type="... medium type ...">
+            ... $\code{medium}$ parameters ...
+        </medium>
 
-		<medium name="exterior" type="... medium type ...">
-		    ... $\code{medium}$ parameters ...
-		</medium>
+        <medium name="exterior" type="... medium type ...">
+            ... $\code{medium}$ parameters ...
+        </medium>
 
-		<!-- Alternatively: reference named media and BSDF
-		     instances that have been declared previously
+        <!-- Alternatively: reference named media and BSDF
+             instances that have been declared previously
 
              <ref id="myBSDF"/>
              <ref name="interior" id="myMedium1"/>
              <ref name="exterior" id="myMedium2"/>
-		-->
-	</shape>
+        -->
+    </shape>
 </scene>
 \end{xml}
 This constitutes the standard ways in which a shape can be declared.

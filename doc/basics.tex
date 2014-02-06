@@ -101,40 +101,40 @@ $\texttt{\$}$ mitsuba -c machine:1234 path-to/my-scene.xml
 When no port is explicitly specified, Mitsuba uses default value of 7554.
 \item \textbf{SSH}:
     This approach works as follows: The renderer creates a SSH connection
-	to the remote side, where it launches a Mitsuba worker instance.
-	All subsequent communication then passes through the encrypted link.
-	This is completely secure but slower due to the encryption overhead.
-	If you are rendering a complex scene, there is a good chance that it
-	won't matter much since most time is spent doing computations rather than
-	communicating
+    to the remote side, where it launches a Mitsuba worker instance.
+    All subsequent communication then passes through the encrypted link.
+    This is completely secure but slower due to the encryption overhead.
+    If you are rendering a complex scene, there is a good chance that it
+    won't matter much since most time is spent doing computations rather than
+    communicating
 
-	Such an SSH link can be created simply by using a slightly different syntax:
+    Such an SSH link can be created simply by using a slightly different syntax:
 \begin{shell}
 $\texttt{\$}$ mitsuba -c username@machine path-to/my-scene.xml
 \end{shell}
-	The above line assumes that the remote home directory contains
-	a Mitsuba source directory named \code{mitsuba},
-	which contains the compiled Mitsuba binaries.
-	If that is not the case, you need to provide the path to such a directory manually, e.g:
+    The above line assumes that the remote home directory contains
+    a Mitsuba source directory named \code{mitsuba},
+    which contains the compiled Mitsuba binaries.
+    If that is not the case, you need to provide the path to such a directory manually, e.g:
 \begin{shell}
 $\texttt{\$}$ mitsuba -c username@machine:/opt/mitsuba path-to/my-scene.xml
 \end{shell}
-	For the SSH connection approach to work, you \emph{must} enable passwordless
-	authentication.
-	Try opening a terminal window and running the command \code{ssh username@machine}
-	(replace with the details of your remote connection).
-	If you are asked for a password, something is not set up correctly --- please see
-	\url{http://www.debian-administration.org/articles/152} for instructions.
+    For the SSH connection approach to work, you \emph{must} enable passwordless
+    authentication.
+    Try opening a terminal window and running the command \code{ssh username@machine}
+    (replace with the details of your remote connection).
+    If you are asked for a password, something is not set up correctly --- please see
+    \url{http://www.debian-administration.org/articles/152} for instructions.
 
-	On Windows, the situation is a bit more difficult since there is no suitable SSH client by
-	default. To get SSH connections to work, Mitsuba requires \code{plink.exe} (from PuTTY) to
-	be on the path. For passwordless authentication with a Linux/OSX-based
-	server, convert your private key to PuTTY's format using \code{puttygen.exe}.
-	Afterwards, start \code{pageant.exe} to load and  authenticate the key. All
-	of these binaries are available from the PuTTY website.
+    On Windows, the situation is a bit more difficult since there is no suitable SSH client by
+    default. To get SSH connections to work, Mitsuba requires \code{plink.exe} (from PuTTY) to
+    be on the path. For passwordless authentication with a Linux/OSX-based
+    server, convert your private key to PuTTY's format using \code{puttygen.exe}.
+    Afterwards, start \code{pageant.exe} to load and  authenticate the key. All
+    of these binaries are available from the PuTTY website.
 
-	It is possible to mix the two approaches to access some machines directly and others
-	over SSH.
+    It is possible to mix the two approaches to access some machines directly and others
+    over SSH.
 \end{itemize}
 When doing many network-based renders over the command line, it can become tedious to
 specify the connections every time. They can alternatively be loaded from a text file
@@ -155,7 +155,7 @@ For instance, you can render a scene several times with different reflectance va
 on a certain material by changing its description to something like
 \begin{xml}
 <bsdf type="diffuse">
-	<spectrum name="reflectance" value="$\texttt{\$}$reflectance"/>
+    <spectrum name="reflectance" value="$\texttt{\$}$reflectance"/>
 </bsdf>
 \end{xml}
 and running Mitsuba as follows:

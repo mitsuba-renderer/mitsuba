@@ -15,16 +15,16 @@ is usually instantiated by declaring it at the top level within the
 scene, e.g.
 \begin{xml}
 <scene version=$\MtsVer$>
-	<!-- Instantiate a unidirectional path tracer,
-	     which renders paths up to a depth of 5 -->
-	<integrator type="path">
-		<integer name="maxDepth" value="5"/>
-	</integrator>
+    <!-- Instantiate a unidirectional path tracer,
+         which renders paths up to a depth of 5 -->
+    <integrator type="path">
+        <integer name="maxDepth" value="5"/>
+    </integrator>
 
-	<!-- Some geometry to be rendered -->
-	<shape type="sphere">
-		<bsdf type="diffuse"/>
-	</shape>
+    <!-- Some geometry to be rendered -->
+    <shape type="sphere">
+        <bsdf type="diffuse"/>
+    </shape>
 </scene>
 \end{xml}
 
@@ -68,13 +68,13 @@ method (\pluginref{mlt}, \pluginref{erpt}).
 \smallrendering{Max. depth = 3}{pathdepth-3}
 \smallrendering{Max. depth = $\infty$}{pathdepth-all}
 \caption{
-	\label{fig:pathdepths}
-	These Cornell box renderings demonstrate the visual
-	effect of a maximum path depth. As the paths
-	are allowed to grow longer, the color saturation
-	increases due to multiple scattering interactions
-	with the colored surfaces. At the same time, the
-	computation time increases.
+    \label{fig:pathdepths}
+    These Cornell box renderings demonstrate the visual
+    effect of a maximum path depth. As the paths
+    are allowed to grow longer, the color saturation
+    increases due to multiple scattering interactions
+    with the colored surfaces. At the same time, the
+    computation time increases.
 }
 \end{figure}
 
@@ -94,10 +94,10 @@ depth unlimited.
 \includegraphics[width=10cm]{images/path_explanation.pdf}
 \vspace{-5mm}
 \caption{
-	\label{fig:path-explanation}
-	A ray of emitted light is scattered by an object and subsequently
-	reaches the eye/sensor.
-	In Mitsuba, this is a \emph{depth-2} path, since it has two edges.
+    \label{fig:path-explanation}
+    A ray of emitted light is scattered by an object and subsequently
+    reaches the eye/sensor.
+    In Mitsuba, this is a \emph{depth-2} path, since it has two edges.
 }
 \end{figure}
 Mitsuba counts depths starting at $1$, which correspond to

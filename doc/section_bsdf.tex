@@ -4,10 +4,10 @@
 \centering
 \includegraphics[width=15.5cm]{images/bsdf_overview.pdf}
 \caption{
-	Schematic overview of the most important surface scattering models in
-	Mitsuba (shown in the style of Weidlich and Wilkie \cite{Weidlich2007Arbitrarily}). The arrows indicate possible outcomes of an
-	interaction with a surface that has the respective model applied to it.
-	\vspace{4mm}
+    Schematic overview of the most important surface scattering models in
+    Mitsuba (shown in the style of Weidlich and Wilkie \cite{Weidlich2007Arbitrarily}). The arrows indicate possible outcomes of an
+    interaction with a surface that has the respective model applied to it.
+    \vspace{4mm}
 }
 \end{figure}
 
@@ -44,22 +44,22 @@ be named and then later referenced by their name.
 The following fragment shows an example of both kinds of usages:
 \begin{xml}
 <scene version=$\MtsVer$>
-	<!-- Creating a named BSDF for later use -->
-	<bsdf type=".. BSDF type .." id="myNamedMaterial">
-		<!-- BSDF parameters go here -->
-	</bsdf>
+    <!-- Creating a named BSDF for later use -->
+    <bsdf type=".. BSDF type .." id="myNamedMaterial">
+        <!-- BSDF parameters go here -->
+    </bsdf>
 
-	<shape type="sphere">
-		<!-- Example of referencing a named material -->
-		<ref id="myNamedMaterial"/>
-	</shape>
+    <shape type="sphere">
+        <!-- Example of referencing a named material -->
+        <ref id="myNamedMaterial"/>
+    </shape>
 
-	<shape type="sphere">
-		<!-- Example of instantiating an unnamed material -->
-		<bsdf type=".. BSDF type ..">
-			<!-- BSDF parameters go here -->
-		</bsdf>
-	</shape>
+    <shape type="sphere">
+        <!-- Example of instantiating an unnamed material -->
+        <bsdf type=".. BSDF type ..">
+            <!-- BSDF parameters go here -->
+        </bsdf>
+    </shape>
 </scene>
 \end{xml}
 It is generally more economical to use named BSDFs when they
@@ -72,13 +72,13 @@ memory usage.
 \includegraphics[width=15cm]{images/glass_explanation.pdf}
 \vspace{-5mm}
 \caption{
-	\label{fig:glass-explanation}
-	Some of the scattering models in Mitsuba need to know
-	the indices of refraction on the exterior and interior-facing
-	side of a surface.
-	It is therefore important to decompose the mesh into meaningful
-	separate surfaces corresponding to each index of refraction change.
-	The example here shows such a decomposition for a water-filled Glass.
+    \label{fig:glass-explanation}
+    Some of the scattering models in Mitsuba need to know
+    the indices of refraction on the exterior and interior-facing
+    side of a surface.
+    It is therefore important to decompose the mesh into meaningful
+    separate surfaces corresponding to each index of refraction change.
+    The example here shows such a decomposition for a water-filled Glass.
 }
 \end{figure}
 
