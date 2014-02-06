@@ -79,7 +79,7 @@ namespace {
  *        \default{none, i.e. object space $=$ world space}
  *     }
  *     \parameter{width, height}{\Integer}{
- *       When the nexted texture is procedural (see below),
+ *       When the nested texture is procedural (see below),
  *       this parameter specifies the resolution at which it should
  *       be rasterized to create a height field made of bilinear patches.
  *	   }

@@ -179,7 +179,7 @@ static int irrOctreeIndex = 0;
  * using a fast hierarchical technique proposed by Jensen and Buhler \cite{Jensen2005Rapid}.
  *
  * There are two different ways of configuring the medium properties.
- * the medium properties.  One possibility is to load a material preset
+ * One possibility is to load a material preset
  * using the \code{material} parameter---see \tblref{medium-coefficients}
  * for details. Alternatively, when specifying parameters by hand, they
  * can either be provided using the scattering and absorption coefficients,
