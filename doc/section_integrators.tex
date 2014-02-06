@@ -134,3 +134,36 @@ enable the alpha channel in the scene's film instance (Section~\ref{sec:films}).
       \caption{\label{fig:hideemitters}An example application of the \code{hideEmitters} parameter
     together with alpha blending}
 }
+\subsubsection*{Number of samples per pixel}
+Many of the integrators in Mitsuba depend on a number of \emph{samples per pixel}, which is related
+to the amount of noise in the final output. However, it is important to note that this parameter is
+\emph{not} a parameter of the integrator.
+Instead, it must be declared in the \code{<sampler>} instantiation, which is nested inside the
+\code{<sampler>} element. The rationale behind this is that the sensor is responsible for performing
+a measurement using a specified sampling strategy. The integrator declares the high-level strategy
+for resolving scattering interactions, but does not depend on a specific number of samples.
+
+\begin{xml}
+<scene version=$\MtsVer$>
+    <!-- ... scene contents ... -->
+
+    <integrator type=".. integrator type ..">
+        <!-- ... integrator parameters ... -->
+    </integrator>
+
+    <sensor type="... sensor type ...">
+        <!-- ... sensor parameters ... -->
+
+        <sampler type=" ... sampler type ... ">
+            <!-- ... sampler parameters ... -->
+
+            <!-- Important: number of samples per pixel goes here -->
+            <integer name="sampleCount" value="32"/>
+        </sampler>
+
+        <film type=" ... film type ... ">
+            <!-- ... film parameters ... -->
+        </film>
+    </sensor>
+</scene>
+\end{xml}

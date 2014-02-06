@@ -4,8 +4,32 @@
 In Mitsuba, \emph{sensors}, along with a \emph{film}, are responsible for recording radiance
 measurements in some usable format. This includes default choices such as perspective
 or orthographic cameras, as well as more specialized sensors that measure the radiance
-into a given direction or the irradiance received by a certain surface. The following
-section lists the available choices.
+into a given direction or the irradiance received by a certain surface. This subsection
+lists the available choices.
+
+\subsubsection*{Syntax}
+In the XML scene description language, a sensor declaration looks as follows
+\begin{xml}
+<scene version=$\MtsVer$>
+    <!-- ... scene contents ... -->
+
+    <sensor type="... sensor type ...">
+        <!-- ... sensor parameters ... -->
+
+        <sampler type=" ... sampler type ... ">
+            <!-- ... sampler parameters ... -->
+        </sampler>
+
+        <film type=" ... film type ... ">
+            <!-- ... film parameters ... -->
+        </film>
+    </sensor>
+</scene>
+\end{xml}
+In other words, the \code{<sensor>} declaration is a child element of the \code{<scene>} (the particular
+position in the scene file does not play a role). Nested within the sensor declaration is a
+sampler instance (described in Section~\ref{sec:samplers}) and a film instance (described in
+Section~\ref{sec:films}).
 
 \subsubsection*{Handedness convention}
 Sensors in Mitsuba are \emph{right-handed}.
