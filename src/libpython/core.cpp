@@ -18,6 +18,7 @@
 #include <mitsuba/core/mstream.h>
 #include <mitsuba/core/cstream.h>
 #include <mitsuba/core/qmc.h>
+#include <mitsuba/core/vmf.h>
 #include <mitsuba/core/shvector.h>
 #include <mitsuba/core/sshstream.h>
 #include <mitsuba/render/scenehandler.h>
@@ -2250,6 +2251,20 @@ void export_core() {
 		.def("getMicrosecondsSinceStart", &Timer::getMicrosecondsSinceStart)
 		.def("getMillisecondsSinceStart", &Timer::getMillisecondsSinceStart)
 		.def("getSecondsSinceStart", &Timer::getSecondsSinceStart);
+
+	BP_STRUCT(VonMisesFisherDistr, bp::init<Float>())
+		.def("getKappa", &VonMisesFisherDistr::getKappa)
+		.def("setKappa", &VonMisesFisherDistr::setKappa)
+		.def("eval", &VonMisesFisherDistr::eval)
+		.def("getMeanCosine", &VonMisesFisherDistr::getMeanCosine)
+		.def("sample", &VonMisesFisherDistr::sample, BP_RETURN_VALUE)
+		.def("forMeanCosine", &VonMisesFisherDistr::forMeanCosine)
+		.def("forPeakValue", &VonMisesFisherDistr::forPeakValue)
+		.def("convolve", &VonMisesFisherDistr::convolve)
+		.def("__repr__", &VonMisesFisherDistr::toString)
+		.staticmethod("forMeanCosine")
+		.staticmethod("forPeakValue")
+		.staticmethod("convolve");
 
 	bp::detail::current_scope = oldScope;
 }
