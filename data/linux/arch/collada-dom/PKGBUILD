@@ -22,8 +22,8 @@ build() {
 	ln -s . minizip/src
 	ln -s . minizip/include
 	cd ..
-	make project=minizip libOpts="-Wl,-soname -Wl,libminizip.so.1.2.3" ccFlags="-fPIC"
-	make project=dom libOpts="-Wl,-soname -Wl,libcollada14dom.so.2.4"  ccFlags="-DCOLLADA_DOM_SUPPORT141 -fPIC"
+	make project=minizip libOpts="-lz -Wl,-soname -Wl,libminizip.so.1.2.3" ccFlags="-fPIC"
+	make project=dom libOpts="-lpcre -Wl,-soname -Wl,libcollada14dom.so.2.4"  ccFlags="-DCOLLADA_DOM_SUPPORT141 -fPIC"
 }
 
 package() {
