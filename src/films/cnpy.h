@@ -46,7 +46,7 @@ namespace cnpy {
 
     template<typename T> std::vector<char>& operator+=(std::vector<char>& lhs, const T rhs) {
         //write in little endian
-        for(char byte = 0; byte < sizeof(T); byte++) {
+        for(unsigned char byte = 0; byte < sizeof(T); byte++) {
             char val = *((char*)&rhs+byte);
             lhs.push_back(val);
         }
@@ -85,7 +85,7 @@ namespace cnpy {
                 assert(tmp_dims == ndims);
             }
 
-            for(int i = 1; i < ndims; i++) {
+            for(unsigned int i = 1; i < ndims; i++) {
                 if(shape[i] != tmp_shape[i]) {
                     std::cout<<"libnpy error: npy_save attempting to append misshaped data to "<<fname<<"\n";
                     assert(shape[i] == tmp_shape[i]);
@@ -107,7 +107,7 @@ namespace cnpy {
         }
 
         unsigned int nels = 1;
-        for(int i = 0;i < ndims;i++) nels *= shape[i];
+        for(unsigned int i = 0;i < ndims;i++) nels *= shape[i];
 
         fwrite(data,sizeof(T),nels,fp);
         fclose(fp);
@@ -213,7 +213,7 @@ namespace cnpy {
         dict += tostring(sizeof(T));
         dict += "', 'fortran_order': False, 'shape': (";
         dict += tostring(shape[0]);
-        for(int i = 1;i < ndims;i++) {
+        for(unsigned int i = 1;i < ndims;i++) {
             dict += ", ";
             dict += tostring(shape[i]);
         }

@@ -332,9 +332,9 @@ public:
 			}
 		} else {
 			unsigned int shape[] = {
-				bitmap->getHeight(),
-				bitmap->getWidth(),
-				bitmap->getChannelCount()
+				(unsigned int) bitmap->getHeight(),
+				(unsigned int) bitmap->getWidth(),
+				(unsigned int) bitmap->getChannelCount()
 			};
 			unsigned int N = 3, *shape_ptr = shape;
 
