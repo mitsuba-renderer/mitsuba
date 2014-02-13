@@ -1,7 +1,7 @@
 \section{Compiling the renderer}
 \label{sec:compiling}
 To compile Mitsuba, you will need a recent C++ compiler (e.g. GCC 4.2+ or
-Visual Studio 2010) and some additional libraries, which Mitsuba uses internally.
+Visual Studio 2010/2013) and some additional libraries, which Mitsuba uses internally.
 Builds on all supported platforms are done using a unified system
 based on SCons (\url{http://www.scons.org}), which is a Python-based
 software construction tool. The exact process is different depending on
@@ -36,12 +36,14 @@ On Linux, there are two supported configurations:
 will run extremely slowly. Its main use is to track down elusive bugs.
 \end{description}
 \paragraph{Windows:}
-On Windows, builds can either be performed using the Visual Studio 2010\footnote{No other Visual Studio versions are currently supported.}
-compiler or Intel XE Composer (on top of Visual Studio 2010).
-Note that Visual Studio 2010 Service Pack 1 \emph{must} be installed or the resulting binaries will crash.
+On Windows, builds can either be performed using the Visual Studio 2010 or 2013\footnote{No other Visual Studio versions are currently supported.}
+compiler or Intel XE Composer.
+If you are using Visual Studio 2010, note that Service Pack 1 \emph{must} be installed or the resulting binaries will crash.
 \begin{description}
 \item[\code{build/config-\{win32, win64\}-\{msvc2010, msvc2010-debug\}.py}:] Create 32 or 64 bit binaries using Microsoft Visual C++ version 2010.
 The configurations with the suffix \code{-debug} will include debug symbols in all binaries, which run very slowly.
+\item[\code{build/config-win64-\{msvc2013, msvc2013-debug\}.py}:] Create 64 bit binaries using Microsoft Visual C++ version 2013. Please use
+Visual Studio 2010 for legacy 32 bit builds.
 \item[\code{build/config-\{win32, win64\}-icl.py}:] Create 32 or 64 bit release binaries using Intel XE Composer (on top of Visual Studio 2010).
 Versions XE 2012 and 2013 are known to work.
 \end{description}
@@ -290,7 +292,7 @@ There are a few other things that need to be set up: make sure that your
 installation of Visual Studio is up to date, since Mitsuba binaries created with versions
 prior to Service Pack 1 will crash.
 
-Next, you will need to install Python 2.6.x
+Next, you will need to install Python 2.7.x
 (\url{www.python.org}) and SCons\footnote{Note that on some Windows machines, the SCons
 installer generates a warning about not finding Python in the registry. In this case, you
 can instead run \code{python setup.py install} within the source release of SCons.}
