@@ -7,7 +7,8 @@ provides some basic instructions on how to use them.
 To launch the interactive frontend, run \code{Mitsuba.app} on MacOS,
 \code{mtsgui.exe} on Windows, and \code{mtsgui} on Linux (after sourcing \code{setpath.sh}).
 You can also drag and drop scene files onto the application icon or the running program to open them.
-A quick video tutorial on using the GUI can be found here: \url{http://vimeo.com/13480342}.
+Two video tutorials on using the GUI can be found here: \url{http://vimeo.com/13480342} (somewhat dated)
+and \url{http://vimeo.com/50528092} (describing new features).
 \subsection{Command line interface}
 \label{sec:mitsuba}
 The \texttt{mitsuba} binary is an alternative non-interactive rendering
@@ -74,7 +75,9 @@ mode of operation is to render a single scene, which is provided as a parameter,
 \begin{shell}
 $\texttt{\$}$ mitsuba path-to/my-scene.xml
 \end{shell}
-It is also possible to connect to network render nodes, which essentially lets Mitsuba parallelize
+The next subsections explain various features of the \texttt{mitsuba} command line frontend.
+\subsubsection{Network rendering}
+Mitsuba can connect to network render nodes to parallelize a length rendering task
 over additional cores. To do this, pass a semicolon-separated list of machines to
 the \code{-c} parameter.
 \begin{shell}
@@ -149,8 +152,9 @@ machine2.domain.org
 machine3.domain.org:7346
 \end{shell}
 \subsubsection{Passing parameters}
-Any attribute in the XML-based scene description language can be parameterized from the
-command line.
+Any attribute in the XML-based scene description language (described in detail in \secref{format})
+can be parameterized from the command line.
+
 For instance, you can render a scene several times with different reflectance values
 on a certain material by changing its description to something like
 \begin{xml}
@@ -176,13 +180,13 @@ image, after which it continues rendering. This can sometimes be useful to
 check if everything is working correctly.
 
 \subsubsection{Rendering an animation}
-The command line interface is ideally suited for rendering numbers of files in batch
+The command line interface is ideally suited for rendering several files in batch
 operation. You can simply pass in the files using a wildcard in the filename.
 
 If you've already rendered a subset of the frames and you only want to complete the remainder,
 add the \texttt{-x} flag, and all files with existing output will be skipped. You can also
-let the scheduler work on several scenes at once using the \texttt{-j} parameter --- this is
-especially useful when parallelizing over multiple machines: as some of the participating machines
+let the scheduler work on several scenes at once using the \texttt{-j} parameter---this is
+can accelerate parallelization over many machines: as some of the machines
 finish rendering the current frame, they can immediately start working on the next one
 instead of having to wait for all other cores to finish. Altogether, you
 might start the with parameters such as the following
@@ -196,7 +200,9 @@ the PowerShell supports the following syntax:
 dir frame_*.xml | % $\texttt{\{}$ <path to mitsuba.exe> $\texttt{\$\_}$ $\texttt{\}}$
 \end{shell}
 
-\subsection{Direct connection server}
+\subsection{Other programs}
+Mitsuba ships with a few other programs, which are explained in the remainder of this section.
+\subsubsection{Direct connection server}
 \label{sec:mtssrv}
 A Mitsuba compute node can be created using the \code{mtssrv} executable. By default,
 it will listen on port 7554:
@@ -211,7 +217,7 @@ the wrong interface. In this case, please specify an explicit IP address or host
 \begin{shell}
 $\texttt{\$}$ mtssrv -i maxwell.cs.cornell.edu
 \end{shell}
-As advised in Section~\ref{sec:mitsuba}, it is advised to run \code{mtssrv} \emph{only} in trusted networks.
+As advised in \secref{mitsuba}, it is advised to run \code{mtssrv} \emph{only} in trusted networks.
 
 One nice feature of \code{mtssrv} is that it (like the \code{mitsuba} executable)
 also supports the \code{-c} and \code{-s} parameters, which create connections
@@ -221,7 +227,7 @@ the root \code{mttsrv} instance of such a hierarchy could share its work with a
 number of other  machines running \code{mtssrv}, and each of these might also
 share their work with further machines, and so on...
 
-The parallelization over such hierarchies happens transparently---when
+The parallelization over such hierarchies happens transparently: when
 connecting a renderering process to the root node, it sees a machine
 with hundreds or thousands of cores, to which it can submit work without
 needing to worry about how exactly it is going to be spread out in
@@ -238,7 +244,7 @@ Using \code{mtssrv}, you can
 instead designate a central scheduling node at your workplace, which accepts connections and delegates
 rendering tasks to the other machines. In this case, you will only have to transmit the scene once,
 and the remaining distribution happens over the fast local network at your workplace.
-\subsection{Utility launcher}
+\subsubsection{Utility launcher}
 \label{sec:mtsutil}
 When working on a larger project, one often needs to implement various utility programs that
 perform simple tasks, such as applying a filter to an image or processing
@@ -253,9 +259,12 @@ $\texttt{\$}$ mtsutil [options] <utility name> [arguments]
 \end{shell}
 For a listing of all supported options and utilities, enter the command without parameters.
 
+The second part of this manual explains how to develop such extensions yourself, specifically
+\secref{parallelization}.
+
 \subsubsection{Tonemapper}
 \label{sec:tonemapper}
-One particularly useful utility that shall be mentioned here is the batch tonemapper, which
+One frequently used utility that shall be mentioned here is the batch tonemapper, which
 loads EXR/RGBE images and writes tonemapped 8-bit PNG/JPGs. This can save much time when one has to
 process many high dynamic-range images such as animation frames using the same basic operations,
 e.g. gamma correction, changing the overall brightness, resizing, cropping, etc. The available

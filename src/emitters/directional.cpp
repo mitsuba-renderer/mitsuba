@@ -55,7 +55,7 @@ public:
 	DirectionalEmitter(const Properties &props) : Emitter(props) {
 		m_type |= EDeltaDirection;
 
-		m_normalIrradiance = props.getSpectrum("irradiance", Spectrum(1.0f));
+		m_normalIrradiance = props.getSpectrum("irradiance", Spectrum::getD65());
 		if (props.hasProperty("direction")) {
 			if (props.hasProperty("toWorld"))
 				Log(EError, "Only one of the parameters 'direction' and 'toWorld'"

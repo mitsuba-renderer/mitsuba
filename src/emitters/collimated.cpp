@@ -58,7 +58,7 @@ public:
 	CollimatedBeamEmitter(const Properties &props) : Emitter(props) {
 		m_type |= EDeltaPosition | EDeltaDirection;
 
-		m_power = props.getSpectrum("power", Spectrum(1.0f));
+		m_power = props.getSpectrum("power", Spectrum::getD65());
 
 		if (props.getTransform("toWorld", Transform()).hasScale())
 			Log(EError, "Scale factors in the emitter-to-world "
