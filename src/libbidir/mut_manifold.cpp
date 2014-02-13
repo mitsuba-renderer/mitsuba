@@ -233,7 +233,6 @@ bool ManifoldPerturbation::sampleMutation(
 	int a, b, c, step, tries = 0;
 	while (!sampleMutationRecord(source, a, b, c, step)) {
 		if (tries++ > 1000) {
-			cout << source.toString() << endl;
 			SLog(EWarn, "Internal error -- can't decide on a mutation strategy!");
 			return false;
 		}
@@ -739,7 +738,14 @@ Float ManifoldPerturbation::Q(const Path &source, const Path &proposal,
 			source.edge(vbEdge), proposal.edge(vbEdge));
 	}
 
-	return 1.0f / weight.getLuminance();
+	Float lum = weight.getLuminance();
+
+	if (lum <= 0 || !std::isfinite(lum)) {
+		Log(EWarn, "Internal error in manifold perturbation: luminance = %f!", lum);
+		return 0.f;
+	}
+
+	return 1.0f / lum;
 }
 
 void ManifoldPerturbation::accept(const MutationRecord &muRec) {

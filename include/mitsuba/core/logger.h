@@ -114,6 +114,7 @@ MTS_NAMESPACE_BEGIN
  * \ingroup libpython
  */
 class MTS_EXPORT_CORE Logger : public Object {
+	friend class Statistics;
 public:
 	/// Construct a new logger with the given minimum log level
 	Logger(ELogLevel logLevel = EDebug);

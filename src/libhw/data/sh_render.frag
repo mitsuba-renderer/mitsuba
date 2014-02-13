@@ -84,7 +84,7 @@ uniform mat4 vplTransform;
 	bool isShadowed(vec3 p) {
 		float depth = texture2D(shadowMap, (p.xy / (-p.z + length(p))) * 0.5 + 0.5).r;
 		depth = (depth * (depthRange[1]-depthRange[0]) + depthRange[0]) * (1.0+EPSILON);
-		return dot(p, p) > depth * depth && p.z < 0;
+		return dot(p, p) > depth * depth && p.z < 0.0;
 	}
 #elif defined(CUBEMAP_VPL)
 	bool isShadowed(vec3 d) {

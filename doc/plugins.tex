@@ -10,21 +10,21 @@ The documentation of a plugin always starts on a new page and is preceded
 by a table similar to the one below:
 \parameters{
     \parameter{softRays}{\Boolean}{
-		Try not to damage objects in the scene by shooting softer rays
-		\default{\code{false}}
-	}
+        Try not to damage objects in the scene by shooting softer rays
+        \default{\code{false}}
+    }
     \parameter{darkMatter}{\Float}{
-	     Controls the proportionate amount of dark matter present in the scene.
-		 \default{0.83}
-	}
+         Controls the proportionate amount of dark matter present in the scene.
+         \default{0.83}
+    }
 }
 
 Suppose this hypothetical plugin is an \emph{integrator} named \code{amazing}. Then, based on
 this description, it can be instantiated from an XML scene file using a custom configuration such as:
 \begin{xml}
 <integrator type="amazing">
-	<boolean name="softerRays" value="true"/>
-	<float name="darkMatter" value="0.4"/>
+    <boolean name="softerRays" value="true"/>
+    <float name="darkMatter" value="0.4"/>
 </integrator>
 \end{xml}
 In some cases\footnote{Note that obvious parameters are generally omitted.
@@ -33,20 +33,20 @@ is left out from the documentation for brevity.}, plugins also indicate that the
 as input arguments. These can either be \emph{named} or \emph{unnamed}. If
 the \code{amazing} integrator also accepted the following two parameters\vspace{-2mm}
 \parameters{
-	\parameter{\Unnamed}{\Integrator}{A nested integrator which does the actual hard work}
-	\parameter{puppies}{\Texture}{This must be used to supply a \mbox{cute picture of puppies}}
+    \parameter{\Unnamed}{\Integrator}{A nested integrator which does the actual hard work}
+    \parameter{puppies}{\Texture}{This must be used to supply a \mbox{cute picture of puppies}}
 }
 \vspace{-1mm}
 
 then it can be instantiated e.g. as follows
 \begin{xml}
 <integrator type="amazing">
-	<boolean name="softerRays" value="true"/>
-	<float name="darkMatter" value="0.4"/>
-	<integrator type="path"/>
-	<texture name="puppies" type="bitmap">
-		<string name="filename" value="cute.jpg"/>
-	</texture>
+    <boolean name="softerRays" value="true"/>
+    <float name="darkMatter" value="0.4"/>
+    <integrator type="path"/>
+    <texture name="puppies" type="bitmap">
+        <string name="filename" value="cute.jpg"/>
+    </texture>
 </integrator>
 \end{xml}
 or, if these were already instantiated previously and are now
@@ -54,10 +54,10 @@ bound to the \emph{identifiers} (\secref{format}) \code{myPathTracer} and
 \code{myTexture}, the following also works:
 \begin{xml}
 <integrator type="amazing">
-	<boolean name="softerRays" value="true"/>
-	<float name="darkMatter" value="0.4"/>
-	<ref id="myPathTracer"/>
-	<ref name="puppies" id="myTexture"/>
+    <boolean name="softerRays" value="true"/>
+    <float name="darkMatter" value="0.4"/>
+    <ref id="myPathTracer"/>
+    <ref name="puppies" id="myTexture"/>
 </integrator>
 \end{xml}
 

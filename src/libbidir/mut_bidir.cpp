@@ -260,7 +260,7 @@ Float BidirectionalMutator::Q(const Path &source, const Path &proposal,
 
 		Float luminance = weight.getLuminance();
 
-		if (luminance <= 0) {
+		if (luminance <= 0 || !std::isfinite(luminance)) {
 			Log(EWarn, "Internal error: luminance = %f!", luminance);
 			continue;
 		}

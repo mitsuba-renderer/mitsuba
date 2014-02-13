@@ -15,16 +15,16 @@ is usually instantiated by declaring it at the top level within the
 scene, e.g.
 \begin{xml}
 <scene version=$\MtsVer$>
-	<!-- Instantiate a unidirectional path tracer,
-	     which renders paths up to a depth of 5 -->
-	<integrator type="path">
-		<integer name="maxDepth" value="5"/>
-	</integrator>
+    <!-- Instantiate a unidirectional path tracer,
+         which renders paths up to a depth of 5 -->
+    <integrator type="path">
+        <integer name="maxDepth" value="5"/>
+    </integrator>
 
-	<!-- Some geometry to be rendered -->
-	<shape type="sphere">
-		<bsdf type="diffuse"/>
-	</shape>
+    <!-- Some geometry to be rendered -->
+    <shape type="sphere">
+        <bsdf type="diffuse"/>
+    </shape>
 </scene>
 \end{xml}
 
@@ -43,7 +43,7 @@ The following ``algorithm'' may help to decide amongst the remaining ones:
 \begin{enumerate}
 \item Try rendering the scene with an appropriate path tracer. If this gives the desired result, stop.
 
-Mitsuba currently comes with three path tracer variations that target different setups: It your
+Mitsuba currently comes with three path tracer variations that target different setups: If your
 scene contains no media and no surfaces with opacity masks, use the plain path tracer (\pluginref{path}).
 
 Otherwise, use one of the volumetric path tracers (\pluginref[volpathsimple]{volpath\_simple}
@@ -68,13 +68,13 @@ method (\pluginref{mlt}, \pluginref{erpt}).
 \smallrendering{Max. depth = 3}{pathdepth-3}
 \smallrendering{Max. depth = $\infty$}{pathdepth-all}
 \caption{
-	\label{fig:pathdepths}
-	These Cornell box renderings demonstrate the visual
-	effect of a maximum path depth. As the paths
-	are allowed to grow longer, the color saturation
-	increases due to multiple scattering interactions
-	with the colored surfaces. At the same time, the
-	computation time increases.
+    \label{fig:pathdepths}
+    These Cornell box renderings demonstrate the visual
+    effect of a maximum path depth. As the paths
+    are allowed to grow longer, the color saturation
+    increases due to multiple scattering interactions
+    with the colored surfaces. At the same time, the
+    computation time increases.
 }
 \end{figure}
 
@@ -94,10 +94,10 @@ depth unlimited.
 \includegraphics[width=10cm]{images/path_explanation.pdf}
 \vspace{-5mm}
 \caption{
-	\label{fig:path-explanation}
-	A ray of emitted light is scattered by an object and subsequently
-	reaches the eye/sensor.
-	In Mitsuba, this is a \emph{depth-2} path, since it has two edges.
+    \label{fig:path-explanation}
+    A ray of emitted light is scattered by an object and subsequently
+    reaches the eye/sensor.
+    In Mitsuba, this is a \emph{depth-2} path, since it has two edges.
 }
 \end{figure}
 Mitsuba counts depths starting at $1$, which correspond to
@@ -124,7 +124,7 @@ from a rendering so that it can be pasted into a differently-colored document.
 Note that only directly visible emitters can be hidden using this feature---a
 reflection on a shiny surface will be unaffected. To perform the kind of
 compositing shown in Figure~\ref{fig:hideemitters}, it is also necessary to
-enable the alpha channel in the scene's film instance (Section~\ref{sec:films}).
+enable the alpha channel in the scene's film instance (\secref{films}).
 
 \renderings{
   \unframedrendering{Daylit smoke rendered with \code{hideEmitters} set to \code{false}
@@ -134,3 +134,36 @@ enable the alpha channel in the scene's film instance (Section~\ref{sec:films}).
       \caption{\label{fig:hideemitters}An example application of the \code{hideEmitters} parameter
     together with alpha blending}
 }
+\subsubsection*{Number of samples per pixel}
+Many of the integrators in Mitsuba depend on a number of \emph{samples per pixel}, which is related
+to the amount of noise in the final output. However, it is important to note that this parameter is
+\emph{not} a parameter of the integrator.
+Instead, it must be declared in the \code{<sampler>} instantiation, which is nested inside the
+\code{<sampler>} element. The rationale behind this is that the sensor is responsible for performing
+a measurement using a specified sampling strategy. The integrator declares the high-level strategy
+for resolving scattering interactions, but does not depend on a specific number of samples.
+
+\begin{xml}
+<scene version=$\MtsVer$>
+    <!-- ... scene contents ... -->
+
+    <integrator type=".. integrator type ..">
+        <!-- ... integrator parameters ... -->
+    </integrator>
+
+    <sensor type="... sensor type ...">
+        <!-- ... sensor parameters ... -->
+
+        <sampler type=" ... sampler type ... ">
+            <!-- ... sampler parameters ... -->
+
+            <!-- Important: number of samples per pixel goes here -->
+            <integer name="sampleCount" value="32"/>
+        </sampler>
+
+        <film type=" ... film type ... ">
+            <!-- ... film parameters ... -->
+        </film>
+    </sensor>
+</scene>
+\end{xml}

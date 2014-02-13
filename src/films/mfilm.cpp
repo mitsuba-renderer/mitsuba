@@ -22,10 +22,11 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <iomanip>
+#include "cnpy.h"
 
 MTS_NAMESPACE_BEGIN
 
-/*!\plugin{mfilm}{MATLAB / Mathematica film}
+/*!\plugin{mfilm}{MATLAB / Mathematica / NumPy film}
  * \order{4}
  * \parameters{
  *     \parameter{width, height}{\Integer}{
@@ -39,7 +40,7 @@ MTS_NAMESPACE_BEGIN
  *     }
  *     \parameter{fileFormat}{\String}{
  *       Specifies the desired output format; must be one of
- *       \code{matlab} or \code{mathematica}. \default{\code{matlab}}
+ *       \code{matlab}, \code{mathematica}, or \code{numpy}. \default{\code{matlab}}
  *     }
  *     \parameter{digits}{\Integer}{
  *       Number of significant digits to be written \default{4}
@@ -72,8 +73,8 @@ MTS_NAMESPACE_BEGIN
  * }
  *
  * This plugin provides a camera film that exports spectrum, RGB, XYZ, or
- * luminance values as a matrix to a MATLAB or Mathematica ASCII file. This is
- * useful when running Mitsuba as simulation step as part of a
+ * luminance values as a matrix to a MATLAB or Mathematica ASCII file or a NumPy binary file.
+ * This is useful when running Mitsuba as simulation step as part of a
  * larger virtual experiment. It can also come in handy when
  * verifying parts of the renderer using an automated test suite.
  */
@@ -81,7 +82,8 @@ class MFilm : public Film {
 public:
 	enum EMode {
 		EMATLAB = 0,
-		EMathematica
+		EMathematica,
+		ENumPy
 	};
 
 	MFilm(const Properties &props) : Film(props) {
@@ -122,9 +124,11 @@ public:
 			m_fileFormat = EMATLAB;
 		} else if (fileFormat == "mathematica") {
 			m_fileFormat = EMathematica;
+		} else if (fileFormat == "numpy") {
+			m_fileFormat = ENumPy;
 		} else {
 			Log(EError, "The \"fileFormat\" parameter must either be equal to "
-				"\"matlab\" or \"mathematica\"!");
+				"\"matlab\" or \"mathematica\" or \"numpy\" or \"numpycompressed\"!");
 		}
 
 		m_digits = props.getInteger("digits", 4);
@@ -246,83 +250,114 @@ public:
 
 		fs::path filename = m_destFile;
 		std::string extension = boost::to_lower_copy(filename.extension().string());
-		if (extension != ".m")
-			filename.replace_extension(".m");
+		std::string expectedExtension;
+		if (m_fileFormat == EMathematica || m_fileFormat == EMATLAB) {
+			expectedExtension = ".m";
+		} else if (m_fileFormat == ENumPy) {
+			expectedExtension = ".npy";
+		} else {
+			Log(EError, "Invalid file format!");
+		}
+		if (extension != expectedExtension)
+			filename.replace_extension(expectedExtension);
 
 		ref<Bitmap> bitmap = m_storage->getBitmap()->convert(
 			m_pixelFormat, Bitmap::EFloat);
 
 		Log(EInfo, "Writing image to \"%s\" ..", filename.filename().string().c_str());
 
-		fs::ofstream os(filename);
-		if (!os.good() || os.fail())
-			Log(EError, "Output file cannot be created!");
+		if (m_fileFormat == EMathematica || m_fileFormat == EMATLAB) {
+			fs::ofstream os(filename);
+			if (!os.good() || os.fail())
+				Log(EError, "Output file cannot be created!");
 
-		os << std::setprecision(m_digits);
+			os << std::setprecision(m_digits);
 
-		int rowSize = bitmap->getWidth();
+			int rowSize = bitmap->getWidth();
 
-		for (int ch=0; ch<bitmap->getChannelCount(); ++ch) {
-			if (m_fileFormat == EMATLAB) {
-				if (ch == 0) {
-					os << m_variable << " = [";
-				} else {
-					os << endl << m_variable << "(:, :, " << ch + 1 << ") = [";
-				}
-			} else {
-				if (ch == 0) {
-					if (bitmap->getChannelCount() == 1)
-						os << m_variable << " = {{";
-					else
-						os << m_variable << " = Transpose[{{{";
-				}
-			}
-			Float *ptr = bitmap->getFloatData();
-			ptr += ch;
-
-			for (int y=0; y < bitmap->getHeight(); y++) {
-				for (int x=0; x < rowSize; x++) {
-					if (m_fileFormat == EMATLAB) {
-						os << *ptr;
+			for (int ch=0; ch<bitmap->getChannelCount(); ++ch) {
+				if (m_fileFormat == EMATLAB) {
+					if (ch == 0) {
+						os << m_variable << " = [";
 					} else {
-						std::ostringstream oss;
-						oss << *ptr;
-						std::string str = oss.str();
-						boost::replace_first(str, "e", " * 10^");
-						os << str;
+						os << endl << m_variable << "(:, :, " << ch + 1 << ") = [";
 					}
+				} else {
+					if (ch == 0) {
+						if (bitmap->getChannelCount() == 1)
+							os << m_variable << " = {{";
+						else
+							os << m_variable << " = Transpose[{{{";
+					}
+				}
+				Float *ptr = bitmap->getFloatData();
+				ptr += ch;
 
-					ptr += bitmap->getChannelCount();
-					if (x + 1 < rowSize) {
-						os << ", ";
-					} else {
+				for (int y=0; y < bitmap->getHeight(); y++) {
+					for (int x=0; x < rowSize; x++) {
 						if (m_fileFormat == EMATLAB) {
-							if (y + 1 < bitmap->getHeight())
-								os << ";" << endl << "\t";
-							else
-								os << "];" << endl;
+							os << *ptr;
 						} else {
-							if (y + 1 < bitmap->getHeight()) {
-								os << "}," << endl << "\t{";
-							} else if (ch + 1 == bitmap->getChannelCount()){
-								if (bitmap->getChannelCount() == 1)
-									os << "}};" << endl;
+							std::ostringstream oss;
+							oss << *ptr;
+							std::string str = oss.str();
+							boost::replace_first(str, "e", " * 10^");
+							os << str;
+						}
+
+						ptr += bitmap->getChannelCount();
+						if (x + 1 < rowSize) {
+							os << ", ";
+						} else {
+							if (m_fileFormat == EMATLAB) {
+								if (y + 1 < bitmap->getHeight())
+									os << ";" << endl << "\t";
 								else
-									os << "}}}, {3,1,2}];" << endl;
+									os << "];" << endl;
 							} else {
-								os << "}}," << endl << endl << "\t{{";
+								if (y + 1 < bitmap->getHeight()) {
+									os << "}," << endl << "\t{";
+								} else if (ch + 1 == bitmap->getChannelCount()){
+									if (bitmap->getChannelCount() == 1)
+										os << "}};" << endl;
+									else
+										os << "}}}, {3,1,2}];" << endl;
+								} else {
+									os << "}}," << endl << endl << "\t{{";
+								}
 							}
 						}
 					}
 				}
 			}
+		} else {
+			unsigned int shape[] = {
+				(unsigned int) bitmap->getHeight(),
+				(unsigned int) bitmap->getWidth(),
+				(unsigned int) bitmap->getChannelCount()
+			};
+			unsigned int N = 3, *shape_ptr = shape;
+
+			if (bitmap->getChannelCount() == 1)
+				N = 2;
+
+			const Float *data = bitmap->getFloatData();
+			cnpy::npy_save(filename.string(), data, shape_ptr, N, "w");
 		}
 	}
 
 	bool destinationExists(const fs::path &baseName) const {
 		fs::path filename = baseName;
-		if (boost::to_lower_copy(filename.extension().string()) != ".m")
-			filename.replace_extension(".m");
+		std::string expectedExtension;
+		if (m_fileFormat == EMathematica || m_fileFormat == EMATLAB) {
+			expectedExtension = ".m";
+		} else if (m_fileFormat == ENumPy) {
+			expectedExtension = ".npy";
+		} else {
+			Log(EError, "Invalid file format!");
+		}
+		if (boost::to_lower_copy(filename.extension().string()) != expectedExtension)
+			filename.replace_extension(expectedExtension);
 		return fs::exists(filename);
 	}
 
@@ -359,5 +394,5 @@ protected:
 };
 
 MTS_IMPLEMENT_CLASS_S(MFilm, false, Film)
-MTS_EXPORT_PLUGIN(MFilm, "MATLAB / Mathematica film");
+MTS_EXPORT_PLUGIN(MFilm, "MATLAB / Mathematica / NumPy film");
 MTS_NAMESPACE_END

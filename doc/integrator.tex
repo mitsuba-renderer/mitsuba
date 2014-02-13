@@ -40,7 +40,7 @@ MTS_NAMESPACE_BEGIN
 
 class MyIntegrator : public SamplingIntegrator {
 public:
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 };
 
 MTS_IMPLEMENT_CLASS_S(MyIntegrator, false, SamplingIntegrator)
@@ -87,7 +87,7 @@ public:
     }
 
 private:
-	Spectrum m_color;
+    Spectrum m_color;
 \end{cpp}
 
 This code fragment sets up a default color (a light shade of green), which
@@ -96,7 +96,7 @@ the integrator from an XML document like this
 
 \begin{xml}
 <integrator type="myIntegrator">
-	<spectrum name="color" value="1.0"/>
+    <spectrum name="color" value="1.0"/>
 </integrator>
 \end{xml}
 in which case white would take preference.
@@ -189,11 +189,11 @@ substituted based the compilation flags. This variable constitutes local
 state, thus it must not be forgotten in the serialization- and unserialization routines:
 append
 \begin{cpp}
-	m_maxDist = stream->readFloat();
+    m_maxDist = stream->readFloat();
 \end{cpp}
 and
 \begin{cpp}
-	stream->writeFloat(m_maxDist);
+    stream->writeFloat(m_maxDist);
 \end{cpp}
 to the unserialization constructor and the \code{serialize} method, respectively.
 
@@ -202,24 +202,24 @@ distance to all corners of the bounding box, which encloses the scene.
 To avoid having to do this every time \code{Li()} is called,
 we can override the \code{preprocess} function:
 \begin{cpp}
-	/// Preprocess function -- called on the initiating machine
-	bool preprocess(const Scene *scene, RenderQueue *queue,
-			const RenderJob *job, int sceneResID, int cameraResID,
-			int samplerResID) {
-		SamplingIntegrator::preprocess(scene, queue, job, sceneResID,
-			cameraResID, samplerResID);
+    /// Preprocess function -- called on the initiating machine
+    bool preprocess(const Scene *scene, RenderQueue *queue,
+            const RenderJob *job, int sceneResID, int cameraResID,
+            int samplerResID) {
+        SamplingIntegrator::preprocess(scene, queue, job, sceneResID,
+            cameraResID, samplerResID);
 
-		const AABB &sceneAABB = scene->getAABB();
+        const AABB &sceneAABB = scene->getAABB();
     /* Find the camera position at t=0 seconds */
-		Point cameraPosition = scene->getSensor()->getWorldTransform()->eval(0).transformAffine(Point(0.0f));
-		m_maxDist = - std::numeric_limits<Float>::infinity();
+        Point cameraPosition = scene->getSensor()->getWorldTransform()->eval(0).transformAffine(Point(0.0f));
+        m_maxDist = - std::numeric_limits<Float>::infinity();
 
-		for (int i=0; i<8; ++i)
-			m_maxDist = std::max(m_maxDist,
-				(cameraPosition - sceneAABB.getCorner(i)).length());
+        for (int i=0; i<8; ++i)
+            m_maxDist = std::max(m_maxDist,
+                (cameraPosition - sceneAABB.getCorner(i)).length());
 
-		return true;
-	}
+        return true;
+    }
 \end{cpp}
 The bottom of this function should be relatively self-explanatory. The
 numerous arguments at the top are related to the parallelization layer, which will be
@@ -238,11 +238,11 @@ other nodes before the rendering begins.
 
 Now, replace the body of the \code{Li} method with
 \begin{cpp}
-	if (rRec.rayIntersect(r)) {
-		Float distance = rRec.its.t;
-		return Spectrum(1.0f - distance/m_maxDist) * m_color;
-	}
-	return Spectrum(0.0f);
+    if (rRec.rayIntersect(r)) {
+        Float distance = rRec.its.t;
+        return Spectrum(1.0f - distance/m_maxDist) * m_color;
+    }
+    return Spectrum(0.0f);
 \end{cpp}
 and the distance renderer is done!
 \begin{center}
@@ -251,11 +251,11 @@ and the distance renderer is done!
 There are a few more noteworthy details: first of all, the ``usual'' way
 to intersect a ray against the scene actually works like this:
 \begin{cpp}
-	Intersection its;
-	Ray ray = ...;
-	if (scene->rayIntersect(ray, its)) {
-		/* Do something with the intersection stored in 'its' */
-	}
+    Intersection its;
+    Ray ray = ...;
+    if (scene->rayIntersect(ray, its)) {
+        /* Do something with the intersection stored in 'its' */
+    }
 \end{cpp}
 As you can see, we did something slightly different in the distance
 renderer fragment above (we called \code{RadianceQueryRecord::rayIntersect()}
@@ -269,11 +269,11 @@ into a scene XML file:
 \begin{xml}
 <!-- Adaptively integrate using the nested technique -->
 <integrator type="adaptive">
-	<!-- Irradiance caching + final gathering with the nested technique -->
-	<integrator type="irrcache">
-		<!-- Simple direct illumination technique -->
-		<integrator type="direct">
-	</integrator>
+    <!-- Irradiance caching + final gathering with the nested technique -->
+    <integrator type="irrcache">
+        <!-- Simple direct illumination technique -->
+        <integrator type="direct">
+    </integrator>
 </integrator>
 \end{xml}
 To support this kind of complex interaction, some information needs to be passed between the
@@ -294,16 +294,16 @@ as possible. Your overall code might for example be structured like this:
 
 \begin{cpp}
    Spectrum Li(const RayDifferential &r, RadianceQueryRecord &rRec) const {
-	  Spectrum result;
+      Spectrum result;
       if (rRec.type & RadianceQueryRecord::EEmittedRadiance) {
          // Emitted surface radiance contribution was requested
-		 result += ...;
-	  }
+         result += ...;
+      }
       if (rRec.type & RadianceQueryRecord::EDirectRadiance) {
          // Direct illumination contribution was requested
-		 result += ...;
-	  }
-	  ...
-	  return result;
+         result += ...;
+      }
+      ...
+      return result;
    }
 \end{cpp}

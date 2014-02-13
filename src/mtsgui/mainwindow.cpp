@@ -36,6 +36,7 @@
 #include <mitsuba/core/sstream.h>
 #include <mitsuba/core/sshstream.h>
 #include <mitsuba/core/plugin.h>
+#include <mitsuba/core/statistics.h>
 #include <mitsuba/core/fresolver.h>
 #include <mitsuba/core/fstream.h>
 
@@ -1389,7 +1390,6 @@ void MainWindow::on_actionSettings_triggered() {
 	}
 }
 
-
 void MainWindow::on_actionStop_triggered() {
 	SceneContext *context = m_context[ui->tabBar->currentIndex()];
 	m_contextMutex.lock();
@@ -1424,6 +1424,10 @@ void MainWindow::on_actionRender_triggered() {
 		return;
 
 	scene->setBlockSize(m_blockSize);
+
+	if (m_renderQueue->getJobCount() == 0)
+		Statistics::getInstance()->resetAll();
+
 	context->renderJob = new RenderJob("rend", scene, m_renderQueue,
 		context->sceneResID, -1, -1, false, true);
 	context->cancelMode = ERender;
@@ -1451,6 +1455,7 @@ void MainWindow::on_actionRender_triggered() {
 #endif
 
 	updateStatus();
+
 	context->renderJob->start();
 }
 
@@ -1821,9 +1826,9 @@ void MainWindow::onWorkCanceled(const RenderJob *job, const Point2i &offset, con
 	if (context == NULL)
 		return;
 	VisualWorkUnit vwu(offset, size);
+	m_contextMutex.lock();
 	if (context->workUnits.find(vwu) != context->workUnits.end())
 		context->workUnits.erase(vwu);
-	m_contextMutex.lock();
 	m_contextMutex.unlock();
 }
 

@@ -538,7 +538,7 @@ static const char *sh_render_frag MAYBE_UNUSED =
 	"	bool isShadowed(vec3 p) {\n"
 	"		float depth = texture2D(shadowMap, (p.xy / (-p.z + length(p))) * 0.5 + 0.5).r;\n"
 	"		depth = (depth * (depthRange[1]-depthRange[0]) + depthRange[0]) * (1.0+EPSILON);\n"
-	"		return dot(p, p) > depth * depth && p.z < 0;\n"
+	"		return dot(p, p) > depth * depth && p.z < 0.0;\n"
 	"	}\n"
 	"#elif defined(CUBEMAP_VPL)\n"
 	"	bool isShadowed(vec3 d) {\n"

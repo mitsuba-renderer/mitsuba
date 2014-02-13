@@ -220,10 +220,10 @@ int mts_main(int argc, char **argv) {
 			XMLString::transcode(toCatch.getMessage()) << endl;
 		retval = -1;
 	} catch (const std::exception &e) {
-		std::cerr << "Caught a critical exeption: " << e.what() << endl;
+		std::cerr << "Caught a critical exception: " << e.what() << endl;
 		retval = -1;
 	} catch (...) {
-		std::cerr << "Caught a critical exeption of unknown type!" << endl;
+		std::cerr << "Caught a critical exception of unknown type!" << endl;
 		retval = -1;
 	}
 

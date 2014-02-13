@@ -353,6 +353,9 @@ public:
 	/// Return a string containing gathered statistics
 	std::string getStats();
 
+	/// Reset all statistics counters
+	void resetAll();
+
 	/// Initialize the global statistics collector
 	static void staticInitialization();
 

@@ -178,13 +178,14 @@ static int irrOctreeIndex = 0;
  * rendering, these  illumination samples are convolved with the diffusion profile
  * using a fast hierarchical technique proposed by Jensen and Buhler \cite{Jensen2005Rapid}.
  *
- * There are several different ways of configuring the medium properties.
- * Either, a material preset can be loaded using the \code{material}
- * parameter---see \tblref{medium-coefficients} for details. Alternatively,
- * when specifying parameters by hand, they can either be provided using
- * the scattering and absorption coefficients, or by declaring the extinction
- * coefficient and single scattering albedo (whichever is more convenient).
- * Mixing these parameter initialization methods is not allowed.
+ * There are two different ways of configuring the medium properties.
+ * One possibility is to load a material preset
+ * using the \code{material} parameter---see \tblref{medium-coefficients}
+ * for details. Alternatively, when specifying parameters by hand, they
+ * can either be provided using the scattering and absorption coefficients,
+ * or by declaring the extinction coefficient and single scattering albedo
+ * (whichever is more convenient). Mixing these parameter initialization
+ * methods is not allowed.
  *
  * All scattering parameters (named \code{sigma*}) should
  * be provided in inverse scene units. For instance, when a world-space

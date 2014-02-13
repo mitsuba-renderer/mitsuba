@@ -56,7 +56,7 @@ static StatsCounter avgPathLength("Volumetric path tracer", "Average path length
  *
  * This integrator has special support for \emph{index-matched} transmission
  * events (i.e. surface scattering events that do not change the direction
- * of light). As a consequence, particating media enclosed by a stencil shape (see
+ * of light). As a consequence, participating media enclosed by a stencil shape (see
  * \secref{shapes} for details) are rendered considerably more efficiently when this
  * shape has \emph{no}\footnote{this is what signals to Mitsuba that the boundary is
  * index-matched and does not interact with light in any way. Alternatively,

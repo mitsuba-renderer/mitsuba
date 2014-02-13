@@ -45,6 +45,7 @@ void Logger::setFormatter(Formatter *formatter) {
 }
 
 void Logger::setLogLevel(ELogLevel level) {
+	LockGuard lock(m_mutex);
 	m_logLevel = level;
 }
 

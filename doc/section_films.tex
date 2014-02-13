@@ -9,22 +9,22 @@ more scientifically oriented data formats (e.g. MATLAB or Mathematica).
 In the XML scene description language, a normal film configuration might look as follows
 \begin{xml}
 <scene version=$\MtsVer$>
-	<!-- ... scene contents ... -->
+    <!-- ... scene contents ... -->
 
-	<sensor type="... sensor type ...">
-		<!-- ... sensor parameters ... -->
+    <sensor type="... sensor type ...">
+        <!-- ... sensor parameters ... -->
 
-		<!-- Write to a high dynamic range EXR image -->
-		<film type="hdrfilm">
-			<!-- Specify the desired resolution (e.g. full HD) -->
-			<integer name="width" value="1920"/>
-			<integer name="height" value="1080"/>
+        <!-- Write to a high dynamic range EXR image -->
+        <film type="hdrfilm">
+            <!-- Specify the desired resolution (e.g. full HD) -->
+            <integer name="width" value="1920"/>
+            <integer name="height" value="1080"/>
 
-			<!-- Use a Gaussian reconstruction filter. For
-			     details on these, refer to the next subsection -->
-			<rfilter type="gaussian"/>
-		</film>
-	</sensor>
+            <!-- Use a Gaussian reconstruction filter. For
+                 details on these, refer to the next subsection -->
+            <rfilter type="gaussian"/>
+        </film>
+    </sensor>
 </scene>
 \end{xml}
 The \code{film} plugin should be instantiated nested inside a \code{sensor} declaration.

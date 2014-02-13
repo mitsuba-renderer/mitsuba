@@ -46,3 +46,14 @@ who want to do their own color processing in a space with a wide gamut.
 Finally, sRGB output is still possible. However, the color processing used in this case
 is fairly na\"ive: out-of-gamut values are simply clipped. This is something that may
 be improved in the future (e.g. by making use of a color management library like \code{lcms2})
+
+\subsection{Using Mitsuba from Makefiles}
+Sometimes it is useful to run \code{mitsuba} from a standard Unix Makefile. This is a bit inconvenient because  shell commands in Makefiles are executed using the
+classic \code{sh} shell, which is incompatible with the \code{setpath.sh} script.
+A simple workaround in this case is to explicitly call \code{bash} or \code{zsh}, e.g.
+\begin{shell}
+MITSUBA_HOME=$\langle$..$\rangle$
+%.exr: %.xml
+    bash -c ". $\texttt{\$}$(MITSUBA_HOME)/setpath.sh; mitsuba -o $\texttt{\$}$@ $\texttt{\$}$<"
+\end{shell}
+

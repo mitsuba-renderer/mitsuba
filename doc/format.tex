@@ -12,9 +12,9 @@ something like this:
 \begin{xml}
 <?xml version="1.0" encoding="utf-8"?>
 <scene version=$\MtsVer$>
-	<shape type="obj">
-		<string name="filename" value="dragon.obj"/>
-	</shape>
+    <shape type="obj">
+        <string name="filename" value="dragon.obj"/>
+    </shape>
 </scene>
 \end{xml}
 The scene version attribute denotes the release of Mitsuba that was used to
@@ -35,9 +35,9 @@ Similarly, you could write
 \begin{xml}
 <?xml version="1.0" encoding="utf-8"?>
 <scene version=$\MtsVer$>
-	<shape type="sphere">
-		<float name="radius" value="10"/>
-	</shape>
+    <shape type="sphere">
+        <float name="radius" value="10"/>
+    </shape>
 </scene>
 \end{xml}
 This loads a different plugin (\code{sphere}) which is still a \emph{Shape}, but instead represents
@@ -51,55 +51,55 @@ and one or more emitters. Here is a more complex example:
 <?xml version="1.0" encoding="utf-8"?>
 
 <scene version=$\MtsVer$>
-	<integrator type="path">
-		<!-- Path trace with a max. path length of 8 -->
-		<integer name="maxDepth" value="8"/>
-	</integrator>
+    <integrator type="path">
+        <!-- Path trace with a max. path length of 8 -->
+        <integer name="maxDepth" value="8"/>
+    </integrator>
 
-	<!-- Instantiate a perspective camera with 45 degrees field of view -->
-	<sensor type="perspective">
-		<!-- Rotate the camera around the Y axis by 180 degrees -->
-		<transform name="toWorld">
-			<rotate y="1" angle="180"/>
-		</transform>
-		<float name="fov" value="45"/>
+    <!-- Instantiate a perspective camera with 45 degrees field of view -->
+    <sensor type="perspective">
+        <!-- Rotate the camera around the Y axis by 180 degrees -->
+        <transform name="toWorld">
+            <rotate y="1" angle="180"/>
+        </transform>
+        <float name="fov" value="45"/>
 
-		<!-- Render with 32 samples per pixel using a basic
+        <!-- Render with 32 samples per pixel using a basic
              independent sampling strategy -->
-		<sampler type="independent">
-			<integer name="sampleCount" value="32"/>
-		</sampler>
+        <sampler type="independent">
+            <integer name="sampleCount" value="32"/>
+        </sampler>
 
-		<!-- Generate an EXR image at HD resolution -->
-		<film type="hdrfilm">
-			<integer name="width" value="1920"/>
-			<integer name="height" value="1080"/>
-		</film>
-	</sensor>
+        <!-- Generate an EXR image at HD resolution -->
+        <film type="hdrfilm">
+            <integer name="width" value="1920"/>
+            <integer name="height" value="1080"/>
+        </film>
+    </sensor>
 
-	<!-- Add a dragon mesh made of rough glass (stored as OBJ file) -->
-	<shape type="obj">
-		<string name="filename" value="dragon.obj"/>
+    <!-- Add a dragon mesh made of rough glass (stored as OBJ file) -->
+    <shape type="obj">
+        <string name="filename" value="dragon.obj"/>
 
-		<bsdf type="roughdielectric">
-			<!-- Tweak the roughness parameter of the material -->
-			<float name="alpha" value="0.01"/>
-		</bsdf>
-	</shape>
+        <bsdf type="roughdielectric">
+            <!-- Tweak the roughness parameter of the material -->
+            <float name="alpha" value="0.01"/>
+        </bsdf>
+    </shape>
 
-	<!-- Add another mesh -- this time, stored using Mitsuba's own
-	     (compact) binary representation -->
-	<shape type="serialized">
-		<string name="filename" value="lightsource.serialized"/>
-		<transform name="toWorld">
-			<translate x="5" y="-3" z="1"/>
-		</transform>
+    <!-- Add another mesh -- this time, stored using Mitsuba's own
+         (compact) binary representation -->
+    <shape type="serialized">
+        <string name="filename" value="lightsource.serialized"/>
+        <transform name="toWorld">
+            <translate x="5" y="-3" z="1"/>
+        </transform>
 
-		<!-- This mesh is an area emitter -->
-		<emitter type="area">
-			<rgb name="radiance" value="100,400,100"/>
-		</emitter>
-	</shape>
+        <!-- This mesh is an area emitter -->
+        <emitter type="area">
+            <rgb name="radiance" value="100,400,100"/>
+        </emitter>
+    </shape>
 </scene>
 \end{xml}
 This example introduces several new object types (\code{integrator, sensor, bsdf, sampler, film}, and \code{emitter})
@@ -126,17 +126,53 @@ Passing strings is straightforward:
 \begin{xml}
 <string name="stringProperty" value="This is a string"/>
 \end{xml}
+\subsubsection{RGB color values}
+In Mitsuba, color data is specified using the \texttt{<rgb>}, and \texttt{<srgb>}, or \texttt{<spectrum>} tags.
+We begin with the first two, which are most commonly used. The RGB tags expect
+red, green, and blue color values in floating point format, which are usually between 0 and 1 when
+specifying reflectance values. The \texttt{<srgb>} tag internally causes the specified value
+to be linearized by mapping it through an inverse sRGB gamma curve:
+\begin{xml}
+<rgb name="spectrumProperty" value="0.2, 0.8, 0.4"/>
+<srgb name="spectrumProperty" value="0.4, 0.3, 0.2"/>
+\end{xml}
+The \texttt{<srgb>} tag also accepts HTML-style hex values, e.g.:
+\begin{xml}
+<srgb name="spectrumProperty" value="#f9aa34"/>
+\end{xml}
+When Mitsuba is compiled with the default settings, it internally uses
+linear RGB to represent colors, so these values are directly used.
+However, when configured for spectral rendering
+\footnote{Note that the official
+releases all use linear RGB---to do spectral renderings, you will have
+to compile Mitsuba yourself.}, a color
+spectrum that has a matching RGB value must be found. This is a classic underdetermined problem,
+since there is an infinite number of spectra corresponding to any particular RGB value.
+
+Mitsuba relies on a method by Smits et al. \cite{Smits2005RGB} to find a
+smooth and physically ``plausible'' spectrum. To do so, it chooses
+one of two variants of Smits' approach depending on whether the spectrum contains a
+unitless reflectance value, or a radiance-valued intensity. This choice can be
+enforced via the \texttt{intent} XML attribute, e.g.:
+\begin{xml}
+<rgb name="spectrumProperty" intent="reflectance" value="0.2, 0.8, 0.4"/>
+<rgb name="spectrumProperty" intent="illuminant" value="0.2, 0.8, 0.4"/>
+\end{xml}
+Usually this attribute is not neccessary:
+Mitsuba detects when an RGB value is specified in the declaration of a light source
+and uses \texttt{intent="illuminant"} in this case and \texttt{intent="reflectance"}
+everywhere else.
+
 \subsubsection{Color spectra}
 \label{sec:format-spectra}
-Depending on the compilation flags of Mitsuba (see \secref{compiling-flags} for
-details), the renderer internally either represents colors using discretized color spectra
-(when \texttt{SPECTRUM\_SAMPLES} is set to a value other than 3), or it
-uses a basic linear RGB representation\footnote{The official
-releases all use linear RGB---to do spectral renderings, you will have
-to compile Mitsuba yourself.}.
-Irrespective of which internal representation is used, Mitsuba supports
-several different ways of specifying color information, which is then
-converted appropriately.
+Mitsuba can also work with spectral color data. The exact internal representation of
+such spectra depends on how the renderer was compiled (see \secref{compiling-flags} for
+details).
+
+When \texttt{SPECTRUM\_SAMPLES} was set 3 at compile time (the default for the official builds),
+Mistuba uses a basic linear RGB representation and thus always converts color spectra to RGB.
+For other values (e.g. \texttt{SPECTRUM\_SAMPLES}=20), then renderer performs all internal
+computations using a full spectral representation with the specified number of bins.
 
 The preferred way of passing color spectra to the renderer is to explicitly
 denote the  associated wavelengths of each value:
@@ -146,49 +182,39 @@ denote the  associated wavelengths of each value:
 This is a mapping from wavelength in nanometers (before the colon)
 to a reflectance or intensity value (after the colon).
 Values in between are linearly interpolated from the two closest neighbors.
-A useful shortcut to get a completely uniform spectrum, it is to provide
+
+A useful shortcut to get a ``white'' or uniform spectrum, it is to provide
 only a single value:
 \begin{xml}
 <spectrum name="spectrumProperty" value="0.56"/>
 \end{xml}
+The exact definition a white spectrum depends on whether
+it specifies a unitless reflectance value or a radiance-valued intensity. As before,
+Mitsuba tries to detect this automatically depending on whether or not the \texttt{<spectrum>}
+tag occurs within a light source declaration, and the \code{intent} attribute can be used
+to override the default behavior. In particular, the next snippet creates a uniform spectrum:
+\begin{xml}
+<spectrum name="spectrumProperty" intent="reflectance" value="0.56"/>
+\end{xml}
+On the other hand, the following creates a multiple of the white point (the CIE D65 illuminant):
+\begin{xml}
+<spectrum name="spectrumProperty" intent="illuminant" value="0.56"/>
+\end{xml}
+
 
 Another (discouraged) option is to directly provide the spectrum in Mitsuba's
 internal representation, avoiding the need for any kind of conversion.
-However, this is problematic, since the associated scene will likely not work
-anymore when Mitsuba is compiled with a different value of
+However, this is problematic, since the associated scene will not work
+when Mitsuba is compiled with a different value of
 \texttt{SPECTRUM\_SAMPLES}.
 For completeness, the possibility is explained nonetheless. Assuming that
 the 360-830$nm$ range is discretized into ten 47$nm$-sized blocks
 (i.e. \texttt{SPECTRUM\_SAMPLES} is set to 10), their values can be specified
-as follows:
+as
 \begin{xml}
 <spectrum name="spectrumProperty" value=".2, .2, .8, .4, .6, .5, .1, .9, .4, .2"/>
 \end{xml}
 
-Another convenient way of providing color spectra is by specifying linear RGB
-or sRGB values using floating-point triplets or hex values:
-\begin{xml}
-<rgb name="spectrumProperty" value="0.2, 0.8, 0.4"/>
-<srgb name="spectrumProperty" value="0.4, 0.3, 0.2"/>
-<srgb name="spectrumProperty" value="#f9aa34"/>
-\end{xml}
-When Mitsuba is compiled with the default settings, it internally uses
-linear RGB to represent colors, so these values can directly be used.
-However, when configured for doing spectral rendering, a suitable color
-spectrum with the requested RGB reflectance must be found. This is a tricky
-problem, since there is an infinite number of spectra with this property.
-
-Mitsuba uses a method by Smits et al. \cite{Smits2005RGB} to find a
-``plausible'' spectrum that is as smooth as possible. To do so, it uses
-one of two methods depending on whether the spectrum contains a
-unitless reflectance value, or a radiance-valued intensity.
-\begin{xml}
-<rgb name="spectrumProperty" intent="reflectance" value="0.2, 0.8, 0.4"/>
-<rgb name="spectrumProperty" intent="illuminant" value="0.2, 0.8, 0.4"/>
-\end{xml}
-The \texttt{reflectance} intent is used by default, so remember to
-set it to \texttt{illuminant} when defining the brightness of a
-light source with the \texttt{<rgb>} tag.
 
 When spectral power or reflectance distributions are obtained from measurements
 (e.g. at 10$nm$ intervals), they are usually quite unwiedy and can clutter
@@ -211,10 +237,10 @@ are allowed. Here is an example:
 \end{xml}
 
 \renderings{
-	\fbox{\includegraphics[width=10cm]{images/blackbody}}
-	\hfill\,
-	\caption{\label{fig:blackbody}A few simulated
-	black body emitters over a range of temperature values}
+    \fbox{\includegraphics[width=10cm]{images/blackbody}}
+    \hfill\,
+    \caption{\label{fig:blackbody}A few simulated
+    black body emitters over a range of temperature values}
 }
 \label{sec:blackbody}
 Finally, it is also possible to specify the spectral distribution of a black body emitter (\figref{blackbody}),
@@ -231,7 +257,7 @@ the light source emission profile.}.
 
 Specifically, the black body spectrum has units of power ($W$) per
 unit area ($m^{-2}$) per steradian ($sr^{-1}$) per unit wavelength ($nm^{-1}$).
-If these units are inconsistent with your scene description, you may use the
+If these units are inconsistent with your scene description (e.g. because it is modeled in millimeters or kilometers), you may use the
 optional \texttt{scale} attribute to adjust them, e.g.:
 \begin{xml}
 <!-- Scale black body radiance by a factor of 1/1000 -->
@@ -252,8 +278,8 @@ with the identity, one can build up a transformation using a sequence of command
 does a translation followed by a rotation might be written like this:
 \begin{xml}
 <transform name="trafoProperty">
-	<translate x="-1" y="3" z="4"/>
-	<rotate y="1" angle="45"/>
+    <translate x="-1" y="3" z="4"/>
+    <rotate y="1" angle="45"/>
 </transform>
 \end{xml}
 Mathematically, each incremental transformation in the sequence is left-multiplied onto the current one. The following
@@ -286,6 +312,7 @@ The \code{up} parameter is not needed for spot lights.
 \end{itemize}
 Cordinates that are zero (for \code{translate} and \code{rotate}) or one (for \code{scale})
 do not explicitly have to be specified.
+\newpage
 \subsection{Animated transformations}
 Most shapes, emitters, and sensors in Mitsuba can accept both normal transformations
 and \emph{animated transformations} as parameters. The latter is useful to
@@ -316,29 +343,29 @@ interpolation for the rotation component.} these for intermediate
 time values.
 It is important to specify appropriate shutter open/close times
 to the sensor so that the motion is visible.
-\newpage
 \subsection{References}
 Quite often, you will find yourself using an object (such as a material) in many places. To avoid having
 to declare it over and over again, which wastes memory, you can make use of references. Here is an example
 of how this works:
+\newpage
 \begin{xml}
 <scene version=$\MtsVer$>
-	<texture type="bitmap" id="myImage">
-		<string name="filename" value="textures/myImage.jpg"/>
-	</texture>
+    <texture type="bitmap" id="myImage">
+        <string name="filename" value="textures/myImage.jpg"/>
+    </texture>
 
-	<bsdf type="diffuse" id="myMaterial">
-		<!-- Reference the texture named myImage and pass it
-			to the BRDF as the reflectance parameter -->
-		<ref name="reflectance" id="myImage"/>
-	</bsdf>
+    <bsdf type="diffuse" id="myMaterial">
+        <!-- Reference the texture named myImage and pass it
+            to the BRDF as the reflectance parameter -->
+        <ref name="reflectance" id="myImage"/>
+    </bsdf>
 
-	<shape type="obj">
-		<string name="filename" value="meshes/myShape.obj"/>
+    <shape type="obj">
+        <string name="filename" value="meshes/myShape.obj"/>
 
-		<!-- Reference the material named myMaterial -->
-		<ref id="myMaterial"/>
-	</shape>
+        <!-- Reference the material named myMaterial -->
+        <ref id="myMaterial"/>
+    </shape>
 </scene>
 \end{xml}
 By providing a unique \texttt{id} attribute in the

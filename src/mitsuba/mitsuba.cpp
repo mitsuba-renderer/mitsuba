@@ -388,10 +388,10 @@ int mitsuba_app(int argc, char **argv) {
 
 		Statistics::getInstance()->printStats();
 	} catch (const std::exception &e) {
-		std::cerr << "Caught a critical exeption: " << e.what() << endl;
+		std::cerr << "Caught a critical exception: " << e.what() << endl;
 		return -1;
 	} catch (...) {
-		std::cerr << "Caught a critical exeption of unknown type!" << endl;
+		std::cerr << "Caught a critical exception of unknown type!" << endl;
 		return -1;
 	}
 

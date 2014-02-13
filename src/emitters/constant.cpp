@@ -46,7 +46,7 @@ class ConstantBackgroundEmitter : public Emitter {
 public:
 	ConstantBackgroundEmitter(const Properties &props) : Emitter(props) {
 		m_type |= EOnSurface | EEnvironmentEmitter;
-		m_radiance = props.getSpectrum("radiance", Spectrum(1.0f));
+		m_radiance = props.getSpectrum("radiance", Spectrum::getD65());
 	}
 
 	ConstantBackgroundEmitter(Stream *stream, InstanceManager *manager)

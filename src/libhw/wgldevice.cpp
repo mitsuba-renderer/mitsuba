@@ -66,7 +66,7 @@ LONG WINAPI WGLDevice::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 	LRESULT retval = 1;
 
 	/* See comment above */
-	WGLDevice *device = reinterpret_cast<WGLDevice *>(GetWindowLong(hWnd, 0));
+	WGLDevice *device = reinterpret_cast<WGLDevice *>(GetWindowLongPtr(hWnd, 0));
 	if (device == NULL)
 		device = __global_workaround;
 	PAINTSTRUCT ps;

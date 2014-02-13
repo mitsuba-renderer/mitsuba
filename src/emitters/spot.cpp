@@ -74,7 +74,7 @@ public:
 		Assert(m_cutoffAngle >= m_beamWidth);
 		m_type = EDeltaPosition;
 		m_texture = new ConstantSpectrumTexture(
-			props.getSpectrum("texture", Spectrum(1.0f)));
+			props.getSpectrum("texture", Spectrum::getD65()));
 	}
 
 	SpotEmitter(Stream *stream, InstanceManager *manager)

@@ -135,7 +135,18 @@ void Statistics::logPlugin(const std::string &name, const std::string &descr) {
 }
 
 void Statistics::printStats() {
-	SLog(EInfo, "Statistics:\n%s", getStats().c_str());
+	mitsuba::Logger *logger = Thread::getThread()->getLogger();
+	LockGuard guard(logger->m_mutex);
+	ELogLevel curLevel = logger->getLogLevel();
+	logger->setLogLevel(EInfo);
+	logger->log(EInfo, NULL, __FILE__, __LINE__, "Statistics:\n%s", getStats().c_str());
+	logger->setLogLevel(curLevel);
+}
+
+void Statistics::resetAll() {
+	LockGuard lock(m_mutex);
+	for (size_t i=0; i<m_counters.size(); ++i)
+		const_cast<StatsCounter *>(m_counters[i])->reset();
 }
 
 std::string Statistics::getStats() {
@@ -157,6 +168,7 @@ std::string Statistics::getStats() {
 	std::string suffixesNumber[] = { "", " K", " M", " G", " T" };
 	std::string suffixesByte[] = { " B", " KiB", " MiB", " GiB", " TiB" };
 	std::string category = "";
+	const int lastSuffix = 4;
 
 	std::sort(m_counters.begin(), m_counters.end(), compareCategory());
 	int statsEntries = 0;
@@ -189,10 +201,11 @@ std::string Statistics::getStats() {
 			case ENumberValue:
 			case EMinimumValue:
 			case EMaximumValue:
-				while (value > 1000.0f) {
+				while (value > 1000.0f && suffixIndex <= lastSuffix) {
 					value /= 1000.0f;
 					suffixIndex++;
 				}
+
 				if (value - std::floor(value) < 0.001f)
 					snprintf(temp, sizeof(temp), "    -  %s : %.0f%s", counter->getName().c_str(), value, suffixesNumber[suffixIndex].c_str());
 				else
@@ -200,7 +213,7 @@ std::string Statistics::getStats() {
 				break;
 
 			case EByteCount:
-				while (value > 1024.0f) {
+				while (value > 1024.0f && suffixIndex < lastSuffix) {
 					value /= 1024.0f;
 					suffixIndex++;
 				}
@@ -212,11 +225,11 @@ std::string Statistics::getStats() {
 
 			case EPercentage: {
 					Float value2 = value, value3 = baseValue;
-					while (value2 > 1000.0f) {
+					while (value2 > 1000.0f && suffixIndex < lastSuffix) {
 						value2 /= 1000.0f;
 						suffixIndex++;
 					}
-					while (value3 > 1000.0f) {
+					while (value3 > 1000.0f && suffixIndex2 < lastSuffix) {
 						value3 /= 1000.0f;
 						suffixIndex2++;
 					}
@@ -229,11 +242,11 @@ std::string Statistics::getStats() {
 			case EAverage: {
 					Float avg = value / (Float) baseValue;
 					Float value2 = value, value3 = baseValue;
-					while (value2 > 1000.0f) {
+					while (value2 > 1000.0f && suffixIndex < lastSuffix) {
 						value2 /= 1000.0f;
 						suffixIndex++;
 					}
-					while (value3 > 1000.0f) {
+					while (value3 > 1000.0f && suffixIndex < lastSuffix) {
 						value3 /= 1000.0f;
 						suffixIndex2++;
 					}

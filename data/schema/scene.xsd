@@ -298,6 +298,7 @@
 		<xsd:attribute name="name" type="xsd:string" use="required"/>
 		<xsd:attribute name="filename" type="xsd:string" use="optional"/>
 		<xsd:attribute name="value" type="xsd:string" use="optional"/>
+		<xsd:attribute name="intent" type="xsd:string" use="optional"/>
 	</xsd:complexType>
 
 	<xsd:complexType name="include">
