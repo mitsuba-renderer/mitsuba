@@ -22,8 +22,9 @@ build() {
 	ln -s . minizip/src
 	ln -s . minizip/include
 	cd ..
-	make project=minizip libOpts="-lz -Wl,-soname -Wl,libminizip.so.1.2.3" ccFlags="-fPIC"
-	make project=dom libOpts="-lpcre -lpcrecpp -lminizip -Wl,-soname -Wl,libcollada14dom.so.2.4"  ccFlags="-DCOLLADA_DOM_SUPPORT141 -fPIC"
+	make project=minizip
+	rm build/linux-1.4/libminizip.so*
+	make project=dom libOpts="-lpcre -lpcrecpp -Lbuild/linux-1.4 -lxml2 -lminizip -Wl,-soname -Wl,libcollada14dom.so.2.4"  ccFlags="-DDOM_INCLUDE_LIBXML -DCOLLADA_DOM_SUPPORT141 -fPIC -DDOM_INCLUDE_LIBXML -O3"
 }
 
 package() {
@@ -33,7 +34,6 @@ package() {
 	make prefix=${pkgdir}/usr project=dom install
 	mv ${pkgdir}/usr/include/colladadom ${pkgdir}/usr/include/collada-dom
 
-	install -m755 build/linux-1.4/libminizip.so* ${pkgdir}/usr/lib
 	install -D -m644 license.txt "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
 }
 
