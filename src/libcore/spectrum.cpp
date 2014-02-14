@@ -96,6 +96,9 @@ Spectrum Spectrum::rgbIllum2SpecBlue;
 Float Spectrum::m_wavelengths[SPECTRUM_SAMPLES + 1];
 #endif
 
+/// Pre-integrated D65 illuminant
+Spectrum Spectrum::CIE_D65;
+
 void Spectrum::staticInitialization() {
 #if SPECTRUM_SAMPLES != 3
 	std::ostringstream oss;
