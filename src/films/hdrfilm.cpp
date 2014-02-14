@@ -41,16 +41,16 @@ MTS_NAMESPACE_BEGIN
  *       \default{\code{openexr}}
  *     }
  *     \parameter{pixelFormat}{\String}{Specifies the desired pixel format
- *         for OpenEXR output images. The options are \code{luminance},
+ *         of output images. The options are \code{luminance},
  *         \code{luminanceAlpha}, \code{rgb}, \code{rgba}, \code{xyz},
- *         \code{xyza}, \code{spectrum}, and \code{spectrumAlpha}. In the latter two cases,
- *         the number of written channels depends on the value assigned to
- *         \code{SPECTRUM\_SAMPLES} during compilation (see Section~\ref{sec:compiling}
- *         for details)
+ *         \code{xyza}, \code{spectrum}, and \code{spectrumAlpha}.
+ *         For the \code{spectrum*} options, the number of written channels depends on
+ *         the value assigned to \code{SPECTRUM\_SAMPLES} during compilation
+ *         (see \secref{compiling} for details)
  *         \default{\code{rgb}}
  *     }
  *     \parameter{componentFormat}{\String}{Specifies the desired floating
- *         point component format used for OpenEXR output. The options are
+ *         point component format of output images. The options are
  *         \code{float16}, \code{float32}, or \code{uint32}.
  *         \default{\code{float16}}
  *     }
@@ -91,7 +91,9 @@ MTS_NAMESPACE_BEGIN
  * The default configuration is RGB with a \code{float16} component format,
  * which is appropriate for most purposes. Note that the spectral output options
  * only make sense when using a custom build of Mitsuba that has spectral
- * rendering enabled. This is not the case for the downloadable release builds.
+ * rendering enabled (this is not the case for the downloadable release builds).
+ * For OpenEXR files, Mitsuba also supports fully general multi-channel output;
+ * refer to the \pluginref{multichannel} plugin for details on how this works.
  *
  * The plugin can also write RLE-compressed files in the Radiance RGBE format
  * pioneered by Greg Ward (set \code{fileFormat=rgbe}), as well as the
@@ -210,8 +212,10 @@ public:
 
 		std::string fileFormat = boost::to_lower_copy(
 			props.getString("fileFormat", "openexr"));
-		std::string pixelFormat = boost::to_lower_copy(
-			props.getString("pixelFormat", "rgb"));
+		std::vector<std::string> pixelFormats = tokenize(boost::to_lower_copy(
+			props.getString("pixelFormat", "rgb")), " ,");
+		std::vector<std::string> channelNames = tokenize(
+			props.getString("channelNames", "rgb"), ", ");
 		std::string componentFormat = boost::to_lower_copy(
 			props.getString("componentFormat", "float16"));
 
@@ -226,32 +230,68 @@ public:
 				"equal to \"openexr\" or \"rgbe\"!");
 		}
 
-		if (pixelFormat == "luminance") {
-			m_pixelFormat = Bitmap::ELuminance;
-		} else if (pixelFormat == "luminancealpha") {
-			m_pixelFormat = Bitmap::ELuminanceAlpha;
-		} else if (pixelFormat == "rgb") {
-			m_pixelFormat = Bitmap::ERGB;
-		} else if (pixelFormat == "rgba") {
-			m_pixelFormat = Bitmap::ERGBA;
-		} else if (pixelFormat == "xyz") {
-			m_pixelFormat = Bitmap::EXYZ;
-		} else if (pixelFormat == "xyza") {
-			m_pixelFormat = Bitmap::EXYZA;
-		} else if (pixelFormat == "spectrum") {
-			m_pixelFormat = Bitmap::ESpectrum;
-		} else if (pixelFormat == "spectrumalpha") {
-			m_pixelFormat = Bitmap::ESpectrumAlpha;
-		} else {
-			Log(EError, "The \"pixelFormat\" parameter must either be equal to "
-				"\"luminance\", \"luminanceAlpha\", \"rgb\", \"rgba\", \"xyz\", \"xyza\", "
-				"\"spectrum\", or \"spectrumAlpha\"!");
+		if (pixelFormats.empty())
+			Log(EError, "At least one pixel format must be specified!");
+
+		if (m_pixelFormats.size() != 1 && m_channelNames.size() != m_pixelFormats.size())
+			Log(EError, "Number of channel names must match the number of specified pixel formats!");
+
+		for (size_t i=0; i<pixelFormats.size(); ++i) {
+			std::string pixelFormat = pixelFormats[i];
+			std::string name = i < channelNames.size() ? channelNames[i] : "";
+
+			if (pixelFormat == "luminance") {
+				m_pixelFormats.push_back(Bitmap::ELuminance);
+				m_channelNames.push_back(name + ".Y");
+			} else if (pixelFormat == "luminancealpha") {
+				m_pixelFormats.push_back(Bitmap::ELuminanceAlpha);
+				m_channelNames.push_back(name + ".Y");
+				m_channelNames.push_back(name + ".A");
+			} else if (pixelFormat == "rgb") {
+				m_pixelFormats.push_back(Bitmap::ERGB);
+				m_channelNames.push_back(name + ".R");
+				m_channelNames.push_back(name + ".G");
+				m_channelNames.push_back(name + ".B");
+			} else if (pixelFormat == "rgba") {
+				m_pixelFormats.push_back(Bitmap::ERGBA);
+				m_channelNames.push_back(name + ".R");
+				m_channelNames.push_back(name + ".G");
+				m_channelNames.push_back(name + ".B");
+				m_channelNames.push_back(name + ".A");
+			} else if (pixelFormat == "xyz") {
+				m_pixelFormats.push_back(Bitmap::EXYZ);
+				if (m_pixelFormats.size() > 1)
+					Log(EError, "The XYZ pixel format is not supported for general multi-channel images!");
+			} else if (pixelFormat == "xyza") {
+				m_pixelFormats.push_back(Bitmap::EXYZA);
+				if (m_pixelFormats.size() > 1)
+					Log(EError, "The XYZA pixel format is not supported for general multi-channel images!");
+			} else if (pixelFormat == "spectrum") {
+				m_pixelFormats.push_back(Bitmap::ESpectrum);
+				for (int i=0; i<SPECTRUM_SAMPLES; ++i) {
+					std::pair<Float, Float> coverage = Spectrum::getBinCoverage(i);
+					m_channelNames.push_back(name + formatString(".%.2f-%.2fnm", coverage.first, coverage.second));
+				}
+			} else if (pixelFormat == "spectrumalpha") {
+				m_pixelFormats.push_back(Bitmap::ESpectrumAlpha);
+				for (int i=0; i<SPECTRUM_SAMPLES; ++i) {
+					std::pair<Float, Float> coverage = Spectrum::getBinCoverage(i);
+					m_channelNames.push_back(name + formatString(".%.2f-%.2fnm", coverage.first, coverage.second));
+				}
+				m_channelNames.push_back(name + ".A");
+			} else {
+				Log(EError, "The \"pixelFormat\" parameter must either be equal to "
+					"\"luminance\", \"luminanceAlpha\", \"rgb\", \"rgba\", \"xyz\", \"xyza\", "
+					"\"spectrum\", or \"spectrumAlpha\"!");
+			}
 		}
 
-		if (SPECTRUM_SAMPLES == 3 && (m_pixelFormat == Bitmap::ESpectrum || m_pixelFormat == Bitmap::ESpectrumAlpha))
-			Log(EError, "You requested to render a spectral image, but Mitsuba is currently "
-				"configured for a RGB flow (i.e. SPECTRUM_SAMPLES = 3). You will need to recompile "
-				"it with a different configuration. Please see the documentation for details.");
+		for (size_t i=0; i<m_pixelFormats.size(); ++i) {
+			if (SPECTRUM_SAMPLES == 3 && (m_pixelFormats[i] == Bitmap::ESpectrum || m_pixelFormats[i] == Bitmap::ESpectrumAlpha))
+				Log(EError, "You requested to render a spectral image, but Mitsuba is currently "
+					"configured for a RGB flow (i.e. SPECTRUM_SAMPLES = 3). You will need to recompile "
+					"it with a different configuration. Please see the documentation for details.");
+		}
 
 		if (componentFormat == "float16") {
 			m_componentFormat = Bitmap::EFloat16;
@@ -266,9 +306,11 @@ public:
 
 		if (m_fileFormat == Bitmap::ERGBE) {
 			/* RGBE output; override pixel & component format if necessary */
-			if (m_pixelFormat != Bitmap::ERGB) {
+			if (m_pixelFormats.size() != 1)
+				Log(EError, "The RGBE format does not support general multi-channel images!");
+			if (m_pixelFormats[0] != Bitmap::ERGB) {
 				Log(EWarn, "The RGBE format only supports pixelFormat=\"rgb\". Overriding..");
-				m_pixelFormat = Bitmap::ERGB;
+				m_pixelFormats[0] = Bitmap::ERGB;
 			}
 			if (m_componentFormat != Bitmap::EFloat32) {
 				Log(EWarn, "The RGBE format only supports componentFormat=\"float32\". Overriding..");
@@ -276,16 +318,17 @@ public:
 			}
 		} else if (m_fileFormat == Bitmap::EPFM) {
 			/* PFM output; override pixel & component format if necessary */
-			if (m_pixelFormat != Bitmap::ERGB && m_pixelFormat != Bitmap::ELuminance) {
+			if (m_pixelFormats.size() != 1)
+				Log(EError, "The PFM format does not support general multi-channel images!");
+			if (m_pixelFormats[0] != Bitmap::ERGB && m_pixelFormats[0] != Bitmap::ELuminance) {
 				Log(EWarn, "The PFM format only supports pixelFormat=\"rgb\" or \"luminance\"."
 					" Overriding (setting to \"rgb\")..");
-				m_pixelFormat = Bitmap::ERGB;
+				m_pixelFormats[0] = Bitmap::ERGB;
 			}
 			if (m_componentFormat != Bitmap::EFloat32) {
 				Log(EWarn, "The PFM format only supports componentFormat=\"float32\". Overriding..");
 				m_componentFormat = Bitmap::EFloat32;
 			}
-
 		}
 
 		std::vector<std::string> keys = props.getPropertyNames();
@@ -298,7 +341,12 @@ public:
 				props.markQueried(keys[i]);
 		}
 
-		m_storage = new ImageBlock(Bitmap::ESpectrumAlphaWeight, m_cropSize);
+		if (m_pixelFormats.size() == 1) {
+			m_storage = new ImageBlock(Bitmap::ESpectrumAlphaWeight, m_cropSize);
+		} else {
+			m_storage = new ImageBlock(Bitmap::EMultiSpectrumAlphaWeight, m_cropSize,
+				NULL, SPECTRUM_SAMPLES * m_pixelFormats.size() + 2);
+		}
 	}
 
 	HDRFilm(Stream *stream, InstanceManager *manager)
@@ -306,7 +354,12 @@ public:
 		m_banner = stream->readBool();
 		m_attachLog = stream->readBool();
 		m_fileFormat = (Bitmap::EFileFormat) stream->readUInt();
-		m_pixelFormat = (Bitmap::EPixelFormat) stream->readUInt();
+		m_pixelFormats.resize((size_t) stream->readUInt());
+		for (size_t i=0; i<m_pixelFormats.size(); ++i)
+			m_pixelFormats[i] = (Bitmap::EPixelFormat) stream->readUInt();
+		m_channelNames.resize((size_t) stream->readUInt());
+		for (size_t i=0; i<m_channelNames.size(); ++i)
+			m_channelNames[i] = stream->readString();
 		m_componentFormat = (Bitmap::EComponentFormat) stream->readUInt();
 	}
 
@@ -315,7 +368,12 @@ public:
 		stream->writeBool(m_banner);
 		stream->writeBool(m_attachLog);
 		stream->writeUInt(m_fileFormat);
-		stream->writeUInt(m_pixelFormat);
+		stream->writeUInt((uint32_t) m_pixelFormats.size());
+		for (size_t i=0; i<m_pixelFormats.size(); ++i)
+			stream->writeUInt(m_pixelFormats[i]);
+		stream->writeUInt((uint32_t) m_channelNames.size());
+		for (size_t i=0; i<m_channelNames.size(); ++i)
+			stream->writeString(m_channelNames[i]);
 		stream->writeUInt(m_componentFormat);
 	}
 
@@ -340,7 +398,8 @@ public:
 		if (bitmap->getPixelFormat() != Bitmap::ESpectrum ||
 			bitmap->getComponentFormat() != Bitmap::EFloat ||
 			bitmap->getGamma() != 1.0f ||
-			size != m_storage->getSize()) {
+			size != m_storage->getSize() ||
+			m_pixelFormats.size() != 1) {
 			Log(EError, "addBitmap(): Unsupported bitmap format!");
 		}
 
@@ -373,7 +432,22 @@ public:
 		uint8_t *targetData = target->getUInt8Data()
 			+ (targetOffset.x + targetOffset.y * target->getWidth()) * targetBpp;
 
-		if (size.x == m_cropSize.x && target->getWidth() == m_storage->getWidth()) {
+		if (EXPECT_NOT_TAKEN(m_pixelFormats.size() != 1)) {
+			/* Special case for general multi-channel images -- just develop the first component(s) */
+			for (int i=0; i<size.y; ++i) {
+				for (int j=0; j<size.x; ++j) {
+					Float weight = *((Float *) (sourceData + (j+1)*sourceBpp - sizeof(Float)));
+					Float invWeight = weight != 0 ? ((Float) 1 / weight) : (Float) 0;
+					cvt->convert(Bitmap::ESpectrum, 1.0f, sourceData + j*sourceBpp,
+						target->getPixelFormat(), target->getGamma(), targetData + j * targetBpp,
+						1, invWeight);
+				}
+
+				sourceData += source->getWidth() * sourceBpp;
+				targetData += target->getWidth() * targetBpp;
+			}
+
+		} else if (size.x == m_cropSize.x && target->getWidth() == m_storage->getWidth()) {
 			/* Develop a connected part of the underlying buffer */
 			cvt->convert(source->getPixelFormat(), 1.0f, sourceData,
 				target->getPixelFormat(), target->getGamma(), targetData,
@@ -403,10 +477,15 @@ public:
 
 		Log(EDebug, "Developing film ..");
 
-		ref<Bitmap> bitmap = m_storage->getBitmap()->convert(
-			m_pixelFormat, m_componentFormat);
+		ref<Bitmap> bitmap;
+		if (m_pixelFormats.size() == 1) {
+			bitmap = m_storage->getBitmap()->convert(m_pixelFormats[0], m_componentFormat);
+		} else {
+			bitmap = m_storage->getBitmap()->convertMultiSpectrumAlphaWeight(m_pixelFormats,
+					m_componentFormat, m_channelNames);
+		}
 
-		if (m_banner && m_cropSize.x > bannerWidth+5 && m_cropSize.y > bannerHeight + 5) {
+		if (m_banner && m_cropSize.x > bannerWidth+5 && m_cropSize.y > bannerHeight + 5 && m_pixelFormats.size() == 1) {
 			int xoffs = m_cropSize.x - bannerWidth - 5,
 			    yoffs = m_cropSize.y - bannerHeight - 5;
 			for (int y=0; y<bannerHeight; y++) {
@@ -434,7 +513,8 @@ public:
 		Log(EInfo, "Writing image to \"%s\" ..", filename.string().c_str());
 		ref<FileStream> stream = new FileStream(filename, FileStream::ETruncWrite);
 
-		annotate(scene, m_properties, bitmap, renderTime, 1.0f);
+		if (m_pixelFormats.size() == 1)
+			annotate(scene, m_properties, bitmap, renderTime, 1.0f);
 
 		/* Attach the log file to the image if this is requested */
 		Logger *logger = Thread::getThread()->getLogger();
@@ -449,18 +529,27 @@ public:
 	}
 
 	bool hasAlpha() const {
+		Assert(m_pixelFormats.size() > 0);
 		return
-			m_pixelFormat == Bitmap::ELuminanceAlpha ||
-			m_pixelFormat == Bitmap::ERGBA ||
-			m_pixelFormat == Bitmap::EXYZA ||
-			m_pixelFormat == Bitmap::ESpectrumAlpha;
+			m_pixelFormats[0] == Bitmap::ELuminanceAlpha ||
+			m_pixelFormats[0] == Bitmap::ERGBA ||
+			m_pixelFormats[0] == Bitmap::EXYZA ||
+			m_pixelFormats[0] == Bitmap::ESpectrumAlpha ||
+			m_pixelFormats.size() > 1;
 	}
 
 	bool destinationExists(const fs::path &baseName) const {
+		std::string properExtension;
+		if (m_fileFormat == Bitmap::EOpenEXR)
+			properExtension = ".exr";
+		else if (m_fileFormat == Bitmap::ERGBE)
+			properExtension = ".rgbe";
+		else
+			properExtension = ".pfm";
+
 		fs::path filename = baseName;
-		std::string extension = (m_fileFormat == Bitmap::EOpenEXR) ? ".exr" : ".rgbe";
-		if (boost::to_lower_copy(filename.extension().string()) != extension)
-			filename.replace_extension(extension);
+		if (boost::to_lower_copy(filename.extension().string()) != properExtension)
+			filename.replace_extension(properExtension);
 		return fs::exists(filename);
 	}
 
@@ -469,7 +558,14 @@ public:
 		oss << "HDRFilm[" << endl
 			<< "  size = " << m_size.toString() << "," << endl
 			<< "  fileFormat = " << m_fileFormat << "," << endl
-			<< "  pixelFormat = " << m_pixelFormat << "," << endl
+			<< "  pixelFormat = ";
+		for (size_t i=0; i<m_pixelFormats.size(); ++i)
+			oss << m_pixelFormats[i] << ", ";
+		oss << endl
+			<< "  channelNames = ";
+		for (size_t i=0; i<m_channelNames.size(); ++i)
+			oss << "\"" << m_channelNames[i] << "\"" << ", ";
+		oss << endl
 			<< "  componentFormat = " << m_componentFormat << "," << endl
 			<< "  cropOffset = " << m_cropOffset.toString() << "," << endl
 			<< "  cropSize = " << m_cropSize.toString() << "," << endl
@@ -482,7 +578,8 @@ public:
 	MTS_DECLARE_CLASS()
 protected:
 	Bitmap::EFileFormat m_fileFormat;
-	Bitmap::EPixelFormat m_pixelFormat;
+	std::vector<Bitmap::EPixelFormat> m_pixelFormats;
+	std::vector<std::string> m_channelNames;
 	Bitmap::EComponentFormat m_componentFormat;
 	bool m_banner;
 	bool m_attachLog;

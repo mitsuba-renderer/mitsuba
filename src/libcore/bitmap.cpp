@@ -399,8 +399,8 @@ void Bitmap::updateChannelCount() {
 		case ESpectrum: m_channelCount = SPECTRUM_SAMPLES; break;
 		case ESpectrumAlpha: m_channelCount = SPECTRUM_SAMPLES + 1; break;
 		case ESpectrumAlphaWeight: m_channelCount = SPECTRUM_SAMPLES + 2; break;
-		case EMultiChannel:
-		case EMultiChannelWeight: break;
+		case EMultiSpectrumAlphaWeight: break;
+		case EMultiChannel: break;
 		default:
 			Log(EError, "Unknown pixel format!");
 	}
@@ -1343,10 +1343,6 @@ void Bitmap::convert(Bitmap *target, Float multiplier, Spectrum::EConversionInte
 		Log(EError, "Conversions involving bitmasks are currently not supported!");
 	if (m_size != target->getSize())
 		Log(EError, "Bitmap::convert(): size mismatch!");
-	Assert(isMultiChannel() == target->isMultiChannel());
-	Assert(!isMultiChannel() || (
-		        getChannelCount() - (        hasWeight() ? 1 : 0) ==
-		target->getChannelCount() - (target->hasWeight() ? 1 : 0)));
 
 	if (m_pixelFormat == target->getPixelFormat() &&
 		m_componentFormat == target->getComponentFormat() &&
@@ -1387,16 +1383,8 @@ ref<Bitmap> Bitmap::convert(EPixelFormat pixelFormat,
 
 	Assert(cvt != NULL);
 
-	ref<Bitmap> target;
-	if (!isMultiChannel()) {
-		target = new Bitmap(pixelFormat, componentFormat, m_size);
-	} else {
-		Assert(pixelFormat == EMultiChannel || pixelFormat == EMultiChannelWeight);
-		int channelCount = m_channelCount - (hasWeight() ? 1 : 0)
-			+ (pixelFormat == EMultiChannelWeight ? 1 : 0);
-		target = new Bitmap(pixelFormat, componentFormat, m_size, channelCount);
-	}
-
+	ref<Bitmap> target = new Bitmap(pixelFormat, componentFormat, m_size,
+			m_channelCount);
 	target->setMetadata(m_metadata);
 	target->setChannelNames(m_channelNames);
 	target->setGamma(gamma);
@@ -1407,6 +1395,67 @@ ref<Bitmap> Bitmap::convert(EPixelFormat pixelFormat,
 		m_channelCount - (hasWeight() ? 1 : 0));
 
 	return target;
+}
+
+ref<Bitmap> Bitmap::convertMultiSpectrumAlphaWeight(const std::vector<EPixelFormat> &pixelFormats,
+		EComponentFormat componentFormat, const std::vector<std::string> &channelNames) const {
+	if (m_componentFormat != EFloat && m_pixelFormat != EMultiSpectrumAlphaWeight)
+		Log(EError, "convertMultiSpectrumAlphaWeight(): unsupported!");
+	ref<Bitmap> bitmap = new Bitmap(Bitmap::EMultiChannel, Bitmap::EFloat, m_size, channelNames.size());
+	bitmap->setChannelNames(channelNames);
+
+	for (int y = 0; y<m_size.y; ++y) {
+		for (int x = 0; x<m_size.x; ++x) {
+			const Float *srcData = getFloatData() + getChannelCount() * (x+y*m_size.x);
+			Float *dstData = bitmap->getFloatData() + bitmap->getChannelCount() * (x+y*m_size.x);
+			Float weight = srcData[getChannelCount()-1],
+				  invWeight = weight == 0 ? 0 : (Float) 1 / weight;
+			Float alpha = srcData[getChannelCount()-2] * invWeight;
+
+			for (size_t i=0; i<pixelFormats.size(); ++i) {
+				Spectrum value = ((Spectrum *) srcData)[i] * invWeight;
+				Float r, g, b;
+				switch (pixelFormats[i]) {
+					case Bitmap::ELuminance:
+						*dstData++ = value.getLuminance();
+						break;
+					case Bitmap::ELuminanceAlpha:
+						*dstData++ = value.getLuminance();
+						*dstData++ = alpha;
+						break;
+					case Bitmap::ERGB:
+						value.toLinearRGB(r, g, b);
+						*dstData++ = r;
+						*dstData++ = g;
+						*dstData++ = b;
+						break;
+					case Bitmap::ERGBA:
+						value.toLinearRGB(r, g, b);
+						*dstData++ = r;
+						*dstData++ = g;
+						*dstData++ = b;
+						*dstData++ = alpha;
+						break;
+					case Bitmap::ESpectrum:
+						for (int j=0; j<SPECTRUM_SAMPLES; ++j)
+							*dstData++ = value[j];
+						break;
+					case Bitmap::ESpectrumAlpha:
+						for (int j=0; j<SPECTRUM_SAMPLES; ++j)
+							*dstData++ = value[j];
+						*dstData++ = alpha;
+						break;
+					default:
+						Log(EError, "Unknown pixel format!");
+				}
+			}
+		}
+	}
+
+	if (componentFormat != Bitmap::EFloat)
+		bitmap = bitmap->convert(Bitmap::EMultiChannel, componentFormat);
+
+	return bitmap;
 }
 
 void Bitmap::convert(void *target, EPixelFormat pixelFormat,
@@ -1900,6 +1949,17 @@ std::string Bitmap::toString() const {
 		<< "  componentFormat = " << m_componentFormat << endl
 		<< "  size = " << m_size.toString() << endl;
 
+	if (isMultiChannel()) {
+		oss << "  channelCount = " << (int) m_channelCount << "," << endl
+		    << "  channelNames = { ";
+		for (size_t i=0; i<m_channelNames.size(); ++i) {
+			oss << "\"" << m_channelNames[i] << "\"";
+			if (i+1<m_channelNames.size())
+				oss << ", ";
+		}
+		oss << " }," << endl;
+	}
+
 	std::vector<std::string> keys = m_metadata.getPropertyNames();
 	if (!keys.empty()) {
 		oss << "  metadata = {" << endl;
@@ -2292,7 +2352,7 @@ void Bitmap::readOpenEXR(Stream *stream, const std::string &_prefix) {
 			ch_by = it.name();
 		} else {
 			bool isSpectralChannel = false;
-			#if SPECTRAL_SAMPLES != 3
+			#if SPECTRUM_SAMPLES != 3
 				for (int i=0; i<SPECTRUM_SAMPLES; ++i) {
 					std::pair<Float, Float> coverage = Spectrum::getBinCoverage(i);
 					if (!ch_spec[i] && boost::ends_with(name, formatString("%.2f-%.2fnm", coverage.first, coverage.second))) {
@@ -2731,7 +2791,7 @@ void Bitmap::writeOpenEXR(Stream *stream) const {
 			std::string name = formatString("%.2f-%.2fnm", coverage.first, coverage.second);
 			channels.insert(name.c_str(), Imf::Channel(compType));
 		}
-	} else if (pixelFormat == EMultiChannel || pixelFormat == EMultiChannelWeight) {
+	} else if (pixelFormat == EMultiChannel) {
 		for (int i=0; i<getChannelCount(); ++i)
 			channels.insert(formatString("%i", i).c_str(), Imf::Channel(compType));
 	} else {
@@ -2766,7 +2826,7 @@ void Bitmap::writeOpenEXR(Stream *stream) const {
 			std::string name = formatString("%.2f-%.2fnm", coverage.first, coverage.second);
 			frameBuffer.insert(name.c_str(), Imf::Slice(compType, ptr, pixelStride, rowStride)); ptr += compStride;
 		}
-	} else if (pixelFormat == EMultiChannel || pixelFormat == EMultiChannelWeight) {
+	} else if (pixelFormat == EMultiChannel) {
 		for (int i=0; i<getChannelCount(); ++i) {
 			frameBuffer.insert(formatString("%i", i).c_str(), Imf::Slice(compType, ptr, pixelStride, rowStride));
 			ptr += compStride;
@@ -3406,14 +3466,16 @@ void Bitmap::drawWorkUnit(const Point2i &offset, const Vector2i &size, int worke
 std::ostream &operator<<(std::ostream &os, const Bitmap::EPixelFormat &value) {
 	switch (value) {
 		case Bitmap::ELuminance: os << "luminance"; break;
-		case Bitmap::ELuminanceAlpha: os << "luminance-alpha"; break;
+		case Bitmap::ELuminanceAlpha: os << "luminanceAlpha"; break;
 		case Bitmap::ERGB: os << "rgb"; break;
 		case Bitmap::ERGBA: os << "rgba"; break;
 		case Bitmap::EXYZ: os << "xyz"; break;
 		case Bitmap::EXYZA: os << "xyza"; break;
 		case Bitmap::ESpectrum: os << "spectrum"; break;
-		case Bitmap::ESpectrumAlpha: os << "spectrum-alpha"; break;
-		case Bitmap::ESpectrumAlphaWeight: os << "spectrum-alpha-weight"; break;
+		case Bitmap::ESpectrumAlpha: os << "spectrumAlpha"; break;
+		case Bitmap::ESpectrumAlphaWeight: os << "spectrumAlphaWeight"; break;
+		case Bitmap::EMultiSpectrumAlphaWeight: os << "multiSpectrumAlphaWeight"; break;
+		case Bitmap::EMultiChannel: os << "multiChannel"; break;
 		default: os << "invalid"; break;
 	}
 	return os;

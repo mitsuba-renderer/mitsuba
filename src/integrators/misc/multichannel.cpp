@@ -45,6 +45,20 @@ public:
 			manager->serialize(stream, m_integrators[i].get());
 	}
 
+	bool preprocess(const Scene *scene, RenderQueue *queue,
+		const RenderJob *job, int sceneResID, int sensorResID,
+		int samplerResID) {
+		if (!SamplingIntegrator::preprocess(scene, queue, job, sceneResID,
+				sensorResID, samplerResID))
+			return false;
+		for (size_t i=0; i<m_integrators.size(); ++i) {
+			if (!m_integrators[i]->preprocess(scene, queue, job, sceneResID,
+					sensorResID, samplerResID))
+				return false;
+		}
+		return true;
+	}
+
 	bool render(Scene *scene,
 			RenderQueue *queue, const RenderJob *job,
 			int sceneResID, int sensorResID, int samplerResID) {
@@ -56,6 +70,9 @@ public:
 		const Sampler *sampler = static_cast<const Sampler *>(sched->getResource(samplerResID, 0));
 		size_t sampleCount = sampler->getSampleCount();
 
+		if (m_integrators.empty())
+			Log(EError, "No sub-integrators were supplied to the multi-channel integrator!");
+
 		Log(EInfo, "Starting render job (%ix%i, " SIZE_T_FMT " %s, " SIZE_T_FMT
 			" %s, " SSE_STR ") ..", film->getCropSize().x, film->getCropSize().y,
 			sampleCount, sampleCount == 1 ? "sample" : "samples", nCores,
@@ -65,7 +82,7 @@ public:
 		ref<BlockedRenderProcess> proc = new BlockedRenderProcess(job,
 			queue, scene->getBlockSize());
 
-		proc->setPixelFormat(Bitmap::EMultiChannelWeight, m_integrators.size() * SPECTRUM_SAMPLES + 1, false);
+		proc->setPixelFormat(Bitmap::EMultiSpectrumAlphaWeight, m_integrators.size() * SPECTRUM_SAMPLES + 2, false);
 
 		int integratorResID = sched->registerResource(this);
 		proc->bindResource("integrator", integratorResID);
@@ -130,10 +147,12 @@ public:
 				int offset = 0;
 				for (size_t k = 0; k<m_integrators.size(); ++k) {
 					RadianceQueryRecord rRec2(rRec);
-					Spectrum result = spec * m_integrators[i]->Li(sensorRay, rRec2);
+					rRec2.its = rRec.its;
+					Spectrum result = spec * m_integrators[k]->Li(sensorRay, rRec2);
 					for (int l = 0; l<SPECTRUM_SAMPLES; ++l)
 						temp[offset++] = result[l];
 				}
+				temp[offset++] = rRec.alpha;
 				temp[offset] = 1.0f;
 				block->put(samplePos, temp);
 				sampler->advance();
@@ -174,6 +193,12 @@ public:
 
 	Spectrum Li(const RayDifferential &r, RadianceQueryRecord &rRec) const {
 		NotImplementedError("Li");
+	}
+
+	const Integrator *getSubIntegrator(int idx) const {
+		if (idx < 0 || idx >= (int) m_integrators.size())
+			return NULL;
+		return m_integrators[idx].get();
 	}
 
 	std::string toString() const {

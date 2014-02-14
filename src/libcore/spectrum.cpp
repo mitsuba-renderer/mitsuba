@@ -456,7 +456,9 @@ void Spectrum::fromRGBE(const uint8_t rgbe[4], EConversionIntent intent) {
 std::string Spectrum::toString() const {
 	std::ostringstream oss;
 	oss << "[";
+#if SPECTRUM_SAMPLES != 3
 	bool dark = std::abs(getLuminance()) < 0.1f;
+#endif
 	for (int i=0; i<SPECTRUM_SAMPLES; i++) {
 #if SPECTRUM_SAMPLES == 3
 		oss << s[i];

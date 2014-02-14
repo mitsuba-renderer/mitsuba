@@ -60,37 +60,37 @@ public:
 	 */
 	enum EPixelFormat {
 		/// Single-channel luminance bitmap
-		ELuminance           = 0x00,
+		ELuminance                = 0x00,
 
 		/// Two-channel luminance + alpha bitmap
-		ELuminanceAlpha      = 0x01,
+		ELuminanceAlpha           = 0x01,
 
 		/// RGB bitmap
-		ERGB                 = 0x02,
+		ERGB                      = 0x02,
 
 		/// RGB bitmap + alpha channel
-		ERGBA                = 0x03,
+		ERGBA                     = 0x03,
 
 		/// XYZ tristimulus bitmap
-		EXYZ                 = 0x04,
+		EXYZ                      = 0x04,
 
 		/// XYZ tristimulus + alpha channel
-		EXYZA                = 0x05,
+		EXYZA                     = 0x05,
 
 		/// Spectrum bitmap
-		ESpectrum            = 0x06,
+		ESpectrum                 = 0x06,
 
 		/// Spectrum bitmap + alpha channel
-		ESpectrumAlpha       = 0x07,
+		ESpectrumAlpha            = 0x07,
 
 		/// Spectrum bitmap + alpha + weight channel (Mitsuba's internal render bucket representation)
-		ESpectrumAlphaWeight = 0x08,
+		ESpectrumAlphaWeight      = 0x08,
+
+		/// Bitmap with multiple spectra + alpha + weight channel (render buckets used by the 'multichannel' plugin)
+		EMultiSpectrumAlphaWeight = 0x09,
 
 		/// Arbitrary multi-channel bitmap without a fixed interpretation
-		EMultiChannel        = 0x09,
-
-		/// Arbitrary multi-channel bitmap without a fixed interpretation; the last channel is a weight
-		EMultiChannelWeight  = 0x10
+		EMultiChannel             = 0x10
 	};
 
 	/// Supported per-component data formats
@@ -303,7 +303,7 @@ public:
 	 *
 	 * \param channelCount
 	 *    Channel count of the image. This parameter is only required when
-	 *    \c pFmt = \ref EMultiChannel or \ref EMultiChannelWeight
+	 *    \c pFmt = \ref EMultiChannel or \ref EMultiSpectrumAlphaWeight
 	 *
 	 * \param data
 	 *    External pointer to the image data. If set to \c NULL, the
@@ -375,14 +375,14 @@ public:
 
 	/// Return whether this image has a weight channel
 	inline bool hasWeight() const {
-		return m_pixelFormat == EMultiChannelWeight ||
-		       m_pixelFormat == ESpectrumAlphaWeight;
+		return m_pixelFormat == ESpectrumAlphaWeight ||
+		       m_pixelFormat == EMultiSpectrumAlphaWeight;
 	}
 
 	/// Return whether this is a generic multi-channel image
 	inline bool isMultiChannel() const {
 		return m_pixelFormat == EMultiChannel ||
-		       m_pixelFormat == EMultiChannelWeight;
+		       m_pixelFormat == EMultiSpectrumAlphaWeight;
 	}
 
 	/**
@@ -666,6 +666,23 @@ public:
 			EPixelFormat pixelFormat, EComponentFormat componentFormat,
 			Float gamma = 1.0f, Float multiplier = 1.0f,
 			Spectrum::EConversionIntent intent = Spectrum::EReflectance) const;
+
+	/**
+	 * \brief Specialized conversion method for multi-channel HDR images
+	 *
+	 * The bitmap class pixel format \ref EMultiSpectrumAlphaWeight is used by the
+	 * 'multichannel' plugin to render multiple related images at the same time.
+	 * This function implements a conversion function analogous to \ref convert()
+	 * that adjusts each of the sub-images so that it has a desired pixel format.
+	 * The returned bitmap has the combined pixel format \ref EMultiChannel and the
+	 * specified component format. Names for each of the resulting channels should
+	 * be provided via the \c channelNames parameters.
+	 *
+	 * This function is currently only used by the \c hdrfilm plugin but located here
+	 * as it is tied to the internals of this class.
+	 */
+	ref<Bitmap> convertMultiSpectrumAlphaWeight(const std::vector<EPixelFormat> &pixelFormats,
+			EComponentFormat componentFormat, const std::vector<std::string> &channelNames) const;
 
 	/**
 	 * \brief Apply Reinhard et al's tonemapper in chromaticity space

@@ -40,7 +40,7 @@ void Integrator::configureSampler(const Scene *scene, Sampler *sampler) {
 	sampler->setFilmResolution(scene->getFilm()->getCropSize(),
 		getClass()->derivesFrom(MTS_CLASS(SamplingIntegrator)));
 }
-const Integrator *Integrator::getSubIntegrator() const { return NULL; }
+const Integrator *Integrator::getSubIntegrator(int idx) const { return NULL; }
 
 SamplingIntegrator::SamplingIntegrator(const Properties &props)
  : Integrator(props) { }
