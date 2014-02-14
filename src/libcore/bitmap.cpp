@@ -334,8 +334,7 @@ Bitmap::Bitmap(EFileFormat format, Stream *stream, const std::string &prefix) : 
 	}
 }
 
-void Bitmap::write(EFileFormat format, Stream *stream, int compression,
-		const std::vector<std::string> *channelNames) const {
+void Bitmap::write(EFileFormat format, Stream *stream, int compression) const {
 	switch (format) {
 		case EJPEG:
 			if (compression == -1)
@@ -347,7 +346,7 @@ void Bitmap::write(EFileFormat format, Stream *stream, int compression,
 				compression = 5;
 			writePNG(stream, compression);
 			break;
-		case EOpenEXR: writeOpenEXR(stream, channelNames); break;
+		case EOpenEXR: writeOpenEXR(stream); break;
 		case ERGBE: writeRGBE(stream); break;
 		case EPFM: writePFM(stream); break;
 		default:
@@ -400,7 +399,8 @@ void Bitmap::updateChannelCount() {
 		case ESpectrum: m_channelCount = SPECTRUM_SAMPLES; break;
 		case ESpectrumAlpha: m_channelCount = SPECTRUM_SAMPLES + 1; break;
 		case ESpectrumAlphaWeight: m_channelCount = SPECTRUM_SAMPLES + 2; break;
-		case EMultiChannel: break;
+		case EMultiChannel:
+		case EMultiChannelWeight: break;
 		default:
 			Log(EError, "Unknown pixel format!");
 	}
@@ -453,6 +453,7 @@ ref<Bitmap> Bitmap::clone() const {
 	memcpy(bitmap->m_data, m_data, getBufferSize());
 	bitmap->m_metadata = m_metadata;
 	bitmap->m_gamma = m_gamma;
+	bitmap->m_channelNames = m_channelNames;
 	return bitmap;
 }
 
@@ -1342,6 +1343,10 @@ void Bitmap::convert(Bitmap *target, Float multiplier, Spectrum::EConversionInte
 		Log(EError, "Conversions involving bitmasks are currently not supported!");
 	if (m_size != target->getSize())
 		Log(EError, "Bitmap::convert(): size mismatch!");
+	Assert(isMultiChannel() == target->isMultiChannel());
+	Assert(!isMultiChannel() || (
+		        getChannelCount() - (        hasWeight() ? 1 : 0) ==
+		target->getChannelCount() - (target->hasWeight() ? 1 : 0)));
 
 	if (m_pixelFormat == target->getPixelFormat() &&
 		m_componentFormat == target->getComponentFormat() &&
@@ -1359,7 +1364,8 @@ void Bitmap::convert(Bitmap *target, Float multiplier, Spectrum::EConversionInte
 
 	cvt->convert(m_pixelFormat, m_gamma, m_data,
 		target->getPixelFormat(), target->getGamma(), target->getData(),
-		(size_t) m_size.x * (size_t) m_size.y, multiplier, intent);
+		(size_t) m_size.x * (size_t) m_size.y, multiplier, intent,
+		m_channelCount - (hasWeight() ? 1 : 0));
 }
 
 ref<Bitmap> Bitmap::convert(EPixelFormat pixelFormat,
@@ -1381,13 +1387,24 @@ ref<Bitmap> Bitmap::convert(EPixelFormat pixelFormat,
 
 	Assert(cvt != NULL);
 
-	ref<Bitmap> target = new Bitmap(pixelFormat, componentFormat, m_size);
+	ref<Bitmap> target;
+	if (!isMultiChannel()) {
+		target = new Bitmap(pixelFormat, componentFormat, m_size);
+	} else {
+		Assert(pixelFormat == EMultiChannel || pixelFormat == EMultiChannelWeight);
+		int channelCount = m_channelCount - (hasWeight() ? 1 : 0)
+			+ (pixelFormat == EMultiChannelWeight ? 1 : 0);
+		target = new Bitmap(pixelFormat, componentFormat, m_size, channelCount);
+	}
+
 	target->setMetadata(m_metadata);
+	target->setChannelNames(m_channelNames);
 	target->setGamma(gamma);
 
 	cvt->convert(m_pixelFormat, m_gamma, m_data,
 		pixelFormat, gamma, target->getData(),
-		(size_t) m_size.x * (size_t) m_size.y, multiplier, intent);
+		(size_t) m_size.x * (size_t) m_size.y, multiplier, intent,
+		m_channelCount - (hasWeight() ? 1 : 0));
 
 	return target;
 }
@@ -1414,7 +1431,8 @@ void Bitmap::convert(void *target, EPixelFormat pixelFormat,
 
 	cvt->convert(m_pixelFormat, m_gamma, m_data,
 		pixelFormat, gamma, target,
-		(size_t) m_size.x * (size_t) m_size.y, multiplier, intent);
+		(size_t) m_size.x * (size_t) m_size.y, multiplier, intent,
+		m_channelCount - (hasWeight() ? 1 : 0));
 }
 
 template <typename T> void tonemapReinhard(T *data, size_t pixels, Bitmap::EPixelFormat fmt,
@@ -1678,6 +1696,7 @@ ref<Bitmap> Bitmap::crop(const Point2i &offset, const Vector2i &size) const {
 			size, m_channelCount);
 
 	result->setGamma(m_gamma);
+	result->setChannelNames(m_channelNames);
 	result->setMetadata(m_metadata);
 
 	uint8_t *source = m_data + (offset.x + offset.y * m_size.x) * pixelStride;
@@ -2284,7 +2303,7 @@ void Bitmap::readOpenEXR(Stream *stream, const std::string &_prefix) {
 				}
 			#endif
 			if (!isSpectralChannel)
-				Log(EWarn, "readOpenEXR(): Don't know how to handle the channel named '%s'", it.name());
+				Log(EWarn, "readOpenEXR(): Don't know what to do with the channel named '%s'", it.name());
 		}
 	}
 
@@ -2452,6 +2471,7 @@ void Bitmap::readOpenEXR(Stream *stream, const std::string &_prefix) {
 		const char *channelName = sourceChannels[i];
 		const Imf::Channel &channel = channels[channelName];
 		Vector2i sampling(channel.xSampling, channel.ySampling);
+		m_channelNames.push_back(channelName);
 
 		if (channel.type != pxType)
 			Log(EError, "readOpenEXR(): file has multiple channel formats, this is unsupported!");
@@ -2613,8 +2633,7 @@ void Bitmap::readOpenEXR(Stream *stream, const std::string &_prefix) {
 	}
 }
 
-void Bitmap::writeOpenEXR(Stream *stream,
-		const std::vector<std::string> *channelNames) const {
+void Bitmap::writeOpenEXR(Stream *stream) const {
 	Log(EDebug, "Writing a %ix%i OpenEXR file", m_size.x, m_size.y);
 	EPixelFormat pixelFormat = m_pixelFormat;
 
@@ -2694,11 +2713,11 @@ void Bitmap::writeOpenEXR(Stream *stream,
 	}
 
 	Imf::ChannelList &channels = header.channels();
-	if (channelNames) {
-		if (channelNames->size() != (size_t) m_channelCount)
+	if (!m_channelNames.empty()) {
+		if (m_channelNames.size() != (size_t) m_channelCount)
 			Log(EError, "writeOpenEXR(): 'channelNames' has the wrong number of entries!");
-		for (size_t i=0; i<channelNames->size(); ++i)
-			channels.insert((*channelNames)[i].c_str(), Imf::Channel(compType));
+		for (size_t i=0; i<m_channelNames.size(); ++i)
+			channels.insert(m_channelNames[i].c_str(), Imf::Channel(compType));
 	} else if (pixelFormat == ELuminance || pixelFormat == ELuminanceAlpha) {
 		channels.insert("Y", Imf::Channel(compType));
 	} else if (pixelFormat == ERGB || pixelFormat == ERGBA ||
@@ -2712,7 +2731,7 @@ void Bitmap::writeOpenEXR(Stream *stream,
 			std::string name = formatString("%.2f-%.2fnm", coverage.first, coverage.second);
 			channels.insert(name.c_str(), Imf::Channel(compType));
 		}
-	} else if (pixelFormat == EMultiChannel) {
+	} else if (pixelFormat == EMultiChannel || pixelFormat == EMultiChannelWeight) {
 		for (int i=0; i<getChannelCount(); ++i)
 			channels.insert(formatString("%i", i).c_str(), Imf::Channel(compType));
 	} else {
@@ -2730,9 +2749,9 @@ void Bitmap::writeOpenEXR(Stream *stream,
 
 	Imf::FrameBuffer frameBuffer;
 
-	if (channelNames) {
-		for (size_t i=0; i<channelNames->size(); ++i) {
-			frameBuffer.insert((*channelNames)[i].c_str(), Imf::Slice(compType, ptr, pixelStride, rowStride));
+	if (!m_channelNames.empty()) {
+		for (size_t i=0; i<m_channelNames.size(); ++i) {
+			frameBuffer.insert(m_channelNames[i].c_str(), Imf::Slice(compType, ptr, pixelStride, rowStride));
 			ptr += compStride;
 		}
 	} else if (pixelFormat == ELuminance || pixelFormat == ELuminanceAlpha) {
@@ -2747,7 +2766,7 @@ void Bitmap::writeOpenEXR(Stream *stream,
 			std::string name = formatString("%.2f-%.2fnm", coverage.first, coverage.second);
 			frameBuffer.insert(name.c_str(), Imf::Slice(compType, ptr, pixelStride, rowStride)); ptr += compStride;
 		}
-	} else if (pixelFormat == EMultiChannel) {
+	} else if (pixelFormat == EMultiChannel || pixelFormat == EMultiChannelWeight) {
 		for (int i=0; i<getChannelCount(); ++i) {
 			frameBuffer.insert(formatString("%i", i).c_str(), Imf::Slice(compType, ptr, pixelStride, rowStride));
 			ptr += compStride;
@@ -3193,7 +3212,6 @@ static std::string pfmReadString(Stream *stream) {
 
 	return result;
 }
-
 
 void Bitmap::readPFM(Stream *stream) {
 	char header[3];

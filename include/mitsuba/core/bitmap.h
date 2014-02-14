@@ -87,7 +87,10 @@ public:
 		ESpectrumAlphaWeight = 0x08,
 
 		/// Arbitrary multi-channel bitmap without a fixed interpretation
-		EMultiChannel        = 0x09
+		EMultiChannel        = 0x09,
+
+		/// Arbitrary multi-channel bitmap without a fixed interpretation; the last channel is a weight
+		EMultiChannelWeight  = 0x10
 	};
 
 	/// Supported per-component data formats
@@ -300,7 +303,7 @@ public:
 	 *
 	 * \param channelCount
 	 *    Channel count of the image. This parameter is only required when
-	 *    \c pFmt = \ref EMultiChannel
+	 *    \c pFmt = \ref EMultiChannel or \ref EMultiChannelWeight
 	 *
 	 * \param data
 	 *    External pointer to the image data. If set to \c NULL, the
@@ -368,6 +371,18 @@ public:
 			m_pixelFormat == ERGBA ||
 			m_pixelFormat == EXYZA ||
 			m_pixelFormat == ESpectrumAlpha;
+	}
+
+	/// Return whether this image has a weight channel
+	inline bool hasWeight() const {
+		return m_pixelFormat == EMultiChannelWeight ||
+		       m_pixelFormat == ESpectrumAlphaWeight;
+	}
+
+	/// Return whether this is a generic multi-channel image
+	inline bool isMultiChannel() const {
+		return m_pixelFormat == EMultiChannel ||
+		       m_pixelFormat == EMultiChannelWeight;
 	}
 
 	/**
@@ -482,15 +497,8 @@ public:
 	 *    For JPEG files, this denotes the desired quality (between 0 and 100,
 	 *    the latter being best). The default argument (-1) uses compression
 	 *    5 for PNG and 100 for JPEG files.
-	 *
-	 * \param channelNames
-	 *    This parameter can be used to explicitly specify the channel
-	 *    names in the output image. It is required when writing image
-	 *    data in the \ref EMultiChannel pixel format. Currently the
-	 *    parameter is ignored by all file formats except \ref EOpenEXR
 	 */
-	void write(EFileFormat format, Stream *stream, int compression = -1,
-		const std::vector<std::string> *channelNames = NULL) const;
+	void write(EFileFormat format, Stream *stream, int compression = -1) const;
 
 	//! @}
 	// ======================================================================
@@ -969,6 +977,20 @@ public:
 	/// Set the a \ref Properties object containing the image metadata
 	inline void setMetadata(const Properties &metadata) { m_metadata = metadata; }
 
+	/**
+	 * \brief Explicitly set the names of the image channels
+	 *
+	 * The main use of this feature is when writing \ref EMultiChannel
+	 * images to OpenEXR files. In other cases, the names are ignored.
+	 */
+	inline void setChannelNames(const std::vector<std::string> &names) { m_channelNames = names; }
+
+	/// Return the names of the image channels if explicitly overridden (empty by default)
+	inline std::vector<std::string> &getChannelNames() { return m_channelNames; }
+
+	/// Return the names of the image channels if explicitly overridden (empty by default)
+	inline const std::vector<std::string> &getChannelNames() const { return m_channelNames; }
+
 	//! @}
 	// ======================================================================
 
@@ -1063,8 +1085,7 @@ protected:
 	void readOpenEXR(Stream *stream, const std::string &prefix);
 
 	/// Write a file using the OpenEXR file format
-	void writeOpenEXR(Stream *stream,
-		const std::vector<std::string> *channelNames) const;
+	void writeOpenEXR(Stream *stream) const;
 
 	/// Read a file stored using the PFM file format
 	void readPFM(Stream *stream);
@@ -1089,6 +1110,7 @@ protected:
 	uint8_t m_channelCount;
 	bool m_ownsData;
 	Properties m_metadata;
+	std::vector<std::string> m_channelNames;
 };
 
 /** \brief Bitmap format conversion helper class
@@ -1152,21 +1174,25 @@ public:
 	 *    Pointer to the first pixel of the destination bitmap
 	 * \param count
 	 *    How many pixels should be transformed?
-	 * \ref multiplier
+	 * \param multiplier
 	 *    An optional multiplicative factor that will be applied to all
 	 *    color/luminance/spectrum values in linear space (alpha and weight
 	 *    values will not be affected).
-	 * \ref intent
+	 * \param intent
 	 *    When converting from RGB to spectral color values, this flag
 	 *    specifies how ambiguities in this highly under-constrained problem
 	 *    should be resolved.
+	 * \param channelCount
+	 *    Number of channels (not including a weight channel, if any). Only
+	 *    needs to be specified for general multi-channel images.
 	 * \sa getConversion()
 	 */
 	virtual void convert(
 			Bitmap::EPixelFormat sourceFormat, Float sourceGamma, const void *_source,
 			Bitmap::EPixelFormat destFormat, Float destGamma, void *_dest,
 			size_t count, Float multiplier = 1.0f,
-			Spectrum::EConversionIntent intent = Spectrum::EReflectance) const= 0;
+			Spectrum::EConversionIntent intent = Spectrum::EReflectance,
+			int channelCount = -1) const= 0;
 
 	/**
 	 * \brief Return the format conversion implemented by this
