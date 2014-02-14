@@ -65,7 +65,7 @@ public:
 				Transform::translate(Vector(props.getPoint("position"))));
 		}
 
-		m_intensity = props.getSpectrum("intensity", Spectrum(1.0f));
+		m_intensity = props.getSpectrum("intensity", Spectrum::getD65());
 	}
 
 	PointEmitter(Stream *stream, InstanceManager *manager)

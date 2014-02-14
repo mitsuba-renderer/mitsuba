@@ -195,8 +195,13 @@ Float SceneHandler::parseFloat(const std::string &name,
 void SceneHandler::startElement(const XMLCh* const xmlName,
 	AttributeList &xmlAttributes) {
 	std::string name = transcode(xmlName);
+	TagMap::const_iterator it = m_tags.find(name);
 
-	ParseContext context((name == "scene") ? NULL : &m_context.top());
+	if (it == m_tags.end())
+		XMLLog(EError, "Unhandled tag \"%s\" encountered!", name.c_str());
+
+	const TagEntry &tag = it->second;
+	ParseContext context((name == "scene") ? NULL : &m_context.top(), tag.first);
 
 	for (size_t i=0; i<xmlAttributes.getLength(); i++) {
 		std::string attrValue = transcode(xmlAttributes.getValue(i));
@@ -216,11 +221,6 @@ void SceneHandler::startElement(const XMLCh* const xmlName,
 		context.attributes[transcode(xmlAttributes.getName(i))] = attrValue;
 	}
 
-	TagMap::const_iterator it = m_tags.find(name);
-	if (it == m_tags.end())
-		XMLLog(EError, "Unhandled tag \"%s\" encountered!", name.c_str());
-
-	const TagEntry &tag = it->second;
 	switch (tag.first) {
 		case EScene: {
 				std::string versionString = context.attributes["version"];
@@ -458,6 +458,9 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 
 		case ERGB: {
 				Spectrum::EConversionIntent intent = Spectrum::EReflectance;
+				if (context.parent->tag == EEmitter)
+					intent = Spectrum::EIlluminant;
+
 				if (context.attributes.find("intent") != context.attributes.end()) {
 					std::string intentString = boost::to_lower_copy(context.attributes["intent"]);
 					if (intentString == "reflectance")
@@ -545,10 +548,13 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 		case ESpectrum: {
 				bool hasValue = context.attributes.find("value") != context.attributes.end();
 				bool hasFilename = context.attributes.find("filename") != context.attributes.end();
+				bool hasIntent = context.attributes.find("intent") != context.attributes.end();
 
 				if (hasValue == hasFilename) {
-					SLog(EError, "Spectrum: please provide one of 'value' or 'filename'");
+					XMLLog(EError, "<spectrum>: please provide one of 'value' or 'filename'");
 				} else if (hasFilename) {
+					if (hasIntent)
+						XMLLog(EError, "<spectrum>: 'intent' and 'filename' cannot be specified at the same time!");
 					FileResolver *resolver = Thread::getThread()->getFileResolver();
 					fs::path path = resolver->resolve(context.attributes["filename"]);
 					InterpolatedSpectrum interp(path);
@@ -561,11 +567,31 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 					std::vector<std::string> tokens = tokenize(
 						context.attributes["value"], ", ");
 					Float value[SPECTRUM_SAMPLES];
-					if (tokens.size() == 1) {
+					if (tokens.size() == 1 && tokens[0].find(':') == std::string::npos) {
+						Spectrum::EConversionIntent intent = Spectrum::EReflectance;
+						if (context.parent->tag == EEmitter)
+							intent = Spectrum::EIlluminant;
+
+						if (hasIntent) {
+							std::string intentString = boost::to_lower_copy(context.attributes["intent"]);
+							if (intentString == "reflectance")
+								intent = Spectrum::EReflectance;
+							else if (intentString == "illuminant")
+								intent = Spectrum::EIlluminant;
+							else
+								XMLLog(EError, "Invalid intent \"%s\", must be "
+									"\"reflectance\" or \"illuminant\"", intentString.c_str());
+						}
 						value[0] = parseFloat(name, tokens[0]);
-						context.parent->properties.setSpectrum(context.attributes["name"],
-							Spectrum(value[0]));
+						Spectrum spec;
+						if (intent == Spectrum::EReflectance)
+							spec = Spectrum(value[0]);
+						else
+							spec = Spectrum::getD65() * value[0];
+						context.parent->properties.setSpectrum(context.attributes["name"], spec);
 					} else {
+						if (hasIntent)
+							XMLLog(EError, "<spectrum>: 'intent' can only be specified when given a single-valued argument.");
 						if (tokens[0].find(':') != std::string::npos) {
 							InterpolatedSpectrum interp(tokens.size());
 							/* Wavelength -> Value mapping */
@@ -585,7 +611,7 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 								discrete);
 						} else {
 							if (tokens.size() != SPECTRUM_SAMPLES)
-								XMLLog(EError, "Invalid spectrum value specified (incorrect length)");
+								XMLLog(EError, "Invalid spectrum value specified (length does not match the current spectral discretization!)");
 							for (int i=0; i<SPECTRUM_SAMPLES; i++)
 								value[i] = parseFloat(name, tokens[i]);
 							context.parent->properties.setSpectrum(context.attributes["name"],

@@ -862,6 +862,12 @@ public:
 	std::string toString() const;
 
 	/**
+	 * \brief Return a spectral color distribution of the
+	 * D65 white point (with unit luminance)
+	 */
+	inline static const Spectrum &getD65() { return CIE_D65; }
+
+	/**
 	 * \brief Static initialization (should be called once during the
 	 * application's initialization phase)
 	 *
@@ -906,6 +912,9 @@ protected:
 	static Spectrum rgbIllum2SpecBlue;
 	/// @}
 	#endif
+
+	/// Pre-integrated D65 illuminant
+	static Spectrum CIE_D65;
 };
 
 MTS_NAMESPACE_END

@@ -25,12 +25,17 @@ MTS_NAMESPACE_BEGIN
 
 class BlockRenderer : public WorkProcessor {
 public:
-	BlockRenderer(int blockSize, int borderSize)
-	 : m_blockSize(blockSize), m_borderSize(borderSize) { }
+	BlockRenderer(Bitmap::EPixelFormat pixelFormat, int channelCount, int blockSize,
+		int borderSize, bool warnInvalid) : m_pixelFormat(pixelFormat),
+		m_channelCount(channelCount), m_blockSize(blockSize),
+		m_borderSize(borderSize), m_warnInvalid(warnInvalid) { }
 
 	BlockRenderer(Stream *stream, InstanceManager *manager) {
+		m_pixelFormat = (Bitmap::EPixelFormat) stream->readInt();
+		m_channelCount = stream->readInt();
 		m_blockSize = stream->readInt();
 		m_borderSize = stream->readInt();
+		m_warnInvalid = stream->readBool();
 	}
 
 	ref<WorkUnit> createWorkUnit() const {
@@ -38,15 +43,15 @@ public:
 	}
 
 	ref<WorkResult> createWorkResult() const {
-		return new ImageBlock(Bitmap::ESpectrumAlphaWeight,
+		return new ImageBlock(m_pixelFormat,
 			Vector2i(m_blockSize),
-			m_sensor->getFilm()->getReconstructionFilter());
+			m_sensor->getFilm()->getReconstructionFilter(),
+			m_channelCount, m_warnInvalid);
 	}
 
 	void prepare() {
 		Scene *scene = static_cast<Scene *>(getResource("scene"));
 		m_scene = new Scene(scene);
-		/// Variance estimates are required when executing a T-test on the rendered data
 		m_sampler = static_cast<Sampler *>(getResource("sampler"));
 		m_sensor = static_cast<Sensor *>(getResource("sensor"));
 		m_integrator = static_cast<SamplingIntegrator *>(getResource("integrator"));
@@ -81,12 +86,16 @@ public:
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
+		stream->writeInt(m_pixelFormat);
+		stream->writeInt(m_channelCount);
 		stream->writeInt(m_blockSize);
 		stream->writeInt(m_borderSize);
+		stream->writeBool(m_warnInvalid);
 	}
 
 	ref<WorkProcessor> clone() const {
-		return new BlockRenderer(m_blockSize, m_borderSize);
+		return new BlockRenderer(m_pixelFormat, m_channelCount,
+			m_blockSize, m_borderSize, m_warnInvalid);
 	}
 
 	MTS_DECLARE_CLASS()
@@ -97,8 +106,11 @@ private:
 	ref<Sensor> m_sensor;
 	ref<Sampler> m_sampler;
 	ref<SamplingIntegrator> m_integrator;
+	Bitmap::EPixelFormat m_pixelFormat;
+	int m_channelCount;
 	int m_blockSize;
 	int m_borderSize;
+	bool m_warnInvalid;
 	HilbertCurve2D<uint8_t> m_hilbertCurve;
 };
 
@@ -106,6 +118,9 @@ BlockedRenderProcess::BlockedRenderProcess(const RenderJob *parent, RenderQueue 
 		int blockSize) : m_queue(queue), m_parent(parent), m_resultCount(0), m_progress(NULL) {
 	m_blockSize = blockSize;
 	m_resultMutex = new Mutex();
+	m_pixelFormat = Bitmap::ESpectrumAlphaWeight;
+	m_channelCount = -1;
+	m_warnInvalid = true;
 }
 
 BlockedRenderProcess::~BlockedRenderProcess() {
@@ -113,8 +128,15 @@ BlockedRenderProcess::~BlockedRenderProcess() {
 		delete m_progress;
 }
 
+void BlockedRenderProcess::setPixelFormat(Bitmap::EPixelFormat pixelFormat, int channelCount, bool warnInvalid) {
+	m_pixelFormat = pixelFormat;
+	m_channelCount = channelCount;
+	m_warnInvalid = warnInvalid;
+}
+
 ref<WorkProcessor> BlockedRenderProcess::createWorkProcessor() const {
-	return new BlockRenderer(m_blockSize, m_borderSize);
+	return new BlockRenderer(m_pixelFormat, m_channelCount,
+			m_blockSize, m_borderSize, m_warnInvalid);
 }
 
 void BlockedRenderProcess::processResult(const WorkResult *result, bool cancelled) {

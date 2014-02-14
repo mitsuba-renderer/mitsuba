@@ -108,7 +108,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 	virtual void convert(
 			Bitmap::EPixelFormat sourceFormat, Float sourceGamma, const void *_source,
 			Bitmap::EPixelFormat destFormat, Float destGamma, void *_dest,
-			size_t count, Float multiplier, Spectrum::EConversionIntent intent) const {
+			size_t count, Float multiplier, Spectrum::EConversionIntent intent, int channelCount) const {
 
 		#if 0
 			std::ostringstream oss;
@@ -124,7 +124,6 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 		/* Revert to memcpy when the underlying data needs no transformation */
 		if ((int) detail::get_pixelformat<SourceFormat>::value == (int) detail::get_pixelformat<DestFormat>::value &&
 			sourceFormat == destFormat && sourceGamma == destGamma && multiplier == 1.0) {
-			int channelCount;
 			switch (sourceFormat) {
 				case Bitmap::ELuminance:            channelCount = 1; break;
 				case Bitmap::ELuminanceAlpha:       channelCount = 2; break;
@@ -135,6 +134,7 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 				case Bitmap::ESpectrum:             channelCount = SPECTRUM_SAMPLES; break;
 				case Bitmap::ESpectrumAlpha:        channelCount = SPECTRUM_SAMPLES + 1; break;
 				case Bitmap::ESpectrumAlphaWeight:  channelCount = SPECTRUM_SAMPLES + 2; break;
+				case Bitmap::EMultiChannel:         break;
 				default:
 					SLog(EError, "Unsupported source/target pixel format!");
 					return;
@@ -1065,6 +1065,18 @@ template <typename T> struct FormatConverterImpl : public FormatConverter {
 							}
 							break;
 
+						default:
+							SLog(EError, "Unsupported destination pixel format!");
+					}
+				}
+				break;
+
+				case Bitmap::EMultiChannel: {
+					switch (destFormat) {
+						case Bitmap::EMultiChannel:
+							for (size_t i=0; i<count*channelCount; ++i)
+								*dest++ = convertScalar<DestFormat>(*source++, sourceGamma, precomp, multiplier, invDestGamma);
+							break;
 						default:
 							SLog(EError, "Unsupported destination pixel format!");
 					}

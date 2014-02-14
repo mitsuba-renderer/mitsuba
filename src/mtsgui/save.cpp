@@ -51,7 +51,6 @@ static QList<QDomElement> findAllChildren(QDomElement element, const char *tagNa
 	return result;
 }
 
-
 static void setProperties(QDomDocument &doc, QDomElement &element,
 		const Properties &props) {
 	element.setAttribute("type", props.getPluginName().c_str());
@@ -147,6 +146,18 @@ static void setProperties(QDomDocument &doc, QDomElement &element,
 		}
 		property.setAttribute("name", (*it).c_str());
 		element.appendChild(property);
+	}
+}
+
+void processSubIntegrators(QDomDocument &doc, const Integrator *integrator, QDomElement integratorNode) {
+	int idx = 0;
+	while (integrator->getSubIntegrator(idx) != NULL) {
+		const Integrator *childIntegrator = integrator->getSubIntegrator(idx);
+		QDomElement childIntegratorNode = doc.createElement("integrator");
+		setProperties(doc, childIntegratorNode, childIntegrator->getProperties());
+		integratorNode.appendChild(childIntegratorNode);
+		processSubIntegrators(doc, childIntegrator, childIntegratorNode);
+		idx++;
 	}
 }
 
@@ -250,15 +261,7 @@ void saveScene(QWidget *parent, SceneContext *ctx, const QString &targetFile) {
 
 	const Integrator *integrator = ctx->scene->getIntegrator();
 	setProperties(ctx->doc, newIntegratorNode, integrator->getProperties());
-	QDomElement currentIntegratorNode = newIntegratorNode;
-
-	while (integrator->getSubIntegrator() != NULL) {
-		integrator = integrator->getSubIntegrator();
-		QDomElement childIntegratorNode = ctx->doc.createElement("integrator");
-		setProperties(ctx->doc, childIntegratorNode, integrator->getProperties());
-		currentIntegratorNode.appendChild(childIntegratorNode);
-		currentIntegratorNode = childIntegratorNode;
-	}
+	processSubIntegrators(ctx->doc, integrator, newIntegratorNode);
 
 	root.insertBefore(newIntegratorNode, oldIntegratorNode);
 	root.removeChild(oldIntegratorNode);

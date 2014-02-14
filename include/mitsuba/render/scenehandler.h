@@ -134,16 +134,6 @@ protected:
 	void clear();
 
 private:
-	struct ParseContext {
-		inline ParseContext(ParseContext *_parent)
-		 : parent(_parent) { }
-
-		ParseContext *parent;
-		Properties properties;
-		std::map<std::string, std::string> attributes;
-		std::vector<std::pair<std::string, ConfigurableObject *> > children;
-	};
-
 	/**
 	 * Enumeration of all possible tags that can be encountered in a
 	 * Mitsuba scene file
@@ -160,6 +150,18 @@ private:
 		ESpectrum, ETransform, EAnimation,
 		EInclude, EAlias, EDefault
 	};
+
+	struct ParseContext {
+		inline ParseContext(ParseContext *_parent, ETag tag)
+		 : parent(_parent), tag(tag) { }
+
+		ParseContext *parent;
+		ETag tag;
+		Properties properties;
+		std::map<std::string, std::string> attributes;
+		std::vector<std::pair<std::string, ConfigurableObject *> > children;
+	};
+
 
 	typedef std::pair<ETag, const Class *> TagEntry;
 	typedef boost::unordered_map<std::string, TagEntry> TagMap;

@@ -355,7 +355,9 @@ public:
 		return (EDir / (Float) nSamples) + EIndir;
 	}
 
-	const Integrator *getSubIntegrator() const {
+	const Integrator *getSubIntegrator(int idx) const {
+		if (idx != 0)
+			return NULL;
 		return m_subIntegrator.get();
 	}
 

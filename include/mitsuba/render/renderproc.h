@@ -40,6 +40,28 @@ public:
 	BlockedRenderProcess(const RenderJob *parent, RenderQueue *queue,
 		int blockSize);
 
+	/**
+	 * \brief Set the pixel format associated with the rendering process
+	 *
+	 * By default, this class works with image blocks that store a set
+	 * of spectral samples along with an alpha value and an accumulated
+	 * reconstruction filter weight for each pixel. This method can be
+	 * used to change this, which is useful when additional information
+	 * should be returned (e.g. normals or depth values).
+	 *
+	 * \param pixelFormat
+	 *    Desired pixel format (e.g. \ref Bitmap::EMultiChannel)
+	 * \param channelCount
+	 *    Number of image channels. Only needs to be specified when
+	 *    setting <tt>pixelFormat=Bitmap::EMultiChannel</tt>
+	 * \param warnInvalid
+	 *    By default, the rendering process issues a warning when writing
+	 *    negative, infinite or NaN-valued pixels. This flag can be used
+	 *    to turn off the warnings.
+	 */
+	void setPixelFormat(Bitmap::EPixelFormat pixelFormat,
+		int channelCount = -1, bool warnInvalid = false);
+
 	// ======================================================================
 	//! @{ \name Implementation of the ParallelProcess interface
 	// ======================================================================
@@ -65,6 +87,9 @@ protected:
 	ref<Mutex> m_resultMutex;
 	ProgressReporter *m_progress;
 	int m_borderSize;
+	Bitmap::EPixelFormat m_pixelFormat;
+	int m_channelCount;
+	bool m_warnInvalid;
 };
 
 MTS_NAMESPACE_END

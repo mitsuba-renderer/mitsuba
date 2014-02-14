@@ -54,7 +54,7 @@ MTS_NAMESPACE_BEGIN
  *         and \code{spectrumAlpha}. In the latter two cases,
  *         the number of written channels depends on the value assigned to
  *         \code{SPECTRUM\_SAMPLES} during compilation (see Section~\ref{sec:compiling}
- *         section for details) \default{\code{luminance}}
+ *         for details) \default{\code{luminance}}
  *     }
  *     \parameter{highQualityEdges}{\Boolean}{
  *        If set to \code{true}, regions slightly outside of the film
@@ -332,9 +332,9 @@ public:
 			}
 		} else {
 			unsigned int shape[] = {
-				bitmap->getHeight(),
-				bitmap->getWidth(),
-				bitmap->getChannelCount()
+				(unsigned int) bitmap->getHeight(),
+				(unsigned int) bitmap->getWidth(),
+				(unsigned int) bitmap->getChannelCount()
 			};
 			unsigned int N = 3, *shape_ptr = shape;
 

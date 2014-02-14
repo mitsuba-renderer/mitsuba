@@ -59,7 +59,9 @@ static void setComboBox(QComboBox *box, const std::string &pluginName) {
 			return;
 		}
 	}
-	SLog(EError, "Unable to find combo box entry named \"%s\"", pluginName.c_str());
+	SLog(EError, "The plugin \"%s\" can't be controlled via the GUI! (update <tt>"
+		"src/mtsgui/resources/docs.xml</tt> and recompile in case you want to be "
+		"able to do this)", pluginName.c_str());
 }
 
 static std::string getPluginName(QComboBox *box) {
@@ -328,14 +330,14 @@ void RenderSettingsDialog::load(const SceneContext *ctx) {
 	if (integratorProps.getPluginName() == "adaptive") {
 		ui->aiBox->setChecked(true);
 		m_model->setProperties(m_aiNode, integratorProps);
-		integrator = integrator->getSubIntegrator();
+		integrator = integrator->getSubIntegrator(0);
 		integratorProps = integrator->getProperties();
 	}
 
 	if (integratorProps.getPluginName() == "irrcache") {
 		ui->icBox->setChecked(true);
 		m_model->setProperties(m_icNode, integratorProps);
-		integrator = integrator->getSubIntegrator();
+		integrator = integrator->getSubIntegrator(0);
 		integratorProps = integrator->getProperties();
 	}
 

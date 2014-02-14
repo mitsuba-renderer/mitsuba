@@ -1976,6 +1976,20 @@ QString ServerConnection::toString() const {
 		.arg(worker->getCoreCount());
 }
 
+static ref<Integrator> recursivelyCloneIntegrator(const Integrator *oldIntegrator) {
+	ref<Integrator> integrator = static_cast<Integrator *> (PluginManager::getInstance()->createObject(
+		MTS_CLASS(Integrator), oldIntegrator->getProperties()));
+	int idx = 0;
+	while (oldIntegrator->getSubIntegrator(idx) != 0) {
+		ref<Integrator> child = recursivelyCloneIntegrator(oldIntegrator->getSubIntegrator(idx));
+		integrator->addChild(child);
+		child->setParent(integrator);
+		idx++;
+	}
+	integrator->configure();
+	return integrator;
+}
+
 SceneContext::SceneContext(SceneContext *ctx) {
 	if (ctx->scene) {
 		/* Temporarily set up a new file resolver */
@@ -1995,24 +2009,7 @@ SceneContext::SceneContext(SceneContext *ctx) {
 		ref<Film> film = static_cast<Film *>
 			(pluginMgr->createObject(MTS_CLASS(Film), oldSensor->getFilm()->getProperties()));
 		const Integrator *oldIntegrator = ctx->scene->getIntegrator();
-		ref<Integrator> currentIntegrator;
-
-		int depth = 0;
-		std::vector<Integrator *> integratorList;
-		while (oldIntegrator != NULL) {
-			ref<Integrator> integrator = static_cast<Integrator *> (pluginMgr->createObject(
-				MTS_CLASS(Integrator), oldIntegrator->getProperties()));
-			if (depth++ == 0)
-				scene->setIntegrator(integrator);
-			else
-				currentIntegrator->addChild(integrator);
-			currentIntegrator = integrator;
-			integratorList.push_back(integrator);
-			oldIntegrator = oldIntegrator->getSubIntegrator();
-		}
-
-		for (int i=(int) integratorList.size()-1; i>=0; --i)
-			integratorList[i]->configure();
+		scene->setIntegrator(recursivelyCloneIntegrator(oldIntegrator));
 
 		ref<ReconstructionFilter> rfilter = static_cast<ReconstructionFilter *>
 			(pluginMgr->createObject(MTS_CLASS(ReconstructionFilter), oldSensor->getFilm()->
@@ -2087,10 +2084,10 @@ int SceneContext::detectPathLength() const {
 	const Integrator *integrator = scene->getIntegrator();
 	int extraDepth = 0;
 
-	while (integrator->getSubIntegrator() != NULL) {
+	while (integrator->getSubIntegrator(0) != NULL) {
 		if (integrator->getClass()->getName() == "IrradianceCacheIntegrator")
 			extraDepth = 1;
-		integrator = integrator->getSubIntegrator();
+		integrator = integrator->getSubIntegrator(0);
 	}
 	const Properties &integratorProps = integrator->getProperties();
 	int maxDepth = -1;

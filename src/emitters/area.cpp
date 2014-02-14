@@ -74,7 +74,7 @@ public:
 				"allowed -- the area light inherits this transformation from "
 				"its parent shape");
 
-		m_radiance = props.getSpectrum("radiance", Spectrum(1.0f));
+		m_radiance = props.getSpectrum("radiance", Spectrum::getD65());
 		m_power = Spectrum(0.0f); /// Don't know the power yet
 	}
 

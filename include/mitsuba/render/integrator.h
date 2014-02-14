@@ -112,7 +112,7 @@ public:
 	 * When the integrator contains a nested integrator, this function can
 	 * be used to query for it
 	 */
-	virtual const Integrator *getSubIntegrator() const;
+	virtual const Integrator *getSubIntegrator(int index) const;
 
 	/// Serialize this integrator to a binary data stream
 	void serialize(Stream *stream, InstanceManager *manager) const;

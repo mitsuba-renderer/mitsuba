@@ -611,6 +611,10 @@ static void bitmap_write(Bitmap *bitmap, Bitmap::EFileFormat fmt, Stream *stream
 	bitmap->write(fmt, stream);
 }
 
+static void bitmap_write2(Bitmap *bitmap, Bitmap::EFileFormat fmt, Stream *stream, int compression) {
+	bitmap->write(fmt, stream, compression);
+}
+
 static ref<Bitmap> bitmap_convert_1(Bitmap *bitmap, Bitmap::EPixelFormat pixelFormat, Bitmap::EComponentFormat componentFormat,
 		Float gamma, Float multiplier, Spectrum::EConversionIntent intent) {
 	return bitmap->convert(pixelFormat, componentFormat, gamma, multiplier, intent);
@@ -1268,6 +1272,8 @@ void export_core() {
 		.def("getChannelName", &Bitmap::getChannelName, BP_RETURN_VALUE)
 		.def("isSquare", &Bitmap::isSquare)
 		.def("hasAlpha", &Bitmap::hasAlpha)
+		.def("hasWeight", &Bitmap::hasWeight)
+		.def("isMultiChannel", &Bitmap::isMultiChannel)
 		.def("getBitsPerComponent", &Bitmap::getBitsPerComponent)
 		.def("getBytesPerComponent", &Bitmap::getBytesPerComponent)
 		.def("getBytesPerPixel", &Bitmap::getBytesPerPixel)
@@ -1279,6 +1285,7 @@ void export_core() {
 		.def("clone", &Bitmap::clone, BP_RETURN_VALUE)
 		.def("clear", &Bitmap::clear)
 		.def("write", &bitmap_write)
+		.def("write", &bitmap_write2)
 		.def("tonemapReinhard", &bitmap_tonemapReinhard)
 		.def("expand", &Bitmap::expand, BP_RETURN_VALUE)
 		.def("separateChannel", &Bitmap::separateChannel, BP_RETURN_VALUE)
@@ -1330,6 +1337,7 @@ void export_core() {
 		.value("ESpectrum", Bitmap::ESpectrum)
 		.value("ESpectrumAlpha", Bitmap::ESpectrumAlpha)
 		.value("ESpectrumAlphaWeight", Bitmap::ESpectrumAlphaWeight)
+		.value("EMultiSpectrumAlphaWeight", Bitmap::EMultiSpectrumAlphaWeight)
 		.value("EMultiChannel", Bitmap::EMultiChannel)
 		.export_values();
 
