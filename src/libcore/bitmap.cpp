@@ -1361,7 +1361,7 @@ void Bitmap::convert(Bitmap *target, Float multiplier, Spectrum::EConversionInte
 	cvt->convert(m_pixelFormat, m_gamma, m_data,
 		target->getPixelFormat(), target->getGamma(), target->getData(),
 		(size_t) m_size.x * (size_t) m_size.y, multiplier, intent,
-		m_channelCount - (hasWeight() ? 1 : 0));
+		m_channelCount);
 }
 
 ref<Bitmap> Bitmap::convert(EPixelFormat pixelFormat,
@@ -1392,70 +1392,96 @@ ref<Bitmap> Bitmap::convert(EPixelFormat pixelFormat,
 	cvt->convert(m_pixelFormat, m_gamma, m_data,
 		pixelFormat, gamma, target->getData(),
 		(size_t) m_size.x * (size_t) m_size.y, multiplier, intent,
-		m_channelCount - (hasWeight() ? 1 : 0));
+		m_channelCount);
 
 	return target;
 }
 
 ref<Bitmap> Bitmap::convertMultiSpectrumAlphaWeight(const std::vector<EPixelFormat> &pixelFormats,
 		EComponentFormat componentFormat, const std::vector<std::string> &channelNames) const {
-	if (m_componentFormat != EFloat && m_pixelFormat != EMultiSpectrumAlphaWeight)
-		Log(EError, "convertMultiSpectrumAlphaWeight(): unsupported!");
-	ref<Bitmap> bitmap = new Bitmap(Bitmap::EMultiChannel, Bitmap::EFloat, m_size, channelNames.size());
+	ref<Bitmap> bitmap = new Bitmap(Bitmap::EMultiChannel, componentFormat, m_size, channelNames.size());
 	bitmap->setChannelNames(channelNames);
+	convertMultiSpectrumAlphaWeight(this, getUInt8Data(), bitmap,
+		bitmap->getUInt8Data(), pixelFormats, componentFormat,
+		(size_t) m_size.x * (size_t) m_size.y);
+	return bitmap;
+}
 
-	for (int y = 0; y<m_size.y; ++y) {
-		for (int x = 0; x<m_size.x; ++x) {
-			const Float *srcData = getFloatData() + getChannelCount() * (x+y*m_size.x);
-			Float *dstData = bitmap->getFloatData() + bitmap->getChannelCount() * (x+y*m_size.x);
-			Float weight = srcData[getChannelCount()-1],
-				  invWeight = weight == 0 ? 0 : (Float) 1 / weight;
-			Float alpha = srcData[getChannelCount()-2] * invWeight;
+void Bitmap::convertMultiSpectrumAlphaWeight(const Bitmap *source,
+		const uint8_t *sourcePtr, const Bitmap *target, uint8_t *targetPtr,
+		const std::vector<EPixelFormat> &pixelFormats,
+		EComponentFormat componentFormat, size_t count) {
+	if (source->getComponentFormat() != EFloat && source->getPixelFormat() != EMultiSpectrumAlphaWeight)
+		Log(EError, "convertMultiSpectrumAlphaWeight(): unsupported!");
 
-			for (size_t i=0; i<pixelFormats.size(); ++i) {
-				Spectrum value = ((Spectrum *) srcData)[i] * invWeight;
-				Float r, g, b;
-				switch (pixelFormats[i]) {
-					case Bitmap::ELuminance:
-						*dstData++ = value.getLuminance();
-						break;
-					case Bitmap::ELuminanceAlpha:
-						*dstData++ = value.getLuminance();
-						*dstData++ = alpha;
-						break;
-					case Bitmap::ERGB:
-						value.toLinearRGB(r, g, b);
-						*dstData++ = r;
-						*dstData++ = g;
-						*dstData++ = b;
-						break;
-					case Bitmap::ERGBA:
-						value.toLinearRGB(r, g, b);
-						*dstData++ = r;
-						*dstData++ = g;
-						*dstData++ = b;
-						*dstData++ = alpha;
-						break;
-					case Bitmap::ESpectrum:
-						for (int j=0; j<SPECTRUM_SAMPLES; ++j)
-							*dstData++ = value[j];
-						break;
-					case Bitmap::ESpectrumAlpha:
-						for (int j=0; j<SPECTRUM_SAMPLES; ++j)
-							*dstData++ = value[j];
-						*dstData++ = alpha;
-						break;
-					default:
-						Log(EError, "Unknown pixel format!");
-				}
+	Float *temp = new Float[count * target->getChannelCount()], *dst = temp;
+
+	for (size_t k = 0; k<count; ++k) {
+		const Float *srcData = (const Float *) sourcePtr + k * source->getChannelCount();
+		Float weight = srcData[source->getChannelCount()-1],
+			  invWeight = weight == 0 ? 0 : (Float) 1 / weight;
+		Float alpha = srcData[source->getChannelCount()-2] * invWeight;
+
+		for (size_t i=0; i<pixelFormats.size(); ++i) {
+			Spectrum value = ((Spectrum *) srcData)[i] * invWeight;
+			Float tmp0, tmp1, tmp2;
+			switch (pixelFormats[i]) {
+				case Bitmap::ELuminance:
+					*dst++ = value.getLuminance();
+					break;
+				case Bitmap::ELuminanceAlpha:
+					*dst++ = value.getLuminance();
+					*dst++ = alpha;
+					break;
+				case Bitmap::EXYZ:
+					value.toXYZ(tmp0, tmp1, tmp2);
+					*dst++ = tmp0;
+					*dst++ = tmp1;
+					*dst++ = tmp2;
+					break;
+				case Bitmap::EXYZA:
+					value.toXYZ(tmp0, tmp1, tmp2);
+					*dst++ = tmp0;
+					*dst++ = tmp1;
+					*dst++ = tmp2;
+					*dst++ = alpha;
+					break;
+				case Bitmap::ERGB:
+					value.toLinearRGB(tmp0, tmp1, tmp2);
+					*dst++ = tmp0;
+					*dst++ = tmp1;
+					*dst++ = tmp2;
+					break;
+				case Bitmap::ERGBA:
+					value.toLinearRGB(tmp0, tmp1, tmp2);
+					*dst++ = tmp0;
+					*dst++ = tmp1;
+					*dst++ = tmp2;
+					*dst++ = alpha;
+					break;
+				case Bitmap::ESpectrum:
+					for (int j=0; j<SPECTRUM_SAMPLES; ++j)
+						*dst++ = value[j];
+					break;
+				case Bitmap::ESpectrumAlpha:
+					for (int j=0; j<SPECTRUM_SAMPLES; ++j)
+						*dst++ = value[j];
+					*dst++ = alpha;
+					break;
+				default:
+					Log(EError, "Unknown pixel format!");
 			}
 		}
 	}
 
-	if (componentFormat != Bitmap::EFloat)
-		bitmap = bitmap->convert(Bitmap::EMultiChannel, componentFormat);
+	const FormatConverter *cvt = FormatConverter::getInstance(
+		std::make_pair(EFloat, target->getComponentFormat())
+	);
 
-	return bitmap;
+	cvt->convert(Bitmap::EMultiChannel, 1.0f, temp, Bitmap::EMultiChannel, 1.0f, targetPtr,
+			count, 1.0f, Spectrum::EReflectance, target->getChannelCount());
+
+	delete[] temp;
 }
 
 void Bitmap::convert(void *target, EPixelFormat pixelFormat,
@@ -1481,7 +1507,7 @@ void Bitmap::convert(void *target, EPixelFormat pixelFormat,
 	cvt->convert(m_pixelFormat, m_gamma, m_data,
 		pixelFormat, gamma, target,
 		(size_t) m_size.x * (size_t) m_size.y, multiplier, intent,
-		m_channelCount - (hasWeight() ? 1 : 0));
+		m_channelCount);
 }
 
 template <typename T> void tonemapReinhard(T *data, size_t pixels, Bitmap::EPixelFormat fmt,

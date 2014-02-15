@@ -215,7 +215,7 @@ public:
 		std::vector<std::string> pixelFormats = tokenize(boost::to_lower_copy(
 			props.getString("pixelFormat", "rgb")), " ,");
 		std::vector<std::string> channelNames = tokenize(
-			props.getString("channelNames", "rgb"), ", ");
+			props.getString("channelNames", ""), ", ");
 		std::string componentFormat = boost::to_lower_copy(
 			props.getString("componentFormat", "float16"));
 
@@ -238,47 +238,50 @@ public:
 
 		for (size_t i=0; i<pixelFormats.size(); ++i) {
 			std::string pixelFormat = pixelFormats[i];
-			std::string name = i < channelNames.size() ? channelNames[i] : "";
+			std::string name = i < channelNames.size() ? (channelNames[i] + std::string(".")) : "";
 
 			if (pixelFormat == "luminance") {
 				m_pixelFormats.push_back(Bitmap::ELuminance);
-				m_channelNames.push_back(name + ".Y");
+				m_channelNames.push_back(name + "Y");
 			} else if (pixelFormat == "luminancealpha") {
 				m_pixelFormats.push_back(Bitmap::ELuminanceAlpha);
-				m_channelNames.push_back(name + ".Y");
-				m_channelNames.push_back(name + ".A");
+				m_channelNames.push_back(name + "Y");
+				m_channelNames.push_back(name + "A");
 			} else if (pixelFormat == "rgb") {
 				m_pixelFormats.push_back(Bitmap::ERGB);
-				m_channelNames.push_back(name + ".R");
-				m_channelNames.push_back(name + ".G");
-				m_channelNames.push_back(name + ".B");
+				m_channelNames.push_back(name + "R");
+				m_channelNames.push_back(name + "G");
+				m_channelNames.push_back(name + "B");
 			} else if (pixelFormat == "rgba") {
 				m_pixelFormats.push_back(Bitmap::ERGBA);
-				m_channelNames.push_back(name + ".R");
-				m_channelNames.push_back(name + ".G");
-				m_channelNames.push_back(name + ".B");
-				m_channelNames.push_back(name + ".A");
+				m_channelNames.push_back(name + "R");
+				m_channelNames.push_back(name + "G");
+				m_channelNames.push_back(name + "B");
+				m_channelNames.push_back(name + "A");
 			} else if (pixelFormat == "xyz") {
 				m_pixelFormats.push_back(Bitmap::EXYZ);
-				if (m_pixelFormats.size() > 1)
-					Log(EError, "The XYZ pixel format is not supported for general multi-channel images!");
+				m_channelNames.push_back(name + "X");
+				m_channelNames.push_back(name + "Y");
+				m_channelNames.push_back(name + "Z");
 			} else if (pixelFormat == "xyza") {
 				m_pixelFormats.push_back(Bitmap::EXYZA);
-				if (m_pixelFormats.size() > 1)
-					Log(EError, "The XYZA pixel format is not supported for general multi-channel images!");
+				m_channelNames.push_back(name + "X");
+				m_channelNames.push_back(name + "Y");
+				m_channelNames.push_back(name + "Z");
+				m_channelNames.push_back(name + "A");
 			} else if (pixelFormat == "spectrum") {
 				m_pixelFormats.push_back(Bitmap::ESpectrum);
 				for (int i=0; i<SPECTRUM_SAMPLES; ++i) {
 					std::pair<Float, Float> coverage = Spectrum::getBinCoverage(i);
-					m_channelNames.push_back(name + formatString(".%.2f-%.2fnm", coverage.first, coverage.second));
+					m_channelNames.push_back(name + formatString("%.2f-%.2fnm", coverage.first, coverage.second));
 				}
 			} else if (pixelFormat == "spectrumalpha") {
 				m_pixelFormats.push_back(Bitmap::ESpectrumAlpha);
 				for (int i=0; i<SPECTRUM_SAMPLES; ++i) {
 					std::pair<Float, Float> coverage = Spectrum::getBinCoverage(i);
-					m_channelNames.push_back(name + formatString(".%.2f-%.2fnm", coverage.first, coverage.second));
+					m_channelNames.push_back(name + formatString("%.2f-%.2fnm", coverage.first, coverage.second));
 				}
-				m_channelNames.push_back(name + ".A");
+				m_channelNames.push_back(name + "A");
 			} else {
 				Log(EError, "The \"pixelFormat\" parameter must either be equal to "
 					"\"luminance\", \"luminanceAlpha\", \"rgb\", \"rgba\", \"xyz\", \"xyza\", "
@@ -529,13 +532,14 @@ public:
 	}
 
 	bool hasAlpha() const {
-		Assert(m_pixelFormats.size() > 0);
-		return
-			m_pixelFormats[0] == Bitmap::ELuminanceAlpha ||
-			m_pixelFormats[0] == Bitmap::ERGBA ||
-			m_pixelFormats[0] == Bitmap::EXYZA ||
-			m_pixelFormats[0] == Bitmap::ESpectrumAlpha ||
-			m_pixelFormats.size() > 1;
+		for (size_t i=0; i<m_pixelFormats.size(); ++i) {
+			if (m_pixelFormats[i] == Bitmap::ELuminanceAlpha ||
+				m_pixelFormats[i] == Bitmap::ERGBA ||
+				m_pixelFormats[i] == Bitmap::EXYZA ||
+				m_pixelFormats[i] == Bitmap::ESpectrumAlpha)
+				return true;
+		}
+		return false;
 	}
 
 	bool destinationExists(const fs::path &baseName) const {

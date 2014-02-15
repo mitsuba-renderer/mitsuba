@@ -101,37 +101,78 @@ MTS_NAMESPACE_BEGIN
 class TiledHDRFilm : public Film {
 public:
 	TiledHDRFilm(const Properties &props) : Film(props), m_output(NULL), m_frameBuffer(NULL) {
-		std::string pixelFormat = boost::to_lower_copy(
-			props.getString("pixelFormat", "rgb"));
+		std::vector<std::string> pixelFormats = tokenize(boost::to_lower_copy(
+			props.getString("pixelFormat", "rgb")), " ,");
+		std::vector<std::string> channelNames = tokenize(
+			props.getString("channelNames", ""), ", ");
 		std::string componentFormat = boost::to_lower_copy(
 			props.getString("componentFormat", "float16"));
 
-		if (pixelFormat == "luminance") {
-			m_pixelFormat = Bitmap::ELuminance;
-		} else if (pixelFormat == "luminancealpha") {
-			m_pixelFormat = Bitmap::ELuminanceAlpha;
-		} else if (pixelFormat == "rgb") {
-			m_pixelFormat = Bitmap::ERGB;
-		} else if (pixelFormat == "rgba") {
-			m_pixelFormat = Bitmap::ERGBA;
-		} else if (pixelFormat == "xyz") {
-			m_pixelFormat = Bitmap::EXYZ;
-		} else if (pixelFormat == "xyza") {
-			m_pixelFormat = Bitmap::EXYZA;
-		} else if (pixelFormat == "spectrum") {
-			m_pixelFormat = Bitmap::ESpectrum;
-		} else if (pixelFormat == "spectrumalpha") {
-			m_pixelFormat = Bitmap::ESpectrumAlpha;
-		} else {
-			Log(EError, "The \"pixelFormat\" parameter must either be equal to "
-				"\"luminance\", \"luminanceAlpha\", \"rgb\", \"rgba\", \"xyz\", \"xyza\", "
-				"\"spectrum\", or \"spectrumAlpha\"!");
+		if (pixelFormats.empty())
+			Log(EError, "At least one pixel format must be specified!");
+
+		if (m_pixelFormats.size() != 1 && m_channelNames.size() != m_pixelFormats.size())
+			Log(EError, "Number of channel names must match the number of specified pixel formats!");
+
+		for (size_t i=0; i<pixelFormats.size(); ++i) {
+			std::string pixelFormat = pixelFormats[i];
+			std::string name = i < channelNames.size() ? (channelNames[i] + std::string(".")) : "";
+
+			if (pixelFormat == "luminance") {
+				m_pixelFormats.push_back(Bitmap::ELuminance);
+				m_channelNames.push_back(name + "Y");
+			} else if (pixelFormat == "luminancealpha") {
+				m_pixelFormats.push_back(Bitmap::ELuminanceAlpha);
+				m_channelNames.push_back(name + "Y");
+				m_channelNames.push_back(name + "A");
+			} else if (pixelFormat == "rgb") {
+				m_pixelFormats.push_back(Bitmap::ERGB);
+				m_channelNames.push_back(name + "R");
+				m_channelNames.push_back(name + "G");
+				m_channelNames.push_back(name + "B");
+			} else if (pixelFormat == "rgba") {
+				m_pixelFormats.push_back(Bitmap::ERGBA);
+				m_channelNames.push_back(name + "R");
+				m_channelNames.push_back(name + "G");
+				m_channelNames.push_back(name + "B");
+				m_channelNames.push_back(name + "A");
+			} else if (pixelFormat == "xyz") {
+				m_pixelFormats.push_back(Bitmap::EXYZ);
+				m_channelNames.push_back(name + "X");
+				m_channelNames.push_back(name + "Y");
+				m_channelNames.push_back(name + "Z");
+			} else if (pixelFormat == "xyza") {
+				m_pixelFormats.push_back(Bitmap::EXYZA);
+				m_channelNames.push_back(name + "X");
+				m_channelNames.push_back(name + "Y");
+				m_channelNames.push_back(name + "Z");
+				m_channelNames.push_back(name + "A");
+			} else if (pixelFormat == "spectrum") {
+				m_pixelFormats.push_back(Bitmap::ESpectrum);
+				for (int i=0; i<SPECTRUM_SAMPLES; ++i) {
+					std::pair<Float, Float> coverage = Spectrum::getBinCoverage(i);
+					m_channelNames.push_back(name + formatString("%.2f-%.2fnm", coverage.first, coverage.second));
+				}
+			} else if (pixelFormat == "spectrumalpha") {
+				m_pixelFormats.push_back(Bitmap::ESpectrumAlpha);
+				for (int i=0; i<SPECTRUM_SAMPLES; ++i) {
+					std::pair<Float, Float> coverage = Spectrum::getBinCoverage(i);
+					m_channelNames.push_back(name + formatString("%.2f-%.2fnm", coverage.first, coverage.second));
+				}
+				m_channelNames.push_back(name + "A");
+			} else {
+				Log(EError, "The \"pixelFormat\" parameter must either be equal to "
+					"\"luminance\", \"luminanceAlpha\", \"rgb\", \"rgba\", \"xyz\", \"xyza\", "
+					"\"spectrum\", or \"spectrumAlpha\"!");
+			}
 		}
 
-		if (SPECTRUM_SAMPLES == 3 && (m_pixelFormat == Bitmap::ESpectrum || m_pixelFormat == Bitmap::ESpectrumAlpha))
-			Log(EError, "You requested to render a spectral image, but Mitsuba is currently "
-				"configured for a RGB flow (i.e. SPECTRUM_SAMPLES = 3). You will need to recompile "
-				"it with a different configuration. Please see the documentation for details.");
+		for (size_t i=0; i<m_pixelFormats.size(); ++i) {
+			if (SPECTRUM_SAMPLES == 3 && (m_pixelFormats[i] == Bitmap::ESpectrum || m_pixelFormats[i] == Bitmap::ESpectrumAlpha))
+				Log(EError, "You requested to render a spectral image, but Mitsuba is currently "
+					"configured for a RGB flow (i.e. SPECTRUM_SAMPLES = 3). You will need to recompile "
+					"it with a different configuration. Please see the documentation for details.");
+		}
 
 		if (componentFormat == "float16") {
 			m_componentFormat = Bitmap::EFloat16;
@@ -151,7 +192,12 @@ public:
 
 	TiledHDRFilm(Stream *stream, InstanceManager *manager)
 		: Film(stream, manager), m_output(NULL), m_frameBuffer(NULL) {
-		m_pixelFormat = (Bitmap::EPixelFormat) stream->readUInt();
+		m_pixelFormats.resize((size_t) stream->readUInt());
+		for (size_t i=0; i<m_pixelFormats.size(); ++i)
+			m_pixelFormats[i] = (Bitmap::EPixelFormat) stream->readUInt();
+		m_channelNames.resize((size_t) stream->readUInt());
+		for (size_t i=0; i<m_channelNames.size(); ++i)
+			m_channelNames[i] = stream->readString();
 		m_componentFormat = (Bitmap::EComponentFormat) stream->readUInt();
 	}
 
@@ -161,22 +207,17 @@ public:
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		Film::serialize(stream, manager);
-		stream->writeUInt(m_pixelFormat);
+		for (size_t i=0; i<m_pixelFormats.size(); ++i)
+			stream->writeUInt(m_pixelFormats[i]);
+		stream->writeUInt((uint32_t) m_channelNames.size());
+		for (size_t i=0; i<m_channelNames.size(); ++i)
+			stream->writeString(m_channelNames[i]);
 		stream->writeUInt(m_componentFormat);
 	}
 
 	void setDestinationFile(const fs::path &destFile, uint32_t blockSize) {
 		if (m_output)
 			develop(NULL, 0);
-
-		Bitmap::EPixelFormat pixelFormat = m_pixelFormat;
-		#if SPECTRUM_SAMPLES == 3
-			if (pixelFormat == Bitmap::ESpectrum)
-				pixelFormat = Bitmap::ERGB;
-			if (pixelFormat == Bitmap::ESpectrumAlpha)
-				pixelFormat = Bitmap::ERGBA;
-		#endif
-
 
 		fs::path filename = destFile;
 		std::string extension = boost::to_lower_copy(filename.extension().string());
@@ -189,19 +230,22 @@ public:
 		header.setTileDescription(Imf::TileDescription(blockSize, blockSize, Imf::ONE_LEVEL));
 		header.insert("generated-by", Imf::StringAttribute("Mitsuba version " MTS_VERSION));
 
-		if (pixelFormat == Bitmap::EXYZ || pixelFormat == Bitmap::EXYZA) {
-			Imf::addChromaticities(header, Imf::Chromaticities(
-				Imath::V2f(1.0f, 0.0f),
-				Imath::V2f(0.0f, 1.0f),
-				Imath::V2f(0.0f, 0.0f),
-				Imath::V2f(1.0f/3.0f, 1.0f/3.0f)));
-		} else if (pixelFormat == Bitmap::ERGB || pixelFormat == Bitmap::ERGBA) {
-			Imf::addChromaticities(header, Imf::Chromaticities());
+		if (m_pixelFormats.size() == 1) {
+			/* Write a chromaticity tag when this is possible */
+			Bitmap::EPixelFormat pixelFormat = m_pixelFormats[0];
+			if (pixelFormat == Bitmap::EXYZ || pixelFormat == Bitmap::EXYZA) {
+				Imf::addChromaticities(header, Imf::Chromaticities(
+					Imath::V2f(1.0f, 0.0f),
+					Imath::V2f(0.0f, 1.0f),
+					Imath::V2f(0.0f, 0.0f),
+					Imath::V2f(1.0f/3.0f, 1.0f/3.0f)));
+			} else if (pixelFormat == Bitmap::ERGB || pixelFormat == Bitmap::ERGBA) {
+				Imf::addChromaticities(header, Imf::Chromaticities());
+			}
 		}
 
 		Imf::PixelType compType;
 		size_t compStride;
-		int channelCount;
 
 		if (m_componentFormat == Bitmap::EFloat16) {
 			compType = Imf::HALF;
@@ -219,62 +263,34 @@ public:
 		}
 
 		Imf::ChannelList &channels = header.channels();
-		if (pixelFormat == Bitmap::ELuminance || pixelFormat == Bitmap::ELuminanceAlpha) {
-			channels.insert("Y", Imf::Channel(compType));
-			channelCount = 1;
-		} else if (pixelFormat == Bitmap::ERGB || pixelFormat == Bitmap::ERGBA ||
-				pixelFormat == Bitmap::EXYZ || pixelFormat == Bitmap::EXYZA) {
-			channels.insert("R", Imf::Channel(compType));
-			channels.insert("G", Imf::Channel(compType));
-			channels.insert("B", Imf::Channel(compType));
-			channelCount = 3;
-		} else if (pixelFormat == Bitmap::ESpectrum || pixelFormat == Bitmap::ESpectrumAlpha) {
-			for (int i=0; i<SPECTRUM_SAMPLES; ++i) {
-				std::pair<Float, Float> coverage = Spectrum::getBinCoverage(i);
-				std::string name = formatString("%.2f-%.2fnm", coverage.first, coverage.second);
-				channels.insert(name.c_str(), Imf::Channel(compType));
-			}
-			channelCount = SPECTRUM_SAMPLES;
-		} else {
-			Log(EError, "Invalid pixel format!");
-			return;
-		}
-
-		if (m_pixelFormat == Bitmap::ELuminanceAlpha || m_pixelFormat == Bitmap::ERGBA ||
-			m_pixelFormat == Bitmap::ESpectrumAlpha) {
-			channels.insert("A", Imf::Channel(compType));
-			channelCount++;
-		}
+		for (size_t i=0; i<m_channelNames.size(); ++i)
+			channels.insert(m_channelNames[i], Imf::Channel(compType));
 
 		m_output = new Imf::TiledOutputFile(filename.string().c_str(), header);
 		m_frameBuffer = new Imf::FrameBuffer();
 		m_blockSize = (int) blockSize;
-		m_tile = new Bitmap(m_pixelFormat, m_componentFormat, Vector2i(m_blockSize, m_blockSize));
 		m_blocksH = (m_size.x + blockSize - 1) / blockSize;
 		m_blocksV = (m_size.y + blockSize - 1) / blockSize;
 
-		m_pixelStride = channelCount * compStride;
+		m_pixelStride = m_channelNames.size() * compStride;
 		m_rowStride = m_pixelStride * m_blockSize;
-		char *ptr = (char *) m_tile->getUInt8Data();
 
-		if (pixelFormat == Bitmap::ELuminance || pixelFormat == Bitmap::ELuminanceAlpha) {
-			m_frameBuffer->insert("Y", Imf::Slice(compType, ptr, m_pixelStride, m_rowStride)); ptr += compStride;
-		} else if (pixelFormat == Bitmap::ERGB || pixelFormat == Bitmap::ERGBA ||
-				pixelFormat == Bitmap::EXYZ || pixelFormat == Bitmap::EXYZA) {
-			m_frameBuffer->insert("R", Imf::Slice(compType, ptr, m_pixelStride, m_rowStride)); ptr += compStride;
-			m_frameBuffer->insert("G", Imf::Slice(compType, ptr, m_pixelStride, m_rowStride)); ptr += compStride;
-			m_frameBuffer->insert("B", Imf::Slice(compType, ptr, m_pixelStride, m_rowStride)); ptr += compStride;
-		} else if (pixelFormat == Bitmap::ESpectrum || pixelFormat == Bitmap::ESpectrumAlpha) {
-			for (int i=0; i<SPECTRUM_SAMPLES; ++i) {
-				std::pair<Float, Float> coverage = Spectrum::getBinCoverage(i);
-				std::string name = formatString("%f-%fnm", coverage.first, coverage.second);
-				m_frameBuffer->insert(name.c_str(), Imf::Slice(compType, ptr, m_pixelStride, m_rowStride)); ptr += compStride;
-			}
+		if (m_pixelFormats.size() == 1) {
+			m_tile = new Bitmap(m_pixelFormats[0], m_componentFormat,
+					Vector2i(m_blockSize, m_blockSize));
+		} else {
+			m_tile = new Bitmap(Bitmap::EMultiChannel, m_componentFormat,
+					Vector2i(m_blockSize, m_blockSize), m_channelNames.size());
+			m_tile->setChannelNames(m_channelNames);
 		}
 
-		if (m_pixelFormat == Bitmap::ERGBA || m_pixelFormat == Bitmap::EXYZA ||
-		    m_pixelFormat == Bitmap::ELuminanceAlpha)
-			m_frameBuffer->insert("A", Imf::Slice(compType, ptr, m_pixelStride, m_rowStride));
+		char *ptr = (char *) m_tile->getUInt8Data();
+
+		for (size_t i=0; i<m_channelNames.size(); ++i) {
+			m_frameBuffer->insert(m_channelNames[i],
+				Imf::Slice(compType, ptr, m_pixelStride, m_rowStride));
+			ptr += compStride;
+		}
 
 		m_output->setFrameBuffer(*m_frameBuffer);
 		m_peakUsage = 0;
@@ -388,6 +404,7 @@ public:
 		}
 
 		const Bitmap *source = mergedBlock->getBitmap();
+
 		size_t sourceBpp = source->getBytesPerPixel();
 		size_t targetBpp = m_tile->getBytesPerPixel();
 
@@ -400,11 +417,15 @@ public:
 		);
 
 		for (int i=0; i<m_blockSize; ++i) {
-			cvt->convert(source->getPixelFormat(), 1.0f, sourceData,
-				m_tile->getPixelFormat(), m_tile->getGamma(), targetData,
-				m_tile->getWidth());
+			if (m_pixelFormats.size() == 1)
+				cvt->convert(source->getPixelFormat(), 1.0f, sourceData,
+					m_tile->getPixelFormat(), m_tile->getGamma(), targetData,
+					m_tile->getWidth());
+			else
+				Bitmap::convertMultiSpectrumAlphaWeight(source, sourceData,
+					m_tile, targetData, m_pixelFormats, m_componentFormat, m_tile->getWidth());
 
-			sourceData +=  source->getWidth() * sourceBpp;
+			sourceData += source->getWidth() * sourceBpp;
 			targetData += m_tile->getWidth() * targetBpp;
 		}
 
@@ -470,11 +491,14 @@ public:
 	void clear() { /* Do nothing */ }
 
 	bool hasAlpha() const {
-		return
-			m_pixelFormat == Bitmap::ELuminanceAlpha ||
-			m_pixelFormat == Bitmap::ERGBA ||
-			m_pixelFormat == Bitmap::EXYZA ||
-			m_pixelFormat == Bitmap::ESpectrumAlpha;
+		for (size_t i=0; i<m_pixelFormats.size(); ++i) {
+			if (m_pixelFormats[i] == Bitmap::ELuminanceAlpha ||
+				m_pixelFormats[i] == Bitmap::ERGBA ||
+				m_pixelFormats[i] == Bitmap::EXYZA ||
+				m_pixelFormats[i] == Bitmap::ESpectrumAlpha)
+				return true;
+		}
+		return false;
 	}
 
 	bool destinationExists(const fs::path &baseName) const {
@@ -488,7 +512,14 @@ public:
 		std::ostringstream oss;
 		oss << "TiledHDRFilm[" << endl
 			<< "  size = " << m_size.toString() << "," << endl
-			<< "  pixelFormat = " << m_pixelFormat << "," << endl
+			<< "  pixelFormat = ";
+		for (size_t i=0; i<m_pixelFormats.size(); ++i)
+			oss << m_pixelFormats[i] << ", ";
+		oss << endl
+			<< "  channelNames = ";
+		for (size_t i=0; i<m_channelNames.size(); ++i)
+			oss << "\"" << m_channelNames[i] << "\"" << ", ";
+		oss << endl
 			<< "  componentFormat = " << m_componentFormat << "," << endl
 			<< "  cropOffset = " << m_cropOffset.toString() << "," << endl
 			<< "  cropSize = " << m_cropSize.toString() << "," << endl
@@ -499,7 +530,8 @@ public:
 
 	MTS_DECLARE_CLASS()
 protected:
-	Bitmap::EPixelFormat m_pixelFormat;
+	std::vector<Bitmap::EPixelFormat> m_pixelFormats;
+	std::vector<std::string> m_channelNames;
 	Bitmap::EComponentFormat m_componentFormat;
 	std::vector<ImageBlock *> m_freeBlocks;
 	std::map<uint32_t, ImageBlock *> m_origBlocks, m_mergedBlocks;

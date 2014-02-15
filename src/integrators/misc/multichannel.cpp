@@ -23,7 +23,30 @@ MTS_NAMESPACE_BEGIN
 
 /*! \plugin{direct}{Multi-channel integrator}
  * \order{16}
+  * \parameters{
+ *     \parameter{\Unnamed}{\BSDF}{Multiple sub-integrators whose output
+ *     should be rendered into a combined multi-channel image}
+ * }
  *
+ * The multi-channel integrator groups several sub-integrators together
+ * and invokes them at the same time for each pixel; the result is written
+ * to a general multi-channel image. The most common application of this plugin
+ * is to create additional image channels storing surface normals or the distance
+ * from the camera (via the \pluginref{field} plugin) or ambient occlusion
+ * (via the \pluginref{ao} plugin).
+ *
+ * This is a fairly advanced plugin that only plays well with a small
+ * part of Mitsuba---see the remarks in the red box for details.
+ *
+ * \remarks{
+ * \item Requires the \pluginref{hdrfilm} or \pluginref{tiledhdrfilm}.
+ * \item All nested integrators must
+ * conform to Mitsuba's basic \emph{SamplingIntegrator} interface.
+ * Currently, only a few of them satisfy this, including:
+ * \pluginref{field}, \pluginref{ao}, \pluginref{direct}, \pluginref{path},
+ * \pluginref{volpath}, \pluginref[volpathsimple]{volpath\_simple},
+ * and \pluginref{irrcache}.
+ * }
  */
 
 class MultiChannelIntegrator : public SamplingIntegrator {
