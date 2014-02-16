@@ -1401,7 +1401,9 @@ ref<Bitmap> Bitmap::convertMultiSpectrumAlphaWeight(const std::vector<EPixelForm
 		EComponentFormat componentFormat, const std::vector<std::string> &channelNames) const {
 	if (m_componentFormat != EFloat && m_pixelFormat != EMultiSpectrumAlphaWeight)
 		Log(EError, "convertMultiSpectrumAlphaWeight(): unsupported!");
-	ref<Bitmap> bitmap = new Bitmap(Bitmap::EMultiChannel, Bitmap::EFloat, m_size, channelNames.size());
+	if (channelNames.size() > std::numeric_limits<uint8_t>::max())
+		Log(EError, "convertMultiSpectrumAlphaWeight(): excessive number of channels!");
+	ref<Bitmap> bitmap = new Bitmap(Bitmap::EMultiChannel, Bitmap::EFloat, m_size, (uint8_t) channelNames.size());
 	bitmap->setChannelNames(channelNames);
 
 	for (int y = 0; y<m_size.y; ++y) {
