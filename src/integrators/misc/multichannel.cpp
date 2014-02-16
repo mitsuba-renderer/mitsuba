@@ -82,7 +82,7 @@ public:
 		ref<BlockedRenderProcess> proc = new BlockedRenderProcess(job,
 			queue, scene->getBlockSize());
 
-		proc->setPixelFormat(Bitmap::EMultiSpectrumAlphaWeight, m_integrators.size() * SPECTRUM_SAMPLES + 2, false);
+		proc->setPixelFormat(Bitmap::EMultiSpectrumAlphaWeight, (int) (m_integrators.size() * SPECTRUM_SAMPLES + 2), false);
 
 		int integratorResID = sched->registerResource(this);
 		proc->bindResource("integrator", integratorResID);
