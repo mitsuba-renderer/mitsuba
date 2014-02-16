@@ -52,7 +52,7 @@ MTS_NAMESPACE_BEGIN
  *         \code{xyza}, \code{spectrum}, and \code{spectrumAlpha}. In the latter two cases,
  *         the number of written channels depends on the value assigned to
  *         \code{SPECTRUM\_SAMPLES} during compilation (see Section~\ref{sec:compiling}
- *         section for details)
+ *         for details)
  *         \default{\code{rgb}}
  *     }
  *     \parameter{componentFormat}{\String}{Specifies the desired floating

@@ -87,6 +87,9 @@ public:
 	/// Return the number of channels stored by the image block
 	inline int getChannelCount() const { return m_bitmap->getChannelCount(); }
 
+	/// Return the underlying pixel format
+	inline Bitmap::EPixelFormat getPixelFormat() const { return m_bitmap->getPixelFormat(); }
+
 	/// Return a pointer to the underlying bitmap representation
 	inline Bitmap *getBitmap() { return m_bitmap; }
 
@@ -143,7 +146,7 @@ public:
 
 		/* Check if all sample values are valid */
 		for (int i=0; i<channels; ++i) {
-			if (EXPECT_NOT_TAKEN(!std::isfinite(value[i]) || value[i] < 0))
+			if (EXPECT_NOT_TAKEN((!std::isfinite(value[i]) || value[i] < 0) && m_warn))
 				goto bad_sample;
 		}
 
@@ -186,7 +189,7 @@ public:
 		return true;
 
 		bad_sample:
-		if (m_warn) {
+		{
 			std::ostringstream oss;
 			oss << "Invalid sample value : [";
 			for (int i=0; i<channels; ++i) {

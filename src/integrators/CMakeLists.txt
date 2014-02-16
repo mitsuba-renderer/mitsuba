@@ -18,18 +18,19 @@ add_integrator(volpath  path/volpath.cpp)
 add_integrator(volpath_simple path/volpath_simple.cpp)
 add_integrator(ptracer  ptracer/ptracer.cpp
                         ptracer/ptracer_proc.h ptracer/ptracer_proc.cpp)
-                        
+
 # Photon mapping-based techniques
 add_integrator(photonmapper photonmapper/photonmapper.cpp photonmapper/bre.cpp)
 add_integrator(ppm          photonmapper/ppm.cpp)
 add_integrator(sppm         photonmapper/sppm.cpp)
 
 # Miscellaneous
-add_integrator(vpl      vpl/vpl.cpp MTS_HW)
-add_integrator(adaptive misc/adaptive.cpp)
-add_integrator(irrcache misc/irrcache.cpp
-                        misc/irrcache_proc.h misc/irrcache_proc.cpp)
-                        
+add_integrator(vpl          vpl/vpl.cpp MTS_HW)
+add_integrator(adaptive     misc/adaptive.cpp)
+add_integrator(irrcache     misc/irrcache.cpp
+                            misc/irrcache_proc.h misc/irrcache_proc.cpp)
+add_integrator(multichannel misc/multichannel.cpp)
+
 # Bidirectional techniques
 add_bidir(bdpt          bdpt/bdpt.h      bdpt/bdpt.cpp
                         bdpt/bdpt_proc.h bdpt/bdpt_proc.cpp
