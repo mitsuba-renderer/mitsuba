@@ -275,7 +275,9 @@ static bp::tuple Matrix4x4_lu(Matrix4x4 *matrix) {
 static Vector4 Matrix4x4_cholSolve(Matrix4x4 *matrix, Vector B) {
 	typedef Matrix<4, 1, Float> Matrix4x1;
 	Vector4 X;
-	matrix->cholSolve<1>((Matrix4x1 &) B, (Matrix4x1 &) X);
+	Matrix4x1 & aliasedB MTS_MAY_ALIAS = reinterpret_cast<Matrix4x1 &>(B);
+	Matrix4x1 & aliasedX MTS_MAY_ALIAS = reinterpret_cast<Matrix4x1 &>(X);
+	matrix->cholSolve<1>(aliasedB, aliasedX);
 	return X;
 }
 
@@ -289,7 +291,9 @@ static Vector4 Matrix4x4_luSolve(Matrix4x4 *matrix, Vector B, bp::list pivList) 
 	for (int i=0; i<4; ++i)
 		piv[i] = bp::extract<Float>(pivList[i]);
 
-	matrix->luSolve<1>((Matrix4x1 &) B, (Matrix4x1 &) X, piv);
+	Matrix4x1 & aliasedB MTS_MAY_ALIAS = reinterpret_cast<Matrix4x1 &>(B);
+	Matrix4x1 & aliasedX MTS_MAY_ALIAS = reinterpret_cast<Matrix4x1 &>(X);
+	matrix->luSolve<1>(aliasedB, aliasedX, piv);
 	return X;
 }
 
