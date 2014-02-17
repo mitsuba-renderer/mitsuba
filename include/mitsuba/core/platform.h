@@ -52,6 +52,17 @@
 		#include <math.h>
 		#pragma intrinsic(memset, memcmp, memcpy, strlen, strcmp, strcpy, _strset, strcat, fabs, abs)
 	#endif
+
+	#if _MSC_VER >= 1600
+		#ifdef SINGLE_PRECISION
+				#pragma detect_mismatch( "MTS_FLOAT_PRECISION", "SINGLE")
+		#elif  DOUBLE_PRECISION
+				#pragma detect_mismatch( "MTS_FLOAT_PRECISION", "DOUBLE")
+		#endif
+		#define MTS_STRINGIFY(s) #s
+		#define MTS_XSTRINGIFY(s) MTS_STRINGIFY(s)
+		#pragma detect_mismatch("MTS_SPECTRUM_SAMPLES", MTS_XSTRINGIFY(SPECTRUM_SAMPLES))
+	#endif
 #elif defined(__APPLE__)
 	#define __OSX__
 #elif defined(__linux)

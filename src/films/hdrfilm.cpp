@@ -348,7 +348,7 @@ public:
 			m_storage = new ImageBlock(Bitmap::ESpectrumAlphaWeight, m_cropSize);
 		} else {
 			m_storage = new ImageBlock(Bitmap::EMultiSpectrumAlphaWeight, m_cropSize,
-				NULL, SPECTRUM_SAMPLES * m_pixelFormats.size() + 2);
+				NULL, (int) (SPECTRUM_SAMPLES * m_pixelFormats.size() + 2));
 		}
 	}
 

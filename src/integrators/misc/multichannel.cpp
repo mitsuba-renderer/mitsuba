@@ -142,7 +142,7 @@ public:
 
 		proc->setPixelFormat(
 				m_integrators.size() > 1 ? Bitmap::EMultiSpectrumAlphaWeight : Bitmap::ESpectrumAlphaWeight,
-				m_integrators.size() * SPECTRUM_SAMPLES + 2, false);
+				(int) (m_integrators.size() * SPECTRUM_SAMPLES + 2), false);
 
 		int integratorResID = sched->registerResource(this);
 		proc->bindResource("integrator", integratorResID);

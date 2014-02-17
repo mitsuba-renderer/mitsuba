@@ -69,7 +69,6 @@ static InterpolatedSpectrum CIE_D65_interp(CIE_wavelengths, CIE_D65_entries, CIE
 Spectrum Spectrum::CIE_X;
 Spectrum Spectrum::CIE_Y;
 Spectrum Spectrum::CIE_Z;
-Spectrum Spectrum::CIE_D65;
 Float Spectrum::CIE_normalization;
 /// @}
 
