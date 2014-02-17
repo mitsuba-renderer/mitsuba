@@ -17,6 +17,7 @@ plugins += env.SharedLibrary('vpl', ['vpl/vpl.cpp'])
 plugins += env.SharedLibrary('adaptive', ['misc/adaptive.cpp'])
 plugins += env.SharedLibrary('irrcache', ['misc/irrcache.cpp', 'misc/irrcache_proc.cpp'])
 plugins += env.SharedLibrary('multichannel', ['misc/multichannel.cpp'])
+plugins += env.SharedLibrary('field', ['misc/field.cpp'])
 
 # Bidirectional techniques
 bidirEnv = env.Clone()

@@ -264,7 +264,7 @@ public:
 
 		Imf::ChannelList &channels = header.channels();
 		for (size_t i=0; i<m_channelNames.size(); ++i)
-			channels.insert(m_channelNames[i], Imf::Channel(compType));
+			channels.insert(m_channelNames[i].c_str(), Imf::Channel(compType));
 
 		m_output = new Imf::TiledOutputFile(filename.string().c_str(), header);
 		m_frameBuffer = new Imf::FrameBuffer();
@@ -287,7 +287,7 @@ public:
 		char *ptr = (char *) m_tile->getUInt8Data();
 
 		for (size_t i=0; i<m_channelNames.size(); ++i) {
-			m_frameBuffer->insert(m_channelNames[i],
+			m_frameBuffer->insert(m_channelNames[i].c_str(),
 				Imf::Slice(compType, ptr, m_pixelStride, m_rowStride));
 			ptr += compStride;
 		}
@@ -331,7 +331,6 @@ public:
 			copy2->incRef();
 			++m_peakUsage;
 		}
-
 
 		uint32_t idx = (uint32_t) x + (uint32_t) y * m_blocksH;
 		m_origBlocks[idx]   = copy1;

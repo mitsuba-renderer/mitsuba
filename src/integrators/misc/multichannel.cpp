@@ -21,28 +21,63 @@
 
 MTS_NAMESPACE_BEGIN
 
-/*! \plugin{direct}{Multi-channel integrator}
+/*!\plugin{multichannel}{Multi-channel integrator}
  * \order{16}
-  * \parameters{
- *     \parameter{\Unnamed}{\BSDF}{Multiple sub-integrators whose output
+ * \parameters{
+ *     \parameter{\Unnamed}{\Integrator}{One or more sub-integrators whose output
  *     should be rendered into a combined multi-channel image}
  * }
  *
  * The multi-channel integrator groups several sub-integrators together
- * and invokes them at the same time for each pixel; the result is written
- * to a general multi-channel image. The most common application of this plugin
- * is to create additional image channels storing surface normals or the distance
+ * and invokes them at the same time for each pixel; the result from each
+ * integrator is written into a separate channel of the output image.
+ * This could include things like surface normals or the distance
  * from the camera (via the \pluginref{field} plugin) or ambient occlusion
  * (via the \pluginref{ao} plugin).
+ * In this way, this integrator can be a powerful tool for unusual applications
+ * of Mitsuba, e.g. to create reference data for computer vision algorithms. Currently, it only
+ * works with a subset of the other plugins---see the red box for details.
  *
- * This is a fairly advanced plugin that only plays well with a small
- * part of Mitsuba---see the remarks in the red box for details.
+ * Thee \code{multichannel} plugin also disables certain checks for negative or infinite
+ * radiance values during rendering that normally cause warnings to be emitted.
+ * This is simply to process extracted fields for which it is fine
+ * to take on such values.
+ *
+ * The following example contains a typical setup for rendering an 7 channel EXR image:
+ * 3 for a path traced image (RGB), 3 for surface normals
+ * (encoded as RGB), and 1 channel for the ray distance measured from the camera.
+ *
+ * \vspace{2mm}
+ * \begin{xml}
+ * <scene>
+ *     <integrator type="multichannel">
+ *         <integrator type="path"/>
+ *         <integrator type="field">
+ *             <string name="field" value="shNormal"/>
+ *         </integrator>
+ *         <integrator type="field">
+ *             <string name="field" value="distance"/>
+ *         </integrator>
+ *     </integrator>
+ *
+ *     <sensor type="perspective">
+ *         <sampler type="halton">
+ *             <integer name="sampleCount" value="32"/>
+ *         </sampler>
+ *         <film type="hdrfilm">
+ *             <string name="pixelFormat" value="rgb, rgb, luminance"/>
+ *             <string name="channelNames" value="color, normal, distance"/>
+ *         </film>
+ *     </sensor>
+ *     <!-- **** scene contents **** -->
+ * </scene>
+ * \end{xml}
  *
  * \remarks{
  * \item Requires the \pluginref{hdrfilm} or \pluginref{tiledhdrfilm}.
  * \item All nested integrators must
  * conform to Mitsuba's basic \emph{SamplingIntegrator} interface.
- * Currently, only a few of them satisfy this, including:
+ * Currently, only a few of them do this, including:
  * \pluginref{field}, \pluginref{ao}, \pluginref{direct}, \pluginref{path},
  * \pluginref{volpath}, \pluginref[volpathsimple]{volpath\_simple},
  * and \pluginref{irrcache}.
@@ -105,7 +140,9 @@ public:
 		ref<BlockedRenderProcess> proc = new BlockedRenderProcess(job,
 			queue, scene->getBlockSize());
 
-		proc->setPixelFormat(Bitmap::EMultiSpectrumAlphaWeight, m_integrators.size() * SPECTRUM_SAMPLES + 2, false);
+		proc->setPixelFormat(
+				m_integrators.size() > 1 ? Bitmap::EMultiSpectrumAlphaWeight : Bitmap::ESpectrumAlphaWeight,
+				m_integrators.size() * SPECTRUM_SAMPLES + 2, false);
 
 		int integratorResID = sched->registerResource(this);
 		proc->bindResource("integrator", integratorResID);
