@@ -328,13 +328,9 @@ int mitsuba_app(int argc, char **argv) {
 		parser->setValidationSchemaFullChecking(true);
 		parser->setValidationScheme(SAXParser::Val_Always);
 		parser->setExternalNoNamespaceSchemaLocation(schemaPath.c_str());
-		#if !defined(__OSX__)
-			/// Not supported on OSX
-			parser->setCalculateSrcOfs(true);
-		#endif
 
 		/* Set the handler */
-		SceneHandler *handler = new SceneHandler(parser, parameters);
+		SceneHandler *handler = new SceneHandler(parameters);
 		parser->setDoNamespaces(true);
 		parser->setDocumentHandler(handler);
 		parser->setErrorHandler(handler);

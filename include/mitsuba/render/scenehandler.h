@@ -85,8 +85,7 @@ public:
 	typedef std::map<std::string, ConfigurableObject *> NamedObjectMap;
 	typedef std::map<std::string, std::string, SimpleStringOrdering> ParameterMap;
 
-	SceneHandler(const xercesc::SAXParser *parser,
-			const ParameterMap &params, NamedObjectMap *objects = NULL,
+	SceneHandler(const ParameterMap &params, NamedObjectMap *objects = NULL,
 			bool isIncludedFile = false);
 	virtual ~SceneHandler();
 
@@ -115,6 +114,7 @@ public:
 	);
 	virtual void endElement(const XMLCh* const name);
 	virtual void characters(const XMLCh* const chars, const XMLSize_t length);
+    virtual void setDocumentLocator(const xercesc::Locator* const locator);
 
 	inline const Scene *getScene() const { return m_scene.get(); }
 	inline Scene *getScene() { return m_scene; }
@@ -166,12 +166,7 @@ private:
 	typedef std::pair<ETag, const Class *> TagEntry;
 	typedef boost::unordered_map<std::string, TagEntry> TagMap;
 
-	#if defined(__clang__)
-		#pragma clang diagnostic push
-		#pragma clang diagnostic ignored "-Wunused-private-field"
-	#endif
-
-	const xercesc::SAXParser *m_parser;
+	const xercesc::Locator *m_locator;
 	xercesc::XMLTranscoder* m_transcoder;
 	ref<Scene> m_scene;
 	ParameterMap m_params;
@@ -182,10 +177,6 @@ private:
 	Transform m_transform;
 	ref<AnimatedTransform> m_animatedTransform;
 	bool m_isIncludedFile;
-
-	#if defined(__clang__)
-		#pragma clang diagnostic pop
-	#endif
 };
 
 MTS_NAMESPACE_END
