@@ -626,6 +626,14 @@ void export_render() {
 		.def("setFarClip", &ProjectiveCamera::setFarClip)
 		.def("setFocusDistance", &ProjectiveCamera::setFocusDistance);
 
+	BP_CLASS(PerspectiveCamera, ProjectiveCamera, bp::no_init)
+		.def("getXFov", &PerspectiveCamera::getXFov)
+		.def("setXFov", &PerspectiveCamera::setXFov)
+		.def("getYFov", &PerspectiveCamera::getYFov)
+		.def("setYFov", &PerspectiveCamera::setYFov)
+		.def("getDiagonalFov", &PerspectiveCamera::getDiagonalFov)
+		.def("setDiagonalFov", &PerspectiveCamera::setDiagonalFov);
+
 	BP_CLASS(Integrator, ConfigurableObject, bp::no_init)
 		.def("preprocess", &Integrator::preprocess)
 		.def("render", &Integrator::render)

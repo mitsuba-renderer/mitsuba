@@ -507,6 +507,7 @@ bp::object cast(ConfigurableObject *obj) {
 	TryCast(Medium);
 	TryCast(VolumeDataSource);
 	TryCast(Film);
+	TryCast(PerspectiveCamera);
 	TryCast(ProjectiveCamera);
 	TryCast(Sensor);
 	TryCast(Emitter);
@@ -1265,6 +1266,7 @@ void export_core() {
 	BP_CLASS(Bitmap, Object, (bp::init<Bitmap::EPixelFormat, Bitmap::EComponentFormat, const Vector2i &>()))
 		.def(bp::init<Bitmap::EPixelFormat, Bitmap::EComponentFormat, const Vector2i &, int>())
 		.def(bp::init<Bitmap::EFileFormat, Stream *>())
+		.def(bp::init<Bitmap::EFileFormat, Stream *, std::string>())
 		.def("getPixelFormat", &Bitmap::getPixelFormat)
 		.def("getComponentFormat", &Bitmap::getComponentFormat)
 		.def("getSize", &Bitmap::getSize, BP_RETURN_VALUE)
