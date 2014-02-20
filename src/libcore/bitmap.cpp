@@ -88,11 +88,12 @@ public:
 	EXRIStream(Stream *stream) : IStream(stream->toString().c_str()),
 		m_stream(stream) {
 		m_offset = stream->getPos();
+		m_size = stream->getSize();
 	}
 
 	bool read(char *c, int n) {
 		m_stream->read(c, n);
-		return m_stream->isEOF();
+		return m_stream->getPos() == m_size;
 	}
 
 	Imf::Int64 tellg() {
@@ -106,7 +107,7 @@ public:
 	void clear() { }
 private:
 	ref<Stream> m_stream;
-	size_t m_offset;
+	size_t m_offset, m_size;
 };
 
 class EXROStream : public Imf::OStream {

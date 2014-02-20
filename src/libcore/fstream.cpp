@@ -206,7 +206,7 @@ void FileStream::seek(size_t pos) {
 			pos, d->path.string().c_str(), lastErrorText().c_str());
 	}
 #else
-	if (fseek(d->file, pos, SEEK_SET)) {
+	if (fseeko(d->file, (off_t) pos, SEEK_SET)) {
 		Log(EError, "Error while trying to seek to position %i in file \"%s\": %s",
 			pos, d->path.string().c_str(), strerror(errno));
 	}
@@ -223,8 +223,7 @@ size_t FileStream::getPos() const {
 	}
 	return (size_t) pos;
 #else
-	long pos;
-	pos = ftell(d->file);
+	off_t pos = ftello(d->file);
 	if (pos == -1) {
 		Log(EError, "Error while looking up the position in file \"%s\": %s",
 			d->path.string().c_str(), strerror(errno));
