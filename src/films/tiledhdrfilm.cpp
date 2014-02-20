@@ -111,7 +111,7 @@ public:
 		if (pixelFormats.empty())
 			Log(EError, "At least one pixel format must be specified!");
 
-		if (m_pixelFormats.size() != 1 && m_channelNames.size() != m_pixelFormats.size())
+		if (pixelFormats.size() != 1 && channelNames.size() != pixelFormats.size())
 			Log(EError, "Number of channel names must match the number of specified pixel formats!");
 
 		for (size_t i=0; i<pixelFormats.size(); ++i) {
