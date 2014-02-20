@@ -39,6 +39,8 @@ MTS_NAMESPACE_BEGIN
  *            \item \code{primIndex}: Integer shape primitive index
  *        \end{itemize}
  *     }
+ *     \parameter{undefined}{\Spectrum\Or\Float}{Value that should be returned when
+ *                           there is no intersection \default{0}}
  * }
  *
  * This integrator extracts a requested field of from the intersection records of shading
@@ -87,6 +89,13 @@ public:
 				"'primIndex', 'shapeIndex', or 'uv'!");
 		}
 
+		if (props.hasProperty("undefined")) {
+			if (props.getType("undefined") == Properties::EFloat)
+				m_undefined = Spectrum(props.getFloat("undefined"));
+			else
+				m_undefined = props.getSpectrum("undefined", Spectrum(0.0f));
+		}
+
 		if (SPECTRUM_SAMPLES != 3 && (m_field == EUV || m_field == EShadingNormal || m_field == EGeometricNormal
 				|| m_field == ERelativePosition || m_field == EPosition)) {
 			Log(EError, "The field integrator implementation requires renderings to be done in RGB when "
@@ -97,18 +106,20 @@ public:
 	FieldIntegrator(Stream *stream, InstanceManager *manager)
 	 : SamplingIntegrator(stream, manager) {
 		 m_field = (EField) stream->readInt();
+		 m_undefined = Spectrum(stream);
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		SamplingIntegrator::serialize(stream, manager);
 		stream->writeInt((int) m_field);
+		m_undefined.serialize(stream);
 	}
 
 	Spectrum Li(const RayDifferential &ray, RadianceQueryRecord &rRec) const {
-		Spectrum result(0.0f);
+		Spectrum result(m_undefined);
 
 		if (!rRec.rayIntersect(ray))
-			return Spectrum(0.0f);
+			return result;
 
 		Intersection &its = rRec.its;
 
@@ -163,6 +174,7 @@ public:
 	MTS_DECLARE_CLASS()
 private:
 	EField m_field;
+	Spectrum m_undefined;
 };
 
 MTS_IMPLEMENT_CLASS_S(FieldIntegrator, false, SamplingIntegrator)
