@@ -35,6 +35,7 @@ MTS_NAMESPACE_BEGIN
  *            \item \code{geoNormal}: Geometric surface normal
  *            \item \code{shNormal}: Shading surface normal
  *            \item \code{uv}: UV coordinate value
+ *            \item \code{albedo}: Albedo value of the BSDF
  *            \item \code{shapeIndex}: Integer index of the high-level shape
  *            \item \code{primIndex}: Integer shape primitive index
  *        \end{itemize}
@@ -60,6 +61,7 @@ public:
 		EGeometricNormal,
 		EShadingNormal,
 		EUV,
+		EAlbedo,
 		EShapeIndex,
 		EPrimIndex
 	};
@@ -79,6 +81,8 @@ public:
 			m_field = EShadingNormal;
 		} else if (field == "uv") {
 			m_field = EUV;
+		} else if (field == "albedo") {
+			m_field = EAlbedo;
 		} else if (field == "shapeIndex") {
 			m_field = EShapeIndex;
 		} else if (field == "primIndex") {
@@ -145,6 +149,9 @@ public:
 				break;
 			case EUV:
 				result.fromLinearRGB(its.uv.x, its.uv.y, 0);
+				break;
+			case EAlbedo:
+				result = its.shape->getBSDF()->getDiffuseReflectance(its);
 				break;
 			case EShapeIndex: {
 					const ref_vector<Shape> &shapes = rRec.scene->getShapes();
