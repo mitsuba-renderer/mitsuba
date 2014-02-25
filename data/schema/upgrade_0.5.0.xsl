@@ -12,7 +12,7 @@
 	</xsl:template>
 
 	<!-- Update the name of the bump plugin -->
-	<xsl:template match="integrator[@type='bump']/@type">
+	<xsl:template match="bsdf[@type='bump']/@type">
 		<xsl:attribute name="type">bumpmap</xsl:attribute>
 	</xsl:template>
 
