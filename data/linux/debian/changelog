@@ -1,4 +1,4 @@
-mitsuba (0.4.5-1) unstable; urgency=low
+mitsuba (0.5.0-1) unstable; urgency=low
   * Mitsuba can now perform renderings of images with multiple channels
     (e.g. a path traced rendering plus surface normals and depth). All
     channels are rendered in one pass and written to a multi-channel EXR file.
