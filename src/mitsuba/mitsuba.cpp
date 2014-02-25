@@ -371,6 +371,8 @@ int mitsuba_app(int argc, char **argv) {
 			thr->start();
 
 			renderQueue->waitLeft(numParallelScenes-1);
+			if (i+1 < argc && numParallelScenes == 1)
+				Statistics::getInstance()->resetAll();
 		}
 
 		/* Wait for all render processes to finish */
