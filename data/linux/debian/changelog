@@ -1,4 +1,25 @@
 mitsuba (0.4.5-1) unstable; urgency=low
+  * Mitsuba can now perform renderings of images with multiple channels
+    (e.g. a path traced rendering plus surface normals and depth). All
+    channels are rendered in one pass and written to a multi-channel EXR file.
+  * Anton Kaplanyan contributed mtsgui GUI usability tweaks and several
+    MLT-related robustness improvements
+  * Greatly improved Python integration, nice interaction with PyQt and NumPy,
+    Python 3.3. support on all platforms
+  * The 'mfilm' plugin now supports writing binary NumPy files (Joe Kider)
+  * Switch tabs in the gui using Alt+Left/Right keys
+  * Ask whether to stop long-running rendering processes when dragging the
+    mouse in the GUI
+  * Windows 8 compatibility
+  * CMake build system working again (Edgar Velázquez-Armendáriz)
+  * Statistics are now automatically reset between renderings
+  * mtssrv robustness improvements on OSX
+  * The 'thindielectric' plugin still computed incorrect results in some
+    situations, which is now fixed
+  * Added a new 'default' XML tag
+ -- Wenzel Jakob <wenzel@cs.cornell.edu>  Tue, 25 Feb 2014 00:00:00 -0400
+
+mitsuba (0.4.5-1) unstable; urgency=low
   * New height field intersection shape
   * kd-tree precision improvements when rendering in double precision
   * Feature to create a bitmap texture from a single color channel of an image
