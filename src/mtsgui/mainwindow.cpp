@@ -825,6 +825,7 @@ void MainWindow::updateUI() {
 	ui->actionClose->setEnabled(hasTab);
 	ui->actionDuplicateTab->setEnabled(hasTab);
 	ui->actionAdjustSize->setEnabled(hasTab);
+	ui->actionCopyImage->setEnabled(hasTab);
 	ui->actionShowKDTree->setEnabled(hasScene);
 	ui->actionShowKDTree->setChecked(hasScene && context->showKDTree);
 	ui->actionSceneDescription->setEnabled(hasScene);
@@ -888,6 +889,7 @@ void MainWindow::on_tabBar_customContextMenuRequested(const QPoint &pt) {
 	menu.addAction(ui->actionDuplicateTab);
 	if (tabIndex == ui->tabBar->currentIndex())
 		menu.addAction(ui->actionAdjustSize);
+	menu.addAction(ui->actionCopyImage);
 	menu.addAction(ui->actionClose);
 	menu.exec(ui->tabBar->mapToGlobal(pt));
 	m_contextIndex = -1;
@@ -1482,6 +1484,10 @@ inline float toSRGB(float value) {
 	return 1.055f * std::pow(value, 0.41666f) - 0.055f;
 }
 
+void MainWindow::on_actionCopyImage_triggered() {
+	exportImage("__clipboard__");
+}
+
 #if MTSGUI_STATIC_QFILEDIALOG
 
 void MainWindow::on_actionExportImage_triggered() {
@@ -1552,7 +1558,7 @@ void MainWindow::exportImage(const QString &fileName) {
 		bool isHDR = true;
 		if (fileName.endsWith(".exr")) {
 			format = Bitmap::EOpenEXR;
-		} else if (fileName.endsWith(".png")) {
+		} else if (fileName.endsWith(".png") || fileName == "__clipboard__") {
 			format = Bitmap::EPNG;
 			isHDR = false;
 		} else if (fileName.endsWith(".hdr") || fileName.endsWith(".rgbe")) {
@@ -1567,9 +1573,6 @@ void MainWindow::exportImage(const QString &fileName) {
 				" .exr, .rgbe, .hdr, .pfm, .png, .jpg, or .jpeg");
 			return;
 		}
-
-		ref<FileStream> fs = new FileStream(toFsPath(fileName),
-			FileStream::ETruncReadWrite);
 
 		const int currentIndex = ui->tabBar->currentIndex();
 		const SceneContext *ctx = m_context[currentIndex];
@@ -1595,7 +1598,18 @@ void MainWindow::exportImage(const QString &fileName) {
 				? (Float) 1.0f : std::pow((Float) 2, ctx->exposure));
 		}
 
-		bitmap->write(format, fs);
+		if (fileName == "__clipboard__") {
+			QImage image(bitmap->getWidth(), bitmap->getHeight(), QImage::Format_RGB888);
+			size_t scanlineSize = (size_t) bitmap->getWidth() * 3 * sizeof(uint8_t);
+			for (int i=0; i<bitmap->getHeight(); ++i)
+				memcpy(image.scanLine(i), bitmap->getUInt8Data() + scanlineSize * i, scanlineSize);
+			QClipboard *clipboard = QApplication::clipboard();
+			clipboard->setPixmap(QPixmap::fromImage(image));
+		} else {
+			ref<FileStream> fs = new FileStream(toFsPath(fileName),
+				FileStream::ETruncReadWrite);
+			bitmap->write(format, fs);
+		}
 	}
 }
 
