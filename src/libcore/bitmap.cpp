@@ -167,6 +167,12 @@ static void png_error_func(png_structp png_ptr, png_const_charp msg) {
 	SLog(EError, "Fatal libpng error: %s\n", msg);
 	exit(-1);
 }
+
+static void png_warn_func(png_structp png_ptr, png_const_charp msg) {
+	if (strstr(msg, "iCCP: known incorrect sRGB profile") != NULL)
+		return;
+	SLog(EWarn, "libpng warning: %s\n", msg);
+}
 #endif
 
 #if defined(MTS_HAS_LIBJPEG)
@@ -2018,7 +2024,7 @@ void Bitmap::readPNG(Stream *stream) {
 	volatile png_bytepp rows = NULL;
 
 	/* Create buffers */
-	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, &png_error_func, NULL);
+	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, &png_error_func, &png_warn_func);
 	if (png_ptr == NULL) {
 		Log(EError, "readPNG(): Unable to create PNG data structure");
 	}
@@ -2142,7 +2148,7 @@ void Bitmap::writePNG(Stream *stream, int compression) const {
 			return;
 	}
 
-	png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, &png_error_func, NULL);
+	png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, &png_error_func, &png_warn_func);
 	if (png_ptr == NULL)
 		Log(EError, "Error while creating PNG data structure");
 
