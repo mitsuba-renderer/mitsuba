@@ -7,10 +7,7 @@ if hasCollada:
 	import platform
 
 	colladaEnv = mainEnv.Clone()
-	if platform.linux_distribution()[0] == 'Fedora':
-		pass # Use old COLLADA-DOM 2.3
-	else: # Everyone else uses 2.4
-		colladaEnv.Prepend(CXXFLAGS=['-DCOLLADA_DOM_2_4'])
+	colladaEnv.Prepend(CXXFLAGS=['-DCOLLADA_DOM_2_4'])
 
 	# Build the COLLADA importer if COLLADA-DOM is vailable
 	colladaEnv.Append(LIBS=['mitsuba-hw'])

@@ -24,7 +24,7 @@ building custom plugins and other extensions for Mitsuba.
 %prep
 %setup -q
 %build
-cat build/config-linux-gcc.py | sed -e "s/\(boost_[^']*\)/\1-mt/g" > config.py
+cat build/config-linux-gcc.py | sed -e "s/collada14dom/libcollada-dom2.4-dp/g" | sed -e "s/include\/collada-dom/include\/collada-dom2.4/g" > config.py
 scons
 %install
 rm -rf $RPM_BUILD_ROOT
