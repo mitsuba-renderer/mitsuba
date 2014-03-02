@@ -67,7 +67,7 @@ void SceneLoader::run() {
 		m_result->diffuseReceivers = settings.value("preview_diffuseReceivers", false).toBool();
 
 		if (suffix == "exr" || suffix == "png"  || suffix == "jpg" || suffix == "jpeg" ||
-		    suffix == "hdr" || suffix == "rgbe" || suffix == "pfm") {
+		    suffix == "hdr" || suffix == "rgbe" || suffix == "pfm" || suffix == "ppm") {
 			/* This is an image, not a scene */
 			ref<FileStream> fs = new FileStream(toFsPath(m_filename), FileStream::EReadOnly);
 			ref<Bitmap> bitmap = new Bitmap(Bitmap::EAuto, fs);

@@ -305,6 +305,8 @@ Bitmap::Bitmap(EFileFormat format, Stream *stream, const std::string &prefix) : 
 			format = ERGBE;
 		} else if (start[0] == 'P' && (start[1] == 'F' || start[1] == 'f')) {
 			format = EPFM;
+		} else if (start[0] == 'P' && start[1] == '6') {
+			format = EPPM;
 		#if defined(MTS_HAS_LIBJPEG)
 		} else if (start[0] == 0xFF && start[1] == 0xD8) {
 			format = EJPEG;
@@ -334,6 +336,7 @@ Bitmap::Bitmap(EFileFormat format, Stream *stream, const std::string &prefix) : 
 		case EOpenEXR: readOpenEXR(stream, prefix); break;
 		case ERGBE: readRGBE(stream); break;
 		case EPFM: readPFM(stream); break;
+		case EPPM: readPPM(stream); break;
 		case ETGA: readTGA(stream); break;
 		case EPNG: readPNG(stream); break;
 		default:
@@ -356,6 +359,7 @@ void Bitmap::write(EFileFormat format, Stream *stream, int compression) const {
 		case EOpenEXR: writeOpenEXR(stream); break;
 		case ERGBE: writeRGBE(stream); break;
 		case EPFM: writePFM(stream); break;
+		case EPPM: writePPM(stream); break;
 		default:
 			Log(EError, "Bitmap::write(): Invalid file format!");
 	}
@@ -3400,6 +3404,54 @@ void Bitmap::writePFM(Stream *stream) const {
 			stream->write(temp, sizeof(float) * m_size.x * (m_channelCount-1));
 		}
 	}
+}
+
+void Bitmap::readPPM(Stream *stream) {
+	int field = 0, nChars = 0;
+
+	std::string fields[4];
+
+	while (field < 4) {
+		char c = stream->readChar();
+		if (c == ' ' || c == '\t' || c == '\n' || c == '\r') {
+			if (nChars != 0) {
+				nChars = 0;
+				++field;
+			}
+		} else {
+			fields[field] += c;
+			++nChars;
+		}
+	}
+	if (fields[0] != "P6")
+		Log(EError, "readPPM(): invalid format!");
+
+	int intValues[3];
+	for (int i=0; i<3; ++i) {
+		char *end_ptr = NULL;
+		intValues[i] = strtol(fields[i+1].c_str(), &end_ptr, 10);
+		if (*end_ptr != '\0')
+			SLog(EError, "readPPM(): unable to parse the file header!");
+	}
+
+	m_size.x = intValues[0];
+	m_size.y = intValues[1];
+	m_pixelFormat = ERGB;
+	m_channelCount = 3;
+	m_gamma = -1.0f;
+	m_ownsData = true;
+	m_componentFormat = intValues[2] <= 0xFF ? EUInt8 : EUInt16;
+	size_t size = getBufferSize();
+	m_data = static_cast<uint8_t *>(allocAligned(size));
+	stream->read(m_data, size);
+}
+
+void Bitmap::writePPM(Stream *stream) const {
+	if (m_pixelFormat != ERGB || (m_componentFormat != EUInt8 && m_componentFormat != EUInt16))
+		Log(EError, "writePPM(): Only 8 or 16-bit RGB images are supported");
+	stream->writeLine(formatString("P6\n%i\n%i\n%i\n", m_size.x, m_size.y,
+		m_componentFormat == EUInt8 ? 0xFF : 0xFFFF).c_str());
+	stream->write(m_data, getBufferSize());
 }
 
 void Bitmap::staticInitialization() {

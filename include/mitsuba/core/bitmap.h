@@ -224,6 +224,16 @@ public:
 		EPFM,
 
 		/**
+		 * \brief PPM (Portable Pixel Map) image format
+		 *
+		 * The following is supported
+		 * <ul>
+		 *   <li>Loading and saving of \ref EUInt8 and \ref EUInt16 - based RGB bitmaps</li>
+		 * </ul>
+		 */
+		EPPM,
+
+		/**
 		 * \brief Joint Photographic Experts Group file format
 		 *
 		 * The following is supported:
@@ -1114,6 +1124,12 @@ protected:
 
 	/// Write a file using the PFM file format
 	void writePFM(Stream *stream) const;
+
+	/// Read a file stored using the PPM file format
+	void readPPM(Stream *stream);
+
+	/// Write a file using the PPM file format
+	void writePPM(Stream *stream) const;
 
 	/// Read a file stored using the TGA file format
 	void readTGA(Stream *stream);

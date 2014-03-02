@@ -585,8 +585,8 @@ void MainWindow::on_actionOpen_triggered() {
 	QSettings settings;
 	QStringList fileNames = QFileDialog::getOpenFileNames(this, QString(),
 		settings.value("fileDir").toString(),
-		tr("All supported formats (*.xml *.exr *.rgbe *.hdr *.pfm *.png *.jpg *.jpeg);;"
-		   "Mitsuba scenes (*.xml);;High dynamic-range images (*.exr *.rgbe *.hdr *.pfm);;"
+		tr("All supported formats (*.xml *.exr *.rgbe *.hdr *.pfm *.ppm *.png *.jpg *.jpeg);;"
+		   "Mitsuba scenes (*.xml);;High dynamic-range images (*.exr *.rgbe *.hdr *.pfm *.ppm);;"
 		   "Low dynamic-range images (*.png *.jpg *.jpeg)"));
 
 	QStringList::ConstIterator it = fileNames.constBegin();
@@ -605,8 +605,8 @@ void MainWindow::onOpenDialogClose(int reason) { /* unused */ }
 
 void MainWindow::on_actionOpen_triggered() {
 	QFileDialog *dialog = new QFileDialog(this, Qt::Sheet);
-	dialog->setNameFilter(tr("All supported formats (*.xml *.exr *.rgbe *.hdr *.pfm *.png *.jpg *.jpeg);;"
-			"Mitsuba scenes (*.xml);;High dynamic-range images (*.exr *.rgbe *.hdr *.pfm);;Low "
+	dialog->setNameFilter(tr("All supported formats (*.xml *.exr *.rgbe *.hdr *.pfm *.ppm *.png *.jpg *.jpeg);;"
+			"Mitsuba scenes (*.xml);;High dynamic-range images (*.exr *.rgbe *.hdr *.pfm *.ppm);;Low "
 			"dynamic-range images (*.png *.jpg *.jpeg)"));
 	dialog->setAttribute(Qt::WA_DeleteOnClose);
 	dialog->setAcceptMode(QFileDialog::AcceptOpen);
@@ -1498,6 +1498,7 @@ void MainWindow::on_actionExportImage_triggered() {
 	        "High dynamic range OpenEXR image (*.exr);;"
 	        "High dynamic range Radiance RGBE image (*.rgbe *.hdr);;"
 	        "High dynamic range Portable Float Map image (*.pfm);;"
+	        "High dynamic range Portable Pixel Map image (*.ppm);;"
 	        "Tonemapped low dynamic range image (*.png *.jpg *.jpeg)"));
 	if (!fileName.isEmpty()) {
 		QSettings settings;
@@ -1516,6 +1517,7 @@ void MainWindow::on_actionExportImage_triggered() {
 	           "High dynamic range OpenEXR image (*.exr);;"
 	           "High dynamic range Radiance RGBE image (*.rgbe *.hdr);;"
 	           "High dynamic range Portable Float Map image (*.pfm);;"
+	        "High dynamic range Portable Pixel Map image (*.ppm);;"
 	           "Tonemapped low dynamic range image (*.png *.jpg *.jpeg)"));
 
 	QSettings settings;
@@ -1554,23 +1556,27 @@ void MainWindow::onExportDialogClose(int reason) {
 
 void MainWindow::exportImage(const QString &fileName) {
 	if (!fileName.isEmpty()) {
+		Bitmap::EComponentFormat compFormat = Bitmap::EInvalid;
 		Bitmap::EFileFormat format;
-		bool isHDR = true;
+
 		if (fileName.endsWith(".exr")) {
 			format = Bitmap::EOpenEXR;
 		} else if (fileName.endsWith(".png") || fileName == "__clipboard__") {
 			format = Bitmap::EPNG;
-			isHDR = false;
+			compFormat = Bitmap::EUInt8;
 		} else if (fileName.endsWith(".hdr") || fileName.endsWith(".rgbe")) {
 			format = Bitmap::ERGBE;
 		} else if (fileName.endsWith(".jpg") || fileName.endsWith(".jpeg")) {
 			format = Bitmap::EJPEG;
-			isHDR = false;
+			compFormat = Bitmap::EUInt8;
 		} else if (fileName.endsWith(".pfm")) {
 			format = Bitmap::EPFM;
+		} else if (fileName.endsWith(".ppm")) {
+			format = Bitmap::EPPM;
+			compFormat = Bitmap::EUInt16;
 		} else {
 			SLog(EError, "Unknown file type -- the filename must end in either"
-				" .exr, .rgbe, .hdr, .pfm, .png, .jpg, or .jpeg");
+				" .exr, .rgbe, .hdr, .pfm, .ppm, .png, .jpg, or .jpeg");
 			return;
 		}
 
@@ -1581,7 +1587,7 @@ void MainWindow::exportImage(const QString &fileName) {
 			ui->glView->downloadFramebuffer();
 
 		ref<Bitmap> bitmap = ctx->framebuffer;
-		if (!isHDR) {
+		if (compFormat == Bitmap::EUInt8 || compFormat == Bitmap::EUInt16) {
 			/* Tonemap the image */
 			if (ctx->toneMappingMethod == EReinhard) {
 				Float logAvgLuminance = 0, maxLuminance = 0; /* Unused */
@@ -1592,7 +1598,7 @@ void MainWindow::exportImage(const QString &fileName) {
 					ctx->reinhardKey, burn);
 			}
 
-			bitmap = bitmap->convert(Bitmap::ERGB, Bitmap::EUInt8,
+			bitmap = bitmap->convert(Bitmap::ERGB, compFormat,
 				ctx->srgb ? (Float) -1 : ctx->gamma,
 				ctx->toneMappingMethod == EReinhard
 				? (Float) 1.0f : std::pow((Float) 2, ctx->exposure));

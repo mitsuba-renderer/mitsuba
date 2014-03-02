@@ -1364,6 +1364,7 @@ void export_core() {
 		.value("EOpenEXR", Bitmap::EOpenEXR)
 		.value("ETGA", Bitmap::ETGA)
 		.value("EPFM", Bitmap::EPFM)
+		.value("EPPM", Bitmap::EPPM)
 		.value("ERGBE", Bitmap::ERGBE)
 		.value("EBMP", Bitmap::EBMP)
 		.value("EJPEG", Bitmap::EJPEG)
