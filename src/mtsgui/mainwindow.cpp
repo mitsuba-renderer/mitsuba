@@ -690,7 +690,7 @@ retry:
 				ret = QMessageBox::question(this, tr("Version mismatch -- update scene file?"),
 					QString("The requested scene file is from an older version of Mitsuba "
 						"(%1). To work with version %2, it will need to be updated. If you "
-						"continue, Mitsuba will perform a fully automated upgrade (note that a "
+						"continue, Mitsuba will perform a fully automated upgrade (a "
 						"backup copy will be made).\n\nProceed?")
 						.arg(version.toString().c_str())
 						.arg(MTS_VERSION), QMessageBox::Yes | QMessageBox::Cancel);

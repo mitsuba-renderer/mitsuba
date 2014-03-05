@@ -159,13 +159,6 @@ public:
 	}
 };
 
-/* Collect zombie processes */
-#if !defined(__WINDOWS__)
-void collect_zombies(int s) {
-	while (waitpid(-1, NULL, WNOHANG) > 0);
-}
-#endif
-
 #if defined(__OSX__)
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
