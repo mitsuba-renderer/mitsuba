@@ -527,7 +527,7 @@ public:
 		           dot(pointFar - v2, n2) <= 0) {
 			if (farT > maxt)
 				return false;
-			p = Point(rayO + rayD * nearT);
+			p = Point(rayO + rayD * farT);
 			t = (Float) farT;
 		} else {
 			return false;
