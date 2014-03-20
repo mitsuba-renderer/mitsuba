@@ -131,32 +131,32 @@ public:
 		/* Transform into the local coordinate system and normalize */
 		m_worldToObject(_ray, ray);
 
-		const Float
+		const double
 			ox = ray.o.x,
 			oy = ray.o.y,
 			dx = ray.d.x,
 			dy = ray.d.y;
 
-		const Float A = dx*dx + dy*dy;
-		const Float B = 2 * (dx*ox + dy*oy);
-		const Float C = ox*ox + oy*oy - m_radius*m_radius;
+		const double A = dx*dx + dy*dy;
+		const double B = 2 * (dx*ox + dy*oy);
+		const double C = ox*ox + oy*oy - m_radius*m_radius;
 
-		Float nearT, farT;
-		if (!solveQuadratic(A, B, C, nearT, farT))
+		double nearT, farT;
+		if (!solveQuadraticDouble(A, B, C, nearT, farT))
 			return false;
 
 		if (!(nearT <= maxt && farT >= mint)) /* NaN-aware conditionals */
 			return false;
 
-		const Float zPosNear = ray.o.z + ray.d.z * nearT;
-		const Float zPosFar = ray.o.z + ray.d.z * farT;
+		const double zPosNear = ray.o.z + ray.d.z * nearT;
+		const double zPosFar = ray.o.z + ray.d.z * farT;
 
 		if (zPosNear >= 0 && zPosNear <= m_length && nearT >= mint) {
-			t = nearT;
+			t = (Float) nearT;
 		} else if (zPosFar >= 0 && zPosFar <= m_length) {
 			if (farT > maxt)
 				return false;
-			t = farT;
+			t = (Float) farT;
 		} else {
 			return false;
 		}
@@ -170,25 +170,25 @@ public:
 		/* Transform into the local coordinate system and normalize */
 		m_worldToObject(_ray, ray);
 
-		const Float
+		const double
 			ox = ray.o.x,
 			oy = ray.o.y,
 			dx = ray.d.x,
 			dy = ray.d.y;
 
-		const Float A = dx*dx + dy*dy;
-		const Float B = 2 * (dx*ox + dy*oy);
-		const Float C = ox*ox + oy*oy - m_radius*m_radius;
+		const double A = dx*dx + dy*dy;
+		const double B = 2 * (dx*ox + dy*oy);
+		const double C = ox*ox + oy*oy - m_radius*m_radius;
 
-		Float nearT, farT;
-		if (!solveQuadratic(A, B, C, nearT, farT))
+		double nearT, farT;
+		if (!solveQuadraticDouble(A, B, C, nearT, farT))
 			return false;
 
 		if (nearT > maxt || farT < mint)
 			return false;
 
-		const Float zPosNear = ray.o.z + ray.d.z * nearT;
-		const Float zPosFar = ray.o.z + ray.d.z * farT;
+		const double zPosNear = ray.o.z + ray.d.z * nearT;
+		const double zPosFar = ray.o.z + ray.d.z * farT;
 		if (zPosNear >= 0 && zPosNear <= m_length && nearT >= mint) {
 			return true;
 		} else if (zPosFar >= 0 && zPosFar <= m_length && farT <= maxt) {
@@ -201,8 +201,8 @@ public:
 	void fillIntersectionRecord(const Ray &ray,
 			const void *temp, Intersection &its) const {
 		its.p = ray(its.t);
-
 		Point local = m_worldToObject(its.p);
+
 		Float phi = std::atan2(local.y, local.x);
 		if (phi < 0)
 			phi += 2*M_PI;
@@ -214,11 +214,15 @@ public:
 		its.shape = this;
 		its.dpdu = m_objectToWorld(dpdu);
 		its.dpdv = m_objectToWorld(dpdv);
-		its.geoFrame.n = Normal(normalize(cross(its.dpdu, its.dpdv)));
-		if (m_flipNormals)
-			its.geoFrame.n *= -1;
 		its.geoFrame.s = normalize(its.dpdu);
 		its.geoFrame.t = normalize(its.dpdv);
+		its.geoFrame.n = Normal(cross(its.geoFrame.s, its.geoFrame.t));
+
+		/* Migitate roundoff error issues by a normal shift of the computed intersection point */
+		its.p += its.geoFrame.n * (m_radius - std::sqrt(local.x*local.x+local.y*local.y));
+
+		if (m_flipNormals)
+			its.geoFrame.n *= -1;
 		its.shFrame = its.geoFrame;
 		its.wi = its.toLocal(-ray.d);
 		its.hasUVPartials = false;
@@ -378,7 +382,7 @@ public:
 			Float alpha = ellipseAxes[0][j], beta = ellipseAxes[1][j];
 			Float tmp = 1 / std::sqrt(alpha*alpha + beta*beta);
 			Float cosTheta = alpha * tmp, sinTheta = beta*tmp;
-			
+
 			Point p1 = ellipseCenter + cosTheta*ellipseAxes[0] + sinTheta*ellipseAxes[1];
 			Point p2 = ellipseCenter - cosTheta*ellipseAxes[0] - sinTheta*ellipseAxes[1];
 
