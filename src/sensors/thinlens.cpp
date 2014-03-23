@@ -572,7 +572,7 @@ public:
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "ThinLens[" << endl
-			<< "  xfov = " << m_xfov << "," << endl
+			<< "  fov = [" << getXFov() << ", " << getYFov() << "]," << endl
 			<< "  apertureRadius = " << m_apertureRadius << "," << endl
 			<< "  focusDistance = " << m_focusDistance << "," << endl
 			<< "  nearClip = " << m_nearClip << "," << endl
