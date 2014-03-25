@@ -236,7 +236,7 @@ public:
 		if (pixelFormats.size() != 1 && channelNames.size() != pixelFormats.size())
 			Log(EError, "Number of channel names must match the number of specified pixel formats!");
 
-		if (m_pixelFormats.size() != 1 && m_fileFormat != Bitmap::EOpenEXR)
+		if (pixelFormats.size() != 1 && m_fileFormat != Bitmap::EOpenEXR)
 			Log(EError, "General multi-channel output is only supported when writing OpenEXR files!");
 
 		for (size_t i=0; i<pixelFormats.size(); ++i) {
