@@ -227,7 +227,7 @@ public:
 			m_fileFormat = Bitmap::EPFM;
 		} else {
 			Log(EError, "The \"fileFormat\" parameter must either be "
-				"equal to \"openexr\" or \"rgbe\"!");
+				"equal to \"openexr\", \"pfm\", or \"rgbe\"!");
 		}
 
 		if (pixelFormats.empty())
