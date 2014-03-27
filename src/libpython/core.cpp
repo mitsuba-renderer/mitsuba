@@ -1060,6 +1060,8 @@ void export_core() {
 	coreModule.attr("ShadowEpsilon") = ShadowEpsilon;
 	coreModule.attr("DeltaEpsilon") = DeltaEpsilon;
 	coreModule.attr("SPECTRUM_SAMPLES") = SPECTRUM_SAMPLES;
+	coreModule.attr("MTS_VERSION") = MTS_VERSION;
+	coreModule.attr("MTS_YEAR") = MTS_YEAR;
 
 	bp::class_<Class, boost::noncopyable>("Class", bp::no_init)
 		.def("getName", &Class::getName, BP_RETURN_CONSTREF)

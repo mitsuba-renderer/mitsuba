@@ -388,8 +388,36 @@ def scene_descr_to_xml(descr):
             el = et.SubElement(parent, 'rgb')
             el.set('name', key)
             el.set('value', "%.15g %.15g %.15g" % (r, g, b))
+        elif type(value) is Point:
+            el = et.SubElement(parent, 'point')
+            el.set('name', key)
+            el.set('x', '%.15g' % value.x)
+            el.set('y', '%.15g' % value.y)
+            el.set('z', '%.15g' % value.z)
+        elif type(value) is Vector:
+            el = et.SubElement(parent, 'vector')
+            el.set('name', key)
+            el.set('x', '%.15g' % value.x)
+            el.set('y', '%.15g' % value.y)
+            el.set('z', '%.15g' % value.z)
+        elif type(value) is float:
+            el = et.SubElement(parent, 'float')
+            el.set('name', key)
+            el.set('value', '%.15g' % value)
+        elif type(value) is int:
+            el = et.SubElement(parent, 'int')
+            el.set('name', key)
+            el.set('value', '%i' % value)
+        elif type(value) is bool:
+            el = et.SubElement(parent, 'boolean')
+            el.set('name', key)
+            el.set('value', '%s' % ('true' if value else 'false'))
+        elif type(value) is str:
+            el = et.SubElement(parent, 'string')
+            el.set('name', key)
+            el.set('value', value)
         else:
-            return None # (More kinds of attributes need to be supported here..)
+            return None # (More kinds of attributes may need to be supported here..)
         return el
 
     def dict_to_xml(name, item, parent):
