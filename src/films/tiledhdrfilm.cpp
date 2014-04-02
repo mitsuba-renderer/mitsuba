@@ -280,7 +280,7 @@ public:
 					Vector2i(m_blockSize, m_blockSize));
 		} else {
 			m_tile = new Bitmap(Bitmap::EMultiChannel, m_componentFormat,
-					Vector2i(m_blockSize, m_blockSize), m_channelNames.size());
+					Vector2i(m_blockSize, m_blockSize), (uint8_t) m_channelNames.size());
 			m_tile->setChannelNames(m_channelNames);
 		}
 
