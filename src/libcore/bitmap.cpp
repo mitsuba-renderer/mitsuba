@@ -88,11 +88,12 @@ public:
 	EXRIStream(Stream *stream) : IStream(stream->toString().c_str()),
 		m_stream(stream) {
 		m_offset = stream->getPos();
+		m_size = stream->getSize();
 	}
 
 	bool read(char *c, int n) {
 		m_stream->read(c, n);
-		return m_stream->isEOF();
+		return m_stream->getPos() == m_size;
 	}
 
 	Imf::Int64 tellg() {
@@ -106,7 +107,7 @@ public:
 	void clear() { }
 private:
 	ref<Stream> m_stream;
-	size_t m_offset;
+	size_t m_offset, m_size;
 };
 
 class EXROStream : public Imf::OStream {
@@ -165,6 +166,12 @@ static void png_write_data(png_structp png_ptr, png_bytep data, png_size_t lengt
 static void png_error_func(png_structp png_ptr, png_const_charp msg) {
 	SLog(EError, "Fatal libpng error: %s\n", msg);
 	exit(-1);
+}
+
+static void png_warn_func(png_structp png_ptr, png_const_charp msg) {
+	if (strstr(msg, "iCCP: known incorrect sRGB profile") != NULL)
+		return;
+	SLog(EWarn, "libpng warning: %s\n", msg);
 }
 #endif
 
@@ -298,6 +305,8 @@ Bitmap::Bitmap(EFileFormat format, Stream *stream, const std::string &prefix) : 
 			format = ERGBE;
 		} else if (start[0] == 'P' && (start[1] == 'F' || start[1] == 'f')) {
 			format = EPFM;
+		} else if (start[0] == 'P' && start[1] == '6') {
+			format = EPPM;
 		#if defined(MTS_HAS_LIBJPEG)
 		} else if (start[0] == 0xFF && start[1] == 0xD8) {
 			format = EJPEG;
@@ -327,6 +336,7 @@ Bitmap::Bitmap(EFileFormat format, Stream *stream, const std::string &prefix) : 
 		case EOpenEXR: readOpenEXR(stream, prefix); break;
 		case ERGBE: readRGBE(stream); break;
 		case EPFM: readPFM(stream); break;
+		case EPPM: readPPM(stream); break;
 		case ETGA: readTGA(stream); break;
 		case EPNG: readPNG(stream); break;
 		default:
@@ -349,6 +359,7 @@ void Bitmap::write(EFileFormat format, Stream *stream, int compression) const {
 		case EOpenEXR: writeOpenEXR(stream); break;
 		case ERGBE: writeRGBE(stream); break;
 		case EPFM: writePFM(stream); break;
+		case EPPM: writePPM(stream); break;
 		default:
 			Log(EError, "Bitmap::write(): Invalid file format!");
 	}
@@ -1361,7 +1372,7 @@ void Bitmap::convert(Bitmap *target, Float multiplier, Spectrum::EConversionInte
 	cvt->convert(m_pixelFormat, m_gamma, m_data,
 		target->getPixelFormat(), target->getGamma(), target->getData(),
 		(size_t) m_size.x * (size_t) m_size.y, multiplier, intent,
-		m_channelCount - (hasWeight() ? 1 : 0));
+		m_channelCount);
 }
 
 ref<Bitmap> Bitmap::convert(EPixelFormat pixelFormat,
@@ -1392,72 +1403,99 @@ ref<Bitmap> Bitmap::convert(EPixelFormat pixelFormat,
 	cvt->convert(m_pixelFormat, m_gamma, m_data,
 		pixelFormat, gamma, target->getData(),
 		(size_t) m_size.x * (size_t) m_size.y, multiplier, intent,
-		m_channelCount - (hasWeight() ? 1 : 0));
+		m_channelCount);
 
 	return target;
 }
 
 ref<Bitmap> Bitmap::convertMultiSpectrumAlphaWeight(const std::vector<EPixelFormat> &pixelFormats,
 		EComponentFormat componentFormat, const std::vector<std::string> &channelNames) const {
-	if (m_componentFormat != EFloat && m_pixelFormat != EMultiSpectrumAlphaWeight)
-		Log(EError, "convertMultiSpectrumAlphaWeight(): unsupported!");
 	if (channelNames.size() > std::numeric_limits<uint8_t>::max())
 		Log(EError, "convertMultiSpectrumAlphaWeight(): excessive number of channels!");
-	ref<Bitmap> bitmap = new Bitmap(Bitmap::EMultiChannel, Bitmap::EFloat, m_size, (uint8_t) channelNames.size());
+	ref<Bitmap> bitmap = new Bitmap(Bitmap::EMultiChannel, componentFormat,
+			m_size, (uint8_t) channelNames.size());
 	bitmap->setChannelNames(channelNames);
+	convertMultiSpectrumAlphaWeight(this, getUInt8Data(), bitmap,
+		bitmap->getUInt8Data(), pixelFormats, componentFormat,
+		(size_t) m_size.x * (size_t) m_size.y);
+	return bitmap;
+}
 
-	for (int y = 0; y<m_size.y; ++y) {
-		for (int x = 0; x<m_size.x; ++x) {
-			const Float *srcData = getFloatData() + getChannelCount() * (x+y*m_size.x);
-			Float *dstData = bitmap->getFloatData() + bitmap->getChannelCount() * (x+y*m_size.x);
-			Float weight = srcData[getChannelCount()-1],
-				  invWeight = weight == 0 ? 0 : (Float) 1 / weight;
-			Float alpha = srcData[getChannelCount()-2] * invWeight;
+void Bitmap::convertMultiSpectrumAlphaWeight(const Bitmap *source,
+		const uint8_t *sourcePtr, const Bitmap *target, uint8_t *targetPtr,
+		const std::vector<EPixelFormat> &pixelFormats,
+		EComponentFormat componentFormat, size_t count) {
+	if (source->getComponentFormat() != EFloat && source->getPixelFormat() != EMultiSpectrumAlphaWeight)
+		Log(EError, "convertMultiSpectrumAlphaWeight(): unsupported!");
 
-			for (size_t i=0; i<pixelFormats.size(); ++i) {
-				Spectrum value = ((Spectrum *) srcData)[i] * invWeight;
-				Float r, g, b;
-				switch (pixelFormats[i]) {
-					case Bitmap::ELuminance:
-						*dstData++ = value.getLuminance();
-						break;
-					case Bitmap::ELuminanceAlpha:
-						*dstData++ = value.getLuminance();
-						*dstData++ = alpha;
-						break;
-					case Bitmap::ERGB:
-						value.toLinearRGB(r, g, b);
-						*dstData++ = r;
-						*dstData++ = g;
-						*dstData++ = b;
-						break;
-					case Bitmap::ERGBA:
-						value.toLinearRGB(r, g, b);
-						*dstData++ = r;
-						*dstData++ = g;
-						*dstData++ = b;
-						*dstData++ = alpha;
-						break;
-					case Bitmap::ESpectrum:
-						for (int j=0; j<SPECTRUM_SAMPLES; ++j)
-							*dstData++ = value[j];
-						break;
-					case Bitmap::ESpectrumAlpha:
-						for (int j=0; j<SPECTRUM_SAMPLES; ++j)
-							*dstData++ = value[j];
-						*dstData++ = alpha;
-						break;
-					default:
-						Log(EError, "Unknown pixel format!");
-				}
+	Float *temp = new Float[count * target->getChannelCount()], *dst = temp;
+
+	for (size_t k = 0; k<count; ++k) {
+		const Float *srcData = (const Float *) sourcePtr + k * source->getChannelCount();
+		Float weight = srcData[source->getChannelCount()-1],
+			  invWeight = weight == 0 ? 0 : (Float) 1 / weight;
+		Float alpha = srcData[source->getChannelCount()-2] * invWeight;
+
+		for (size_t i=0; i<pixelFormats.size(); ++i) {
+			Spectrum value = ((Spectrum *) srcData)[i] * invWeight;
+			Float tmp0, tmp1, tmp2;
+			switch (pixelFormats[i]) {
+				case Bitmap::ELuminance:
+					*dst++ = value.getLuminance();
+					break;
+				case Bitmap::ELuminanceAlpha:
+					*dst++ = value.getLuminance();
+					*dst++ = alpha;
+					break;
+				case Bitmap::EXYZ:
+					value.toXYZ(tmp0, tmp1, tmp2);
+					*dst++ = tmp0;
+					*dst++ = tmp1;
+					*dst++ = tmp2;
+					break;
+				case Bitmap::EXYZA:
+					value.toXYZ(tmp0, tmp1, tmp2);
+					*dst++ = tmp0;
+					*dst++ = tmp1;
+					*dst++ = tmp2;
+					*dst++ = alpha;
+					break;
+				case Bitmap::ERGB:
+					value.toLinearRGB(tmp0, tmp1, tmp2);
+					*dst++ = tmp0;
+					*dst++ = tmp1;
+					*dst++ = tmp2;
+					break;
+				case Bitmap::ERGBA:
+					value.toLinearRGB(tmp0, tmp1, tmp2);
+					*dst++ = tmp0;
+					*dst++ = tmp1;
+					*dst++ = tmp2;
+					*dst++ = alpha;
+					break;
+				case Bitmap::ESpectrum:
+					for (int j=0; j<SPECTRUM_SAMPLES; ++j)
+						*dst++ = value[j];
+					break;
+				case Bitmap::ESpectrumAlpha:
+					for (int j=0; j<SPECTRUM_SAMPLES; ++j)
+						*dst++ = value[j];
+					*dst++ = alpha;
+					break;
+				default:
+					Log(EError, "Unknown pixel format!");
 			}
 		}
 	}
 
-	if (componentFormat != Bitmap::EFloat)
-		bitmap = bitmap->convert(Bitmap::EMultiChannel, componentFormat);
+	const FormatConverter *cvt = FormatConverter::getInstance(
+		std::make_pair(EFloat, target->getComponentFormat())
+	);
 
-	return bitmap;
+	cvt->convert(Bitmap::EMultiChannel, 1.0f, temp, Bitmap::EMultiChannel, 1.0f, targetPtr,
+			count, 1.0f, Spectrum::EReflectance, target->getChannelCount());
+
+	delete[] temp;
 }
 
 void Bitmap::convert(void *target, EPixelFormat pixelFormat,
@@ -1483,7 +1521,7 @@ void Bitmap::convert(void *target, EPixelFormat pixelFormat,
 	cvt->convert(m_pixelFormat, m_gamma, m_data,
 		pixelFormat, gamma, target,
 		(size_t) m_size.x * (size_t) m_size.y, multiplier, intent,
-		m_channelCount - (hasWeight() ? 1 : 0));
+		m_channelCount);
 }
 
 template <typename T> void tonemapReinhard(T *data, size_t pixels, Bitmap::EPixelFormat fmt,
@@ -1990,7 +2028,7 @@ void Bitmap::readPNG(Stream *stream) {
 	volatile png_bytepp rows = NULL;
 
 	/* Create buffers */
-	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, &png_error_func, NULL);
+	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, &png_error_func, &png_warn_func);
 	if (png_ptr == NULL) {
 		Log(EError, "readPNG(): Unable to create PNG data structure");
 	}
@@ -2114,7 +2152,7 @@ void Bitmap::writePNG(Stream *stream, int compression) const {
 			return;
 	}
 
-	png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, &png_error_func, NULL);
+	png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, &png_error_func, &png_warn_func);
 	if (png_ptr == NULL)
 		Log(EError, "Error while creating PNG data structure");
 
@@ -3366,6 +3404,54 @@ void Bitmap::writePFM(Stream *stream) const {
 			stream->write(temp, sizeof(float) * m_size.x * (m_channelCount-1));
 		}
 	}
+}
+
+void Bitmap::readPPM(Stream *stream) {
+	int field = 0, nChars = 0;
+
+	std::string fields[4];
+
+	while (field < 4) {
+		char c = stream->readChar();
+		if (c == ' ' || c == '\t' || c == '\n' || c == '\r') {
+			if (nChars != 0) {
+				nChars = 0;
+				++field;
+			}
+		} else {
+			fields[field] += c;
+			++nChars;
+		}
+	}
+	if (fields[0] != "P6")
+		Log(EError, "readPPM(): invalid format!");
+
+	int intValues[3];
+	for (int i=0; i<3; ++i) {
+		char *end_ptr = NULL;
+		intValues[i] = strtol(fields[i+1].c_str(), &end_ptr, 10);
+		if (*end_ptr != '\0')
+			SLog(EError, "readPPM(): unable to parse the file header!");
+	}
+
+	m_size.x = intValues[0];
+	m_size.y = intValues[1];
+	m_pixelFormat = ERGB;
+	m_channelCount = 3;
+	m_gamma = -1.0f;
+	m_ownsData = true;
+	m_componentFormat = intValues[2] <= 0xFF ? EUInt8 : EUInt16;
+	size_t size = getBufferSize();
+	m_data = static_cast<uint8_t *>(allocAligned(size));
+	stream->read(m_data, size);
+}
+
+void Bitmap::writePPM(Stream *stream) const {
+	if (m_pixelFormat != ERGB || (m_componentFormat != EUInt8 && m_componentFormat != EUInt16))
+		Log(EError, "writePPM(): Only 8 or 16-bit RGB images are supported");
+	stream->writeLine(formatString("P6\n%i\n%i\n%i\n", m_size.x, m_size.y,
+		m_componentFormat == EUInt8 ? 0xFF : 0xFFFF).c_str());
+	stream->write(m_data, getBufferSize());
 }
 
 void Bitmap::staticInitialization() {

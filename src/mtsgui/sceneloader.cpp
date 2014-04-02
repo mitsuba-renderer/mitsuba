@@ -48,7 +48,7 @@ void SceneLoader::run() {
 	QFileInfo fileInfo(m_filename);
 	QString suffix = fileInfo.suffix().toLower();
 
-	SceneHandler *handler = new SceneHandler(parser, m_parameters);
+	SceneHandler *handler = new SceneHandler(m_parameters);
 	m_result = new SceneContext();
 	try {
 		QSettings settings;
@@ -67,7 +67,7 @@ void SceneLoader::run() {
 		m_result->diffuseReceivers = settings.value("preview_diffuseReceivers", false).toBool();
 
 		if (suffix == "exr" || suffix == "png"  || suffix == "jpg" || suffix == "jpeg" ||
-		    suffix == "hdr" || suffix == "rgbe" || suffix == "pfm") {
+		    suffix == "hdr" || suffix == "rgbe" || suffix == "pfm" || suffix == "ppm") {
 			/* This is an image, not a scene */
 			ref<FileStream> fs = new FileStream(toFsPath(m_filename), FileStream::EReadOnly);
 			ref<Bitmap> bitmap = new Bitmap(Bitmap::EAuto, fs);
@@ -87,10 +87,6 @@ void SceneLoader::run() {
 			parser->setValidationSchemaFullChecking(true);
 			parser->setValidationScheme(SAXParser::Val_Always);
 			parser->setExternalNoNamespaceSchemaLocation(schemaPath.c_str());
-			#if !defined(__OSX__)
-				/// Not supported on OSX
-				parser->setCalculateSrcOfs(true);
-			#endif
 
 			/* Set the SAX handler */
 			parser->setDoNamespaces(true);

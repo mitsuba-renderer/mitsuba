@@ -527,7 +527,7 @@ public:
 		           dot(pointFar - v2, n2) <= 0) {
 			if (farT > maxt)
 				return false;
-			p = Point(rayO + rayD * nearT);
+			p = Point(rayO + rayD * farT);
 			t = (Float) farT;
 		} else {
 			return false;
@@ -840,6 +840,11 @@ void HairShape::fillIntersectionRecord(const Ray &ray,
 	const Vector relHitPoint = its.p - m_kdtree->firstVertex(iv);
 	its.geoFrame.n = Normal(normalize(relHitPoint - dot(axis, relHitPoint) * axis));
 	its.geoFrame.t = cross(its.geoFrame.n, its.geoFrame.s);
+
+	/* Migitate roundoff error issues by a normal shift of the computed intersection point */
+	const Vector local = its.geoFrame.toLocal(relHitPoint);
+	its.p += its.geoFrame.n * (m_kdtree->getRadius() - std::sqrt(local.y*local.y+local.z*local.z));
+
 	its.shFrame = its.geoFrame;
 	its.wi = its.toLocal(-ray.d);
 	its.hasUVPartials = false;

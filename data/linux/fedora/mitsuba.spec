@@ -1,5 +1,5 @@
 Name:		mitsuba
-Version:	0.4.5
+Version:	0.5.0
 Release:	1%{?dist}
 Summary:	Mitsuba renderer
 Group:		Applications/Graphics
@@ -24,7 +24,7 @@ building custom plugins and other extensions for Mitsuba.
 %prep
 %setup -q
 %build
-cat build/config-linux-gcc.py | sed -e "s/\(boost_[^']*\)/\1-mt/g" > config.py
+cat build/config-linux-gcc.py | sed -e "s/collada14dom/libcollada-dom2.4-dp/g" | sed -e "s/include\/collada-dom/include\/collada-dom2.4/g" > config.py
 scons
 %install
 rm -rf $RPM_BUILD_ROOT
@@ -65,6 +65,9 @@ rm -rf $RPM_BUILD_ROOT
 %files devel
 /usr/include/*
 %changelog
+
+* Tue Feb 25 2014 Wenzel Jakob <wenzel@cs.cornell.edu> 0.5.0%{?dist}
+- Upgrade to version 0.5.0
 
 * Sun Nov 10 2013 Wenzel Jakob <wenzel@cs.cornell.edu> 0.4.5%{?dist}
 - Upgrade to version 0.4.5

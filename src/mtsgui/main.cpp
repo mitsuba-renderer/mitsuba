@@ -159,13 +159,6 @@ public:
 	}
 };
 
-/* Collect zombie processes */
-#if !defined(__WINDOWS__)
-void collect_zombies(int s) {
-	while (waitpid(-1, NULL, WNOHANG) > 0);
-}
-#endif
-
 #if defined(__OSX__)
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
@@ -213,13 +206,8 @@ int main(int argc, char *argv[]) {
 
 #if !defined(__WINDOWS__)
 	/* Avoid zombies processes when running the server */
-	struct sigaction sa;
-	sa.sa_handler = collect_zombies;
-	sigemptyset(&sa.sa_mask);
-	sa.sa_flags = SA_RESTART;
-
-	if (sigaction(SIGCHLD, &sa, NULL) == -1)
-		SLog(EWarn, "Error in sigaction(): %s!", strerror(errno));
+	if (signal(SIGCHLD, SIG_IGN) == SIG_ERR)
+		SLog(EWarn, "Error in signal(): %s!", strerror(errno));
 #endif
 
 	qRegisterMetaType<ELogLevel>("ELogLevel");

@@ -30,6 +30,7 @@ add_integrator(adaptive     misc/adaptive.cpp)
 add_integrator(irrcache     misc/irrcache.cpp
                             misc/irrcache_proc.h misc/irrcache_proc.cpp)
 add_integrator(multichannel misc/multichannel.cpp)
+add_integrator(field        misc/field.cpp)
 
 # Bidirectional techniques
 add_bidir(bdpt          bdpt/bdpt.h      bdpt/bdpt.cpp

@@ -14,6 +14,8 @@ for ver in hasPython:
 	pythonEnv.Append(CPPDEFINES = [['MTS_BUILD_MODULE', 'MTS_MODULE_PYTHON']])
 	pythonEnv['SHLIBPREFIX']=''
 	pythonEnv.RelaxCompilerSettings()
+	pythonEnv.Append(LIBS=['mitsuba-bidir'])
+	pythonEnv.Append(LIBPATH=['#src/libbidir'])
 
 	if pythonEnv.has_key('XERCESINCLUDE'):
 		pythonEnv.Prepend(CPPPATH=pythonEnv['XERCESINCLUDE'])

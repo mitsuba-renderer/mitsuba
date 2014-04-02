@@ -18,10 +18,10 @@
 
 #include <mitsuba/core/vmf.h>
 #include <mitsuba/core/warp.h>
+#include <mitsuba/core/brent.h>
+#include <boost/bind.hpp>
 
 MTS_NAMESPACE_BEGIN
-
-VonMisesFisherDistr::VonMisesFisherDistr(Float kappa): m_kappa(kappa) { }
 
 Float VonMisesFisherDistr::eval(Float cosTheta) const {
 	if (m_kappa == 0.0f)
@@ -63,20 +63,21 @@ Vector VonMisesFisherDistr::sample(const Point2 &sample) const {
 		sinPhi * sinTheta, cosTheta);
 }
 
-Float VonMisesFisherDistr::forPeakValue(Float x) {
-	if (x < INV_FOURPI) {
-		return 0.0f;
-	} else if (x > 0.795) {
-		return 2 * M_PI * x;
-	} else {
-		return std::max((Float) 0.0f,
-			(168.479f * x * x + 16.4585f * x - 2.39942f) /
-			(-1.12718f * x * x + 29.1433f * x + 1.0f));
-	}
+Float VonMisesFisherDistr::getMeanCosine() const {
+	if (m_kappa == 0)
+		return 0;
+	Float coth = m_kappa > 6 ? 1 : ((std::exp(2*m_kappa)+1)/(std::exp(2*m_kappa)-1));
+	return coth-1/m_kappa;
 }
 
 static Float A3(Float kappa) {
 	return 1/ std::tanh(kappa) - 1 / kappa;
+}
+
+std::string VonMisesFisherDistr::toString() const {
+	std::ostringstream oss;
+	oss << "VonMisesFisherDistr[kappa=" << m_kappa << "]";
+	return oss.str();
 }
 
 static Float dA3(Float kappa) {
@@ -108,6 +109,35 @@ static Float A3inv(Float y, Float guess) {
 
 Float VonMisesFisherDistr::convolve(Float kappa1, Float kappa2) {
 	return A3inv(A3(kappa1) * A3(kappa2), std::min(kappa1, kappa2));
+}
+
+Float VonMisesFisherDistr::forPeakValue(Float x) {
+	if (x < INV_FOURPI) {
+		return 0.0f;
+	} else if (x > 0.795) {
+		return 2 * M_PI * x;
+	} else {
+		return std::max((Float) 0.0f,
+			(168.479f * x * x + 16.4585f * x - 2.39942f) /
+			(-1.12718f * x * x + 29.1433f * x + 1.0f));
+	}
+}
+
+static Float meanCosineFunctor(Float kappa, Float g) {
+	return VonMisesFisherDistr(kappa).getMeanCosine()-g;
+}
+
+Float VonMisesFisherDistr::forMeanCosine(Float g) {
+	if (g == 0)
+		return 0;
+	else if (g < 0)
+		SLog(EError, "Error: vMF distribution cannot be created for g<0.");
+
+	BrentSolver brentSolver(100, 1e-6f);
+	BrentSolver::Result result = brentSolver.solve(
+		boost::bind(&meanCosineFunctor, _1, g), 0, 1000);
+	SAssert(result.success);
+	return result.x;
 }
 
 MTS_NAMESPACE_END

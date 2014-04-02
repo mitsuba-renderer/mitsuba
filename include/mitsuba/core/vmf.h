@@ -28,7 +28,9 @@ MTS_NAMESPACE_BEGIN
  * \brief Von Mises-Fisher distribution on the 2-sphere
  *
  * This is a basic implementation, which assumes that the
- * distribution is centered around the Z-axis.
+ * distribution is centered around the Z-axis. All provided
+ * functions are implemented in such a way that they avoid
+ * issues with numerical overflow.
  *
  * \author Wenzel Jakob
  * \ingroup libcore
@@ -39,12 +41,20 @@ public:
 	 * \brief Create a new von Mises-Fisher distribution
 	 * with the given concentration parameter
 	 */
-	VonMisesFisherDistr(Float kappa = 0);
+	explicit inline VonMisesFisherDistr(Float kappa = 0) : m_kappa(kappa) { }
+
+	/// Return the concentration parameter kappa
+	inline void setKappa(Float kappa) {
+		m_kappa = kappa;
+	}
 
 	/// Return the concentration parameter kappa
 	inline Float getKappa() const {
 		return m_kappa;
 	}
+
+	/// Return the mean cosine of the distribution
+	Float getMeanCosine() const;
 
 	/// Evaluate the distribution for a given value of cos(theta)
 	Float eval(Float cosTheta) const;
@@ -57,11 +67,20 @@ public:
 	 */
 	Vector sample(const Point2 &sample) const;
 
+	/// Return a string representation
+	std::string toString() const;
+
 	/**
 	 * \brief Compute an appropriate concentration parameter so that
 	 * the associated vMF distribution takes on the value \c x at its peak
 	 */
 	static Float forPeakValue(Float x);
+
+	/**
+	 * \brief Compute an appropriate concentration parameter so that
+	 * the associated vMF distribution has the mean cosine \c g.
+	 */
+	static Float forMeanCosine(Float g);
 
 	/**
 	 * \brief Compute an concentration parameter that approximately

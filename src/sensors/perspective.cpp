@@ -448,7 +448,7 @@ public:
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "PerspectiveCamera[" << endl
-			<< "  xfov = " << m_xfov << "," << endl
+			<< "  fov = [" << getXFov() << ", " << getYFov() << "]," << endl
 			<< "  nearClip = " << m_nearClip << "," << endl
 			<< "  farClip = " << m_farClip << "," << endl
 			<< "  worldTransform = " << indent(m_worldTransform.toString()) << "," << endl

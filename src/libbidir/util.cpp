@@ -36,15 +36,15 @@ ref<Bitmap> BidirectionalUtils::renderDirectComponent(Scene *scene, int sceneRes
 	/* Render the direct illumination component separately */
 	ref<Bitmap> directImage = new Bitmap(Bitmap::ERGBA, Bitmap::EFloat32, film->getCropSize());
 	bool hasMedia = scene->getMedia().size() > 0;
+	bool hasDOF = scene->getSensor()->needsApertureSample();
 	size_t pixelSamples = directSamples;
 	Properties integratorProps(hasMedia ? "volpath" : "direct");
 
-	if (hasMedia) {
-		/* Render with a volumetric path tracer */
+	if (hasMedia || hasDOF) {
 		integratorProps.setInteger("maxDepth", 2);
 	} else {
-		/* No participating media-> we can use the 'direct' plugin, which has
-		   somewhat better control over where to place shading/pixel samples */
+		/* No participating media / DoF -> we can more carefully
+		   distribute samples between shading and visibility */
 		int shadingSamples = 1;
 		while (pixelSamples > 8) {
 			pixelSamples /= 2;

@@ -100,6 +100,8 @@ print(trafo * myVector)
 \subsection{Recipes}
 The following section contains a series of ``recipes'' on how to do
 certain things with the help of the Python bindings.
+To copy and paste from this chapter, the \LaTeX source code may
+be more convenient. It is available at the following URL: \url{https://www.mitsuba-renderer.org/repos/mitsuba/files/tip/doc/python.tex}.
 
 \subsubsection{Loading a scene}
 The following script demonstrates how to use the
@@ -301,6 +303,158 @@ scene.addChild(pmgr.create({
 }))
 
 scene.configure()
+\end{python}
+
+\subsubsection{Flexible scene generation for rendering in-process and emitting XML}
+The following example shows how to construct a scene in a way so that it can
+be rendered in-process or alternatively written to an XML file for later processing.
+This is the recommended way of integrating Mitsuba into modeling software.
+Roughly, the approach is to create an ordered dictionary version of the entire
+scene (named \code{scene\_descr} below) that can either be passed to the
+\code{PluginManager} or a simple function that turns it into Mitsuba-compatible XML.
+
+The example below also does instancing via the \pluginref{shapegroup}
+and \pluginref{instance} plugins to show how referencing can be implemented
+for such an approach.
+\begin{python}
+import mitsuba
+from mitsuba.core import *
+from mitsuba.render import *
+from collections import OrderedDict
+
+def rgb_spectrum(r, g, b):
+    spec = Spectrum()
+    spec.fromLinearRGB(r, g, b)
+    return spec
+
+# Map that explains what functionality different plugins implement
+plugin_type_map ={
+    'sphere' : 'shape',
+    'instance' : 'shape',
+    'shapegroup' : 'shape',
+    'diffuse' : 'bsdf',
+    'orthographic' : 'sensor' # need to complete
+}
+
+# Scene description as a big dictionary. The outermost layer
+# should be ordered so that references can be processed correctly
+scene_descr = OrderedDict([
+    ('type', 'scene'),
+    ('shapegroup_0', {
+        'type' : 'shapegroup',
+        'id' : 'my_shapegroup',
+        'some_child_geometry' : {
+            'type' : 'sphere',
+            'bsdf' : {
+                'type' : 'diffuse',
+                'reflectance' : rgb_spectrum(0.5, 0.7, 0.1)
+            }
+        }
+    }),
+    ('instance_0', {
+        'type' : 'instance',
+        # This is how a reference is specified (type='ref')
+        'reference_to_shapegroup' : {
+            'type' : 'ref',
+            'id' : 'my_shapegroup'
+        },
+        'toWorld' : Transform.translate(Vector(1, 2.5, 3))
+    }),
+    ('sensor_0', {
+        'type' : 'orthographic',
+        'toWorld' : Transform.lookAt(Point(0, 0, -1),
+            Point(0, 0, 0), Vector(0, 1, 0)) * Transform.scale(Vector(10, 10, 1))
+
+    })
+])
+
+def scene_descr_to_xml(descr):
+    import xml.etree.cElementTree as et
+    from xml.dom import minidom
+
+    def property_to_xml(key, value, parent):
+        if type(value) is Transform:
+            el = et.SubElement(parent, 'transform')
+            el.set('name', key)
+            el2 = et.SubElement(el, 'matrix')
+            matrix = value.getMatrix()
+            matrix_str = ""
+            for i in range(4):
+                for j in range(4):
+                    matrix_str += "%.15g " % matrix[(i, j)]
+            el2.set('value', matrix_str[:-1])
+        elif type(value) is Spectrum:
+            r, g, b = value.toLinearRGB()
+            el = et.SubElement(parent, 'rgb')
+            el.set('name', key)
+            el.set('value', "%.15g %.15g %.15g" % (r, g, b))
+        elif type(value) is Point:
+            el = et.SubElement(parent, 'point')
+            el.set('name', key)
+            el.set('x', '%.15g' % value.x)
+            el.set('y', '%.15g' % value.y)
+            el.set('z', '%.15g' % value.z)
+        elif type(value) is Vector:
+            el = et.SubElement(parent, 'vector')
+            el.set('name', key)
+            el.set('x', '%.15g' % value.x)
+            el.set('y', '%.15g' % value.y)
+            el.set('z', '%.15g' % value.z)
+        elif type(value) is float:
+            el = et.SubElement(parent, 'float')
+            el.set('name', key)
+            el.set('value', '%.15g' % value)
+        elif type(value) is int:
+            el = et.SubElement(parent, 'int')
+            el.set('name', key)
+            el.set('value', '%i' % value)
+        elif type(value) is bool:
+            el = et.SubElement(parent, 'boolean')
+            el.set('name', key)
+            el.set('value', '%s' % ('true' if value else 'false'))
+        elif type(value) is str:
+            el = et.SubElement(parent, 'string')
+            el.set('name', key)
+            el.set('value', value)
+        else:
+            return None # (More kinds of attributes may need to be supported here..)
+        return el
+
+    def dict_to_xml(name, item, parent):
+        if parent is None:
+            el = et.Element('scene')
+        elif item['type'] == 'ref':
+            el = et.SubElement(parent, 'ref')
+            el.set('name', name)
+            el.set('id', item['id'])
+        else:
+            el = et.SubElement(parent, plugin_type_map[item['type']])
+            el.set('type', item['type'])
+
+        if name:
+            el.set('name', name)
+        if 'id' in item:
+            el.set('id', item['id'])
+        for key, value in item.items():
+            if key == 'id' or key == 'type':
+                continue
+            if type(value) is dict:
+                dict_to_xml(key, value, el)
+            else:
+                property_to_xml(key, value, el)
+        return el
+
+    root = dict_to_xml(None, descr, None)
+    root.set('version', $\texttt{\MitsubaVersion}$)
+
+    # Indent the ElementTree output (unfortunately this involves re-parsing..)
+    return minidom.parseString(
+        et.tostring(root, 'utf-8')).toprettyxml(indent='\t')
+
+print('Mitsuba version: ')
+print(PluginManager.getInstance().create(scene_descr))
+print('XML version: ')
+print(scene_descr_to_xml(scene_descr))
 \end{python}
 
 \subsubsection{Taking control of the logging system}

@@ -128,6 +128,7 @@
     <addaction name="separator"/>
     <addaction name="actionSave"/>
     <addaction name="actionSaveAs"/>
+  	<addaction name="actionCopyImage"/>
     <addaction name="actionExportImage"/>
     <addaction name="separator"/>
     <addaction name="actionClose"/>
@@ -473,6 +474,14 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+F</string>
+   </property>
+  </action>
+  <action name="actionCopyImage">
+   <property name="text">
+    <string>&amp;Copy image</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+C</string>
    </property>
   </action>
   <action name="actionFeedback">

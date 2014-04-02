@@ -206,7 +206,7 @@ public:
 	/// Create a clone of the entire image block
 	ref<ImageBlock> clone() const {
 		ref<ImageBlock> clone = new ImageBlock(m_bitmap->getPixelFormat(),
-			m_bitmap->getSize() - Vector2i(2*m_borderSize, 2*m_borderSize), m_filter);
+			m_bitmap->getSize() - Vector2i(2*m_borderSize, 2*m_borderSize), m_filter, m_bitmap->getChannelCount());
 		copyTo(clone);
 		return clone;
 	}

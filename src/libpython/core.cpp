@@ -18,6 +18,7 @@
 #include <mitsuba/core/mstream.h>
 #include <mitsuba/core/cstream.h>
 #include <mitsuba/core/qmc.h>
+#include <mitsuba/core/vmf.h>
 #include <mitsuba/core/shvector.h>
 #include <mitsuba/core/sshstream.h>
 #include <mitsuba/render/scenehandler.h>
@@ -506,6 +507,7 @@ bp::object cast(ConfigurableObject *obj) {
 	TryCast(Medium);
 	TryCast(VolumeDataSource);
 	TryCast(Film);
+	TryCast(PerspectiveCamera);
 	TryCast(ProjectiveCamera);
 	TryCast(Sensor);
 	TryCast(Emitter);
@@ -525,13 +527,13 @@ static bp::object pluginmgr_createobject_2(PluginManager *mgr, const Class *cls,
 	return cast(mgr->createObject(cls, props));
 }
 
-static ConfigurableObject *pluginmgr_create(PluginManager *manager, bp::dict dict) {
+static ConfigurableObject *pluginmgr_create_helper(PluginManager *manager, bp::dict dict, std::map<std::string, ConfigurableObject *> &objs) {
 	Properties properties;
-	bp::list list = dict.items();
+	bp::list items = dict.items();
 	std::map<std::string, ConfigurableObject *> children;
 
-	for (int i=0; i<bp::len(list); ++i) {
-		bp::tuple tuple = bp::extract<bp::tuple>(list[i]);
+	for (bp::stl_input_iterator<bp::tuple> it(items), end; it!=end; ++it) {
+		bp::tuple tuple = *it;
 		std::string name = bp::extract<std::string>(tuple[0]);
 		bp::extract<bp::dict> extractDict(tuple[1]);
 		bp::extract<std::string> extractString(tuple[1]);
@@ -542,8 +544,13 @@ static ConfigurableObject *pluginmgr_create(PluginManager *manager, bp::dict dic
 				SLog(EError, "'type' property must map to a string!");
 			else
 				properties.setPluginName(extractString());
+		} else if (name == "id") {
+			if (!extractString.check())
+				SLog(EError, "'id' property must map to a string!");
+			else
+				properties.setID(extractString());
 		} else if (extractDict.check()) {
-			children[name] = pluginmgr_create(manager, extractDict());
+			children[name] = pluginmgr_create_helper(manager, extractDict(), objs);
 		} else if (extractConfigurableObject.check()) {
 			children[name] = extractConfigurableObject();
 		} else {
@@ -552,10 +559,23 @@ static ConfigurableObject *pluginmgr_create(PluginManager *manager, bp::dict dic
 	}
 
 	ConfigurableObject *object;
-	if (properties.getPluginName() == "scene")
+	if (properties.getPluginName() == "scene") {
 		object = new Scene(properties);
-	else
+	} else if (properties.getPluginName() == "ref") {
+		std::string id = properties.getID();
+		if (id == "unnamed")
+			SLog(EError, "id parameter of reference is missing!");
+		if (objs.find(id) == objs.end())
+			SLog(EError, "Could not find referenced object with id \"%s\"", id.c_str());
+		return objs[id];
+	} else {
 		object = manager->createObject(properties);
+	}
+
+	if (properties.getID() != "unnamed") {
+		objs[properties.getID()] = object;
+		object->incRef();
+	}
 
 	for (std::map<std::string, ConfigurableObject *>::iterator it = children.begin();
 		it != children.end(); ++it) {
@@ -565,6 +585,15 @@ static ConfigurableObject *pluginmgr_create(PluginManager *manager, bp::dict dic
 
 	object->configure();
 	return object;
+}
+
+static ConfigurableObject *pluginmgr_create(PluginManager *manager, bp::dict dict) {
+	std::map<std::string, ConfigurableObject *> objs;
+	ConfigurableObject *result = pluginmgr_create_helper(manager, dict, objs);
+	for (std::map<std::string, ConfigurableObject *>::iterator it = objs.begin();
+			it != objs.end(); ++it)
+		it->second->decRef();
+	return result;
 }
 
 static bp::tuple mkCoordinateSystem(const Vector &n) {
@@ -1030,6 +1059,9 @@ void export_core() {
 	coreModule.attr("Epsilon") = Epsilon;
 	coreModule.attr("ShadowEpsilon") = ShadowEpsilon;
 	coreModule.attr("DeltaEpsilon") = DeltaEpsilon;
+	coreModule.attr("SPECTRUM_SAMPLES") = SPECTRUM_SAMPLES;
+	coreModule.attr("MTS_VERSION") = MTS_VERSION;
+	coreModule.attr("MTS_YEAR") = MTS_YEAR;
 
 	bp::class_<Class, boost::noncopyable>("Class", bp::no_init)
 		.def("getName", &Class::getName, BP_RETURN_CONSTREF)
@@ -1264,6 +1296,7 @@ void export_core() {
 	BP_CLASS(Bitmap, Object, (bp::init<Bitmap::EPixelFormat, Bitmap::EComponentFormat, const Vector2i &>()))
 		.def(bp::init<Bitmap::EPixelFormat, Bitmap::EComponentFormat, const Vector2i &, int>())
 		.def(bp::init<Bitmap::EFileFormat, Stream *>())
+		.def(bp::init<Bitmap::EFileFormat, Stream *, std::string>())
 		.def("getPixelFormat", &Bitmap::getPixelFormat)
 		.def("getComponentFormat", &Bitmap::getComponentFormat)
 		.def("getSize", &Bitmap::getSize, BP_RETURN_VALUE)
@@ -1361,6 +1394,7 @@ void export_core() {
 		.value("EOpenEXR", Bitmap::EOpenEXR)
 		.value("ETGA", Bitmap::ETGA)
 		.value("EPFM", Bitmap::EPFM)
+		.value("EPPM", Bitmap::EPPM)
 		.value("ERGBE", Bitmap::ERGBE)
 		.value("EBMP", Bitmap::EBMP)
 		.value("EJPEG", Bitmap::EJPEG)
@@ -2262,6 +2296,20 @@ void export_core() {
 		.def("getMicrosecondsSinceStart", &Timer::getMicrosecondsSinceStart)
 		.def("getMillisecondsSinceStart", &Timer::getMillisecondsSinceStart)
 		.def("getSecondsSinceStart", &Timer::getSecondsSinceStart);
+
+	BP_STRUCT(VonMisesFisherDistr, bp::init<Float>())
+		.def("getKappa", &VonMisesFisherDistr::getKappa)
+		.def("setKappa", &VonMisesFisherDistr::setKappa)
+		.def("eval", &VonMisesFisherDistr::eval)
+		.def("getMeanCosine", &VonMisesFisherDistr::getMeanCosine)
+		.def("sample", &VonMisesFisherDistr::sample, BP_RETURN_VALUE)
+		.def("forMeanCosine", &VonMisesFisherDistr::forMeanCosine)
+		.def("forPeakValue", &VonMisesFisherDistr::forPeakValue)
+		.def("convolve", &VonMisesFisherDistr::convolve)
+		.def("__repr__", &VonMisesFisherDistr::toString)
+		.staticmethod("forMeanCosine")
+		.staticmethod("forPeakValue")
+		.staticmethod("convolve");
 
 	bp::detail::current_scope = oldScope;
 }

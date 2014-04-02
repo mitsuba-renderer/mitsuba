@@ -269,10 +269,17 @@ public:
 		if (m_config.workUnits <= 0) {
 			const size_t desiredMutationsPerWorkUnit = 200000;
 			const size_t cropArea  = (size_t) cropSize.x * cropSize.y;
-			const size_t workUnits = ((desiredMutationsPerWorkUnit - 1) + 
+			const size_t workUnits = ((desiredMutationsPerWorkUnit - 1) +
 				(cropArea * sampleCount)) / desiredMutationsPerWorkUnit;
 			Assert(workUnits <= (size_t) std::numeric_limits<int>::max());
 			m_config.workUnits = (int) std::max(workUnits, (size_t) 1);
+		}
+
+		size_t luminanceSamples = m_config.luminanceSamples;
+		if (luminanceSamples < (size_t) m_config.workUnits * 10) {
+			luminanceSamples = (size_t) m_config.workUnits * 10;
+			Log(EWarn, "Warning: increasing number of luminance samples to " SIZE_T_FMT,
+				luminanceSamples);
 		}
 
 		m_config.nMutations = (cropSize.x * cropSize.y *
@@ -295,7 +302,7 @@ public:
 		ref<MLTProcess> process = new MLTProcess(job, queue,
 				m_config, directImage, pathSeeds);
 
-		m_config.luminance = pathSampler->generateSeeds(m_config.luminanceSamples,
+		m_config.luminance = pathSampler->generateSeeds(luminanceSamples,
 			m_config.workUnits, true, m_config.importanceMap, pathSeeds);
 
 		if (!nested)

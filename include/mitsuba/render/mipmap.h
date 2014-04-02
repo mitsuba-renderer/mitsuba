@@ -196,8 +196,15 @@ public:
 		/* Potentially create a MIP map cache file */
 		uint8_t *mmapData = NULL, *mmapPtr = NULL;
 		if (!cacheFilename.empty()) {
-			Log(EInfo, "Generating MIP map cache file \"%s\" ..", cacheFilename.c_str());
-			m_mmap = new MemoryMappedFile(cacheFilename, cacheSize);
+			Log(EInfo, "Generating MIP map cache file \"%s\" ..", cacheFilename.string().c_str());
+			try {
+				m_mmap = new MemoryMappedFile(cacheFilename, cacheSize);
+			} catch (std::runtime_error &e) {
+				Log(EWarn, "Unable to create MIP map cache file \"%s\" -- "
+					"retrying with a temporary file. Error message was: %s",
+					cacheFilename.string().c_str(), e.what());
+				m_mmap = MemoryMappedFile::createTemporary(cacheSize);
+			}
 			mmapData = mmapPtr = (uint8_t *) m_mmap->getData();
 		}
 
@@ -313,7 +320,7 @@ public:
 			: m_weightLut(NULL), m_maxAnisotropy(maxAnisotropy) {
 		m_mmap = new MemoryMappedFile(cacheFilename);
 		uint8_t *mmapPtr = (uint8_t *) m_mmap->getData();
-		Log(EInfo, "Mapped MIP map cache file \"%s\" into memory (%s).", cacheFilename.c_str(),
+		Log(EInfo, "Mapped MIP map cache file \"%s\" into memory (%s).", cacheFilename.string().c_str(),
 			memString(m_mmap->getSize()).c_str());
 
 		stats::mipStorage += m_mmap->getSize();

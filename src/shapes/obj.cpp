@@ -557,7 +557,7 @@ public:
 		}
 
 		bsdf->setID(name);
-		addChild(name, bsdf);
+		addChild(name, bsdf, false);
 	}
 
 	struct Vertex {
@@ -716,6 +716,10 @@ public:
 	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
+		addChild(name, child, true);
+	}
+
+	void addChild(const std::string &name, ConfigurableObject *child, bool warn) {
 		const Class *cClass = child->getClass();
 		if (cClass->derivesFrom(MTS_CLASS(BSDF))) {
 			Shape::addChild(name, child);
@@ -731,7 +735,7 @@ public:
 						m_meshes[i]->addChild(name, child);
 					}
 				}
-				if (!found)
+				if (!found && warn)
 					Log(EWarn, "Attempted to register the material named "
 						"'%s', which does not occur in the OBJ file!", name.c_str());
 			}

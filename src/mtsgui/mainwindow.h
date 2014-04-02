@@ -172,6 +172,7 @@ private slots:
 	void on_actionFocusAll_triggered();
 	void on_actionSceneDescription_triggered();
 	void on_actionEnableCommandLine_triggered();
+	void on_actionCopyImage_triggered();
 	void on_tabBar_currentChanged(int index);
 	bool on_tabBar_tabCloseRequested(int index);
 	void on_tabBar_tabMoved(int from, int to);

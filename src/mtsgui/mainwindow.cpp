@@ -585,8 +585,8 @@ void MainWindow::on_actionOpen_triggered() {
 	QSettings settings;
 	QStringList fileNames = QFileDialog::getOpenFileNames(this, QString(),
 		settings.value("fileDir").toString(),
-		tr("All supported formats (*.xml *.exr *.rgbe *.hdr *.pfm *.png *.jpg *.jpeg);;"
-		   "Mitsuba scenes (*.xml);;High dynamic-range images (*.exr *.rgbe *.hdr *.pfm);;"
+		tr("All supported formats (*.xml *.exr *.rgbe *.hdr *.pfm *.ppm *.png *.jpg *.jpeg);;"
+		   "Mitsuba scenes (*.xml);;High dynamic-range images (*.exr *.rgbe *.hdr *.pfm *.ppm);;"
 		   "Low dynamic-range images (*.png *.jpg *.jpeg)"));
 
 	QStringList::ConstIterator it = fileNames.constBegin();
@@ -605,8 +605,8 @@ void MainWindow::onOpenDialogClose(int reason) { /* unused */ }
 
 void MainWindow::on_actionOpen_triggered() {
 	QFileDialog *dialog = new QFileDialog(this, Qt::Sheet);
-	dialog->setNameFilter(tr("All supported formats (*.xml *.exr *.rgbe *.hdr *.pfm *.png *.jpg *.jpeg);;"
-			"Mitsuba scenes (*.xml);;High dynamic-range images (*.exr *.rgbe *.hdr *.pfm);;Low "
+	dialog->setNameFilter(tr("All supported formats (*.xml *.exr *.rgbe *.hdr *.pfm *.ppm *.png *.jpg *.jpeg);;"
+			"Mitsuba scenes (*.xml);;High dynamic-range images (*.exr *.rgbe *.hdr *.pfm *.ppm);;Low "
 			"dynamic-range images (*.png *.jpg *.jpeg)"));
 	dialog->setAttribute(Qt::WA_DeleteOnClose);
 	dialog->setAcceptMode(QFileDialog::AcceptOpen);
@@ -690,7 +690,7 @@ retry:
 				ret = QMessageBox::question(this, tr("Version mismatch -- update scene file?"),
 					QString("The requested scene file is from an older version of Mitsuba "
 						"(%1). To work with version %2, it will need to be updated. If you "
-						"continue, Mitsuba will perform a fully automated upgrade (note that a "
+						"continue, Mitsuba will perform a fully automated upgrade (a "
 						"backup copy will be made).\n\nProceed?")
 						.arg(version.toString().c_str())
 						.arg(MTS_VERSION), QMessageBox::Yes | QMessageBox::Cancel);
@@ -825,6 +825,7 @@ void MainWindow::updateUI() {
 	ui->actionClose->setEnabled(hasTab);
 	ui->actionDuplicateTab->setEnabled(hasTab);
 	ui->actionAdjustSize->setEnabled(hasTab);
+	ui->actionCopyImage->setEnabled(hasTab);
 	ui->actionShowKDTree->setEnabled(hasScene);
 	ui->actionShowKDTree->setChecked(hasScene && context->showKDTree);
 	ui->actionSceneDescription->setEnabled(hasScene);
@@ -888,6 +889,7 @@ void MainWindow::on_tabBar_customContextMenuRequested(const QPoint &pt) {
 	menu.addAction(ui->actionDuplicateTab);
 	if (tabIndex == ui->tabBar->currentIndex())
 		menu.addAction(ui->actionAdjustSize);
+	menu.addAction(ui->actionCopyImage);
 	menu.addAction(ui->actionClose);
 	menu.exec(ui->tabBar->mapToGlobal(pt));
 	m_contextIndex = -1;
@@ -1482,6 +1484,10 @@ inline float toSRGB(float value) {
 	return 1.055f * std::pow(value, 0.41666f) - 0.055f;
 }
 
+void MainWindow::on_actionCopyImage_triggered() {
+	exportImage("__clipboard__");
+}
+
 #if MTSGUI_STATIC_QFILEDIALOG
 
 void MainWindow::on_actionExportImage_triggered() {
@@ -1492,6 +1498,7 @@ void MainWindow::on_actionExportImage_triggered() {
 	        "High dynamic range OpenEXR image (*.exr);;"
 	        "High dynamic range Radiance RGBE image (*.rgbe *.hdr);;"
 	        "High dynamic range Portable Float Map image (*.pfm);;"
+	        "High dynamic range Portable Pixel Map image (*.ppm);;"
 	        "Tonemapped low dynamic range image (*.png *.jpg *.jpeg)"));
 	if (!fileName.isEmpty()) {
 		QSettings settings;
@@ -1510,6 +1517,7 @@ void MainWindow::on_actionExportImage_triggered() {
 	           "High dynamic range OpenEXR image (*.exr);;"
 	           "High dynamic range Radiance RGBE image (*.rgbe *.hdr);;"
 	           "High dynamic range Portable Float Map image (*.pfm);;"
+	        "High dynamic range Portable Pixel Map image (*.ppm);;"
 	           "Tonemapped low dynamic range image (*.png *.jpg *.jpeg)"));
 
 	QSettings settings;
@@ -1548,28 +1556,29 @@ void MainWindow::onExportDialogClose(int reason) {
 
 void MainWindow::exportImage(const QString &fileName) {
 	if (!fileName.isEmpty()) {
+		Bitmap::EComponentFormat compFormat = Bitmap::EInvalid;
 		Bitmap::EFileFormat format;
-		bool isHDR = true;
+
 		if (fileName.endsWith(".exr")) {
 			format = Bitmap::EOpenEXR;
-		} else if (fileName.endsWith(".png")) {
+		} else if (fileName.endsWith(".png") || fileName == "__clipboard__") {
 			format = Bitmap::EPNG;
-			isHDR = false;
+			compFormat = Bitmap::EUInt8;
 		} else if (fileName.endsWith(".hdr") || fileName.endsWith(".rgbe")) {
 			format = Bitmap::ERGBE;
 		} else if (fileName.endsWith(".jpg") || fileName.endsWith(".jpeg")) {
 			format = Bitmap::EJPEG;
-			isHDR = false;
+			compFormat = Bitmap::EUInt8;
 		} else if (fileName.endsWith(".pfm")) {
 			format = Bitmap::EPFM;
+		} else if (fileName.endsWith(".ppm")) {
+			format = Bitmap::EPPM;
+			compFormat = Bitmap::EUInt16;
 		} else {
 			SLog(EError, "Unknown file type -- the filename must end in either"
-				" .exr, .rgbe, .hdr, .pfm, .png, .jpg, or .jpeg");
+				" .exr, .rgbe, .hdr, .pfm, .ppm, .png, .jpg, or .jpeg");
 			return;
 		}
-
-		ref<FileStream> fs = new FileStream(toFsPath(fileName),
-			FileStream::ETruncReadWrite);
 
 		const int currentIndex = ui->tabBar->currentIndex();
 		const SceneContext *ctx = m_context[currentIndex];
@@ -1578,7 +1587,7 @@ void MainWindow::exportImage(const QString &fileName) {
 			ui->glView->downloadFramebuffer();
 
 		ref<Bitmap> bitmap = ctx->framebuffer;
-		if (!isHDR) {
+		if (compFormat == Bitmap::EUInt8 || compFormat == Bitmap::EUInt16) {
 			/* Tonemap the image */
 			if (ctx->toneMappingMethod == EReinhard) {
 				Float logAvgLuminance = 0, maxLuminance = 0; /* Unused */
@@ -1589,13 +1598,24 @@ void MainWindow::exportImage(const QString &fileName) {
 					ctx->reinhardKey, burn);
 			}
 
-			bitmap = bitmap->convert(Bitmap::ERGB, Bitmap::EUInt8,
+			bitmap = bitmap->convert(Bitmap::ERGB, compFormat,
 				ctx->srgb ? (Float) -1 : ctx->gamma,
 				ctx->toneMappingMethod == EReinhard
 				? (Float) 1.0f : std::pow((Float) 2, ctx->exposure));
 		}
 
-		bitmap->write(format, fs);
+		if (fileName == "__clipboard__") {
+			QImage image(bitmap->getWidth(), bitmap->getHeight(), QImage::Format_RGB888);
+			size_t scanlineSize = (size_t) bitmap->getWidth() * 3 * sizeof(uint8_t);
+			for (int i=0; i<bitmap->getHeight(); ++i)
+				memcpy(image.scanLine(i), bitmap->getUInt8Data() + scanlineSize * i, scanlineSize);
+			QClipboard *clipboard = QApplication::clipboard();
+			clipboard->setPixmap(QPixmap::fromImage(image));
+		} else {
+			ref<FileStream> fs = new FileStream(toFsPath(fileName),
+				FileStream::ETruncReadWrite);
+			bitmap->write(format, fs);
+		}
 	}
 }
 

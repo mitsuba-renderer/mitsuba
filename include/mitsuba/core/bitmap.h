@@ -224,6 +224,16 @@ public:
 		EPFM,
 
 		/**
+		 * \brief PPM (Portable Pixel Map) image format
+		 *
+		 * The following is supported
+		 * <ul>
+		 *   <li>Loading and saving of \ref EUInt8 and \ref EUInt16 - based RGB bitmaps</li>
+		 * </ul>
+		 */
+		EPPM,
+
+		/**
 		 * \brief Joint Photographic Experts Group file format
 		 *
 		 * The following is supported:
@@ -678,11 +688,16 @@ public:
 	 * specified component format. Names for each of the resulting channels should
 	 * be provided via the \c channelNames parameters.
 	 *
-	 * This function is currently only used by the \c hdrfilm plugin but located here
-	 * as it is tied to the internals of this class.
+	 * This feature is currently used by the \c hdrfilm and \c tiledhdrfilm plugins.
 	 */
 	ref<Bitmap> convertMultiSpectrumAlphaWeight(const std::vector<EPixelFormat> &pixelFormats,
 			EComponentFormat componentFormat, const std::vector<std::string> &channelNames) const;
+
+	/// Similar to the above, but writes to an already existing image
+	static void convertMultiSpectrumAlphaWeight(const Bitmap *source,
+		const uint8_t *sourcePtr, const Bitmap *target, uint8_t *targetPtr,
+		const std::vector<EPixelFormat> &pixelFormats,
+		EComponentFormat componentFormat, size_t count);
 
 	/**
 	 * \brief Apply Reinhard et al's tonemapper in chromaticity space
@@ -1109,6 +1124,12 @@ protected:
 
 	/// Write a file using the PFM file format
 	void writePFM(Stream *stream) const;
+
+	/// Read a file stored using the PPM file format
+	void readPPM(Stream *stream);
+
+	/// Write a file using the PPM file format
+	void writePPM(Stream *stream) const;
 
 	/// Read a file stored using the TGA file format
 	void readTGA(Stream *stream);

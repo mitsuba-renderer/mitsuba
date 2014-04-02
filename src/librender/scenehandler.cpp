@@ -27,6 +27,7 @@
 #include <xercesc/parsers/SAXParser.hpp>
 #include <xercesc/framework/MemBufInputSource.hpp>
 #include <xercesc/util/TransService.hpp>
+#include <xercesc/sax/Locator.hpp>
 #include <mitsuba/render/scenehandler.h>
 #include <mitsuba/core/fresolver.h>
 #include <mitsuba/render/scene.h>
@@ -38,24 +39,21 @@ XERCES_CPP_NAMESPACE_USE
 
 #define TRANSCODE_BLOCKSIZE 2048
 
-#if !defined(__OSX__)
-	#define XMLLog(level, fmt, ...) Thread::getThread()->getLogger()->log(\
-		level, NULL, __FILE__, __LINE__, "Near file offset %i: " fmt, \
-		(int) m_parser->getSrcOffset(), ## __VA_ARGS__)
-#else
-	#define XMLLog(level, fmt, ...) Thread::getThread()->getLogger()->log(\
-		level, NULL, __FILE__, __LINE__, fmt, ## __VA_ARGS__)
-#endif
+#define XMLLog(level, fmt, ...) Thread::getThread()->getLogger()->log(\
+	level, NULL, __FILE__, __LINE__, "In file \"%s\" (near line %i): " fmt, \
+	m_locator ? transcode(m_locator->getSystemId()).c_str() : "<unknown>", \
+	m_locator ? m_locator->getLineNumber() : -1, \
+	## __VA_ARGS__)
 
 typedef void (*CleanupFun) ();
 typedef boost::unordered_set<CleanupFun> CleanupSet;
 static PrimitiveThreadLocal<CleanupSet> __cleanup_tls;
 
-SceneHandler::SceneHandler(const SAXParser *parser,
-	const ParameterMap &params, NamedObjectMap *namedObjects,
-	bool isIncludedFile) : m_parser(parser), m_params(params),
+SceneHandler::SceneHandler(const ParameterMap &params,
+	NamedObjectMap *namedObjects, bool isIncludedFile) : m_params(params),
 		m_namedObjects(namedObjects), m_isIncludedFile(isIncludedFile) {
-		m_pluginManager = PluginManager::getInstance();
+	m_pluginManager = PluginManager::getInstance();
+	m_locator = NULL;
 
 	if (m_isIncludedFile) {
 		SAssert(namedObjects != NULL);
@@ -117,6 +115,10 @@ SceneHandler::~SceneHandler() {
 	clear();
 	if (!m_isIncludedFile)
 		delete m_namedObjects;
+}
+
+void SceneHandler::setDocumentLocator(const xercesc::Locator* const locator) {
+	m_locator = locator;
 }
 
 void SceneHandler::clear() {
@@ -665,14 +667,10 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 				parser->setExternalNoNamespaceSchemaLocation(schemaPath.c_str());
 
 				/* Set the handler and start parsing */
-				SceneHandler *handler = new SceneHandler(parser, m_params, m_namedObjects, true);
+				SceneHandler *handler = new SceneHandler(m_params, m_namedObjects, true);
 				parser->setDoNamespaces(true);
 				parser->setDocumentHandler(handler);
 				parser->setErrorHandler(handler);
-				#if !defined(__OSX__)
-					/// Not supported on OSX
-					parser->setCalculateSrcOfs(true);
-				#endif
 				fs::path path = resolver->resolve(context.attributes["filename"]);
 				XMLLog(EInfo, "Parsing included file \"%s\" ..", path.filename().string().c_str());
 				parser->parse(path.c_str());
@@ -741,7 +739,11 @@ void SceneHandler::endElement(const XMLCh* const xmlName) {
 
 					}
 				} else {
-					object = m_pluginManager->createObject(tag.second, props);
+					try {
+						object = m_pluginManager->createObject(tag.second, props);
+					} catch (const std::exception &ex) {
+						XMLLog(EError, "Error while creating object: %s", ex.what());
+					}
 				}
 			}
 			break;
@@ -831,9 +833,8 @@ ref<Scene> SceneHandler::loadScene(const fs::path &filename, const ParameterMap 
 	parser->setValidationSchemaFullChecking(true);
 	parser->setValidationScheme(SAXParser::Val_Always);
 	parser->setExternalNoNamespaceSchemaLocation(schemaPath.c_str());
-	parser->setCalculateSrcOfs(true);
 
-	SceneHandler *handler = new SceneHandler(parser, params);
+	SceneHandler *handler = new SceneHandler(params);
 	parser->setDoNamespaces(true);
 	parser->setDocumentHandler(handler);
 	parser->setErrorHandler(handler);
@@ -858,9 +859,8 @@ ref<Scene> SceneHandler::loadSceneFromString(const std::string &content, const P
 	parser->setValidationSchemaFullChecking(true);
 	parser->setValidationScheme(SAXParser::Val_Always);
 	parser->setExternalNoNamespaceSchemaLocation(schemaPath.c_str());
-	parser->setCalculateSrcOfs(true);
 
-	SceneHandler *handler = new SceneHandler(parser, params);
+	SceneHandler *handler = new SceneHandler(params);
 	parser->setDoNamespaces(true);
 	parser->setDocumentHandler(handler);
 	parser->setErrorHandler(handler);

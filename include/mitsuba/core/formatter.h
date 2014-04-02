@@ -67,6 +67,7 @@ protected:
  * \ingroup libpython
  */
 class MTS_EXPORT_CORE DefaultFormatter : public Formatter {
+	friend class Logger;
 public:
 	/// Create a new default formatter
 	DefaultFormatter();

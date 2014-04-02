@@ -2198,6 +2198,21 @@ protected:
 					*newEventsLeftEnd = newEventsLeftStart,
 					*newEventsRightEnd = newEventsRightStart;
 
+			AABBType leftNodeAABB_enlarged(leftNodeAABB),
+					 rightNodeAABB_enlarged(rightNodeAABB);
+
+			#if defined(DOUBLE_PRECISION)
+				int axis0 = (bestSplit.axis + 1)%3, axis1 = (bestSplit.axis + 2)%3;
+				leftNodeAABB_enlarged.min[axis0] = rightNodeAABB_enlarged.min[axis0]  =
+					nextafterf((float) nodeAABB.min[axis0], -std::numeric_limits<float>::max());
+				leftNodeAABB_enlarged.max[axis0] = rightNodeAABB_enlarged.max[axis0]  =
+					nextafterf((float) nodeAABB.max[axis0],  std::numeric_limits<float>::max());
+				leftNodeAABB_enlarged.min[axis1] = rightNodeAABB_enlarged.min[axis1]  =
+					nextafterf((float) nodeAABB.min[axis1], -std::numeric_limits<float>::max());
+				leftNodeAABB_enlarged.max[axis1] = rightNodeAABB_enlarged.max[axis1]  =
+					nextafterf((float) nodeAABB.max[axis1],  std::numeric_limits<float>::max());
+			#endif
+
 			for (EdgeEvent *event = eventStart; event<eventEnd; ++event) {
 				int classification = storage.get(event->index);
 
@@ -2212,11 +2227,11 @@ protected:
 					   generate new events for each side */
 					const IndexType index = event->index;
 
-					AABBType clippedLeft = cast()->getClippedAABB(index, leftNodeAABB);
-					AABBType clippedRight = cast()->getClippedAABB(index, rightNodeAABB);
+					AABBType clippedLeft = cast()->getClippedAABB(index, leftNodeAABB_enlarged);
+					AABBType clippedRight = cast()->getClippedAABB(index, rightNodeAABB_enlarged);
 
-					KDAssert(leftNodeAABB.contains(clippedLeft));
-					KDAssert(rightNodeAABB.contains(clippedRight));
+					KDAssert(leftNodeAABB_enlarged.contains(clippedLeft));
+					KDAssert(rightNodeAABB_enlarged.contains(clippedRight));
 
 					if (clippedLeft.isValid() && clippedLeft.getSurfaceArea() > 0) {
 						for (int axis=0; axis<PointType::dim; ++axis) {
