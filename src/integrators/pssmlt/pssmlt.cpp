@@ -328,6 +328,13 @@ public:
 			m_config.workUnits = (int) std::max(workUnits, (size_t) 1);
 		}
 
+		size_t luminanceSamples = m_config.luminanceSamples;
+		if (luminanceSamples < (size_t) m_config.workUnits * 10) {
+			luminanceSamples = (size_t) m_config.workUnits * 10;
+			Log(EWarn, "Warning: increasing number of luminance samples to " SIZE_T_FMT,
+				luminanceSamples);
+		}
+
 		m_config.nMutations = (cropSize.x * cropSize.y *
 			sampleCount) / m_config.workUnits;
 
@@ -348,7 +355,7 @@ public:
 		ref<PSSMLTProcess> process = new PSSMLTProcess(job, queue,
 				m_config, directImage, pathSeeds);
 
-		m_config.luminance = pathSampler->generateSeeds(m_config.luminanceSamples,
+		m_config.luminance = pathSampler->generateSeeds(luminanceSamples,
 			m_config.workUnits, false, m_config.importanceMap, pathSeeds);
 
 		if (!nested)
