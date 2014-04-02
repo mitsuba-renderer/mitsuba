@@ -37,7 +37,7 @@ add_custom_target (scene_schema
 set_target_properties (scene_schema PROPERTIES FOLDER "data")
 
 # Actual installation
-install(FILES "scene.xsd" "upgrade_0.3.0.xsl" "upgrade_0.4.0.xsl"
+install(FILES "scene.xsd" "upgrade_0.3.0.xsl" "upgrade_0.4.0.xsl" "upgrade_0.5.0.xsl"
   DESTINATION ${SCHEMA_DESTINATION}
   PERMISSIONS "OWNER_READ" "GROUP_READ" "WORLD_READ"
   COMPONENT Runtime
