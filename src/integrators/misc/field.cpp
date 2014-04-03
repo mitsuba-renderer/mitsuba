@@ -165,7 +165,7 @@ public:
 				}
 				break;
 			case EPrimIndex:
-				result = Spectrum((int) its.primIndex);
+				result = Spectrum((Float) its.primIndex);
 				break;
 			default:
 				Log(EError, "Internal error!");
