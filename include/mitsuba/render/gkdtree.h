@@ -30,7 +30,7 @@
 #endif
 
 /// Activate lots of extra checks
-// #define MTS_KD_DEBUG 1
+#define MTS_KD_DEBUG 1
 
 /** Compile-time KD-tree depth limit. Allows to put certain
     data structures on the stack */
@@ -2449,9 +2449,9 @@ protected:
 			for (SizeType i=0; i<m_primCount; ++i) {
 				const AABBType aabb = derived->getAABB(indices[i]);
 				for (int axis=0; axis<PointType::dim; ++axis) {
-					int64_t minIdx = (int64_t) ((aabb.min[axis] - m_aabb.min[axis])
+					int64_t minIdx = (int64_t) (((float) aabb.min[axis] - (float) m_aabb.min[axis])
 							* m_invBinSize[axis]);
-					int64_t maxIdx = (int64_t) ((aabb.max[axis] - m_aabb.min[axis])
+					int64_t maxIdx = (int64_t) (((float) aabb.max[axis] - (float) m_aabb.min[axis])
 							* m_invBinSize[axis]);
 					m_maxBins[axis * m_binCount
 						+ std::max((int64_t) 0, std::min(maxIdx, maxBin))]++;
