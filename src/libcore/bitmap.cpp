@@ -2883,7 +2883,7 @@ void Bitmap::writeOpenEXR(Stream *stream) const {
 	file.writePixels(m_size.y);
 }
 #else
-void Bitmap::readOpenEXR(Stream *stream) {
+void Bitmap::readOpenEXR(Stream *stream, const std::string &_prefix) {
 	Log(EError, "Bitmap::readOpenEXR(): OpenEXR support was disabled at compile time!");
 }
 void Bitmap::writeOpenEXR(Stream *stream) const {
