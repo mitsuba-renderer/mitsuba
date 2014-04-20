@@ -30,7 +30,7 @@
 #endif
 
 /// Activate lots of extra checks
-#define MTS_KD_DEBUG 1
+//#define MTS_KD_DEBUG 1
 
 /** Compile-time KD-tree depth limit. Allows to put certain
     data structures on the stack */
