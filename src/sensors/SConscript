@@ -9,6 +9,5 @@ plugins += env.SharedLibrary('thinlens', ['thinlens.cpp'])
 plugins += env.SharedLibrary('orthographic', ['orthographic.cpp'])
 plugins += env.SharedLibrary('telecentric', ['telecentric.cpp'])
 plugins += env.SharedLibrary('spherical', ['spherical.cpp'])
-plugins += env.SharedLibrary('fisheye', ['fisheye.cpp'])
 
 Export('plugins')
