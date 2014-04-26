@@ -384,16 +384,17 @@ public:
 		H *= math::signum(Frame::cosTheta(H));
 
 		/* Evaluate the roughness */
-		Float alphaU = m_distribution.transformRoughness(
-					m_alphaU->eval(bRec.its).average()),
-			  alphaV = m_distribution.transformRoughness(
-					m_alphaV->eval(bRec.its).average());
+		Float alphaU = m_alphaU->eval(bRec.its).average(),
+			  alphaV = m_alphaV->eval(bRec.its).average();
 
 #if ENLARGE_LOBE_TRICK == 1
 		Float factor = (1.2f - 0.2f * std::sqrt(
 			std::abs(Frame::cosTheta(bRec.wi))));
 		alphaU *= factor; alphaV *= factor;
 #endif
+
+		alphaU = m_distribution.transformRoughness(alphaU);
+		alphaV = m_distribution.transformRoughness(alphaV);
 
 		/* Evaluate the microsurface normal sampling density */
 		Float prob = m_distribution.pdf(H, alphaU, alphaV);
@@ -419,20 +420,21 @@ public:
 			return Spectrum(0.0f);
 
 		/* Evaluate the roughness */
-		Float alphaU = m_distribution.transformRoughness(
-					m_alphaU->eval(bRec.its).average()),
-			  alphaV = m_distribution.transformRoughness(
-					m_alphaV->eval(bRec.its).average());
+		Float alphaU = m_alphaU->eval(bRec.its).average(),
+		      alphaV = m_alphaV->eval(bRec.its).average(),
+		      sampleAlphaU = alphaU,
+		      sampleAlphaV = alphaV;
 
 #if ENLARGE_LOBE_TRICK == 1
 		Float factor = (1.2f - 0.2f * std::sqrt(
 			std::abs(Frame::cosTheta(bRec.wi))));
-		Float sampleAlphaU = alphaU * factor,
-			  sampleAlphaV = alphaV * factor;
-#else
-		Float sampleAlphaU = alphaU,
-			  sampleAlphaV = alphaV;
+		sampleAlphaU *= factor; sampleAlphaV *= factor;
 #endif
+
+		alphaU = m_distribution.transformRoughness(alphaU);
+		alphaV = m_distribution.transformRoughness(alphaV);
+		sampleAlphaU = m_distribution.transformRoughness(sampleAlphaU);
+		sampleAlphaV = m_distribution.transformRoughness(sampleAlphaV);
 
 		/* Sample M, the microsurface normal */
 		Float microfacetPDF;
@@ -510,20 +512,21 @@ public:
 			return Spectrum(0.0f);
 
 		/* Evaluate the roughness */
-		Float alphaU = m_distribution.transformRoughness(
-					m_alphaU->eval(bRec.its).average()),
-			  alphaV = m_distribution.transformRoughness(
-					m_alphaV->eval(bRec.its).average());
+		Float alphaU = m_alphaU->eval(bRec.its).average(),
+		      alphaV = m_alphaV->eval(bRec.its).average(),
+		      sampleAlphaU = alphaU,
+		      sampleAlphaV = alphaV;
 
 #if ENLARGE_LOBE_TRICK == 1
 		Float factor = (1.2f - 0.2f * std::sqrt(
 			std::abs(Frame::cosTheta(bRec.wi))));
-		Float sampleAlphaU = alphaU * factor,
-			  sampleAlphaV = alphaV * factor;
-#else
-		Float sampleAlphaU = alphaU,
-			  sampleAlphaV = alphaV;
+		sampleAlphaU *= factor; sampleAlphaV *= factor;
 #endif
+
+		alphaU = m_distribution.transformRoughness(alphaU);
+		alphaV = m_distribution.transformRoughness(alphaV);
+		sampleAlphaU = m_distribution.transformRoughness(sampleAlphaU);
+		sampleAlphaV = m_distribution.transformRoughness(sampleAlphaV);
 
 		/* Sample M, the microsurface normal */
 		Float microfacetPDF;
