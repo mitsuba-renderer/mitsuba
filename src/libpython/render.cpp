@@ -4,6 +4,7 @@
 #include <mitsuba/render/renderqueue.h>
 #include <mitsuba/render/renderjob.h>
 #include <mitsuba/render/noise.h>
+#include "../shapes/instance.h"
 
 using namespace mitsuba;
 
@@ -32,6 +33,38 @@ static bp::tuple bsdf_sample(const BSDF *bsdf, BSDFSamplingRecord &bRec, const P
 	Float pdf;
 	Spectrum result = bsdf->sample(bRec, pdf, sample);
 	return bp::make_tuple(result, pdf);
+}
+
+static bp::list shapekdtree_getShapes(const ShapeKDTree *kdtree) {
+	const std::vector<const Shape *> &shapes = kdtree->getShapes();
+	bp::list list;
+	for (size_t i=0; i<shapes.size(); ++i)
+		list.append(bp::object(ref<Shape>(const_cast<Shape *>(shapes[i]))));
+	return list;
+}
+
+static Shape *shape_getShapeGroup(Shape *shape) {
+	if (shape->getClass()->getName() != "Instance")
+		return NULL;
+	return static_cast<Instance *>(shape)->getShapeGroup();
+}
+
+static AABB shapekdtree_getAABB(const ShapeKDTree *kdtree) {
+	return kdtree->getAABB();
+}
+
+static bp::object shapekdtree_rayIntersect(const ShapeKDTree *kdtree, const Ray &ray) {
+	Intersection its;
+
+	if (!kdtree->rayIntersect(ray, its))
+		return bp::object();
+
+	return bp::object(its);
+}
+
+
+static ShapeKDTree* shape_getKDTree(const Shape *shape) {
+	return const_cast<ShapeKDTree *>(static_cast<const ShapeKDTree *>(shape->getKDTree()));
 }
 
 static bp::object shape_rayIntersect(const Shape *shape, const Ray &ray, Float mint, Float maxt) {
@@ -293,8 +326,17 @@ void export_render() {
 		.value("EDiscrete", EDiscrete)
 		.export_values();
 
+	BP_CLASS(ShapeKDTree, Object, bp::no_init)
+		.def("getPrimitiveCount", &ShapeKDTree::getPrimitiveCount)
+		.def("addShape", &ShapeKDTree::addShape)
+		.def("build", &ShapeKDTree::build)
+		.def("getAABB", &shapekdtree_getAABB, BP_RETURN_VALUE)
+		.def("getShapes", &shapekdtree_getShapes)
+		.def("rayIntersect", &shapekdtree_rayIntersect);
+
 	Sampler *(Scene::*scene_getSampler)(void) = &Scene::getSampler;
 	Film *(Scene::*scene_getFilm)(void) = &Scene::getFilm;
+	ShapeKDTree *(Scene::*scene_getKDTree)(void) = &Scene::getKDTree;
 
 	BP_CLASS(Scene, NetworkedObject, bp::init<>())
 		.def(bp::init<Properties>())
@@ -341,7 +383,8 @@ void export_render() {
 		.def("getShapes", &scene_getShapes)
 		.def("getMeshes", &scene_getMeshes)
 		.def("getEmitters", &scene_getEmitters)
-		.def("getMedia", &scene_getMedia);
+		.def("getMedia", &scene_getMedia)
+		.def("getKDTree", scene_getKDTree, BP_RETURN_VALUE);
 
 	BP_CLASS(Sampler, ConfigurableObject, bp::no_init)
 		.def("clone", &Sampler::clone, BP_RETURN_VALUE)
@@ -486,9 +529,11 @@ void export_render() {
 		.def("hasBSDF", &Shape::hasBSDF)
 		.def("getBSDF", shape_getBSDF, BP_RETURN_VALUE)
 		.def("setBSDF", &Shape::setBSDF)
+		.def("getKDTree", &shape_getKDTree, BP_RETURN_VALUE)
 		.def("getPrimitiveCount", &Shape::getPrimitiveCount)
 		.def("getEffectivePrimitiveCount", &Shape::getEffectivePrimitiveCount)
-		.def("copyAttachments", &Shape::copyAttachments);
+		.def("copyAttachments", &Shape::copyAttachments)
+		.def("getShapeGroup", &shape_getShapeGroup, BP_RETURN_VALUE);
 
 	void (TriMesh::*triMesh_serialize1)(Stream *stream) const = &TriMesh::serialize;
 	void (TriMesh::*triMesh_serialize2)(Stream *stream, InstanceManager *) const = &TriMesh::serialize;
