@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import subprocess, sys, re
 
 if len(sys.argv) == 1:
@@ -19,12 +21,13 @@ for arg in sys.argv[1:]:
         ['d', 60*60*24],
         ['h', 60*60],
         ['m', 60],
-        ['s', 1]
+        ['s', 1],
+        ['ms', 0.001]
     ];
 
     for unit in units:
-        if value[-1] == unit[0]:
-            value = float(value[0:-1]) * unit[1]
+        if value[-len(unit[0]):] == unit[0]:
+            value = float(value[0:-len(unit[0])]) * unit[1]
             break
 
     force = False
