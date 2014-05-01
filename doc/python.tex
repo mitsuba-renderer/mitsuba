@@ -34,6 +34,8 @@ os.environ['PATH'] = 'path-to-mitsuba-directory' + os.pathsep + os.environ['PATH
 
 import mitsuba
 \end{python}
+If you get an error message ``\code{ImportError: DLL load failed: \%1 is not a valid Win32 application}'',
+    the Python and Mitsuba architectures are mismatched (\code{i386} vs \code{x86\_64}).
 
 \subsubsection*{Python API documentation}
 For an overview of the currently exposed API subset, please refer
