@@ -19,7 +19,7 @@ If you compiled Mitsuba yourself, you will need to source the
 
 \paragraph{Windows}
 On Windows it is necessary to explicitly specify the required extension search path within Python
-before issuing the \code{import} command, e.g.:
+\emph{before} issuing the \code{import mitsuba} command, e.g.:
 \begin{python}
 import os, sys
 
@@ -27,15 +27,18 @@ import os, sys
 # '\' to avoid pitfalls with string escaping)
 
 # Configure the search path for the Python extension module
-sys.path.append('path-to-mitsuba-dist-directory/python/<python version, e.g. 2.7>')
+sys.path.append('$\texttt{\color{lstattrib}\emph{mitsuba-dist-directory}}$/python/<python version, e.g. 2.7>')
 
 # Ensure that Python will be able to find the Mitsuba core libraries
-os.environ['PATH'] = 'path-to-mitsuba-dist-directory' + os.pathsep + os.environ['PATH']
+os.environ['PATH'] = '$\texttt{\color{lstattrib}\emph{mitsuba-dist-directory}}$' + os.pathsep + os.environ['PATH']
 
 import mitsuba
 \end{python}
-If you get an error message ``\code{ImportError: DLL load failed: \%1 is not a valid Win32 application}'',
-    the Python and Mitsuba architectures are mismatched (\code{i386} vs \code{x86\_64}).
+\begin{sloppypar}
+\noindent
+If importing fails with ``\code{ImportError: DLL load failed: \%1 is not a valid Win32 application}'',
+the Python and Mitsuba architectures are mismatched (\code{i386} vs \code{x86\_64}).
+\end{sloppypar}
 
 \subsubsection*{Python API documentation}
 For an overview of the currently exposed API subset, please refer
