@@ -485,6 +485,14 @@ public:
 		return result * (1.0f / N);
 	}
 
+	/// Component-wise absolute value
+	inline TSpectrum abs() const {
+		TSpectrum value;
+		for (int i=0; i<N; i++)
+			value.s[i] = std::abs(s[i]);
+		return value;
+	}
+
 	/// Component-wise square root
 	inline TSpectrum sqrt() const {
 		TSpectrum value;
