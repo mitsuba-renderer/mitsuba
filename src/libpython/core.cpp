@@ -647,22 +647,34 @@ static void bitmap_write2(Bitmap *bitmap, Bitmap::EFileFormat fmt, Stream *strea
 	bitmap->write(fmt, stream, compression);
 }
 
-static ref<Bitmap> bitmap_convert_1(Bitmap *bitmap, Bitmap::EPixelFormat pixelFormat, Bitmap::EComponentFormat componentFormat,
+static void bitmap_convert_0(Bitmap *bitmap, Bitmap *target) {
+    bitmap->convert(target);
+}
+
+static void bitmap_convert_1(Bitmap *bitmap, Bitmap *target, Float multiplier) {
+    bitmap->convert(target, multiplier);
+}
+
+static void bitmap_convert_2(Bitmap *bitmap, Bitmap *target, Float multiplier, Spectrum::EConversionIntent intent) {
+	bitmap->convert(target, multiplier, intent);
+}
+
+static ref<Bitmap> bitmap_convert_3(Bitmap *bitmap, Bitmap::EPixelFormat pixelFormat, Bitmap::EComponentFormat componentFormat,
 		Float gamma, Float multiplier, Spectrum::EConversionIntent intent) {
 	return bitmap->convert(pixelFormat, componentFormat, gamma, multiplier, intent);
 }
 
-static ref<Bitmap> bitmap_convert_2(Bitmap *bitmap, Bitmap::EPixelFormat pixelFormat, Bitmap::EComponentFormat componentFormat,
+static ref<Bitmap> bitmap_convert_4(Bitmap *bitmap, Bitmap::EPixelFormat pixelFormat, Bitmap::EComponentFormat componentFormat,
 		Float gamma, Float multiplier) {
 	return bitmap->convert(pixelFormat, componentFormat, gamma, multiplier);
 }
 
-static ref<Bitmap> bitmap_convert_3(Bitmap *bitmap, Bitmap::EPixelFormat pixelFormat, Bitmap::EComponentFormat componentFormat,
+static ref<Bitmap> bitmap_convert_5(Bitmap *bitmap, Bitmap::EPixelFormat pixelFormat, Bitmap::EComponentFormat componentFormat,
 		Float gamma) {
 	return bitmap->convert(pixelFormat, componentFormat, gamma);
 }
 
-static ref<Bitmap> bitmap_convert_4(Bitmap *bitmap, Bitmap::EPixelFormat pixelFormat, Bitmap::EComponentFormat componentFormat) {
+static ref<Bitmap> bitmap_convert_6(Bitmap *bitmap, Bitmap::EPixelFormat pixelFormat, Bitmap::EComponentFormat componentFormat) {
 	return bitmap->convert(pixelFormat, componentFormat);
 }
 
@@ -1351,10 +1363,13 @@ void export_core() {
 		.def("drawRect", &Bitmap::drawRect)
 		.def("fillRect", &Bitmap::fillRect)
 		.def("drawWorkUnit", &Bitmap::drawWorkUnit)
-		.def("convert", &bitmap_convert_1, BP_RETURN_VALUE)
-		.def("convert", &bitmap_convert_2, BP_RETURN_VALUE)
+		.def("convert", &bitmap_convert_0)
+		.def("convert", &bitmap_convert_1)
+		.def("convert", &bitmap_convert_2)
 		.def("convert", &bitmap_convert_3, BP_RETURN_VALUE)
 		.def("convert", &bitmap_convert_4, BP_RETURN_VALUE)
+		.def("convert", &bitmap_convert_5, BP_RETURN_VALUE)
+		.def("convert", &bitmap_convert_6, BP_RETURN_VALUE)
 		.def("fromByteArray", &bitmap_fromByteArray)
 		.def("toByteArray", &bitmap_toByteArray_1)
 		.def("toByteArray", &bitmap_toByteArray_2)
@@ -1724,6 +1739,7 @@ void export_core() {
 	bp::class_<Properties> properties("Properties");
 	properties
 		.def(bp::init<std::string>())
+		.def(bp::init<const Properties &>())
 		.def("getPluginName", &Properties::getPluginName, BP_RETURN_CONSTREF)
 		.def("setPluginName", &Properties::setPluginName)
 		.def("getID", &Properties::getID, BP_RETURN_CONSTREF)
