@@ -27,10 +27,10 @@ import os, sys
 # '\' to avoid pitfalls with string escaping)
 
 # Configure the search path for the Python extension module
-sys.path.append('path-to-mitsuba-directory/python/<python version, e.g. 2.7>')
+sys.path.append('path-to-mitsuba-dist-directory/python/<python version, e.g. 2.7>')
 
 # Ensure that Python will be able to find the Mitsuba core libraries
-os.environ['PATH'] = 'path-to-mitsuba-directory' + os.pathsep + os.environ['PATH']
+os.environ['PATH'] = 'path-to-mitsuba-dist-directory' + os.pathsep + os.environ['PATH']
 
 import mitsuba
 \end{python}
