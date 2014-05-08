@@ -39,7 +39,7 @@ MTS_NAMESPACE_BEGIN
  *        \default{automatic}
  *     }
  *     \parameter{stepWidth}{\Float}{
- *        Controls the width of of step function used for the
+ *        Controls the width of the step function used for the
  *        color transition. It is specified as a value between zero
  *        and one (relative to the \code{lineWidth} parameter)
  *        \default{0.5}

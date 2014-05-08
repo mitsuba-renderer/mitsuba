@@ -64,7 +64,7 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{resolution}{\Integer}{Specifies the horizontal resolution of the precomputed
  *         image that is used to represent the sun environment map \default{512, i.e. 512$\times$256}}
  *     \parameter{scale}{\Float}{
- *         This parameter can be used to scale the the amount of illumination
+ *         This parameter can be used to scale the amount of illumination
  *         emitted by the sky emitter. \default{1}
  *     }
  *     \parameter{samplingWeight}{\Float}{
@@ -160,7 +160,7 @@ MTS_NAMESPACE_BEGIN
  * (512$\times$ 256) of the entire sky that is then forwarded to the
  * \pluginref{envmap} plugin---this dramatically improves rendering
  * performance. This resolution is generally plenty since the sky radiance
- * distribution is so smooth, but it it can be adjusted manually if
+ * distribution is so smooth, but it can be adjusted manually if
  * necessary using the \code{resolution} parameter.
  *
  * Note that while the model encompasses sunrise and sunset configurations,
@@ -212,7 +212,7 @@ MTS_NAMESPACE_BEGIN
  *   \medrendering{\code{albedo}=100%}{emitter_sky_albedo_1}
  *   \medrendering{\code{albedo}=20% green}{emitter_sky_albedo_green}
  *   \caption{\label{fig:sky_groundalbedo}Influence
- *   of the ground albedo on the apperance of the sky}
+ *   of the ground albedo on the appearance of the sky}
  * }
  */
 class SkyEmitter : public Emitter {

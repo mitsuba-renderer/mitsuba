@@ -34,7 +34,7 @@ MTS_NAMESPACE_BEGIN
  *	      path termination criterion. \default{\code{5}}
  *	   }
  *	   \parameter{granularity}{\Integer}{
- *        Specifies the work unit granularity used to parallize the the particle
+ *        Specifies the work unit granularity used to parallize the particle
  *        tracing task. This should be set high enough so that accumulating
  *        partially exposed images (and potentially sending them over the network)
  *        is not the bottleneck.

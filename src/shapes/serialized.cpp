@@ -46,7 +46,7 @@ extern MTS_EXPORT_RENDER void pushSceneCleanupHandler(void (*cleanup)());
  *     \parameter{faceNormals}{\Boolean}{
  *       When set to \code{true}, any existing or computed vertex normals are
  *       discarded and \emph{face normals} will instead be used during rendering.
- *       This gives the rendered object a faceted apperance.\default{\code{false}}
+ *       This gives the rendered object a faceted appearance.\default{\code{false}}
  *	   }
  *     \parameter{maxSmoothAngle}{\Float}{
  *       When specified, Mitsuba will discard all vertex normals in the input mesh and rebuild

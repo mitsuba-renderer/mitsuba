@@ -65,7 +65,7 @@ MTS_NAMESPACE_BEGIN
  *
  * \remarks{
  *    \item Due to the data dependencies of this algorithm, the parallelization is
- *    limited to to the local machine (i.e. cluster-wide renderings are not implemented)
+ *    limited to the local machine (i.e. cluster-wide renderings are not implemented)
  *    \item This integrator does not handle participating media
  *    \item This integrator does not currently work with subsurface scattering
  *    models.
