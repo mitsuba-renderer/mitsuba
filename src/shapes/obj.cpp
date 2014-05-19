@@ -265,7 +265,8 @@ public:
 				if (triangles.size() > 0) {
 					/// make sure that we have unique names
 					if (geomNames.find(targetName) != geomNames.end())
-						targetName = formatString("%s_%i", targetName.c_str(), geomIndex++);
+						targetName = formatString("%s_%i", targetName.c_str(), geomIndex);
+					geomIndex += 1;
 					geomNames.insert(targetName);
 					if (shapeIndex < 0 || geomIndex-1 == shapeIndex)
 						createMesh(targetName, vertices, normals, texcoords,
@@ -280,7 +281,8 @@ public:
 				if (triangles.size() > 0 && !m_collapse) {
 					/// make sure that we have unique names
 					if (geomNames.find(name) != geomNames.end())
-						name = formatString("%s_%i", name.c_str(), geomIndex++);
+						name = formatString("%s_%i", name.c_str(), geomIndex);
+					geomIndex += 1;
 					geomNames.insert(name);
 					if (shapeIndex < 0 || geomIndex-1 == shapeIndex)
 						createMesh(name, vertices, normals, texcoords,
@@ -406,6 +408,7 @@ public:
 		}
 		Properties props("bitmap");
 		props.setString("filename", path.string());
+		props.setFloat("gamma", 1.0f);
 		ref<Texture> texture = static_cast<Texture *> (PluginManager::getInstance()->
 			createObject(MTS_CLASS(Texture), props));
 		texture->configure();
