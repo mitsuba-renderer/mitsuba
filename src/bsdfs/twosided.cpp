@@ -23,7 +23,7 @@
 MTS_NAMESPACE_BEGIN
 
 /*!\plugin{twosided}{Two-sided BRDF adapter}
- * \order{18}
+ * \order{19}
  * \parameters{
  *     \parameter{\Unnamed}{\BSDF}{A nested BRDF that should
  *     be turned into a two-sided scattering model. If two BRDFs

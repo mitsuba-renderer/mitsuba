@@ -22,7 +22,7 @@
 MTS_NAMESPACE_BEGIN
 
 /*!\plugin{mask}{Opacity mask}
- * \order{17}
+ * \order{18}
  * \parameters{
  *     \parameter{opacity}{\Spectrum\Or\Texture}{
  *          Specifies the per-channel opacity (where $1=$ completely opaque)\default{0.5}.

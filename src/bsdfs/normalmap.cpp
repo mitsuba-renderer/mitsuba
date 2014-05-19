@@ -21,6 +21,29 @@
 
 MTS_NAMESPACE_BEGIN
 
+/*! \plugin{normalmap}{Normal map modifier}
+ * \order{13}
+ * \icon{bsdf_bumpmap}
+ *
+ * \parameters{
+ *     \parameter{\Unnamed}{\Texture}{
+ *       The color values of this texture specify the perturbed
+ *       normals relative in the local surface coordinate system.
+ *     }
+ *     \parameter{\Unnamed}{\BSDF}{A BSDF model that should
+ *     be affected by the normal map}
+ * }
+ *
+ * This plugin is conceptually similar to the \pluginref{bump} map plugin
+ * but uses a normal map instead of a bump map. A normal map is a RGB texture, whose color channels
+ * encode the XYZ coordinates of the desired surface normals.
+ * These are specified \emph{relative} to the local shading frame,
+ * which means that a normal map with a value of $(0,0,1)$ everywhere
+ * causes no changes to the surface.
+ * To turn the 3D normal directions into (nonnegative) color values
+ * suitable for this plugin, the
+ * mapping $x \mapsto (x+1)/2$ must be applied to each component.
+ */
 class NormalMap : public BSDF {
 public:
 	NormalMap(const Properties &props) : BSDF(props) { }
@@ -61,7 +84,12 @@ public:
 			m_nested = static_cast<BSDF *>(child);
 		} else if (child->getClass()->derivesFrom(MTS_CLASS(Texture))) {
 			if (m_normals != NULL)
-				Log(EError, "Only a single normals texture can be specified!");
+				Log(EError, "Only a single normal texture can be specified!");
+			const Properties &props = child->getProperties();
+			if (props.getPluginName() == "bitmap" && !props.hasProperty("gamma"))
+				Log(EError, "When using a bitmap texture as a normal map, please explicitly specify "
+						"the 'gamma' parameter of the bitmap plugin. In most cases the following is the correct choice: "
+						"<float name=\"gamma\" value=\"1.0\"/>");
 			m_normals = static_cast<Texture *>(child);
 		} else {
 			BSDF::addChild(name, child);
@@ -192,7 +220,7 @@ protected:
 // ================ Hardware shader implementation ================
 
 /**
- * This is a quite approximate version of the bump map model -- it likely
+ * This is a quite approximate version of the normal map model -- it likely
  * won't match the reference exactly, but it should be good enough for
  * preview purposes
  */
