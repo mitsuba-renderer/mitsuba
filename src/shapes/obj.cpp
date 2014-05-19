@@ -52,15 +52,18 @@ MTS_NAMESPACE_BEGIN
  *	   }
  *     \parameter{flipTexCoords}{\Boolean}{
  *       Treat the vertical component of the texture as inverted? Most OBJ files use
- *       this convention. \default{\code{true}, i.e. flip them to get the
- *       correct coordinates}.
+ *       this convention. \default{\code{true}}
  *	   }
  *     \parameter{toWorld}{\Transform\Or\Animation}{
  *	      Specifies an optional linear object-to-world transformation.
  *        \default{none (i.e. object space $=$ world space)}
  *     }
+ *	   \parameter{shapeIndex}{\Integer}{
+ *	     When the file contains multiple meshes, this parameter can
+ *	     be used to select a single one. \default{\code{-1}, \mbox{i.e. load all}}
+ *	   }
  *	   \parameter{collapse}{\Boolean}{
- *	     Collapse all contained meshes into a single object \default{\code{false}}
+ *	     Collapse all meshes into a single shape \default{\code{false}}
  *	   }
  * }
  * \renderings{
@@ -134,7 +137,6 @@ MTS_NAMESPACE_BEGIN
  * valid vertex normals).
  *
  * \remarks{
- * \item The plugin currently only supports loading meshes constructed from triangles and quadrilaterals.
  * \item Importing geometry via OBJ files should only be used as an absolutely
  * last resort. Due to inherent limitations of this format, the files tend to be unreasonably
  * large, and parsing them requires significant amounts of memory and processing power. What's worse
@@ -205,6 +207,9 @@ public:
 		/* Causes all texture coordinates to be vertically flipped */
 		bool flipTexCoords = props.getBoolean("flipTexCoords", true);
 
+		/// When the file contains multiple meshes, this index specifies which one to load
+		int shapeIndex = props.getInteger("shapeIndex", -1);
+
 		/* Object-space -> World-space transformation */
 		Transform objectToWorld = props.getTransform("toWorld", Transform());
 
@@ -226,7 +231,7 @@ public:
 		std::set<std::string> geomNames;
 		std::vector<Vertex> vertexBuffer;
 		fs::path materialLibrary;
-		int geomIdx = 0;
+		int geomIndex = 0;
 		bool nameBeforeGeometry = false;
 		std::string materialName;
 
@@ -260,10 +265,11 @@ public:
 				if (triangles.size() > 0) {
 					/// make sure that we have unique names
 					if (geomNames.find(targetName) != geomNames.end())
-						targetName = formatString("%s_%i", targetName.c_str(), geomIdx++);
+						targetName = formatString("%s_%i", targetName.c_str(), geomIndex++);
 					geomNames.insert(targetName);
-					createMesh(targetName, vertices, normals, texcoords,
-						triangles, materialName, objectToWorld, vertexBuffer);
+					if (shapeIndex < 0 || geomIndex-1 == shapeIndex)
+						createMesh(targetName, vertices, normals, texcoords,
+							triangles, materialName, objectToWorld, vertexBuffer);
 					triangles.clear();
 				} else {
 					nameBeforeGeometry = true;
@@ -271,13 +277,14 @@ public:
 				name = newName;
 			} else if (buf == "usemtl") {
 				/* Flush if necessary */
-				if (triangles.size() > 0) {
+				if (triangles.size() > 0 && !m_collapse) {
 					/// make sure that we have unique names
 					if (geomNames.find(name) != geomNames.end())
-						name = formatString("%s_%i", name.c_str(), geomIdx++);
+						name = formatString("%s_%i", name.c_str(), geomIndex++);
 					geomNames.insert(name);
-					createMesh(name, vertices, normals, texcoords,
-						triangles, materialName, objectToWorld, vertexBuffer);
+					if (shapeIndex < 0 || geomIndex-1 == shapeIndex)
+						createMesh(name, vertices, normals, texcoords,
+							triangles, materialName, objectToWorld, vertexBuffer);
 					triangles.clear();
 					name = m_name;
 				}
@@ -298,27 +305,25 @@ public:
 				iss >> tmp; parse(t, 1, tmp);
 				iss >> tmp; parse(t, 2, tmp);
 				triangles.push_back(t);
-				if (iss >> tmp) {
-					t.p[1] = t.p[0];
-					t.uv[1] = t.uv[0];
-					t.n[1] = t.n[0];
-					parse(t, 0, tmp);
-
+				/* Handle n-gons assuming a convex shape */
+				while (iss >> tmp) {
+					t.p[1] = t.p[2];
+					t.uv[1] = t.uv[2];
+					t.n[1] = t.n[2];
+					parse(t, 2, tmp);
 					triangles.push_back(t);
 				}
-				if (iss >> tmp)
-					Log(EError, "Encountered an n-gon (with n>4)! Only "
-						"triangles and quads are supported by the OBJ loader.");
 			} else {
 				/* Ignore */
 			}
 		}
 		if (geomNames.find(name) != geomNames.end())
 			/// make sure that we have unique names
-			name = formatString("%s_%i", m_name.c_str(), geomIdx);
+			name = formatString("%s_%i", m_name.c_str(), geomIndex);
 
-		createMesh(name, vertices, normals, texcoords,
-			triangles, materialName, objectToWorld, vertexBuffer);
+		if (shapeIndex < 0 || geomIndex-1 == shapeIndex)
+			createMesh(name, vertices, normals, texcoords,
+				triangles, materialName, objectToWorld, vertexBuffer);
 
 		if (props.hasProperty("maxSmoothAngle")) {
 			if (m_faceNormals)
@@ -535,7 +540,7 @@ public:
 		bsdf->configure();
 
 		if (bump) {
-			props = Properties("bump");
+			props = Properties("bumpmap");
 			ref<BSDF> bumpBSDF = static_cast<BSDF *> (PluginManager::getInstance()->
 				createObject(MTS_CLASS(BSDF), props));
 
