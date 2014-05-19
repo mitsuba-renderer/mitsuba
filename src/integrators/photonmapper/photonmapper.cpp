@@ -437,7 +437,7 @@ public:
 
 		unsigned int bsdfType = bsdf->getType() & BSDF::EAll;
 
-		/* Irradiance cachq query -> trat as diffuse */
+		/* Irradiance cache query -> treat as diffuse */
 		bool isDiffuse = (bsdfType == BSDF::EDiffuseReflection) || cacheQuery;
 
 		bool hasSpecular = bsdfType & BSDF::EDelta;

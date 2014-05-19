@@ -31,7 +31,8 @@ this is a windowed Gaussian filter with configurable standard deviation.
 It produces pleasing results and never suffers from ringing, but may
 occasionally introduce too much blurring.
 When no reconstruction filter is explicitly requested, this is the default
-choice in Mitsuba.
+choice in Mitsuba. Takes a standard deviation parameter (\code{stddev})
+which is set to 0.5 pixels by default.
 \item[Mitchell-Netravali filter (\code{mitchell}):]
 Separable cubic spline reconstruction filter by Mitchell and Netravali
 \cite{Mitchell:1988:Reconstruction}
