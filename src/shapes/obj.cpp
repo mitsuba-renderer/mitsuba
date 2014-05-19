@@ -65,6 +65,9 @@ MTS_NAMESPACE_BEGIN
  *	   \parameter{collapse}{\Boolean}{
  *	     Collapse all meshes into a single shape \default{\code{false}}
  *	   }
+ *	   \parameter{loadMaterials}{\Boolean}{
+ *	     \mbox{Import materials from a \code{mtl} file, if it exists?\default{\code{true}}}
+ *	   }
  * }
  * \renderings{
  *     \label{fig:rungholt}
@@ -213,6 +216,9 @@ public:
 		/* Object-space -> World-space transformation */
 		Transform objectToWorld = props.getTransform("toWorld", Transform());
 
+		/* Import materials from a MTL file, if any? */
+		bool loadMaterials = props.getBoolean("loadMaterials", true);
+
 		/* Load the geometry */
 		Log(EInfo, "Loading geometry from \"%s\" ..", path.filename().string().c_str());
 		fs::ifstream is(path);
@@ -336,7 +342,7 @@ public:
 				m_meshes[i]->rebuildTopology(maxSmoothAngle);
 		}
 
-		if (!materialLibrary.empty())
+		if (!materialLibrary.empty() && loadMaterials)
 			loadMaterialLibrary(fileResolver, materialLibrary);
 
 		Log(EInfo, "Done with \"%s\" (took %i ms)", path.filename().string().c_str(), timer->getMilliseconds());
