@@ -154,6 +154,7 @@ public:
 
 		/// When the file contains multiple meshes, this index specifies which one to load
 		int shapeIndex = props.getInteger("shapeIndex", 0);
+		AssertEx(shapeIndex >= 0, "Shape index must be nonnegative!");
 
 		std::string name = (props.getID() != "unnamed") ? props.getID()
 			: formatString("%s@%i", filePath.stem().string().c_str(), shapeIndex);
