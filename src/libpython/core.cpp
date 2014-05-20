@@ -527,7 +527,7 @@ static bp::object pluginmgr_createobject_2(PluginManager *mgr, const Class *cls,
 	return cast(mgr->createObject(cls, props));
 }
 
-static ConfigurableObject *pluginmgr_create_helper(PluginManager *manager, bp::dict dict, std::map<std::string, ConfigurableObject *> &objs) {
+static ref<ConfigurableObject> pluginmgr_create_helper(PluginManager *manager, bp::dict dict, std::map<std::string, ConfigurableObject *> &objs) {
 	Properties properties;
 	bp::list items = dict.items();
 	std::map<std::string, ConfigurableObject *> children;
@@ -550,15 +550,19 @@ static ConfigurableObject *pluginmgr_create_helper(PluginManager *manager, bp::d
 			else
 				properties.setID(extractString());
 		} else if (extractDict.check()) {
-			children[name] = pluginmgr_create_helper(manager, extractDict(), objs);
+			ref<ConfigurableObject> obj = pluginmgr_create_helper(manager, extractDict(), objs);
+			children[name] = obj;
+			obj->incRef();
 		} else if (extractConfigurableObject.check()) {
-			children[name] = extractConfigurableObject();
+			ref<ConfigurableObject> obj = extractConfigurableObject();
+			children[name] = obj;
+			obj->incRef();
 		} else {
 			properties_wrapper::set(properties, name, tuple[1]);
 		}
 	}
 
-	ConfigurableObject *object;
+	ref<ConfigurableObject> object;
 	if (properties.getPluginName() == "scene") {
 		object = new Scene(properties);
 	} else if (properties.getPluginName() == "ref") {
@@ -567,12 +571,17 @@ static ConfigurableObject *pluginmgr_create_helper(PluginManager *manager, bp::d
 			SLog(EError, "id parameter of reference is missing!");
 		if (objs.find(id) == objs.end())
 			SLog(EError, "Could not find referenced object with id \"%s\"", id.c_str());
+		for (std::map<std::string, ConfigurableObject *>::iterator it = children.begin();
+			it != children.end(); ++it)
+			it->second->decRef();
 		return objs[id];
 	} else {
 		object = manager->createObject(properties);
 	}
 
 	if (properties.getID() != "unnamed") {
+		if (objs.find(properties.getID()) != objs.end())
+			SLog(EError, "Duplicate ID '%s'", properties.getID().c_str());
 		objs[properties.getID()] = object;
 		object->incRef();
 	}
@@ -581,15 +590,16 @@ static ConfigurableObject *pluginmgr_create_helper(PluginManager *manager, bp::d
 		it != children.end(); ++it) {
 		object->addChild(it->first, it->second);
 		it->second->setParent(object);
+		it->second->decRef();
 	}
 
 	object->configure();
 	return object;
 }
 
-static ConfigurableObject *pluginmgr_create(PluginManager *manager, bp::dict dict) {
+static ref<ConfigurableObject> pluginmgr_create(PluginManager *manager, bp::dict dict) {
 	std::map<std::string, ConfigurableObject *> objs;
-	ConfigurableObject *result = pluginmgr_create_helper(manager, dict, objs);
+	ref<ConfigurableObject> result = pluginmgr_create_helper(manager, dict, objs);
 	for (std::map<std::string, ConfigurableObject *>::iterator it = objs.begin();
 			it != objs.end(); ++it)
 		it->second->decRef();
