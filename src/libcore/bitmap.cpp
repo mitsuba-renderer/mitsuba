@@ -2815,7 +2815,8 @@ void Bitmap::writeOpenEXR(Stream *stream) const {
 	Imf::ChannelList &channels = header.channels();
 	if (!m_channelNames.empty()) {
 		if (m_channelNames.size() != (size_t) m_channelCount)
-			Log(EError, "writeOpenEXR(): 'channelNames' has the wrong number of entries!");
+			Log(EError, "writeOpenEXR(): 'channelNames' has the wrong number of entries (%i, expected %i)!",
+				(int) m_channelNames.size(), (int) m_channelCount);
 		for (size_t i=0; i<m_channelNames.size(); ++i)
 			channels.insert(m_channelNames[i].c_str(), Imf::Channel(compType));
 	} else if (pixelFormat == ELuminance || pixelFormat == ELuminanceAlpha) {

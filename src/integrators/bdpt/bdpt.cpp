@@ -56,7 +56,7 @@ MTS_NAMESPACE_BEGIN
  *     	paths starting at the emitters and the sensor and connecting them in every possible way.
  *     	This works particularly well in closed scenes as the one shown above. Here, the unidirectional
  *     	path tracer has severe difficulties finding some of the indirect illumination paths.
- *     	Modeled after after a scene by Eric Veach.
+ *     	Modeled after a scene by Eric Veach.
  *     }
  * }
  * \renderings{

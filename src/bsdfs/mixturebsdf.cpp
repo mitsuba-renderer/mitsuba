@@ -23,7 +23,7 @@
 MTS_NAMESPACE_BEGIN
 
 /*! \plugin{mixturebsdf}{Mixture material}
- * \order{15}
+ * \order{16}
  * \parameters{
  *     \parameter{weights}{\String}{A comma-separated list of BSDF weights}
  *     \parameter{\Unnamed}{\BSDF}{Multiple BSDF instances that should be

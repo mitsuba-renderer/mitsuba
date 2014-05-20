@@ -80,7 +80,7 @@ MTS_NAMESPACE_BEGIN
  *
  * The implementation loads a captured illumination environment from a image in
  * latitude-longitude format and turns it into an infinitely distant emitter.
- * The image could either be be a processed photograph or a rendering made using the
+ * The image could either be a processed photograph or a rendering made using the
  * \pluginref{spherical} sensor. The direction conventions of this transformation
  * are shown in (b).
  * The plugin can work with all types of images that are natively supported by Mitsuba

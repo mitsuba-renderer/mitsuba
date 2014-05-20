@@ -24,7 +24,7 @@
 MTS_NAMESPACE_BEGIN
 
 /*! \plugin{blendbsdf}{Blended material}
- * \order{16}
+ * \order{17}
  * \parameters{
  *     \parameter{weight}{\Float\Or\Texture}{A floating point value or texture
  *      with values between zero and one. The extreme values zero and one activate the

@@ -113,6 +113,11 @@ public:
 		} else if (child->getClass()->derivesFrom(MTS_CLASS(Texture))) {
 			if (m_displacement != NULL)
 				Log(EError, "Only a single displacement texture can be specified!");
+			const Properties &props = child->getProperties();
+			if (props.getPluginName() == "bitmap" && !props.hasProperty("gamma"))
+				Log(EError, "When using a bitmap texture as a bump map, please explicitly specify "
+						"the 'gamma' parameter of the bitmap plugin. In most cases the following is the correct choice: "
+						"<float name=\"gamma\" value=\"1.0\"/>");
 			m_displacement = static_cast<Texture *>(child);
 		} else {
 			BSDF::addChild(name, child);

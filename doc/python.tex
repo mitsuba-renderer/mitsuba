@@ -545,7 +545,7 @@ command-line executable.
 \subsubsection{Simultaneously rendering multiple versions of a scene}
 Sometimes it is useful to be able to submit multiple scenes to the rendering scheduler
 at the same time, e.g. when rendering on a big cluster, where one image is not enough to keep all
-cores on all machines busy. This is is quite easy to do by simply launching multiple \code{RenderJob}
+cores on all machines busy. This is quite easy to do by simply launching multiple \code{RenderJob}
 instances before issuing the \code{queue.waitLeft} call.
 
 However, things go wrong when rendering multiple versions of the \emph{same} scene simultaneously (for instance
@@ -753,7 +753,7 @@ As before, some changes will be necessary to get this to run on PySide.
 When using this snippet, please be wary of threading-related issues; the key thing to remember is that
 in Qt, only the main thread is allowed to modify Qt widgets. On the other hand, rendering and logging-related
 callbacks will be invoked from different Mitsuba-internal threads---this means that it's not possible to e.g.
-directly update the status bar message from the callback \code{finishJobEvent}. To do this, we must use
+directly update the status bar message from the callback \code{finishJobEvent}. To do this, we must
 use Qt's \code{QueuedConnection} to communicate this event to the main thread via signals and slots. See the
 code that updates the status and progress bar for more detail.
 \begin{python}

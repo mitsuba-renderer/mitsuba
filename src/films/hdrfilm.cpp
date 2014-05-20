@@ -155,7 +155,7 @@ MTS_NAMESPACE_BEGIN
  *
  * Apart from querying the render time,
  * memory usage, and other scene-related information, it is also possible
- * to `paste' an existing parameter that was provided to another plugin---for instance,the
+ * to `paste' an existing parameter that was provided to another plugin---for instance,
  * the camera transform matrix would be obtained as \code{\$sensor['toWorld']}. The name of
  * the active integrator plugin is given by \code{\$integrator['type']}, and so on.
  * All of these can be mixed to build larger fragments, as following example demonstrates.

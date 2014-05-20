@@ -48,7 +48,7 @@ MTS_NAMESPACE_BEGIN
  *       \begin{enumerate}[(i)]
  *          \item \code{gamma}: Exposure and gamma correction (default)
  *          \vspace{-1mm}
- *          \item \code{reinhard}: Apply the the
+ *          \item \code{reinhard}: Apply the
  *          tonemapping technique by Reinhard et al. \cite{Reinhard2002Photographic}
  *          followd by gamma correction.
  *       \vspace{-4mm}

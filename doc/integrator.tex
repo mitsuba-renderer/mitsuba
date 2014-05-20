@@ -7,7 +7,7 @@ The framework distinguishes between \emph{sampling-based} integrators and
 \emph{generic} ones. A sampling-based integrator is able to generate
 (usually unbiased) estimates of the incident radiance along a specified rays, and this
 is done a large number of times to render a scene. A generic integrator
-is more like a black box, where no assumptions are made on how the the image is
+is more like a black box, where no assumptions are made on how the image is
 created. For instance, the VPL renderer uses OpenGL to rasterize the scene
 using hardware acceleration, which certainly doesn't fit into the sampling-based pattern.
 For that reason, it must be implemented as a generic integrator.
@@ -261,7 +261,7 @@ As you can see, we did something slightly different in the distance
 renderer fragment above (we called \code{RadianceQueryRecord::rayIntersect()}
 on the supplied parameter \code{rRec}), and the reason for this is \emph{nesting}.
 \subsection{Nesting}
-The idea of of nesting is that sampling-based rendering techniques can be
+The idea of nesting is that sampling-based rendering techniques can be
 embedded within each other for added flexibility: for instance, one
 might concoct a  1-bounce indirect rendering technique complete with
 irradiance caching and adaptive integration simply by writing the following

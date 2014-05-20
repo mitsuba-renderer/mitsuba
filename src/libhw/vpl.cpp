@@ -107,12 +107,19 @@ void VPLShaderManager::setScene(const Scene *scene) {
 					shape = instantiatedShapes[j];
 					if (!m_renderer->unregisterGeometry(shape))
 						continue;
-					m_renderer->unregisterShaderForResource(shape->getBSDF());
+					const BSDF *bsdf = shape->getBSDF();
+					if (!bsdf)
+						bsdf = const_cast<Shape *>(shape)->createTriMesh()->getBSDF();
+					m_renderer->unregisterShaderForResource(bsdf);
 				}
 			} else {
+				const BSDF *bsdf = shape->getBSDF();
+				if (!bsdf)
+					bsdf = const_cast<Shape *>(shape)->createTriMesh()->getBSDF();
+
 				if (!m_renderer->unregisterGeometry(shape))
 					continue;
-				m_renderer->unregisterShaderForResource(shape->getBSDF());
+				m_renderer->unregisterShaderForResource(bsdf);
 			}
 		}
 
@@ -168,9 +175,13 @@ void VPLShaderManager::setScene(const Scene *scene) {
 				if (!gpuGeo)
 					continue;
 
-				Shader *shader = m_renderer->registerShaderForResource(shape->getBSDF());
+				const BSDF *bsdf = shape->getBSDF();
+				if (!bsdf)
+					bsdf = gpuGeo->getTriMesh()->getBSDF();
+
+				Shader *shader = m_renderer->registerShaderForResource(bsdf);
 				if (shader && !shader->isComplete()) {
-					m_renderer->unregisterShaderForResource(shape->getBSDF());
+					m_renderer->unregisterShaderForResource(bsdf);
 					shader = NULL;
 				}
 
@@ -192,13 +203,14 @@ void VPLShaderManager::setScene(const Scene *scene) {
 			GPUGeometry *gpuGeo = m_renderer->registerGeometry(shape);
 			if (!gpuGeo)
 				continue;
-
-			Shader *shader = m_renderer->registerShaderForResource(shape->getBSDF());
+			const BSDF *bsdf = shape->getBSDF();
+			if (!bsdf)
+				bsdf = gpuGeo->getTriMesh()->getBSDF();
+			Shader *shader = m_renderer->registerShaderForResource(bsdf);
 			if (shader && !shader->isComplete()) {
-				m_renderer->unregisterShaderForResource(shape->getBSDF());
+				m_renderer->unregisterShaderForResource(bsdf);
 				shader = NULL;
 			}
-
 			gpuGeo->setShader(shader);
 			m_geometry.push_back(std::make_pair(gpuGeo, identityTrafo));
 

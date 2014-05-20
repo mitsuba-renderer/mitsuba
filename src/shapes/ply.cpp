@@ -51,7 +51,7 @@ MTS_NAMESPACE_BEGIN
  *	   }
  *     \parameter{faceNormals}{\Boolean}{
  *       When set to \code{true}, Mitsuba will use face normals when rendering
- *       the object, which will give it a faceted apperance. \default{\code{false}}
+ *       the object, which will give it a faceted appearance. \default{\code{false}}
  *	   }
  *     \parameter{maxSmoothAngle}{\Float}{
  *       When specified, Mitsuba will discard all vertex normals in the input mesh and rebuild

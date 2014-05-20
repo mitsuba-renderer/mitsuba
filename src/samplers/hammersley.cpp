@@ -70,7 +70,7 @@ MTS_NAMESPACE_BEGIN
  * The Hammerlsey sequence is closely related to the Halton sequence and yields a very
  * high quality point set that is slightly more regular (and has lower discrepancy),
  * especially in the first few dimensions. As is the case with the Halton sequence,
- * the points should be scrambled to reduce patterns that manifest due due to correlations
+ * the points should be scrambled to reduce patterns that manifest due to correlations
  * in higher dimensions. Please refer to the \pluginref{halton} page for more information
  * on how this works.
  *

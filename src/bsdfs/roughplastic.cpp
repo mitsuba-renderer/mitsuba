@@ -103,13 +103,13 @@ MTS_NAMESPACE_BEGIN
  * interaction of light with a diffuse base surface coated by a thin dielectric
  * layer (where the coating layer is now \emph{rough}). This is a convenient
  * abstraction rather than a restriction. In other words, there are many
- * materials that can be rendered with this model, even if they might not not
+ * materials that can be rendered with this model, even if they might not
  * fit this description perfectly well.
  *
  * The simplicity of this setup makes it possible to account for interesting
  * nonlinear effects due to internal scattering, which is controlled by
  * the \texttt{nonlinear} parameter. For more details, please refer to the description
- * of this parameter given in the the \pluginref{plastic} plugin section
+ * of this parameter given in the \pluginref{plastic} plugin section
  * on \pluginpage{plastic}.
  *
  *

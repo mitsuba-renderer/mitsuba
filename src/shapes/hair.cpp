@@ -65,7 +65,7 @@ MTS_NAMESPACE_BEGIN
  *     \fbox{\includegraphics[width=6cm]{images/shape_hair}}\hspace{4.5cm}
  *     \caption{A close-up of the hair shape rendered with a diffuse
  *     scattering model (an actual hair scattering model will
- *     be needed for realistic apperance)}
+ *     be needed for realistic appearance)}
  * }
  * The plugin implements a space-efficient acceleration structure for
  * hairs made from many straight cylindrical hair segments with miter

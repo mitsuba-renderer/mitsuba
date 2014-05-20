@@ -67,11 +67,11 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{resolution}{\Integer}{Specifies the horizontal resolution of the precomputed
  *         image that is used to represent the sun environment map \default{512, i.e. 512$\times$256}}
  *     \parameter{sunScale}{\Float}{
- *         This parameter can be used to separately scale the the amount of illumination
+ *         This parameter can be used to separately scale the amount of illumination
  *         emitted by the sun. \default{1}
  *     }
  *     \parameter{skyScale}{\Float}{
- *         This parameter can be used to separately scale the the amount of illumination
+ *         This parameter can be used to separately scale the amount of illumination
  *         emitted by the sky.\default{1}
  *     }
  *     \parameter{sunRadiusScale}{\Float}{

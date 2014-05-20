@@ -96,7 +96,7 @@ MTS_NAMESPACE_BEGIN
  * Internally, this is model simulates the interaction of light with a diffuse
  * base surface coated by a thin dielectric layer. This is a convenient
  * abstraction rather than a restriction. In other words, there are many
- * materials that can be rendered with this model, even if they might not not
+ * materials that can be rendered with this model, even if they might not
  * fit this description perfectly well.
  *
  * \begin{figure}[h]
