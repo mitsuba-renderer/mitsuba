@@ -29,8 +29,7 @@ static void appendVPL(const Scene *scene, Random *random,
 	prunedVPLs.incrementBase();
 
 	const Sensor *sensor = scene->getSensor();
-	Float time = sensor->getShutterOpen()
-		+ sensor->getShutterOpenTime() * random->nextFloat();
+	Float time = random->nextFloat();
 
 	if (prune) {
 		/* Possibly reject VPLs if they are unlikely to be
@@ -43,7 +42,7 @@ static void appendVPL(const Scene *scene, Random *random,
 		Vector2i size = sensor->getFilm()->getCropSize();
 		for (int i=0; i<nSamples; ++i) {
 			if (sensor->needsTimeSample())
-				time = sensor->sampleTime(random->nextFloat());
+				time = random->nextFloat();
 
 			sensor->sampleRay(ray, Point2(random->nextFloat() * size.x,
 					random->nextFloat() * size.y), Point2(0.5f), time);
