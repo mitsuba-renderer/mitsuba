@@ -269,7 +269,7 @@ protected:
 		} else {
 			const Shape *shape = m_shapes[shapeIdx];
 			if (shape->rayIntersect(ray, mint, maxt, t,
-					reinterpret_cast<uint8_t*>(temp) + 8)) {
+					reinterpret_cast<uint8_t*>(temp) + 2*sizeof(IndexType))) {
 				cache->shapeIndex = shapeIdx;
 				cache->primIndex = KNoTriangleFlag;
 				return true;
@@ -291,7 +291,7 @@ protected:
 			uint32_t shapeIndex = ta.shapeIndex;
 			const Shape *shape = m_shapes[shapeIndex];
 			if (shape->rayIntersect(ray, mint, maxt, t,
-					reinterpret_cast<uint8_t*>(temp) + 8)) {
+					reinterpret_cast<uint8_t*>(temp) + 2*sizeof(IndexType))) {
 				cache->shapeIndex = shapeIndex;
 				cache->primIndex = KNoTriangleFlag;
 				return true;
@@ -428,7 +428,7 @@ protected:
 			its.time = ray.time;
 		} else {
 			shape->fillIntersectionRecord(ray,
-				reinterpret_cast<const uint8_t*>(temp) + 8, its);
+				reinterpret_cast<const uint8_t*>(temp) + 2*sizeof(IndexType), its);
 		}
 	}
 

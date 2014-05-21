@@ -189,7 +189,7 @@ bool ShapeKDTree::rayIntersect(const Ray &ray, Float &t, ConstShapePtr &shape,
 					Intersection its;
 					its.t = t;
 					shape->fillIntersectionRecord(ray,
-						reinterpret_cast<const uint8_t*>(temp) + 8, its);
+						reinterpret_cast<const uint8_t*>(temp) + 2*sizeof(IndexType), its);
 					n = its.geoFrame.n;
 					uv = its.uv;
 					if (its.shape)
@@ -330,7 +330,7 @@ void ShapeKDTree::rayIntersectPacket(const RayPacket4 &packet,
 
 						if (shape->rayIntersect(ray, searchStart.f[i], searchEnd.f[i], t,
 								reinterpret_cast<uint8_t *>(temp)
-								+ i * MTS_KD_INTERSECTION_TEMP + 8)) {
+								+ i * MTS_KD_INTERSECTION_TEMP + 2*sizeof(IndexType))) {
 							its.t.f[i] = t;
 							its.shapeIndex.i[i] = kdTri.shapeIndex;
 							its.primIndex.i[i] = KNoTriangleFlag;
