@@ -23,6 +23,12 @@
 
 MTS_NAMESPACE_BEGIN
 
+inline Float cuberoot(Float x) {
+	return (x < 0.0f) ?
+			-pow(-x, (Float) (1.0f/3.0f)) :
+			pow(x, (Float) (1.0f/3.0f));
+}
+
 /*!\plugin{rayleigh}{Rayleigh phase function}
  * \order{3}
  *
@@ -54,8 +60,8 @@ public:
 
 		Float z = 2 * (2*sample.x - 1),
 			  tmp = std::sqrt(z*z+1),
-			  A = std::pow(z+tmp, (Float) (1.0f/3.0f)),
-			  B = std::pow(z-tmp, (Float) (1.0f/3.0f)),
+			  A = cuberoot(z+tmp),
+			  B = cuberoot(z-tmp),
 			  cosTheta = A + B,
 			  sinTheta = math::safe_sqrt(1.0f-cosTheta*cosTheta),
 			  phi = 2*M_PI*sample.y,
