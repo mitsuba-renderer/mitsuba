@@ -651,7 +651,7 @@ public:
 		      majorRadius = Aprime != 0 ? std::sqrt(F / Aprime) : 0,
 		      minorRadius = Cprime != 0 ? std::sqrt(F / Cprime) : 0;
 
-		if (m_filterType == ETrilinear || minorRadius == 0 || F < 0) {
+		if (m_filterType == ETrilinear || !(minorRadius > 0) || !(majorRadius > 0) || F < 0) {
 			/* Determine a suitable mip map level, while preferring
 			   blurring over aliasing */
 			Float level = log2(std::max(majorRadius, Epsilon));
