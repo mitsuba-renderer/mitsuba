@@ -258,7 +258,7 @@ public:
 			if (!m_channel.empty()) {
 				/* Create a texture from a certain channel of an image */
 				pixelFormat = Bitmap::ELuminance;
-				bitmap = bitmap->separateChannel(findChannel(bitmap, m_channel));
+				bitmap = bitmap->extractChannel(findChannel(bitmap, m_channel));
 				if (m_channel == "a")
 					bitmap->setGamma(1.0f);
 			} else {
@@ -369,7 +369,7 @@ public:
 		if (!m_channel.empty()) {
 			/* Create a texture from a certain channel of an image */
 			pixelFormat = Bitmap::ELuminance;
-			bitmap = bitmap->separateChannel(findChannel(bitmap, m_channel));
+			bitmap = bitmap->extractChannel(findChannel(bitmap, m_channel));
 			if (m_channel == "a")
 				bitmap->setGamma(1.0f);
 		} else {

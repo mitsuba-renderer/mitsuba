@@ -54,7 +54,7 @@ public:
 	 * The object will automatically be deallocated once
 	 * the reference count reaches zero.
 	 */
-	void decRef() const;
+	void decRef(bool autoDeallocate = true) const;
 
 	/// Retrieve this object's class
 	virtual const Class *getClass() const;

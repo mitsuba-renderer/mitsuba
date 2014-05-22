@@ -649,12 +649,28 @@ static void bitmap_applyMatrix(Bitmap *bitmap, bp::list list) {
 	bitmap->applyMatrix(matrix);
 }
 
-static void bitmap_write(Bitmap *bitmap, Bitmap::EFileFormat fmt, Stream *stream) {
+static void bitmap_write1(Bitmap *bitmap, Bitmap::EFileFormat fmt, Stream *stream) {
 	bitmap->write(fmt, stream);
 }
 
 static void bitmap_write2(Bitmap *bitmap, Bitmap::EFileFormat fmt, Stream *stream, int compression) {
 	bitmap->write(fmt, stream, compression);
+}
+
+static void bitmap_write3(Bitmap *bitmap, Bitmap::EFileFormat fmt, const fs::path &path) {
+	bitmap->write(fmt, path);
+}
+
+static void bitmap_write4(Bitmap *bitmap, Bitmap::EFileFormat fmt, const fs::path &path, int compression) {
+	bitmap->write(fmt, path, compression);
+}
+
+static void bitmap_write5(Bitmap *bitmap, const fs::path &path) {
+	bitmap->write(path);
+}
+
+static void bitmap_write6(Bitmap *bitmap, const fs::path &path, int compression) {
+	bitmap->write(path, compression);
 }
 
 static void bitmap_convert_0(Bitmap *bitmap, Bitmap *target) {
@@ -686,6 +702,29 @@ static ref<Bitmap> bitmap_convert_5(Bitmap *bitmap, Bitmap::EPixelFormat pixelFo
 
 static ref<Bitmap> bitmap_convert_6(Bitmap *bitmap, Bitmap::EPixelFormat pixelFormat, Bitmap::EComponentFormat componentFormat) {
 	return bitmap->convert(pixelFormat, componentFormat);
+}
+
+static bp::dict bitmap_split(Bitmap *bitmap) {
+	std::map<std::string, Bitmap *> map = bitmap->split();
+	bp::dict result;
+	for (std::map<std::string, Bitmap *>::iterator it = map.begin(); it != map.end(); ++it)
+		result[it->first] = bp::object(ref<Bitmap>(it->second));
+	return result;
+}
+
+static bp::object bitmap_plot(Bitmap *_bitmap) {
+	bp::dict locals;
+	locals["bitmap"] = ref<Bitmap>(_bitmap);
+	bp::exec("import matplotlib.pyplot as plt\n"
+			 "handle = plt.imshow(bitmap.buffer())\n", bp::object(), locals);
+	return locals["handle"];
+}
+
+static ref<Bitmap> bitmap_extractChannels(Bitmap::EPixelFormat fmt, Bitmap *bitmap, bp::list list) {
+	std::vector<int> channels(bp::len(list));
+	for (int i=0; i<bp::len(list); ++i)
+		channels[i] = bp::extract<int>(list[i]);
+	return bitmap->extractChannels(fmt, channels);
 }
 
 static void bitmap_fromByteArray(Bitmap *bitmap, bp::object obj) {
@@ -973,7 +1012,7 @@ struct NativeBuffer {
 	}
 };
 
-static NativeBuffer bitmap_getNativeBuffer(Bitmap *bitmap) {
+static NativeBuffer bitmap_buffer(Bitmap *bitmap) {
 	int ndim = bitmap->getChannelCount() == 1 ? 2 : 3;
 	Py_ssize_t shape[3] = {
 		(Py_ssize_t) bitmap->getHeight(),
@@ -1317,8 +1356,8 @@ void export_core() {
 
 	BP_CLASS(Bitmap, Object, (bp::init<Bitmap::EPixelFormat, Bitmap::EComponentFormat, const Vector2i &>()))
 		.def(bp::init<Bitmap::EPixelFormat, Bitmap::EComponentFormat, const Vector2i &, int>())
-		.def(bp::init<Bitmap::EFileFormat, Stream *>())
-		.def(bp::init<Bitmap::EFileFormat, Stream *, std::string>())
+		.def(bp::init<Bitmap::EFileFormat, Stream *, bp::optional<std::string> >())
+		.def(bp::init<fs::path, bp::optional<std::string> >())
 		.def("getPixelFormat", &Bitmap::getPixelFormat)
 		.def("getComponentFormat", &Bitmap::getComponentFormat)
 		.def("getSize", &Bitmap::getSize, BP_RETURN_VALUE)
@@ -1342,11 +1381,16 @@ void export_core() {
 		.def("drawVLine", &Bitmap::drawVLine)
 		.def("clone", &Bitmap::clone, BP_RETURN_VALUE)
 		.def("clear", &Bitmap::clear)
-		.def("write", &bitmap_write)
+		.def("write", &bitmap_write1)
 		.def("write", &bitmap_write2)
+		.def("write", &bitmap_write3)
+		.def("write", &bitmap_write4)
+		.def("write", &bitmap_write5)
+		.def("write", &bitmap_write6)
 		.def("tonemapReinhard", &bitmap_tonemapReinhard)
 		.def("expand", &Bitmap::expand, BP_RETURN_VALUE)
-		.def("separateChannel", &Bitmap::separateChannel, BP_RETURN_VALUE)
+		.def("extractChannel", &Bitmap::extractChannel, BP_RETURN_VALUE)
+		.def("extractChannels", bitmap_extractChannels, BP_RETURN_VALUE)
 		.def("join", &bitmap_join, BP_RETURN_VALUE)
 		.def("crop", &Bitmap::crop)
 		.def("flipVertically", &Bitmap::flipVertically)
@@ -1383,7 +1427,9 @@ void export_core() {
 		.def("fromByteArray", &bitmap_fromByteArray)
 		.def("toByteArray", &bitmap_toByteArray_1)
 		.def("toByteArray", &bitmap_toByteArray_2)
-		.def("getNativeBuffer", bitmap_getNativeBuffer)
+		.def("buffer", bitmap_buffer)
+		.def("split", bitmap_split)
+		.def("plot", bitmap_plot)
 		.staticmethod("join")
 		.staticmethod("arithmeticOperation");
 

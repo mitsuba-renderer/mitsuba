@@ -656,7 +656,7 @@ a reference to the associated \code{Thread} instance if it was already registere
 The following listing contains a complete program that
 renders a sphere and efficiently displays it in a PyQt window
 (to make this work in PySide, change all occurrences of \code{PyQt4} to \code{PySide} in the
-import declarations and rename the function call to \code{getNativeBuffer()} to \code{toByteArray()},
+import declarations and rename the function call to \code{buffer()} to \code{toByteArray()},
 which is a tiny bit less efficient).
 \begin{python}
 import mitsuba, multiprocessing, sys
@@ -720,7 +720,7 @@ class MitsubaView(QMainWindow):
         bitmap.write(Bitmap.EPNG, outFile)
         outFile.close()
         # Also create a QImage (using a fast memory copy in C++)
-        return QImage(bitmap.getNativeBuffer(),
+        return QImage(bitmap.buffer(),
             size.x, size.y, QImage.Format_RGB888)
 
     def paintEvent(self, event):
@@ -838,7 +838,7 @@ class MitsubaRenderBuffer(RenderListener):
 
             # Create a QImage that is backed by the Mitsuba Bitmap instance
             # (i.e. without doing unnecessary bitmap copy operations)
-            self.qimage = QImage(self.bitmap.getNativeBuffer(), self.size.x,
+            self.qimage = QImage(self.bitmap.buffer(), self.size.x,
                                  self.size.y, QImage.Format_RGB888)
 
             self.callback(MitsubaRenderBuffer.GEOMETRY_CHANGED)
@@ -1002,5 +1002,22 @@ if __name__ == '__main__':
 Suppose that \code{bitmap} contains a \code{mitsuba.core.Bitmap} instance (e.g. a rendering). Then the following snippet efficiently turns the image into a NumPy array:
 \begin{python}
 import numpy as np
-array = np.array(bitmap.getNativeBuffer())
+array = np.array(bitmap.buffer())
+\end{python}
+The next snippet shows how to extract an individual image
+from the channels of a larger multi-channel EXR image (e.g. channels named \code{albedo.r}, \code{albedo.g}, \code{albedo.b})
+and display them using matplotlib.
+\begin{python}
+from mitsuba.core import *
+import matplotlib.pyplot as plt
+import numpy as np
+# Load all channels of a multi-channel EXR image and split them into structural components
+bitmaps = Bitmap('multi_channel.exr', '*').split()
+# Create a NumPy array of one of them
+buf = np.array(bitmaps['albedo'].buffer())
+# Tonemap
+buf = buf ** (1/2.2)
+# Display
+plt.imshow(buf)
+plt.show()
 \end{python}

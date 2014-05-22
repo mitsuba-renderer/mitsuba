@@ -293,6 +293,15 @@ Bitmap::Bitmap(EPixelFormat pFormat, EComponentFormat cFormat,
 }
 
 Bitmap::Bitmap(EFileFormat format, Stream *stream, const std::string &prefix) : m_data(NULL), m_ownsData(false) {
+	readStream(format, stream, prefix);
+}
+
+Bitmap::Bitmap(const fs::path &path, const std::string &prefix) : m_data(NULL), m_ownsData(false) {
+	ref<FileStream> fs = new FileStream(path, FileStream::EReadOnly);
+	readStream(EAuto, fs, prefix);
+}
+
+void Bitmap::readStream(EFileFormat format, Stream *stream, const std::string &prefix)  {
 	if (format == EAuto) {
 		/* Try to automatically detect the file format */
 		size_t pos = stream->getPos();
@@ -342,6 +351,33 @@ Bitmap::Bitmap(EFileFormat format, Stream *stream, const std::string &prefix) : 
 		default:
 			Log(EError, "Bitmap: Invalid file format!");
 	}
+}
+
+void Bitmap::write(const fs::path &path, int compression) const {
+	std::string s = boost::to_lower_copy(path.string());
+	EFileFormat format;
+	if (boost::ends_with(s, "jpeg") || boost::ends_with(s, "jpg"))
+		format = EJPEG;
+	else if (boost::ends_with(s, "png"))
+		format = EPNG;
+	else if (boost::ends_with(s, "exr"))
+		format = EOpenEXR;
+	else if (boost::ends_with(s, "hdr") || boost::ends_with(s, "rgbe"))
+		format = ERGBE;
+	else if (boost::ends_with(s, "pfm"))
+		format = EPFM;
+	else if (boost::ends_with(s, "ppm"))
+		format = EPPM;
+	else {
+		Log(EError, "No supported bitmap file extension: \"%s\"", path.string().c_str());
+		return;
+	}
+	write(format, path, compression);
+}
+
+void Bitmap::write(EFileFormat format, const fs::path &path, int compression) const {
+	ref<FileStream> fs = new FileStream(path, FileStream::ETruncReadWrite);
+	write(format, fs, compression);
 }
 
 void Bitmap::write(EFileFormat format, Stream *stream, int compression) const {
@@ -1691,14 +1727,148 @@ void Bitmap::tonemapReinhard(Float &logAvgLuminance, Float &maxLuminance, Float 
 	}
 }
 
-ref<Bitmap> Bitmap::separateChannel(int channelIndex) {
+
+std::map<std::string, Bitmap *> Bitmap::split() const {
+	typedef std::map<std::string, int> ChannelMap;
+	std::map<std::string, Bitmap *> result;
+	if (m_channelNames.empty())
+		Log(EError, "Bitmap::split(): color channel names not available!");
+
+	ChannelMap channels;
+	for (size_t i=0; i<m_channelNames.size(); ++i)
+		channels[boost::to_lower_copy(m_channelNames[i])] = i;
+
+	for (size_t i=0; i<m_channelNames.size(); ++i) {
+		std::string name = boost::to_lower_copy(m_channelNames[i]);
+		if (channels.find(name) == channels.end())
+			continue;
+		std::string prefix = "";
+		char postfix = '\0';
+
+		if (!name.empty()) {
+			prefix = name.substr(0, name.length()-1);
+			postfix = name[name.length()-1];
+		}
+
+		std::vector<int> extractChannels;
+		EPixelFormat extractFormat;
+
+		ChannelMap::iterator
+			itR = channels.find(prefix + "r"),
+			itG = channels.find(prefix + "g"),
+			itB = channels.find(prefix + "b"),
+			itA = channels.find(prefix + "a"),
+			itX = channels.find(prefix + "x"),
+			itY = channels.find(prefix + "y"),
+			itZ = channels.find(prefix + "z");
+
+		bool maybeRGB = postfix == 'r' || postfix == 'g' || postfix == 'b' || postfix == 'a';
+		bool maybeXYZ = postfix == 'x' || postfix == 'y' || postfix == 'z' || postfix == 'a';
+		bool maybeY = postfix == 'y' || postfix == 'a';
+
+		if (maybeRGB && itR != channels.end() && itG != channels.end() && itB != channels.end()) {
+			extractFormat = ERGB;
+			extractChannels.push_back(itR->second);
+			extractChannels.push_back(itG->second);
+			extractChannels.push_back(itB->second);
+			if (itA != channels.end()) {
+				extractFormat = ERGBA;
+				extractChannels.push_back(itA->second);
+				channels.erase(prefix + "a");
+			}
+			channels.erase(prefix + "r");
+			channels.erase(prefix + "g");
+			channels.erase(prefix + "b");
+		} else if (maybeXYZ && itX != channels.end() && itY != channels.end() && itZ != channels.end()) {
+			extractFormat = EXYZ;
+			extractChannels.push_back(itX->second);
+			extractChannels.push_back(itY->second);
+			extractChannels.push_back(itZ->second);
+			if (itA != channels.end()) {
+				extractFormat = EXYZA;
+				extractChannels.push_back(itA->second);
+				channels.erase(prefix + "a");
+			}
+			channels.erase(prefix + "x");
+			channels.erase(prefix + "y");
+			channels.erase(prefix + "z");
+		} else if (maybeY && itY != channels.end()) {
+			extractFormat = ELuminance;
+			extractChannels.push_back(itY->second);
+			if (itA != channels.end()) {
+				extractFormat = ELuminanceAlpha;
+				extractChannels.push_back(itA->second);
+				channels.erase(prefix + "a");
+			}
+			channels.erase(prefix + "y");
+		} else {
+			extractFormat = ELuminance;
+			extractChannels.push_back(i);
+			channels.erase(name);
+		}
+
+		std::vector<std::string> channelNames;
+		for (int i=0; i<extractChannels.size(); ++i)
+			channelNames.push_back(m_channelNames[extractChannels[i]]);
+		Bitmap *bitmap = NULL;
+		{
+			ref<Bitmap> _bitmap = this->extractChannels(extractFormat, extractChannels);
+			bitmap = _bitmap.get();
+			bitmap->incRef();
+		}
+		bitmap->decRef(false);
+		bitmap->setChannelNames(channelNames);
+
+		prefix = m_channelNames[i];
+		if (!prefix.empty())
+			prefix = prefix.substr(0, prefix.length()-1);
+		if (!prefix.empty() && prefix[prefix.length()-1] == '.')
+			prefix = prefix.substr(0, prefix.length()-1);
+
+		if (result.find(prefix) != result.end())
+			Log(EError, "Internal error -- encountered two sub-images with the same prefix");
+		result[prefix] = bitmap;
+	}
+	return result;
+}
+
+ref<Bitmap> Bitmap::extractChannels(EPixelFormat fmt, const std::vector<int> &channels) const {
+	int channelCount = getChannelCount();
+
+	for (size_t i=0; i<channels.size(); ++i)
+		if (channels[i] < 0 || channels[i] >= channelCount)
+			Log(EError, "Bitmap::extractChannel(%i): channel index "
+				"must be between 0 and %i", channels[i], channelCount-1);
+
+	ref<Bitmap> result = new Bitmap(fmt, m_componentFormat, m_size, channels.size());
+	result->setMetadata(m_metadata);
+	result->setGamma(m_gamma);
+
+	size_t componentSize = getBytesPerComponent();
+	size_t stride = channelCount * componentSize;
+	size_t pixelCount = (size_t) m_size.x * (size_t) m_size.y;
+
+	const uint8_t *source = getUInt8Data();
+	uint8_t *target = result->getUInt8Data();
+
+	for (size_t px = 0; px<pixelCount; ++px) {
+		for (size_t ch = 0; ch<channels.size(); ++ch)
+			for (size_t c = 0; c<componentSize; ++c)
+				*target++ = (source+channels[ch]*componentSize)[c];
+		source += stride;
+	}
+
+	return result;
+}
+
+ref<Bitmap> Bitmap::extractChannel(int channelIndex) const {
 	int channelCount = getChannelCount();
 
 	if (channelIndex == 0 && channelCount == 1)
-		return this;
+		return const_cast<Bitmap *>(this);
 
 	if (channelIndex < 0 || channelIndex >= channelCount)
-		Log(EError, "Bitmap::separateChannel(%i): channel index "
+		Log(EError, "Bitmap::extractChannel(%i): channel index "
 			"must be between 0 and %i", channelIndex, channelCount-1);
 
 	ref<Bitmap> result = new Bitmap(ELuminance, m_componentFormat, m_size);
@@ -1715,7 +1885,7 @@ ref<Bitmap> Bitmap::separateChannel(int channelIndex) {
 
 	for (size_t px = 0; px<pixelCount; ++px) {
 		for (size_t c = 0; c<componentSize; ++c)
-			*target++ = *source;
+			*target++ = source[c];
 		source += stride;
 	}
 
@@ -2358,13 +2528,14 @@ void Bitmap::readOpenEXR(Stream *stream, const std::string &_prefix) {
 
 	memset(ch_spec, 0, sizeof(const char *) * SPECTRUM_SAMPLES);
 	std::string prefix = boost::to_lower_copy(_prefix);
+	bool multichannel = false;
 
 	/* First of all, check which layers are there */
 	for (Imf::ChannelList::ConstIterator it = channels.begin(); it != channels.end(); ++it) {
 		std::string name = boost::to_lower_copy(std::string(it.name()));
 
 		/* Skip layers that have the wrong prefix */
-		if (!boost::starts_with(name, prefix))
+		if (!boost::starts_with(name, prefix) && prefix != "*")
 			continue;
 
 		if (!ch_r && (name == "r" || name == "red" ||
@@ -2402,8 +2573,12 @@ void Bitmap::readOpenEXR(Stream *stream, const std::string &_prefix) {
 					}
 				}
 			#endif
-			if (!isSpectralChannel)
-				Log(EWarn, "readOpenEXR(): Don't know what to do with the channel named '%s'", it.name());
+			if (!isSpectralChannel) {
+				if (_prefix == "*")
+					multichannel = true;
+				else
+					Log(EWarn, "readOpenEXR(): Don't know what to do with the channel named '%s'", it.name());
+			}
 		}
 	}
 
@@ -2419,7 +2594,13 @@ void Bitmap::readOpenEXR(Stream *stream, const std::string &_prefix) {
 
 	/* Now, try to categorize this image into some sort of
 	   generic class that we know how to deal with */
-	if (spectral) {
+	if (multichannel) {
+		for (Imf::ChannelList::ConstIterator it = channels.begin(); it != channels.end(); ++it)
+			sourceChannels.push_back(it.name());
+		m_channelCount = sourceChannels.size();
+		m_pixelFormat = EMultiChannel;
+		formatString = "Multichannel";
+	} else if (spectral) {
 		m_pixelFormat = ESpectrum;
 		formatString = "Spectrum";
 		sourceChannels.insert(sourceChannels.begin(), ch_spec, ch_spec + SPECTRUM_SAMPLES);

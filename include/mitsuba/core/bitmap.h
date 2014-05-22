@@ -41,8 +41,8 @@ MTS_NAMESPACE_BEGIN
  * The Python version of this API contains thee additional member functions:
  * <tt>fromByteArray</tt> and <tt>toByteArray</tt> copy image data
  * between the Bitmap instance and a Python <tt>bytearray</tt>. The function
- * <tt>getNativeBuffer</tt> returns a <tt>memoryview</tt>-compatible buffer
- * object.
+ * <tt>buffer</tt> returns a <tt>memoryview</tt>-compatible buffer
+ * object that can also interoperate with <tt>numpy</tt>'s <tt>ndarray</tt>.
  *
  * \ingroup libcore
  * \ingroup libpython
@@ -337,6 +337,18 @@ public:
 	 */
 	Bitmap(EFileFormat format, Stream *stream, const std::string &prefix = "");
 
+	/**
+	 * \brief Load a bitmap from a file on disk
+	 *
+	 * \param path
+	 *    Path to a bitmap file (format will be auto-detected)
+	 *
+	 * \param prefix
+	 *    Only consider image layers whose identifier begins with \c prefix.
+	 *    This is currently only supported by the OpenEXR format loader.
+	 */
+	Bitmap(const fs::path &path, const std::string &prefix = "");
+
 	//! @}
 	// ======================================================================
 
@@ -491,7 +503,7 @@ public:
 	void clear();
 
 	/**
-	 * Write an encoded form of the bitmap using the specified file format
+	 * Write an encoded form of the bitmap to a stream using the specified file format
 	 *
 	 * \param format
 	 *    Target file format (\ref EOpenEXR, \ref EPNG, or \ref EOpenEXR)
@@ -509,6 +521,43 @@ public:
 	 *    5 for PNG and 100 for JPEG files.
 	 */
 	void write(EFileFormat format, Stream *stream, int compression = -1) const;
+
+	/**
+	 * Write an encoded form of the bitmap to a file using the specified file format
+	 *
+	 * \param format
+	 *    Target file format (\ref EOpenEXR, \ref EPNG, or \ref EOpenEXR)
+	 *
+	 * \param stream
+	 *    Target stream that will receive the encoded output
+	 *
+	 * \param compression
+	 *    For PNG images, this parameter can be used to control how
+	 *    strongly libpng will try to compress the output (with 1 being
+	 *    the lowest and 9 denoting the highest compression). Note that
+	 *    saving files with the highest compression will be very slow.
+	 *    For JPEG files, this denotes the desired quality (between 0 and 100,
+	 *    the latter being best). The default argument (-1) uses compression
+	 *    5 for PNG and 100 for JPEG files.
+	 */
+	void write(EFileFormat format, const fs::path &filename, int compression = -1) const;
+
+	/**
+	 * Write an encoded form of the bitmap to a file (auto-detecting the file format)
+	 *
+	 * \param stream
+	 *    Target stream that will receive the encoded output
+	 *
+	 * \param compression
+	 *    For PNG images, this parameter can be used to control how
+	 *    strongly libpng will try to compress the output (with 1 being
+	 *    the lowest and 9 denoting the highest compression). Note that
+	 *    saving files with the highest compression will be very slow.
+	 *    For JPEG files, this denotes the desired quality (between 0 and 100,
+	 *    the latter being best). The default argument (-1) uses compression
+	 *    5 for PNG and 100 for JPEG files.
+	 */
+	void write(const fs::path &filename, int compression = -1) const;
 
 	//! @}
 	// ======================================================================
@@ -750,13 +799,25 @@ public:
 	ref<Bitmap> expand();
 
 	/**
-	 * \brief Separate out one of the color channels in the
+	 * \brief Extract one of the color channels in the
 	 * bitmap and return it as a separate luminance bitmap
 	 *
 	 * When this is already a single-channel bitmap, the function
 	 * returns a pointer to the current instance.
 	 */
-	ref<Bitmap> separateChannel(int channelIndex);
+	ref<Bitmap> extractChannel(int channelIndex) const;
+
+	/**
+	 * \brief Extract several color channels of a multi-channel
+	 * bitmap and return them as a bitmap with the given pixel format
+	 */
+	ref<Bitmap> extractChannels(Bitmap::EPixelFormat fmt, const std::vector<int> &channels) const;
+
+	/**
+	 * \brief Split an multi-channel image buffer (e.g. from an OpenEXR image
+	 * with lots of AOVs) into group of RGB[A]/XYZ[A]/Luminance images
+	 */
+	std::map<std::string, Bitmap *> split() const;
 
 	/**
 	 * \brief Merges multiple luminance-valued bitmaps into
@@ -1017,10 +1078,10 @@ public:
 	 */
 	inline void setChannelNames(const std::vector<std::string> &names) { m_channelNames = names; }
 
-	/// Return the names of the image channels if explicitly overridden (empty by default)
+	/// Return the names of the image channels if explicitly specified (empty by default)
 	inline std::vector<std::string> &getChannelNames() { return m_channelNames; }
 
-	/// Return the names of the image channels if explicitly overridden (empty by default)
+	/// Return the names of the image channels if explicitly specified (empty by default)
 	inline const std::vector<std::string> &getChannelNames() const { return m_channelNames; }
 
 	//! @}
@@ -1139,6 +1200,9 @@ protected:
 
 	/// Update the internally cached channel count
 	void updateChannelCount();
+
+	/// Delegate for stream loading operations
+	void readStream(EFileFormat format, Stream *stream, const std::string &prefix);
 protected:
 	EPixelFormat m_pixelFormat;
 	EComponentFormat m_componentFormat;

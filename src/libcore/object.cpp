@@ -101,7 +101,7 @@ void Object::incRef() const {
 #endif
 }
 
-void Object::decRef() const {
+void Object::decRef(bool autoDeallocate) const {
 #if DEBUG_REFCOUNTS == 1
 	if (Class::rttiIsInitialized()) {
 		cout << this << ": Decreasing reference count (" << getClass()->getName() << ") -> "
@@ -114,7 +114,7 @@ void Object::decRef() const {
 	int count = __sync_sub_and_fetch(&m_refCount, 1);
 #endif
 	AssertEx(count >= 0, "Reference count is below zero!");
-	if (count == 0) {
+	if (count == 0 && autoDeallocate) {
 #if DEBUG_REFCOUNTS == 1
 		if (Class::rttiIsInitialized())
 			cout << this << ": Deleting an instance of " <<

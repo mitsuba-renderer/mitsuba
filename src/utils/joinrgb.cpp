@@ -32,9 +32,9 @@ public:
 		ref<Bitmap> rBitmap = new Bitmap(Bitmap::EOpenEXR, rFile);
 		ref<Bitmap> gBitmap = new Bitmap(Bitmap::EOpenEXR, gFile);
 		ref<Bitmap> bBitmap = new Bitmap(Bitmap::EOpenEXR, bFile);
-		rBitmap = rBitmap->separateChannel(0);
-		gBitmap = gBitmap->separateChannel(0);
-		bBitmap = bBitmap->separateChannel(0);
+		rBitmap = rBitmap->extractChannel(0);
+		gBitmap = gBitmap->extractChannel(0);
+		bBitmap = bBitmap->extractChannel(0);
 
 		std::vector<Bitmap *> sourceBitmaps;
 		sourceBitmaps.push_back(rBitmap);
