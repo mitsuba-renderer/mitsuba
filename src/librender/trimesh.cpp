@@ -802,7 +802,7 @@ void TriMesh::getNormalDerivative(const Intersection &its,
 		dndu = (n1 - n0) * il; dndu -= N * dot(N, dndu);
 		dndv = (n2 - n0) * il; dndv -= N * dot(N, dndv);
 
-		if (m_tangents) {
+		if (m_texcoords) {
 			/* Compute derivatives with respect to a specified texture
 			   UV parameterization.  */
 			const Point2
