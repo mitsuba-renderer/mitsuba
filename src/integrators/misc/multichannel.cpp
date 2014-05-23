@@ -179,7 +179,7 @@ public:
 		block->clear();
 
 		uint32_t queryType = RadianceQueryRecord::ESensorRay;
-		Float *temp = (Float *) alloca(sizeof(Float) * (m_integrators.size() * SPECTRUM_SAMPLES + 1));
+		Float *temp = (Float *) alloca(sizeof(Float) * (m_integrators.size() * SPECTRUM_SAMPLES + 2));
 
 		for (size_t i = 0; i<points.size(); ++i) {
 			Point2i offset = Point2i(points[i]) + Vector2i(block->getOffset());
