@@ -393,7 +393,8 @@ public:
 
 	Texture *loadTexture(const FileResolver *fileResolver,
 			std::map<std::string, Texture *> &cache,
-			const fs::path &mtlPath, std::string filename) {
+			const fs::path &mtlPath, std::string filename,
+			bool noGamma = false) {
 		/* Prevent Linux/OSX fs::path handling issues for DAE files created on Windows */
 		for (size_t i=0; i<filename.length(); ++i) {
 			if (filename[i] == '\\')
@@ -414,7 +415,8 @@ public:
 		}
 		Properties props("bitmap");
 		props.setString("filename", path.string());
-		props.setFloat("gamma", 1.0f);
+		if (noGamma)
+			props.setFloat("gamma", 1.0f);
 		ref<Texture> texture = static_cast<Texture *> (PluginManager::getInstance()->
 			createObject(MTS_CLASS(Texture), props));
 		texture->configure();
@@ -484,7 +486,7 @@ public:
 			} else if (buf == "bump") {
 				std::string filename;
 				iss >> filename;
-				bump = loadTexture(fileResolver, cache, mtlPath, filename);
+				bump = loadTexture(fileResolver, cache, mtlPath, filename, true);
 			} else if (buf == "map_d") {
 				std::string filename;
 				iss >> filename;
