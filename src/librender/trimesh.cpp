@@ -386,8 +386,7 @@ void TriMesh::configure() {
 
 	/* For manifold exploration: always compute UV tangents when a glossy material
 	   is involved. TODO: find a way to avoid this expense (compute on demand?) */
-	if (hasBSDF() && (m_bsdf->getType() & BSDF::EGlossy))
-		computeUVTangents();
+	computeUVTangents();
 }
 
 void TriMesh::prepareSamplingTable() {
