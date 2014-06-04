@@ -55,7 +55,4 @@ if [[ "$(uname)" == 'Darwin' ]]; then
 else
 	export LD_LIBRARY_PATH="$MITSUBA_DIR/dist:$LD_LIBRARY_PATH"
 	export PATH="$MITSUBA_DIR/dist:$PATH"
-
-	# Generate core dumps if something goes wrong
-	ulimit -c 1000000000
 fi
