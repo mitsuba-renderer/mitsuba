@@ -999,10 +999,11 @@ if __name__ == '__main__':
 
 
 \subsubsection{Mitsuba interaction with NumPy}
-Suppose that \code{bitmap} contains a \code{mitsuba.core.Bitmap} instance (e.g. a rendering). Then the following snippet efficiently turns the image into a NumPy array:
+Suppose that \code{bitmap} contains a \code{mitsuba.core.Bitmap} instance (e.g. a rendering). Then the following snippet efficiently turns the image into a NumPy array (and back):
 \begin{python}
 import numpy as np
 array = np.array(bitmap.buffer())
+bitmap = Bitmap(array)
 \end{python}
 The next snippet shows how to extract an individual image
 from the channels of a larger multi-channel EXR image (e.g. channels named \code{albedo.r}, \code{albedo.g}, \code{albedo.b})
