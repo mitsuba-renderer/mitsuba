@@ -105,6 +105,14 @@ public:
 		manager->serialize(stream, m_displacement.get());
 	}
 
+	Spectrum getDiffuseReflectance(const Intersection &its) const {
+		return m_nested->getDiffuseReflectance(its);
+	}
+
+	Spectrum getSpecularReflectance(const Intersection &its) const {
+		return m_nested->getSpecularReflectance(its);
+	}
+
 	void addChild(const std::string &name, ConfigurableObject *child) {
 		if (child->getClass()->derivesFrom(MTS_CLASS(BSDF))) {
 			if (m_nested != NULL)

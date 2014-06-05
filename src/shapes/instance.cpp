@@ -129,6 +129,24 @@ bool Instance::rayIntersect(const Ray &_ray, Float mint, Float maxt) const {
 	return kdtree->rayIntersect(ray, mint, maxt);
 }
 
+void Instance::adjustTime(Intersection &its, Float time) const {
+	Transform trafo = m_transform->eval(its.time).inverse();
+	trafo = m_transform->eval(time) * trafo;
+
+	Vector s = trafo(its.shFrame.s);
+	its.shFrame.n = normalize(trafo(its.shFrame.n));
+	its.shFrame.s = normalize(s - its.shFrame.n
+		* dot(its.shFrame.n, s));
+	its.shFrame.t = cross(its.shFrame.n, its.shFrame.s);
+	its.geoFrame = Frame(normalize(trafo(its.geoFrame.n)));
+	its.dpdu = trafo(its.dpdu);
+	its.dpdv = trafo(its.dpdv);
+	its.p = trafo(its.p);
+	its.wi = normalize(trafo(its.wi));
+	its.instance = this;
+	its.time = time;
+}
+
 void Instance::fillIntersectionRecord(const Ray &_ray,
 	const void *temp, Intersection &its) const {
 	const ShapeKDTree *kdtree = m_shapeGroup->getKDTree();

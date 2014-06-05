@@ -73,6 +73,11 @@ void Shape::configure() {
 			"emitter/sensor/subsurface attachment. This is not allowed!", getName().c_str());
 }
 
+void Shape::adjustTime(Intersection &its, Float time) const {
+	its.time = time;
+	/* Do nothing else by default */
+}
+
 bool Shape::isCompound() const {
 	return false;
 }

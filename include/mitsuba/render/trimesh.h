@@ -80,12 +80,13 @@ public:
 	TriMesh(Stream *stream, InstanceManager *manager);
 
 	/**
-	 * Unserialize a triangle mesh - this is an alternative
-	 * routine, which only loads triangle data (no BSDF,
-	 * Sub-surface integrator, etc.) in a format that
-	 * will remain stable as Mitsuba evolves. The files
-	 * can optionally contain multiple meshes -- in that case,
-	 * the specified index determines which one to load.
+	 * \brief Unserialize a triangle mesh
+	 *
+	 * This is an alternative routine, which only loads triangle data
+	 * (no BSDF, Sub-surface integrator, etc.) in a format that will
+	 * remain stable as Mitsuba evolves. The files can optionally contain
+	 * multiple meshes -- in that case, the specified index determines
+	 * which one to load.
 	 */
 	TriMesh(Stream *stream, int idx = 0);
 

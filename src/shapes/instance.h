@@ -51,6 +51,9 @@ public:
 	/// Return a pointer to the associated \ref ShapeGroup (const version)
 	inline const ShapeGroup* getShapeGroup() const { return m_shapeGroup.get(); }
 
+	/// Return the underlying animated transformation
+	inline const AnimatedTransform *getAnimatedTransform() const { return m_transform.get(); }
+
 	// =============================================================
 	//! @{ \name Implementation of the Shape interface
 	// =============================================================
@@ -71,6 +74,8 @@ public:
 	size_t getPrimitiveCount() const;
 
 	size_t getEffectivePrimitiveCount() const;
+
+	void adjustTime(Intersection &its, Float time) const;
 
 	//! @}
 	// =============================================================

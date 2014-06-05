@@ -26,6 +26,7 @@
 #define EIGEN_NO_DEBUG
 
 #include <Eigen/Core>
+#include <Eigen/Geometry>
 #include <cmath>
 #include <stdexcept>
 

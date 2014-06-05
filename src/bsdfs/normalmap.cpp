@@ -77,6 +77,14 @@ public:
 		manager->serialize(stream, m_normals.get());
 	}
 
+	Spectrum getDiffuseReflectance(const Intersection &its) const {
+		return m_nested->getDiffuseReflectance(its);
+	}
+
+	Spectrum getSpecularReflectance(const Intersection &its) const {
+		return m_nested->getSpecularReflectance(its);
+	}
+
 	void addChild(const std::string &name, ConfigurableObject *child) {
 		if (child->getClass()->derivesFrom(MTS_CLASS(BSDF))) {
 			if (m_nested != NULL)
@@ -97,21 +105,63 @@ public:
 	}
 
 	Frame getFrame(const Intersection &its) const {
+		Frame result;
 		Normal n;
+
 		m_normals->eval(its, false).toLinearRGB(n.x, n.y, n.z);
 		for (int i=0; i<3; ++i)
 			n[i] = 2 * n[i] - 1;
 
-		Frame result;
-		result.n = normalize(its.shFrame.toWorld(n));
+		Frame frame = BSDF::getFrame(its);
+		result.n = normalize(frame.toWorld(n));
+
 		result.s = normalize(its.dpdu - result.n
 			* dot(result.n, its.dpdu));
+
 		result.t = cross(result.n, result.s);
 
-		if (dot(result.n, its.geoFrame.n) < 0)
-			result.n *= -1;
-
 		return result;
+	}
+
+	void getFrameDerivative(const Intersection &its, Frame &du, Frame &dv) const {
+		Vector n;
+
+		m_normals->eval(its, false).toLinearRGB(n.x, n.y, n.z);
+		for (int i=0; i<3; ++i)
+			n[i] = 2 * n[i] - 1;
+
+		Spectrum dn[2];
+		Vector dndu, dndv;
+		m_normals->evalGradient(its, dn);
+		Spectrum(2*dn[0]).toLinearRGB(dndu.x, dndu.y, dndu.z);
+		Spectrum(2*dn[1]).toLinearRGB(dndv.x, dndv.y, dndv.z);
+
+		Frame base_du, base_dv;
+		Frame base = BSDF::getFrame(its);
+		BSDF::getFrameDerivative(its, base_du, base_dv);
+
+		Vector worldN = base.toWorld(n);
+
+		Float invLength_n = 1/worldN.length();
+		worldN *= invLength_n;
+
+		du.n = invLength_n * (base.toWorld(dndu) + base_du.toWorld(n));
+		dv.n = invLength_n * (base.toWorld(dndv) + base_dv.toWorld(n));
+		du.n -= dot(du.n, worldN) * worldN;
+		dv.n -= dot(dv.n, worldN) * worldN;
+
+		Vector s = its.dpdu - worldN * dot(worldN, its.dpdu);
+		Float invLen_s = 1.0f / s.length();
+		s *= invLen_s;
+
+		du.s = invLen_s * (-du.n * dot(worldN, its.dpdu) - worldN * dot(du.n, its.dpdu));
+		dv.s = invLen_s * (-dv.n * dot(worldN, its.dpdu) - worldN * dot(dv.n, its.dpdu));
+
+		du.s -= s * dot(du.s, s);
+		dv.s -= s * dot(dv.s, s);
+
+		du.t = cross(du.n, s) + cross(worldN, du.s);
+		dv.t = cross(dv.n, s) + cross(worldN, dv.s);
 	}
 
 	Spectrum eval(const BSDFSamplingRecord &bRec, EMeasure measure) const {
@@ -283,5 +333,5 @@ Shader *NormalMap::createShader(Renderer *renderer) const {
 
 MTS_IMPLEMENT_CLASS(NormalMapShader, false, Shader)
 MTS_IMPLEMENT_CLASS_S(NormalMap, false, BSDF)
-MTS_EXPORT_PLUGIN(NormalMap, "Smooth dielectric coating");
+MTS_EXPORT_PLUGIN(NormalMap, "Normal map modifier");
 MTS_NAMESPACE_END

@@ -110,6 +110,10 @@ public:
 		return m_diffuseReflectance->eval(its);
 	}
 
+	Spectrum getSpecularReflectance(const Intersection &its) const {
+		return m_specularReflectance->eval(its);
+	}
+
 	/// Reflection in local coordinates
 	inline Vector reflect(const Vector &wi) const {
 		return Vector(-wi.x, -wi.y, wi.z);

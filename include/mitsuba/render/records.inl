@@ -92,6 +92,24 @@ inline const Medium *Intersection::getTargetMedium(Float cosTheta) const {
 		return shape->getInteriorMedium();
 }
 
+void Intersection::adjustTime(Float time) {
+	if (instance)
+		instance->adjustTime(*this, time);
+	else if (shape)
+		shape->adjustTime(*this, time);
+	else
+		this->time = time;
+}
+
+void Intersection::getNormalDerivative(Vector &dndu, Vector &dndv,
+	bool shadingFrame) const {
+
+	if (instance)
+		instance->getNormalDerivative(*this, dndu, dndv, shadingFrame);
+	else if (shape)
+		shape->getNormalDerivative(*this, dndu, dndv, shadingFrame);
+}
+
 inline const PhaseFunction *MediumSamplingRecord::getPhaseFunction() const {
 	return medium->getPhaseFunction();
 }

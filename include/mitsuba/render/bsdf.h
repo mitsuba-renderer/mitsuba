@@ -336,6 +336,11 @@ public:
 	/// Return the diffuse reflectance value (if any)
 	virtual Spectrum getDiffuseReflectance(const Intersection &its) const;
 
+	/// Return the specular reflectance value (if any)
+	virtual Spectrum getSpecularReflectance(const Intersection &its) const {
+		return Spectrum(0.0f);
+	}
+
 	/**
 	 * \brief Sample the BSDF and return the importance weight (i.e. the
 	 * value of the BSDF divided by the probability density of the sample).
@@ -461,6 +466,15 @@ public:
 	 * By default, it returns <tt>its.shFrame</tt>
 	 */
 	virtual Frame getFrame(const Intersection &its) const;
+
+	/**
+	 * \brief Sometimes, BSDF models make use of a perturbed frame for
+	 * internal shading computations (e.g. bump maps). This function
+	 * computes the derivative of this frame with respect to the UV
+	 * parameterization of the underlying shape.
+	 */
+	virtual void getFrameDerivative(const Intersection &its,
+			Frame &du, Frame &dv) const;
 
 	// =============================================================
 	//! @{ \name ConfigurableObject interface

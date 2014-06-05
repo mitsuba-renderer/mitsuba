@@ -118,6 +118,13 @@ public:
 	/// Computes texture coordinate partials
 	void computePartials(const RayDifferential &ray);
 
+	/// Move the intersection forward or backward through time
+	inline void adjustTime(Float time);
+
+	/// Calls the suitable implementaiton of \ref Shape::getNormalDerivative()
+	inline void getNormalDerivative(Vector &dndu, Vector &dndv,
+		bool shadingFrame = true) const;
+
 	/// Return a string representation
 	std::string toString() const;
 public:
@@ -315,6 +322,11 @@ public:
 	 */
 	void getCurvature(const Intersection &its, Float &H, Float &K,
 		bool shadingFrame = true) const;
+
+	/**
+	 * Adjust an intersection record to a different time value
+	 */
+	virtual void adjustTime(Intersection &its, Float time) const;
 
 	/**
 	 * \brief Return the internal kd-tree of this shape (if any)

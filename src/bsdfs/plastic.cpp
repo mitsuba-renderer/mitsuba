@@ -220,6 +220,9 @@ public:
 		return m_diffuseReflectance->eval(its) * (1-m_fdrExt);
 	}
 
+	Spectrum getSpecularReflectance(const Intersection &its) const {
+		return m_specularReflectance->eval(its);
+	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
 		if (child->getClass()->derivesFrom(MTS_CLASS(Texture))) {
