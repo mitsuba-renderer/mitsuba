@@ -84,8 +84,8 @@ public:
 
 	MTS_DECLARE_CLASS()
 protected:
-    /// Create a new reconstruction filter
-    ReconstructionFilter(const Properties &props);
+	/// Create a new reconstruction filter
+	ReconstructionFilter(const Properties &props);
 
 	/// Unserialize a filter
 	ReconstructionFilter(Stream *stream, InstanceManager *manager);
@@ -121,126 +121,88 @@ template <typename Scalar> struct Resampler {
 	 *      outside of the defined input domain.
 	 */
 	Resampler(const ReconstructionFilter *rfilter, ReconstructionFilter::EBoundaryCondition bc,
-			int sourceRes, int targetRes) : m_bc(bc), m_sourceRes(sourceRes), m_targetRes(targetRes) {
+			int sourceRes, int targetRes) : m_bc(bc), m_sourceRes(sourceRes), m_targetRes(targetRes),
+			m_start(NULL), m_weights(NULL) {
 		SAssert(sourceRes > 0 && targetRes > 0);
 		Float filterRadius = rfilter->getRadius(), scale = 1.0f, invScale = 1.0f;
 
 		/* Low-pass filter: scale reconstruction filters when downsampling */
 		if (targetRes < sourceRes) {
 			scale = (Float) sourceRes / (Float) targetRes;
-		    invScale = 1 / scale;
+			invScale = 1 / scale;
 			filterRadius *= scale;
 		}
 
-		m_taps = floorToInt(filterRadius * 2);
-		m_start = new int[targetRes];
-		m_weights = new Scalar[m_taps * targetRes];
-		m_fastStart = 0;
-		m_fastEnd = m_targetRes;
+		m_taps = ceilToInt(filterRadius * 2);
+		if (sourceRes == targetRes && (m_taps % 2) != 1)
+			--m_taps;
+		m_halfTaps = m_taps / 2;
 
-		for (int i=0; i<targetRes; i++) {
-			/* Compute the fractional coordinates of the new sample i in the original coordinates */
-			Float center = (i + (Float) 0.5f) / targetRes * sourceRes;
+		if (sourceRes != targetRes) { /* Resampling mode */
+			m_start = new int[targetRes];
+			m_weights = new Scalar[m_taps * targetRes];
+			m_fastStart = 0;
+			m_fastEnd = m_targetRes;
 
-			/* Determine the index of the first original sample that might contribute */
-			m_start[i] = floorToInt(center - filterRadius + (Float) 0.5f);
+			for (int i=0; i<targetRes; i++) {
+				/* Compute the fractional coordinates of the new sample i in the original coordinates */
+				Float center = (i + (Float) 0.5f) / targetRes * sourceRes;
 
-			/* Determine the size of center region, on which to run fast non condition-aware code */
-			if (m_start[i] < 0)
-				m_fastStart = std::max(m_fastStart, i + 1);
-			else if (m_start[i] + m_taps - 1 >= m_sourceRes)
-				m_fastEnd = std::min(m_fastEnd, i - 1);
+				/* Determine the index of the first original sample that might contribute */
+				m_start[i] = floorToInt(center - filterRadius + (Float) 0.5f);
 
+				/* Determine the size of center region, on which to run fast non condition-aware code */
+				if (m_start[i] < 0)
+					m_fastStart = std::max(m_fastStart, i + 1);
+				else if (m_start[i] + m_taps - 1 >= m_sourceRes)
+					m_fastEnd = std::min(m_fastEnd, i - 1);
+
+				Float sum = 0;
+				for (int j=0; j<m_taps; j++) {
+					/* Compute the the position where the filter should be evaluated */
+					Float pos = m_start[i] + j + (Float) 0.5f - center;
+
+					/* Perform the evaluation and record the weight */
+					Float weight = rfilter->eval(pos * invScale);
+					m_weights[i * m_taps + j] = (Scalar) weight;
+					sum += weight;
+				}
+
+				/* Normalize the contribution of each sample */
+				Float normalization = 1.0f / sum;
+				for (int j=0; j<m_taps; j++) {
+					Scalar &value = m_weights[i * m_taps + j];
+					value = (Scalar) ((Float) value * normalization);
+				}
+			}
+		} else { /* Filtering mode */
+			m_weights = new Scalar[m_taps];
 			Float sum = 0;
-			for (int j=0; j<m_taps; j++) {
-				/* Compute the the position where the filter should be evaluated */
-				Float pos = m_start[i] + j + (Float) 0.5f - center;
-
-				/* Perform the evaluation and record the weight */
-				Float weight = rfilter->eval(pos * invScale);
-				m_weights[i * m_taps + j] = (Scalar) weight;
+			for (int i=0; i<m_taps; i++) {
+				Float weight = (Scalar) rfilter->eval((Float) (i-m_halfTaps));
+				m_weights[i] = weight;
 				sum += weight;
 			}
-
-			/* Normalize the contribution of each sample */
 			Float normalization = 1.0f / sum;
-			for (int j=0; j<m_taps; j++) {
-				Scalar &value = m_weights[i * m_taps + j];
+			for (int i=0; i<m_taps; i++) {
+				Scalar &value = m_weights[i];
 				value = (Scalar) ((Float) value * normalization);
 			}
+			m_fastStart = std::min(m_halfTaps, m_targetRes-1);
+			m_fastEnd = std::max(m_targetRes-m_halfTaps-1, 0);
 		}
+
+		/* Don't have overlapping fast start/end intervals when
+		   the target image is very small compared to the source image */
 		m_fastStart = std::min(m_fastStart, m_fastEnd);
 	}
 
 	/// Release all memory
 	~Resampler() {
-		delete[] m_start;
-		delete[] m_weights;
-	}
-
-	/**
-	 * \brief Resample a multi-channel array
-	 *
-	 * \param source
-	 *     Source array of samples
-	 * \param target
-	 *     Target array of samples
-	 * \param sourceStride
-	 *     Stride of samples in the source array. A value
-	 *     of '1' implies that they are densely packed.
-	 * \param targetStride
-	 *     Stride of samples in the source array. A value
-	 *     of '1' implies that they are densely packed.
-	 * \param channels
-	 *     Number of channels to be resampled
-	 */
-	void resample(const Scalar *source, size_t sourceStride,
-			Scalar *target, size_t targetStride, int channels) {
-		const int taps = m_taps;
-		targetStride = channels * (targetStride - 1);
-		sourceStride *= channels;
-
-		/* Resample the left border region, while accounting for the boundary conditions */
-		for (int i=0; i<m_fastStart; ++i) {
-			int start = m_start[i];
-
-			for (int ch=0; ch<channels; ++ch) {
-				Scalar result = 0;
-				for (int j=0; j<taps; ++j)
-					result += lookup(source, start + j, sourceStride, ch) * m_weights[i * taps + j];
-				*target++ = result;
-			}
-
-			target += targetStride;
-		}
-
-		/* Use a faster, vectorizable loop for resampling the main portion */
-		for (int i=m_fastStart; i<m_fastEnd; ++i) {
-			int start = m_start[i];
-
-			for (int ch=0; ch<channels; ++ch) {
-				Scalar result = 0;
-				for (int j=0; j<taps; ++j)
-					result += source[sourceStride * (start + j) + ch] * m_weights[i * taps + j];
-				*target++ = result;
-			}
-
-			target += targetStride;
-		}
-
-		/* Resample the right border region, while accounting for the boundary conditions */
-		for (int i=m_fastEnd; i<m_targetRes; ++i) {
-			int start = m_start[i];
-
-			for (int ch=0; ch<channels; ++ch) {
-				Scalar result = 0;
-				for (int j=0; j<taps; ++j)
-					result += lookup(source, start + j, sourceStride, ch) * m_weights[i * taps + j];
-				*target++ = result;
-			}
-
-			target += targetStride;
-		}
+		if (m_start)
+			delete[] m_start;
+		if (m_weights)
+			delete[] m_weights;
 	}
 
 	/**
@@ -270,53 +232,206 @@ template <typename Scalar> struct Resampler {
 	void resampleAndClamp(const Scalar *source, size_t sourceStride,
 			Scalar *target, size_t targetStride, int channels,
 			Scalar min = (Scalar) 0, Scalar max = (Scalar) 1) {
-		const int taps = m_taps;
+		const int taps = m_taps, halfTaps = m_halfTaps;
 		targetStride = channels * (targetStride - 1);
 		sourceStride *= channels;
 
-		/* Resample the left border region, while accounting for the boundary conditions */
-		for (int i=0; i<m_fastStart; ++i) {
-			int start = m_start[i];
+		if (m_start) {
+			/* Resample the left border region, while accounting for the boundary conditions */
+			for (int i=0; i<m_fastStart; ++i) {
+				int start = m_start[i];
 
-			for (int ch=0; ch<channels; ++ch) {
-				Scalar result = 0;
-				for (int j=0; j<taps; ++j)
-					result += lookup(source, start + j, sourceStride, ch) * m_weights[i * taps + j];
-				*target++ = std::min(max, std::max(min, result));
+				for (int ch=0; ch<channels; ++ch) {
+					Scalar result = 0;
+					for (int j=0; j<taps; ++j)
+						result += lookup(source, start + j, sourceStride, ch) * m_weights[i * taps + j];
+				    *target++ = std::min(max, std::max(min, result));
+				}
+
+				target += targetStride;
 			}
 
-			target += targetStride;
-		}
+			/* Use a faster, vectorizable loop for resampling the main portion */
+			for (int i=m_fastStart; i<m_fastEnd; ++i) {
+				int start = m_start[i];
 
-		/* Use a faster, vectorizable loop for resampling the main portion */
-		for (int i=m_fastStart; i<m_fastEnd; ++i) {
-			int start = m_start[i];
+				for (int ch=0; ch<channels; ++ch) {
+					Scalar result = 0;
+					for (int j=0; j<taps; ++j)
+						result += source[sourceStride * (start + j) + ch] * m_weights[i * taps + j];
+				    *target++ = std::min(max, std::max(min, result));
+				}
 
-			for (int ch=0; ch<channels; ++ch) {
-				Scalar result = 0;
-				for (int j=0; j<taps; ++j)
-					result += source[sourceStride * (start + j) + ch] * m_weights[i * taps + j];
-				*target++ = std::min(max, std::max(min, result));
+				target += targetStride;
 			}
 
-			target += targetStride;
-		}
+			/* Resample the right border region, while accounting for the boundary conditions */
+			for (int i=m_fastEnd; i<m_targetRes; ++i) {
+				int start = m_start[i];
 
-		/* Resample the right border region, while accounting for the boundary conditions */
-		for (int i=m_fastEnd; i<m_targetRes; ++i) {
-			int start = m_start[i];
+				for (int ch=0; ch<channels; ++ch) {
+					Scalar result = 0;
+					for (int j=0; j<taps; ++j)
+						result += lookup(source, start + j, sourceStride, ch) * m_weights[i * taps + j];
+				    *target++ = std::min(max, std::max(min, result));
+				}
 
-			for (int ch=0; ch<channels; ++ch) {
-				Scalar result = 0;
-				for (int j=0; j<taps; ++j)
-					result += lookup(source, start + j, sourceStride, ch) * m_weights[i * taps + j];
-				*target++ = std::min(max, std::max(min, result));
+				target += targetStride;
+			}
+		} else {
+			/* Filter the left border region, while accounting for the boundary conditions */
+			for (int i=0; i<m_fastStart; ++i) {
+				int start = i - halfTaps;
+
+				for (int ch=0; ch<channels; ++ch) {
+					Scalar result = 0;
+					for (int j=0; j<taps; ++j)
+						result += lookup(source, start + j, sourceStride, ch) * m_weights[j];
+				    *target++ = std::min(max, std::max(min, result));
+				}
+
+				target += targetStride;
 			}
 
-			target += targetStride;
+			/* Use a faster, vectorizable loop for filtering the main portion */
+			for (int i=m_fastStart; i<m_fastEnd; ++i) {
+				int start = i - halfTaps;
+
+				for (int ch=0; ch<channels; ++ch) {
+					Scalar result = 0;
+					for (int j=0; j<taps; ++j)
+						result += source[sourceStride * (start + j) + ch] * m_weights[j];
+				    *target++ = std::min(max, std::max(min, result));
+				}
+
+				target += targetStride;
+			}
+
+			/* Filter the right border region, while accounting for the boundary conditions */
+			for (int i=m_fastEnd; i<m_targetRes; ++i) {
+				int start = i - halfTaps;
+
+				for (int ch=0; ch<channels; ++ch) {
+					Scalar result = 0;
+					for (int j=0; j<taps; ++j)
+						result += lookup(source, start + j, sourceStride, ch) * m_weights[j];
+				    *target++ = std::min(max, std::max(min, result));
+				}
+
+				target += targetStride;
+			}
 		}
 	}
 
+	/**
+	 * \brief Resample a multi-channel array
+	 *
+	 * \param source
+	 *     Source array of samples
+	 * \param target
+	 *     Target array of samples
+	 * \param sourceStride
+	 *     Stride of samples in the source array. A value
+	 *     of '1' implies that they are densely packed.
+	 * \param targetStride
+	 *     Stride of samples in the source array. A value
+	 *     of '1' implies that they are densely packed.
+	 * \param channels
+	 *     Number of channels to be resampled
+	 */
+	void resample(const Scalar *source, size_t sourceStride,
+			Scalar *target, size_t targetStride, int channels) {
+		const int taps = m_taps, halfTaps = m_halfTaps;
+
+		targetStride = channels * (targetStride - 1);
+		sourceStride *= channels;
+
+		if (m_start) {
+			/* Resample the left border region, while accounting for the boundary conditions */
+			for (int i=0; i<m_fastStart; ++i) {
+				int start = m_start[i];
+
+				for (int ch=0; ch<channels; ++ch) {
+					Scalar result = 0;
+					for (int j=0; j<taps; ++j)
+						result += lookup(source, start + j, sourceStride, ch) * m_weights[i * taps + j];
+					*target++ = result;
+				}
+
+				target += targetStride;
+			}
+
+			/* Use a faster, vectorizable loop for resampling the main portion */
+			for (int i=m_fastStart; i<m_fastEnd; ++i) {
+				int start = m_start[i];
+
+				for (int ch=0; ch<channels; ++ch) {
+					Scalar result = 0;
+					for (int j=0; j<taps; ++j)
+						result += source[sourceStride * (start + j) + ch] * m_weights[i * taps + j];
+					*target++ = result;
+				}
+
+				target += targetStride;
+			}
+
+			/* Resample the right border region, while accounting for the boundary conditions */
+			for (int i=m_fastEnd; i<m_targetRes; ++i) {
+				int start = m_start[i];
+
+				for (int ch=0; ch<channels; ++ch) {
+					Scalar result = 0;
+					for (int j=0; j<taps; ++j)
+						result += lookup(source, start + j, sourceStride, ch) * m_weights[i * taps + j];
+					*target++ = result;
+				}
+
+				target += targetStride;
+			}
+		} else {
+			/* Filter the left border region, while accounting for the boundary conditions */
+			for (int i=0; i<m_fastStart; ++i) {
+				int start = i - halfTaps;
+
+				for (int ch=0; ch<channels; ++ch) {
+					Scalar result = 0;
+					for (int j=0; j<taps; ++j)
+						result += lookup(source, start + j, sourceStride, ch) * m_weights[j];
+					*target++ = result;
+				}
+
+				target += targetStride;
+			}
+
+			/* Use a faster, vectorizable loop for filtering the main portion */
+			for (int i=m_fastStart; i<m_fastEnd; ++i) {
+				int start = i - halfTaps;
+
+				for (int ch=0; ch<channels; ++ch) {
+					Scalar result = 0;
+					for (int j=0; j<taps; ++j)
+						result += source[sourceStride * (start + j) + ch] * m_weights[j];
+					*target++ = result;
+				}
+
+				target += targetStride;
+			}
+
+			/* Filter the right border region, while accounting for the boundary conditions */
+			for (int i=m_fastEnd; i<m_targetRes; ++i) {
+				int start = i - halfTaps;
+
+				for (int ch=0; ch<channels; ++ch) {
+					Scalar result = 0;
+					for (int j=0; j<taps; ++j)
+						result += lookup(source, start + j, sourceStride, ch) * m_weights[j];
+					*target++ = result;
+				}
+
+				target += targetStride;
+			}
+		}
+	}
 
 private:
 	FINLINE Scalar lookup(const Scalar *source, int pos, size_t stride, int offset) const {
@@ -349,7 +464,7 @@ private:
 	int *m_start;
 	Scalar *m_weights;
 	int m_fastStart, m_fastEnd;
-	int m_taps;
+	int m_taps, m_halfTaps;
 };
 
 extern MTS_EXPORT_CORE std::ostream &operator<<(std::ostream &os, const ReconstructionFilter::EBoundaryCondition &value);

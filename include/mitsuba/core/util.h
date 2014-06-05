@@ -51,8 +51,8 @@ extern MTS_EXPORT_CORE std::string indent(const std::string &string, int amount=
 extern MTS_EXPORT_CORE std::string formatString(const char *pFmt, ...);
 
 /**
- * \brief Convert a time difference (in ms) to a string representation
- * \param time Time value in milliseconds
+ * \brief Convert a time difference (in seconds) to a string representation
+ * \param time Time difference in (fractional) sections
  * \param precise When set to true, a higher-precision string representation
  * is generated.
  */

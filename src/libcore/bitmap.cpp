@@ -23,6 +23,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/scoped_array.hpp>
 #include <boost/thread/mutex.hpp>
+#include <set>
 
 #if defined(__WINDOWS__)
 #undef _CRT_SECURE_NO_WARNINGS
@@ -2216,12 +2217,12 @@ void Bitmap::applyMatrix(Float matrix_[3][3]) {
 	}
 }
 
-/// Bitmap resampling utility function
+/// Bitmap filtering / resampling utility function
 template <typename Scalar> static void resample(ref<const ReconstructionFilter> rfilter,
 	ReconstructionFilter::EBoundaryCondition bch,
 	ReconstructionFilter::EBoundaryCondition bcv,
 	const Bitmap *source, Bitmap *target, ref<Bitmap> temp, Float minValue,
-	Float maxValue, bool forceFiltering) {
+	Float maxValue, bool filter) {
 
 	if (!rfilter) {
 		/* Resample using a 2-lobed Lanczos reconstruction filter */
@@ -2235,7 +2236,7 @@ template <typename Scalar> static void resample(ref<const ReconstructionFilter> 
 	}
 
 	if (source->getHeight() == target->getHeight() &&
-		source->getWidth() == target->getWidth() && !forceFiltering) {
+		source->getWidth() == target->getWidth() && !filter) {
 		memcpy(target->getData(), source->getData(), source->getBufferSize());
 		return;
 	}
@@ -2245,13 +2246,13 @@ template <typename Scalar> static void resample(ref<const ReconstructionFilter> 
 		minValue != -std::numeric_limits<Float>::infinity() ||
 		maxValue !=  std::numeric_limits<Float>::infinity();
 
-	if (source->getWidth() != target->getWidth() || forceFiltering) {
+	if (source->getWidth() != target->getWidth() || filter) {
 		/* Re-sample along the X direction */
 		Resampler<Scalar> r(rfilter, bch, source->getWidth(), target->getWidth());
 
 		/* Create a bitmap for intermediate storage */
 		if (!temp) {
-			if (source->getHeight() == target->getHeight() && !forceFiltering)
+			if (source->getHeight() == target->getHeight() && !filter)
 				temp = target; // write directly to the output bitmap
 			else // otherwise: write to a temporary bitmap
 				temp = new Bitmap(source->getPixelFormat(), source->getComponentFormat(),
@@ -2289,7 +2290,7 @@ template <typename Scalar> static void resample(ref<const ReconstructionFilter> 
 		source = temp;
 	}
 
-	if (source->getHeight() != target->getHeight() || forceFiltering) {
+	if (source->getHeight() != target->getHeight() || filter) {
 		/* Re-sample along the Y direction */
 		Resampler<Scalar> r(rfilter, bcv, source->getHeight(), target->getHeight());
 
@@ -2370,7 +2371,6 @@ void Bitmap::filter(const ReconstructionFilter *rfilter,
 	}
 }
 
-
 ref<Bitmap> Bitmap::resample(const ReconstructionFilter *rfilter,
 		ReconstructionFilter::EBoundaryCondition bch,
 		ReconstructionFilter::EBoundaryCondition bcv,
@@ -2378,7 +2378,20 @@ ref<Bitmap> Bitmap::resample(const ReconstructionFilter *rfilter,
 	ref<Bitmap> result = new Bitmap(m_pixelFormat, m_componentFormat, size);
 	result->m_metadata = m_metadata;
 	result->m_gamma = m_gamma;
+	result->m_channelNames = m_channelNames;
 	resample(rfilter, bch, bcv, result, NULL, minValue, maxValue);
+	return result;
+}
+
+ref<Bitmap> Bitmap::filter(const ReconstructionFilter *rfilter,
+		ReconstructionFilter::EBoundaryCondition bch,
+		ReconstructionFilter::EBoundaryCondition bcv,
+		Float minValue, Float maxValue) const {
+	ref<Bitmap> result = new Bitmap(m_pixelFormat, m_componentFormat, getSize());
+	result->m_metadata = m_metadata;
+	result->m_gamma = m_gamma;
+	result->m_channelNames = m_channelNames;
+	filter(rfilter, bch, bcv, result, NULL, minValue, maxValue);
 	return result;
 }
 

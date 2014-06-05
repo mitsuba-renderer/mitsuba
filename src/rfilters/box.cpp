@@ -48,7 +48,7 @@ public:
 	}
 
 	std::string toString() const {
-		return "BoxFilter[]";
+		return formatString("GaussianFilter[radius=%f]", m_radius);
 	}
 
 	MTS_DECLARE_CLASS()

@@ -121,7 +121,7 @@ public:
 	/// Move the intersection forward or backward through time
 	inline void adjustTime(Float time);
 
-	/// Calls the suitable implementaiton of \ref Shape::getNormalDerivative()
+	/// Calls the suitable implementation of \ref Shape::getNormalDerivative()
 	inline void getNormalDerivative(Vector &dndu, Vector &dndv,
 		bool shadingFrame = true) const;
 

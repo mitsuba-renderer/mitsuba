@@ -1023,33 +1023,14 @@ public:
 	 * horizontal and vertical boundary conditions when looking up data
 	 * outside of the input domain.
 	 *
-	 * A maximum and maximum image value can be specified to prevent to prevent
-	 * out-of-range values that are created by the resampling process.
-	 * 
+	 * A maximum and maximum image value can be specified to prevent to
+	 * prevent out-of-range values that are created by the resampling process.
+	 *
 	 * The optional 'temp' parameter can be used to pass an image of
 	 * resolution <tt>Vector2i(target->getWidth(), this->getHeight())</tt>
 	 * to avoid intermediate memory allocations.
 	 */
 	void resample(const ReconstructionFilter *rfilter,
-		ReconstructionFilter::EBoundaryCondition bch,
-		ReconstructionFilter::EBoundaryCondition bcv,
-		Bitmap *target, Bitmap *temp = NULL,
-		Float minValue = 0.0f, Float maxValue = 1.0f) const;
-
-	/**
-	 * \brief Apply a separable filter to the image
-	 *
-	 * Applies the provided filter while observing the specified
-	 * horizontal and vertical boundary conditions when looking up data
-	 * outside of the input domain.
-	 *
-	 * A maximum and maximum image value can be specified to prevent to prevent
-	 * out-of-range values that are created by the filtering process.
-	 * 
-	 * The optional 'temp' parameter can be used to pass an image of
-	 * the same dimensions as the source and target image.
-	 */
-	void filter(const ReconstructionFilter *rfilter,
 		ReconstructionFilter::EBoundaryCondition bch,
 		ReconstructionFilter::EBoundaryCondition bcv,
 		Bitmap *target, Bitmap *temp = NULL,
@@ -1064,12 +1045,56 @@ public:
 	 *
 	 * A maximum and maximum image value can be specified to prevent to prevent
 	 * out-of-range values that are created by the resampling process.
+	 *
+	 * This function allocates a new output image and returns it.
 	 */
 	ref<Bitmap> resample(const ReconstructionFilter *rfilter,
 		ReconstructionFilter::EBoundaryCondition bch,
 		ReconstructionFilter::EBoundaryCondition bcv,
 		const Vector2i &size, Float minValue = 0.0f,
 		Float maxValue = 1.0f) const;
+
+	/**
+	 * \brief Apply a separable convolution filter to the image
+	 *
+	 * Applies the provided filter while observing the specified
+	 * horizontal and vertical boundary conditions when looking up data
+	 * outside of the input domain.
+	 *
+	 * In comparison to \ref convolve(), this function operates
+	 * in the primal domain.
+	 *
+	 * A maximum and maximum image value can be specified to prevent to
+	 * prevent out-of-range values that are created by the filtering process.
+	 *
+	 * The optional 'temp' parameter can be used to pass an image of
+	 * the same dimensions as the source and target image.
+	 */
+	void filter(const ReconstructionFilter *rfilter,
+		ReconstructionFilter::EBoundaryCondition bch,
+		ReconstructionFilter::EBoundaryCondition bcv,
+		Bitmap *target, Bitmap *temp = NULL,
+		Float minValue = 0.0f, Float maxValue = 1.0f) const;
+
+	/**
+	 * \brief Apply a separable convolution filter to the image
+	 *
+	 * Applies the provided filter while observing the specified
+	 * horizontal and vertical boundary conditions when looking up data
+	 * outside of the input domain.
+	 *
+	 * In comparison to \ref convolve(), this function operates
+	 * in the primal domain.
+	 *
+	 * A maximum and maximum image value can be specified to prevent to
+	 * prevent out-of-range values that are created by the filtering process.
+	 *
+	 * This function allocates a new output image and returns it.
+	 */
+	ref<Bitmap> filter(const ReconstructionFilter *rfilter,
+		ReconstructionFilter::EBoundaryCondition bch,
+		ReconstructionFilter::EBoundaryCondition bcv,
+		Float minValue = 0.0f, Float maxValue = 1.0f) const;
 
 	//! @}
 	// ======================================================================

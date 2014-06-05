@@ -604,13 +604,13 @@ static ref<ConfigurableObject> pluginmgr_create_helper(PluginManager *manager, b
 	return object;
 }
 
-static ref<ConfigurableObject> pluginmgr_create(PluginManager *manager, bp::dict dict) {
+static bp::object pluginmgr_create(PluginManager *manager, bp::dict dict) {
 	std::map<std::string, ConfigurableObject *> objs;
 	ref<ConfigurableObject> result = pluginmgr_create_helper(manager, dict, objs);
 	for (std::map<std::string, ConfigurableObject *>::iterator it = objs.begin();
 			it != objs.end(); ++it)
 		it->second->decRef();
-	return result;
+	return cast(result);
 }
 
 static bp::tuple mkCoordinateSystem(const Vector &n) {
@@ -1099,8 +1099,10 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(fromLinearRGB_overloads, fromLinearRGB, 3
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(fromXYZ_overloads, fromXYZ, 3, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(fromIPT_overloads, fromIPT, 3, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(reset_overloads, reset, 0, 1)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(filter_overloads, filter, 4, 7)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(resample_overloads, resample, 4, 7)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(resample1_overloads, resample, 4, 7)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(resample2_overloads, resample, 6, 4)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(filter1_overloads, filter, 4, 7)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(filter2_overloads, filter, 3, 5)
 
 #define IMPLEMENT_ANIMATION_TRACK(Name) \
 	BP_CLASS(Name, AbstractAnimationTrack, (bp::init<AbstractAnimationTrack::EType, size_t>())) \
@@ -1475,13 +1477,17 @@ void export_core() {
 		ReconstructionFilter::EBoundaryCondition, ReconstructionFilter::EBoundaryCondition,
 		Bitmap *, Bitmap *, Float, Float) const  = &Bitmap::resample;
 
+	ref<Bitmap> (Bitmap::*resample_2)(const ReconstructionFilter *,
+		ReconstructionFilter::EBoundaryCondition, ReconstructionFilter::EBoundaryCondition,
+		const Vector2i &, Float, Float) const  = &Bitmap::resample;
+
 	void (Bitmap::*filter_1)(const ReconstructionFilter *,
 		ReconstructionFilter::EBoundaryCondition, ReconstructionFilter::EBoundaryCondition,
 		Bitmap *, Bitmap *, Float, Float) const  = &Bitmap::filter;
 
-	ref<Bitmap> (Bitmap::*resample_2)(const ReconstructionFilter *,
+	ref<Bitmap> (Bitmap::*filter_2)(const ReconstructionFilter *,
 		ReconstructionFilter::EBoundaryCondition, ReconstructionFilter::EBoundaryCondition,
-		const Vector2i &, Float, Float) const  = &Bitmap::resample;
+		Float, Float) const  = &Bitmap::filter;
 
 	const std::vector<std::string> & (Bitmap::*getChannelNames_1)() const = &Bitmap::getChannelNames;
 
@@ -1541,9 +1547,10 @@ void export_core() {
 		.def("copyFrom", copyFrom_3)
 		.def("convolve", &Bitmap::convolve)
 		.def("arithmeticOperation", &Bitmap::arithmeticOperation, BP_RETURN_VALUE)
-		.def("filter", filter_1, filter_overloads())
-		.def("resample", resample_1, resample_overloads())
-		.def("resample", resample_2, BP_RETURN_VALUE)
+		.def("resample", resample_1, resample1_overloads())
+		.def("resample", resample_2, resample2_overloads()[BP_RETURN_VALUE])
+		.def("filter", filter_1, filter1_overloads())
+		.def("filter", filter_2, filter2_overloads()[BP_RETURN_VALUE])
 		.def("setGamma", &Bitmap::setGamma)
 		.def("getGamma", &Bitmap::getGamma)
 		.def("setMetadataString", &Bitmap::setMetadataString)
