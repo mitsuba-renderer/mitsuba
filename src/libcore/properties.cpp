@@ -374,6 +374,12 @@ bool Properties::operator==(const Properties &p) const {
 	return true;
 }
 
+void Properties::merge(const Properties &p) {
+	std::map<std::string, PropertyElement>::const_iterator it = p.m_elements->begin();
+	for (; it != p.m_elements->end(); ++it)
+		(*m_elements)[it->first] = it->second;
+}
+
 ConfigurableObject::ConfigurableObject(Stream *stream, InstanceManager *manager)
  : SerializableObject(stream, manager) {
 }

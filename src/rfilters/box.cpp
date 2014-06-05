@@ -35,7 +35,7 @@ public:
 		   samplers (Hammersley and Halton in particular) place samples
 		   at positions like (0, 0). Without such an epsilon and rounding
 		   errors, samples may end up not contributing to any pixel. */
-		m_radius = 0.5f + 1e-6f;
+		m_radius = props.getFloat("radius", 0.5f) + 1e-5f;
 	}
 
 	BoxFilter(Stream *stream, InstanceManager *manager)
@@ -44,7 +44,7 @@ public:
 	}
 
 	Float eval(Float x) const {
-		return std::abs(x) <= (0.5f + Epsilon) ? 1.0f : 0.0f;
+		return std::abs(x) <= m_radius ? 1.0f : 0.0f;
 	}
 
 	std::string toString() const {

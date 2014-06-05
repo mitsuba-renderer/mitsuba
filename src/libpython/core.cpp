@@ -89,6 +89,13 @@ static void shutdownFramework() {
 	Class::staticShutdown();
 }
 
+StringVector *StringVector_fromList(bp::list list) {
+	StringVector *result = new StringVector(bp::len(list));
+	for (int i=0; i<bp::len(list); ++i)
+		result->operator[](i) = bp::extract<std::string>(list[i]);
+	return result;
+}
+
 template <typename SpectrumType> class SpectrumWrapper {
 public:
 	static Float get(const SpectrumType &spec, int i) {
@@ -154,23 +161,23 @@ public:
 		bp::extract<AnimatedTransform *> extractAnimatedTransform(value);
 
 		if (extractString.check()){
-			props.setString(name, extractString());
+			props.setString(name, extractString(), false);
 		} else if (extractBoolean.check() && PyObject_IsInstance(value.ptr(), (PyObject *) &PyBool_Type)) {
-			props.setBoolean(name, extractBoolean());
+			props.setBoolean(name, extractBoolean(), false);
 		} else if (extractInteger.check()) {
-			props.setInteger(name, extractInteger());
+			props.setInteger(name, extractInteger(), false);
 		} else if (extractFloat.check()) {
-			props.setFloat(name, extractFloat());
+			props.setFloat(name, extractFloat(), false);
 		} else if (extractPoint.check()) {
-			props.setPoint(name, extractPoint());
+			props.setPoint(name, extractPoint(), false);
 		} else if (extractVector.check()) {
-			props.setVector(name, extractVector());
+			props.setVector(name, extractVector(), false);
 		} else if (extractTransform.check()) {
-			props.setTransform(name, extractTransform());
+			props.setTransform(name, extractTransform(), false);
 		} else if (extractAnimatedTransform.check()) {
-			props.setAnimatedTransform(name, extractAnimatedTransform());
+			props.setAnimatedTransform(name, extractAnimatedTransform(), false);
 		} else if (extractSpectrum.check()) {
-			props.setSpectrum(name, extractSpectrum());
+			props.setSpectrum(name, extractSpectrum(), false);
 		} else {
 			SLog(EError, "Properties: type of keyword \"%s\" is not supported!", name.c_str());
 		}
@@ -1023,10 +1030,77 @@ static NativeBuffer bitmap_buffer(Bitmap *bitmap) {
 	return NativeBuffer(bitmap, bitmap->getUInt8Data(), bitmap->getComponentFormat(), ndim, shape);
 }
 
+
+static ref<Bitmap> bitmap_array_constructor(bp::object _obj) {
+	PyObject *obj = _obj.ptr();
+	if (!obj)
+		SLog(EError, "Expected a non-NULL argument!");
+
+	bp::extract<fs::path> extractPath(_obj);
+	if (extractPath.check())
+		return new Bitmap(extractPath());
+
+	Py_buffer buffer;
+	if (PyObject_GetBuffer(obj, &buffer, PyBUF_CONTIG_RO | PyBUF_FORMAT))
+		SLog(EError, "Could not access supplied object using the buffer protocol!");
+
+	Vector2i size(1);
+	Bitmap::EPixelFormat pixelFormat = Bitmap::ELuminance;
+	Bitmap::EComponentFormat componentFormat = Bitmap::EUInt8;
+	int nChannels = 1;
+
+	if (buffer.ndim == 0 || buffer.ndim > 3)
+		SLog(EError, "Invalid number of dimensions!");
+
+	if (buffer.ndim == 1) {
+		size.x = buffer.shape[0];
+	} else if (buffer.ndim > 1) {
+		size.y = buffer.shape[0];
+		size.x = buffer.shape[1];
+	}
+	if (buffer.ndim > 2) {
+		nChannels = buffer.shape[2];
+		if (nChannels == 1)
+			pixelFormat = Bitmap::ELuminance;
+		else if (nChannels == 2)
+			pixelFormat = Bitmap::ELuminanceAlpha;
+		else if (nChannels == 3)
+			pixelFormat = Bitmap::ERGB;
+		else if (nChannels == 4)
+			pixelFormat = Bitmap::ERGBA;
+		else
+			pixelFormat = Bitmap::EMultiChannel;
+	}
+	if (strlen(buffer.format) != 1)
+		SLog(EError, "Invalid buffer format \"%s\"", buffer.format);
+
+	switch (buffer.format[0]) {
+		case 'B': componentFormat = Bitmap::EUInt8; break;
+		case 'H': componentFormat = Bitmap::EUInt16; break;
+		case 'I': componentFormat = Bitmap::EUInt32; break;
+		case 'e': componentFormat = Bitmap::EFloat16; break;
+		case 'f': componentFormat = Bitmap::EFloat32; break;
+		case 'd': componentFormat = Bitmap::EFloat64; break;
+		default:
+			SLog(EError, "Invalid buffer format \"%s\"", buffer.format);
+	}
+
+	ref<Bitmap> result = new Bitmap(pixelFormat, componentFormat, size, nChannels);
+	if ((size_t) buffer.len != result->getBufferSize())
+		SLog(EError, "Internal error: Python buffer size and Mitsuba bitmap size disagree: "
+			SIZE_T_FMT " vs " SIZE_T_FMT, (size_t) buffer.len, (size_t) result->getBufferSize());
+
+	memcpy(result->getData(), buffer.buf, result->getBufferSize());
+
+	PyBuffer_Release(&buffer);
+	return result;
+}
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(fromLinearRGB_overloads, fromLinearRGB, 3, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(fromXYZ_overloads, fromXYZ, 3, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(fromIPT_overloads, fromIPT, 3, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(reset_overloads, reset, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(filter_overloads, filter, 4, 7)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(resample_overloads, resample, 4, 7)
 
 #define IMPLEMENT_ANIMATION_TRACK(Name) \
 	BP_CLASS(Name, AbstractAnimationTrack, (bp::init<AbstractAnimationTrack::EType, size_t>())) \
@@ -1083,12 +1157,53 @@ static std::string memString2(size_t size, bool precise) { return mitsuba::memSt
 static std::string timeString1(Float size) { return mitsuba::timeString(size); }
 static std::string timeString2(Float size, bool precise) { return mitsuba::timeString(size, precise); }
 
+// Based on 'http://stackoverflow.com/questions/15842126/feeding-a-python-list-into-a-function-taking-in-a-vector-with-boost-python'
+struct iterable_converter {
+	template <typename Container> iterable_converter& from_python() {
+		bp::converter::registry::push_back(
+			&iterable_converter::convertible,
+			&iterable_converter::construct<Container>,
+			bp::type_id<Container>());
+		return *this;
+	}
+
+	static void* convertible(PyObject* object) {
+		return PyObject_GetIter(object) ? object : NULL;
+	}
+
+	template <typename Container> static void construct(
+		PyObject* object,
+		bp::converter::rvalue_from_python_stage1_data* data) {
+
+		// Object is a borrowed reference, so create a handle indicting it is
+		// borrowed for proper reference counting.
+		bp::handle<> handle(bp::borrowed(object));
+
+		// Obtain a handle to the memory block that the converter has allocated
+		// for the C++ type.
+		typedef bp::converter::rvalue_from_python_storage<Container> storage_type;
+		void* storage = reinterpret_cast<storage_type*>(data)->storage.bytes;
+
+		typedef bp::stl_input_iterator<typename Container::value_type> iterator;
+		// Allocate the C++ type into the converter's memory block, and assign
+		// its handle to the converter's convertible variable.  The C++
+		// container is populated by passing the begin and end iterators of
+		// the python object to the container's constructor.
+		data->convertible = new (storage) Container(
+			iterator(bp::object(handle)),
+			iterator());
+	}
+};
+
 void export_core() {
+	/* Set up various implicit conversions */
 	bp::to_python_converter<fs::path, path_to_python_str>();
 	bp::to_python_converter<TSpectrum<Float, SPECTRUM_SAMPLES>, TSpectrum_to_Spectrum>();
 	bp::implicitly_convertible<std::string, fs::path>();
-
 	PythonIntegrandFromPythonCallable();
+
+	iterable_converter()
+		.from_python<StringVector>();
 
 	bp::object coreModule(
 		bp::handle<>(bp::borrowed(PyImport_AddModule("mitsuba.core"))));
@@ -1101,7 +1216,9 @@ void export_core() {
 
 	/* Basic STL containers */
 	bp::class_<StringVector>("StringVector")
-		.def(bp::vector_indexing_suite<StringVector>());
+		.def(bp::vector_indexing_suite<StringVector>())
+		.def("__init__", bp::make_constructor(StringVector_fromList));
+
 	bp::class_<StringMap>("StringMap")
 		.def(bp::map_indexing_suite<StringMap>());
 
@@ -1123,6 +1240,14 @@ void export_core() {
 	coreModule.attr("SPECTRUM_SAMPLES") = SPECTRUM_SAMPLES;
 	coreModule.attr("MTS_VERSION") = MTS_VERSION;
 	coreModule.attr("MTS_YEAR") = MTS_YEAR;
+
+	#if defined(SINGLE_PRECISION)
+		coreModule.attr("DOUBLE_PRECISION") = 0;
+		coreModule.attr("SINGLE_PRECISION") = 1;
+	#else
+		coreModule.attr("DOUBLE_PRECISION") = 1;
+		coreModule.attr("SINGLE_PRECISION") = 0;
+	#endif
 
 	bp::class_<Class, boost::noncopyable>("Class", bp::no_init)
 		.def("getName", &Class::getName, BP_RETURN_CONSTREF)
@@ -1348,16 +1473,23 @@ void export_core() {
 
 	void (Bitmap::*resample_1)(const ReconstructionFilter *,
 		ReconstructionFilter::EBoundaryCondition, ReconstructionFilter::EBoundaryCondition,
-		Bitmap *, Float, Float) const  = &Bitmap::resample;
+		Bitmap *, Bitmap *, Float, Float) const  = &Bitmap::resample;
+
+	void (Bitmap::*filter_1)(const ReconstructionFilter *,
+		ReconstructionFilter::EBoundaryCondition, ReconstructionFilter::EBoundaryCondition,
+		Bitmap *, Bitmap *, Float, Float) const  = &Bitmap::filter;
 
 	ref<Bitmap> (Bitmap::*resample_2)(const ReconstructionFilter *,
 		ReconstructionFilter::EBoundaryCondition, ReconstructionFilter::EBoundaryCondition,
 		const Vector2i &, Float, Float) const  = &Bitmap::resample;
 
+	const std::vector<std::string> & (Bitmap::*getChannelNames_1)() const = &Bitmap::getChannelNames;
+
 	BP_CLASS(Bitmap, Object, (bp::init<Bitmap::EPixelFormat, Bitmap::EComponentFormat, const Vector2i &>()))
 		.def(bp::init<Bitmap::EPixelFormat, Bitmap::EComponentFormat, const Vector2i &, int>())
 		.def(bp::init<Bitmap::EFileFormat, Stream *, bp::optional<std::string> >())
 		.def(bp::init<fs::path, bp::optional<std::string> >())
+		.def("__init__", bp::make_constructor(bitmap_array_constructor))
 		.def("getPixelFormat", &Bitmap::getPixelFormat)
 		.def("getComponentFormat", &Bitmap::getComponentFormat)
 		.def("getSize", &Bitmap::getSize, BP_RETURN_VALUE)
@@ -1367,6 +1499,8 @@ void export_core() {
 		.def("getHeight", &Bitmap::getHeight)
 		.def("getChannelCount", &Bitmap::getChannelCount)
 		.def("getChannelName", &Bitmap::getChannelName, BP_RETURN_VALUE)
+		.def("getChannelNames", getChannelNames_1, BP_RETURN_VALUE)
+		.def("setChannelNames", &Bitmap::setChannelNames)
 		.def("isSquare", &Bitmap::isSquare)
 		.def("hasAlpha", &Bitmap::hasAlpha)
 		.def("hasWeight", &Bitmap::hasWeight)
@@ -1396,6 +1530,7 @@ void export_core() {
 		.def("flipVertically", &Bitmap::flipVertically)
 		.def("rotateFlip", &Bitmap::rotateFlip, BP_RETURN_VALUE)
 		.def("scale", &Bitmap::scale)
+		.def("pow", &Bitmap::pow)
 		.def("colorBalance", &Bitmap::colorBalance)
 		.def("applyMatrix", &bitmap_applyMatrix)
 		.def("accumulate", accumulate_1)
@@ -1406,7 +1541,8 @@ void export_core() {
 		.def("copyFrom", copyFrom_3)
 		.def("convolve", &Bitmap::convolve)
 		.def("arithmeticOperation", &Bitmap::arithmeticOperation, BP_RETURN_VALUE)
-		.def("resample", resample_1)
+		.def("filter", filter_1, filter_overloads())
+		.def("resample", resample_1, resample_overloads())
 		.def("resample", resample_2, BP_RETURN_VALUE)
 		.def("setGamma", &Bitmap::setGamma)
 		.def("getGamma", &Bitmap::getGamma)
@@ -1475,6 +1611,7 @@ void export_core() {
 	bp::enum_<Bitmap::EArithmeticOperation>("EArithmeticOperation")
 		.value("EAddition", Bitmap::EAddition)
 		.value("ESubtraction", Bitmap::ESubtraction)
+		.value("EMultiplication", Bitmap::EMultiplication)
 		.value("EDivision", Bitmap::EDivision)
 		.export_values();
 
@@ -1568,6 +1705,7 @@ void export_core() {
 
 	BP_CLASS(Statistics, Object, bp::no_init)
 		.def("getStats", &Statistics::getStats, BP_RETURN_VALUE)
+		.def("resetAll", &Statistics::resetAll)
 		.def("printStats", &Statistics::printStats)
 		.def("getInstance", &Statistics::getInstance, BP_RETURN_VALUE)
 		.staticmethod("getInstance");
@@ -1805,6 +1943,8 @@ void export_core() {
 		.def("hasProperty", &Properties::hasProperty)
 		.def("wasQueried", &Properties::wasQueried)
 		.def("markQueried", &Properties::markQueried)
+		.def("removeProperty", &Properties::removeProperty)
+		.def("merge", &Properties::merge)
 		.def("__getitem__", &properties_wrapper::get)
 		.def("__setitem__", &properties_wrapper::set)
 		.def("__contains__", &Properties::hasProperty)

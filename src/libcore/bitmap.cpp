@@ -435,6 +435,13 @@ std::string Bitmap::getChannelName(int idx) const {
 	return std::string(1, name);
 }
 
+void Bitmap::setChannelNames(const std::vector<std::string> &names) {
+	if (!names.empty() && names.size() != m_channelCount)
+		Log(EError, "setChannelNames(): tried to set %i channel names for an image with %i channels!",
+			(int) names.size(), m_channelCount);
+	m_channelNames = names;
+}
+
 void Bitmap::updateChannelCount() {
 	switch (m_pixelFormat) {
 		case ELuminance: m_channelCount = 1; break;
@@ -1129,6 +1136,145 @@ void Bitmap::scale(Float value) {
 	}
 }
 
+void Bitmap::pow(Float value) {
+	if (m_componentFormat == EBitmask)
+		Log(EError, "Bitmap::pow(): bitmasks are not supported!");
+
+	size_t nPixels = getPixelCount(), nChannels = getChannelCount();
+
+	if (hasAlpha()) {
+		switch (m_componentFormat) {
+			case EUInt8: {
+					uint8_t *data = (uint8_t *) m_data;
+					for (size_t i=0; i<nPixels; ++i) {
+						for (size_t j=0; j<nChannels-1; ++j) {
+							*data = (uint8_t) std::min((Float) 0xFF,
+								std::max((Float) 0, std::pow((Float) *data, value) + (Float) 0.5f));
+							++data;
+						}
+						++data;
+					}
+				}
+				break;
+
+			case EUInt16: {
+					uint16_t *data = (uint16_t *) m_data;
+					for (size_t i=0; i<nPixels; ++i) {
+						for (size_t j=0; j<nChannels-1; ++j) {
+							*data = (uint16_t) std::min((Float) 0xFFFF,
+								std::max((Float) 0, std::pow((Float) *data, value) + (Float) 0.5f));
+							++data;
+						}
+						++data;
+					}
+				}
+				break;
+
+			case EUInt32: {
+					uint32_t *data = (uint32_t *) m_data;
+					for (size_t i=0; i<nPixels; ++i) {
+						for (size_t j=0; j<nChannels-1; ++j) {
+							*data = (uint32_t) std::min((Float) 0xFFFFFFFFUL,
+								std::max((Float) 0, std::pow((Float) *data, value) + (Float) 0.5f));
+							++data;
+						}
+						++data;
+					}
+				}
+				break;
+
+			case EFloat16: {
+					half *data = (half *) m_data;
+					for (size_t i=0; i<nPixels; ++i) {
+						for (size_t j=0; j<nChannels-1; ++j) {
+							*data = safe_cast<half> (std::pow((Float) *data, value)); ++data;
+						}
+						++data;
+					}
+				}
+				break;
+
+			case EFloat32: {
+					float *data = (float *) m_data;
+					for (size_t i=0; i<nPixels; ++i) {
+						for (size_t j=0; j<nChannels-1; ++j) {
+							*data = (float) std::pow((Float) *data, value); ++data;
+						}
+						++data;
+					}
+				}
+				break;
+
+			case EFloat64: {
+					double *data = (double *) m_data;
+					for (size_t i=0; i<nPixels; ++i) {
+						for (size_t j=0; j<nChannels-1; ++j) {
+							*data = (double) std::pow((Float) *data, value); ++data;
+						}
+						++data;
+					}
+				}
+				break;
+
+			default:
+				Log(EError, "Bitmap::pow(): unexpected data format!");
+		}
+
+	} else {
+		size_t nEntries = nPixels * nChannels;
+
+		switch (m_componentFormat) {
+			case EUInt8: {
+					uint8_t *data = (uint8_t *) m_data;
+					for (size_t i=0; i<nEntries; ++i)
+						data[i] = (uint8_t) std::min((Float) 0xFF,
+							std::max((Float) 0, std::pow((Float) data[i], value) + (Float) 0.5f));
+				}
+				break;
+
+			case EUInt16: {
+					uint16_t *data = (uint16_t *) m_data;
+					for (size_t i=0; i<nEntries; ++i)
+						data[i] = (uint16_t) std::min((Float) 0xFFFF,
+							std::max((Float) 0, std::pow((Float) data[i], value) + (Float) 0.5f));
+				}
+				break;
+
+			case EUInt32: {
+					uint32_t *data = (uint32_t *) m_data;
+					for (size_t i=0; i<nEntries; ++i)
+						data[i] = (uint32_t) std::min((Float) 0xFFFFFFFFUL,
+							std::max((Float) 0, std::pow((Float) data[i], value) + (Float) 0.5f));
+				}
+				break;
+
+			case EFloat16: {
+					half *data = (half *) m_data;
+					for (size_t i=0; i<nEntries; ++i)
+						data[i] = safe_cast<half> (std::pow((Float) data[i], value));
+				}
+				break;
+
+			case EFloat32: {
+					float *data = (float *) m_data;
+					for (size_t i=0; i<nEntries; ++i)
+						data[i] = (float) std::pow((Float) data[i], value);
+				}
+				break;
+
+			case EFloat64: {
+					double *data = (double *) m_data;
+					for (size_t i=0; i<nEntries; ++i)
+						data[i] = (double) std::pow((Float) data[i], value);
+				}
+				break;
+
+			default:
+				Log(EError, "Bitmap::pow(): unexpected data format!");
+		}
+	}
+}
+
 ref<Bitmap> Bitmap::arithmeticOperation(Bitmap::EArithmeticOperation operation, const Bitmap *_bitmap1, const Bitmap *_bitmap2) {
 	ref<const Bitmap> bitmap1(_bitmap1), bitmap2(_bitmap2);
 
@@ -1433,7 +1579,8 @@ ref<Bitmap> Bitmap::convert(EPixelFormat pixelFormat,
 	ref<Bitmap> target = new Bitmap(pixelFormat, componentFormat, m_size,
 			m_channelCount);
 	target->setMetadata(m_metadata);
-	target->setChannelNames(m_channelNames);
+	if (m_channelNames.size() == (size_t) target->getChannelCount())
+		target->setChannelNames(m_channelNames);
 	target->setGamma(gamma);
 
 	cvt->convert(m_pixelFormat, m_gamma, m_data,
@@ -1808,8 +1955,9 @@ std::map<std::string, Bitmap *> Bitmap::split() const {
 		}
 
 		std::vector<std::string> channelNames;
-		for (int i=0; i<extractChannels.size(); ++i)
-			channelNames.push_back(m_channelNames[extractChannels[i]]);
+		for (size_t j=0; j<extractChannels.size(); ++j)
+			channelNames.push_back(m_channelNames[extractChannels[j]]);
+
 		Bitmap *bitmap = NULL;
 		{
 			ref<Bitmap> _bitmap = this->extractChannels(extractFormat, extractChannels);
@@ -1897,46 +2045,71 @@ ref<Bitmap> Bitmap::join(EPixelFormat fmt,
 	if (sourceBitmaps.size() == 0)
 		Log(EError, "Bitmap::join(): Need at least one bitmap!");
 
-	const Bitmap *ch0 = sourceBitmaps[0];
-	if (ch0->getComponentFormat() == EBitmask)
+	const Bitmap *bitmap0 = sourceBitmaps[0];
+	if (bitmap0->getComponentFormat() == EBitmask)
 		Log(EError, "Conversions involving bitmasks are currently not supported!");
 
-	ref<Bitmap> result = new Bitmap(fmt, ch0->getComponentFormat(),
-		ch0->getSize());
-	size_t channelCount = (size_t) result->getChannelCount();
+	for (size_t i=1; i<sourceBitmaps.size(); ++i) {
+		if (sourceBitmaps[i]->getSize() != bitmap0->getSize())
+			Log(EError, "Bitmap::join(): Detected a size mismatch!");
+		if (sourceBitmaps[i]->getGamma() != bitmap0->getGamma())
+			Log(EError, "Bitmap::join(): Detected a gamma mismatch!");
+		if (sourceBitmaps[i]->getComponentFormat() != bitmap0->getComponentFormat())
+			Log(EError, "Bitmap::join(): Detected a component format mismatch!");
+	}
 
-	result->setMetadata(ch0->getMetadata());
-	result->setGamma(ch0->getGamma());
+	/* Determine channel names and metadata */
+	int sourceChannelCount = 0, channelCount = -1;
+	std::vector<std::string> channelNames;
+	Properties metadata;
+	for (size_t i=0; i<sourceBitmaps.size(); ++i) {
+		sourceChannelCount += sourceBitmaps[i]->getChannelCount();
+		const std::vector<std::string> &names = sourceBitmaps[i]->getChannelNames();
+		channelNames.insert(channelNames.end(), names.begin(), names.end());
+		metadata.merge(sourceBitmaps[i]->getMetadata());
+	}
 
-	if (channelCount == sourceBitmaps.size())
+	if (!channelNames.empty()) {
+		std::set<std::string> namesUnique;
+		for (size_t i = 0; i < channelNames.size(); ++i) {
+			if (!channelNames[i].empty())
+				namesUnique.insert(channelNames[i]);
+		}
+		if (namesUnique.size() != channelNames.size())
+			Log(EError, "Bitmap::join(): Error -- some of the image supplied color "
+				" channel names, but it was not possible to assign a unique set of names.");
+	}
+
+	if (fmt == Bitmap::EMultiChannel)
+		channelCount = sourceChannelCount;
+
+	ref<Bitmap> result = new Bitmap(fmt, bitmap0->getComponentFormat(),
+		bitmap0->getSize(), channelCount);
+
+	channelCount = result->getChannelCount();
+	if (channelCount != sourceChannelCount)
 		Log(EError, "Bitmap::join(): Error -- supplied the wrong number "
 			"of channels (%i instead of %i)", (int) sourceBitmaps.size(),
 			result->getChannelCount());
 
-	for (size_t i=0; i<channelCount; ++i) {
-		if (sourceBitmaps[i]->getSize() != ch0->getSize())
-			Log(EError, "Bitmap::join(): Detected a size mismatch!");
+	result->setMetadata(metadata);
+	result->setGamma(bitmap0->getGamma());
+	result->setChannelNames(channelNames);
 
-		if (sourceBitmaps[i]->getComponentFormat() != ch0->getComponentFormat())
-			Log(EError, "Bitmap::join(): Detected a component format mismatch!");
+	size_t pixelCount = (size_t) bitmap0->getSize().x * (size_t) bitmap0->getSize().y;
+	uint8_t **pointers = (uint8_t **) alloca(sourceBitmaps.size() * sizeof(uint8_t *));
+	size_t *pixelSize = (size_t *) alloca(sourceBitmaps.size() * sizeof(size_t));
 
-		if (sourceBitmaps[i]->getPixelFormat() != ELuminance)
-			Log(EError, "Bitmap::join(): Detected a pixel format mismatch (expected ELuminance)!");
-	}
-
-	size_t pixelCount = (size_t) ch0->getSize().x
-		* (size_t) ch0->getSize().y;
-	size_t componentSize = ch0->getBytesPerComponent();
-
-	uint8_t **pointers = (uint8_t **) alloca(channelCount * sizeof(uint8_t *));
-	for (size_t i = 0; i<channelCount; ++i)
+	for (size_t i = 0; i<sourceBitmaps.size(); ++i) {
 		pointers[i] = sourceBitmaps[i]->getUInt8Data();
+		pixelSize[i] = sourceBitmaps[i]->getBytesPerPixel();
+	}
 
 	uint8_t *dest = result->getUInt8Data();
 
 	for (size_t i = 0; i<pixelCount; ++i)
-		for (size_t j = 0; j<channelCount; ++j)
-			for (size_t k= 0; k < componentSize; ++k)
+		for (size_t j = 0; j<sourceBitmaps.size(); ++j)
+			for (size_t k= 0; k < pixelSize[j]; ++k)
 				*dest++ = *pointers[j]++;
 
 	return result;
@@ -2047,10 +2220,8 @@ void Bitmap::applyMatrix(Float matrix_[3][3]) {
 template <typename Scalar> static void resample(ref<const ReconstructionFilter> rfilter,
 	ReconstructionFilter::EBoundaryCondition bch,
 	ReconstructionFilter::EBoundaryCondition bcv,
-	const Bitmap *source, Bitmap *target, Float minValue, Float maxValue) {
-	ref<Bitmap> temp; // Pointer to a temporary bitmap
-
-	int channels = source->getChannelCount();
+	const Bitmap *source, Bitmap *target, ref<Bitmap> temp, Float minValue,
+	Float maxValue, bool forceFiltering) {
 
 	if (!rfilter) {
 		/* Resample using a 2-lobed Lanczos reconstruction filter */
@@ -2063,47 +2234,86 @@ template <typename Scalar> static void resample(ref<const ReconstructionFilter> 
 		rfilter = instance;
 	}
 
-	if (source->getWidth() != target->getWidth()) {
+	if (source->getHeight() == target->getHeight() &&
+		source->getWidth() == target->getWidth() && !forceFiltering) {
+		memcpy(target->getData(), source->getData(), source->getBufferSize());
+		return;
+	}
+
+	int channels = source->getChannelCount();
+	bool clamp =
+		minValue != -std::numeric_limits<Float>::infinity() ||
+		maxValue !=  std::numeric_limits<Float>::infinity();
+
+	if (source->getWidth() != target->getWidth() || forceFiltering) {
 		/* Re-sample along the X direction */
 		Resampler<Scalar> r(rfilter, bch, source->getWidth(), target->getWidth());
 
 		/* Create a bitmap for intermediate storage */
-		if (source->getHeight() == target->getHeight())
-			temp = target; // write directly to the output bitmap
-		else // otherwise: write to a temporary bitmap
-			temp = new Bitmap(source->getPixelFormat(), source->getComponentFormat(),
-				Vector2i(target->getWidth(), source->getHeight()), channels);
+		if (!temp) {
+			if (source->getHeight() == target->getHeight() && !forceFiltering)
+				temp = target; // write directly to the output bitmap
+			else // otherwise: write to a temporary bitmap
+				temp = new Bitmap(source->getPixelFormat(), source->getComponentFormat(),
+					Vector2i(target->getWidth(), source->getHeight()), channels);
+		}
 
-		#if defined(MTS_OPENMP)
-			#pragma omp parallel for
-		#endif
-		for (int y=0; y<source->getHeight(); ++y) {
-			const Scalar *srcPtr = (Scalar *) source->getUInt8Data()
-				+ y * source->getWidth() * channels;
-			Scalar *trgPtr = (Scalar *) temp->getUInt8Data()
-				+ y * target->getWidth() * channels;
+		if (clamp) {
+			#if defined(MTS_OPENMP)
+				#pragma omp parallel for
+			#endif
+			for (int y=0; y<source->getHeight(); ++y) {
+				const Scalar *srcPtr = (Scalar *) source->getUInt8Data()
+					+ y * source->getWidth() * channels;
+				Scalar *trgPtr = (Scalar *) temp->getUInt8Data()
+					+ y * target->getWidth() * channels;
 
-			r.resampleAndClamp(srcPtr, 1, trgPtr, 1, channels,
-					safe_cast<Scalar>(minValue), safe_cast<Scalar>(maxValue));
+				r.resampleAndClamp(srcPtr, 1, trgPtr, 1, channels,
+						safe_cast<Scalar>(minValue), safe_cast<Scalar>(maxValue));
+			}
+		} else {
+			#if defined(MTS_OPENMP)
+				#pragma omp parallel for
+			#endif
+			for (int y=0; y<source->getHeight(); ++y) {
+				const Scalar *srcPtr = (Scalar *) source->getUInt8Data()
+					+ y * source->getWidth() * channels;
+				Scalar *trgPtr = (Scalar *) temp->getUInt8Data()
+					+ y * target->getWidth() * channels;
+
+				r.resample(srcPtr, 1, trgPtr, 1, channels);
+			}
 		}
 
 		/* Now, read from the temporary bitmap */
 		source = temp;
 	}
 
-	if (source->getHeight() != target->getHeight()) {
+	if (source->getHeight() != target->getHeight() || forceFiltering) {
 		/* Re-sample along the Y direction */
 		Resampler<Scalar> r(rfilter, bcv, source->getHeight(), target->getHeight());
 
-		#if defined(MTS_OPENMP)
-			#pragma omp parallel for
-		#endif
-		for (int x=0; x<source->getWidth(); ++x) {
-			const Scalar *srcPtr = (Scalar *) source->getUInt8Data() + x * channels;
-			Scalar *trgPtr = (Scalar *) target->getUInt8Data() + x * channels;
+		if (clamp) {
+			#if defined(MTS_OPENMP)
+				#pragma omp parallel for
+			#endif
+			for (int x=0; x<source->getWidth(); ++x) {
+				const Scalar *srcPtr = (Scalar *) source->getUInt8Data() + x * channels;
+				Scalar *trgPtr = (Scalar *) target->getUInt8Data() + x * channels;
 
-			r.resampleAndClamp(srcPtr, source->getWidth(), trgPtr, target->getWidth(),
-				channels, safe_cast<Scalar>(minValue), safe_cast<Scalar>(maxValue));
+				r.resampleAndClamp(srcPtr, source->getWidth(), trgPtr, target->getWidth(),
+					channels, safe_cast<Scalar>(minValue), safe_cast<Scalar>(maxValue));
+			}
+		} else {
+			#if defined(MTS_OPENMP)
+				#pragma omp parallel for
+			#endif
+			for (int x=0; x<source->getWidth(); ++x) {
+				const Scalar *srcPtr = (Scalar *) source->getUInt8Data() + x * channels;
+				Scalar *trgPtr = (Scalar *) target->getUInt8Data() + x * channels;
+
+				r.resample(srcPtr, source->getWidth(), trgPtr, target->getWidth(), channels);
+			}
 		}
 	}
 }
@@ -2111,26 +2321,55 @@ template <typename Scalar> static void resample(ref<const ReconstructionFilter> 
 void Bitmap::resample(const ReconstructionFilter *rfilter,
 		ReconstructionFilter::EBoundaryCondition bch,
 		ReconstructionFilter::EBoundaryCondition bcv,
-		Bitmap *target, Float minValue, Float maxValue) const {
+		Bitmap *target, Bitmap *temp, Float minValue, Float maxValue) const {
 
 	Assert(getPixelFormat() == target->getPixelFormat() &&
 		getComponentFormat() == target->getComponentFormat() &&
-		getChannelCount() == target->getChannelCount());
+		getChannelCount() == target->getChannelCount() &&
+		(!temp || temp->getSize() == Vector2i(target->getWidth(), getHeight())));
+
 
 	switch (m_componentFormat) {
 		case EFloat16:
-			mitsuba::resample<half>(rfilter, bch, bcv, this, target, minValue, maxValue);
+			mitsuba::resample<half>(rfilter, bch, bcv, this, target, temp, minValue, maxValue, false);
 			break;
 		case EFloat32:
-			mitsuba::resample<float>(rfilter, bch, bcv, this, target, minValue, maxValue);
+			mitsuba::resample<float>(rfilter, bch, bcv, this, target, temp, minValue, maxValue, false);
 			break;
 		case EFloat64:
-			mitsuba::resample<double>(rfilter, bch, bcv, this, target, minValue, maxValue);
+			mitsuba::resample<double>(rfilter, bch, bcv, this, target, temp, minValue, maxValue, false);
 			break;
 		default:
 			Log(EError, "resample(): Unsupported component type! (must be float16/32/64)");
 	}
 }
+
+void Bitmap::filter(const ReconstructionFilter *rfilter,
+		ReconstructionFilter::EBoundaryCondition bch,
+		ReconstructionFilter::EBoundaryCondition bcv,
+		Bitmap *target, Bitmap *temp, Float minValue, Float maxValue) const {
+
+	Assert(getPixelFormat() == target->getPixelFormat() &&
+		getComponentFormat() == target->getComponentFormat() &&
+		getChannelCount() == target->getChannelCount() &&
+		getSize() == target->getSize() &&
+		(!temp || temp->getSize() == getSize()));
+
+	switch (m_componentFormat) {
+		case EFloat16:
+			mitsuba::resample<half>(rfilter, bch, bcv, this, target, temp, minValue, maxValue, true);
+			break;
+		case EFloat32:
+			mitsuba::resample<float>(rfilter, bch, bcv, this, target, temp, minValue, maxValue, true);
+			break;
+		case EFloat64:
+			mitsuba::resample<double>(rfilter, bch, bcv, this, target, temp, minValue, maxValue, true);
+			break;
+		default:
+			Log(EError, "filter(): Unsupported component type! (must be float16/32/64)");
+	}
+}
+
 
 ref<Bitmap> Bitmap::resample(const ReconstructionFilter *rfilter,
 		ReconstructionFilter::EBoundaryCondition bch,
@@ -2139,7 +2378,7 @@ ref<Bitmap> Bitmap::resample(const ReconstructionFilter *rfilter,
 	ref<Bitmap> result = new Bitmap(m_pixelFormat, m_componentFormat, size);
 	result->m_metadata = m_metadata;
 	result->m_gamma = m_gamma;
-	resample(rfilter, bch, bcv, result, minValue, maxValue);
+	resample(rfilter, bch, bcv, result, NULL, minValue, maxValue);
 	return result;
 }
 
@@ -2155,19 +2394,21 @@ bool Bitmap::operator==(const Bitmap &bitmap) const {
 std::string Bitmap::toString() const {
 	std::ostringstream oss;
 	oss << "Bitmap[" << endl
-		<< "  type = " << m_pixelFormat << endl
-		<< "  componentFormat = " << m_componentFormat << endl
-		<< "  size = " << m_size.toString() << endl;
+		<< "  type = " << m_pixelFormat << "," << endl
+		<< "  componentFormat = " << m_componentFormat << "," << endl
+		<< "  size = " << m_size.toString() << "," << endl;
 
-	if (isMultiChannel()) {
-		oss << "  channelCount = " << (int) m_channelCount << "," << endl
-		    << "  channelNames = { ";
+	if (isMultiChannel())
+		oss << "  channelCount = " << (int) m_channelCount << "," << endl;
+
+	if (!m_channelNames.empty()) {
+    	oss << "  channelNames = [ ";
 		for (size_t i=0; i<m_channelNames.size(); ++i) {
 			oss << "\"" << m_channelNames[i] << "\"";
 			if (i+1<m_channelNames.size())
 				oss << ", ";
 		}
-		oss << " }," << endl;
+		oss << " ]," << endl;
 	}
 
 	std::vector<std::string> keys = m_metadata.getPropertyNames();
@@ -2183,7 +2424,7 @@ std::string Bitmap::toString() const {
 				oss << ",";
 			oss << endl;
 		}
-		oss << "  }" << endl;
+		oss << "  }," << endl;
 	}
 	oss << "  gamma = " << m_gamma << "," << endl
 		<< "  data = [ " << memString(getBufferSize()) << " of image data ]" << endl

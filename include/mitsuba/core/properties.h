@@ -242,6 +242,9 @@ public:
 		return !operator==(props);
 	}
 
+	/// Merge a properties record into the current one
+	void merge(const Properties &props);
+
 	/// Return a string representation
 	std::string toString() const;
 private:

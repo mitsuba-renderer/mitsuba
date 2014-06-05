@@ -820,15 +820,28 @@ public:
 	std::map<std::string, Bitmap *> split() const;
 
 	/**
-	 * \brief Merges multiple luminance-valued bitmaps into
-	 * a proper multi-channel bitmap.
+	 * \brief Extract several color channels of a multi-channel
+	 * bitmap and return them as a bitmap with the given pixel format
+	 */
+	ref<Bitmap> extractChannels(Bitmap::EPixelFormat fmt, const std::vector<int> &channels) const;
+
+	/**
+	 * \brief Split an multi-channel image buffer (e.g. from an OpenEXR image
+	 * with lots of AOVs) into group of RGB[A]/XYZ[A]/Luminance images
+	 */
+	std::map<std::string, Bitmap *> split() const;
+
+	/**
+	 * \brief Merges multiple bitmaps of the same type and resolution
+	 * into one with a larger number of channels
 	 *
 	 * \param fmt The desired pixel format of the combined bitmap
-	 * \param sourceBitmaps An array containing the according
-	 * amount of luminance bitmaps. They must all be of the
-	 * same size and component format.
 	 *
-	 * \return A newly created multi-channel bitmap
+	 * \param sourceBitmaps An array containing the input bitmaps
+	 * They must all be of the same size and component format.
+	 *
+	 * \return A newly created bitmap containing all input images
+	 * as color channels
 	 */
 	static ref<Bitmap> join(EPixelFormat fmt,
 			const std::vector<Bitmap *> &sourceBitmaps);
@@ -853,6 +866,15 @@ public:
 	 * scale operation, it is clamped to the representable range.
 	 */
 	void scale(Float value);
+
+	/**
+	 * \brief Raise the entire image to a certain value
+	 *
+	 * Skips the image's alpha channel, if it has one. When the image uses
+	 * a fixed point representation and a pixel value overflows during the
+	 * scale operation, it is clamped to the representable range.
+	 */
+	void pow(Float value);
 
 	/**
 	 * \brief Color balancing: apply the given scale factors to the
@@ -1015,12 +1037,35 @@ public:
 	 *
 	 * A maximum and maximum image value can be specified to prevent to prevent
 	 * out-of-range values that are created by the resampling process.
+	 * 
+	 * The optional 'temp' parameter can be used to pass an image of
+	 * resolution <tt>Vector2i(target->getWidth(), this->getHeight())</tt>
+	 * to avoid intermediate memory allocations.
 	 */
 	void resample(const ReconstructionFilter *rfilter,
 		ReconstructionFilter::EBoundaryCondition bch,
 		ReconstructionFilter::EBoundaryCondition bcv,
-		Bitmap *target, Float minValue = 0.0f,
-		Float maxValue = 1.0f) const;
+		Bitmap *target, Bitmap *temp = NULL,
+		Float minValue = 0.0f, Float maxValue = 1.0f) const;
+
+	/**
+	 * \brief Apply a separable filter to the image
+	 *
+	 * Applies the provided filter while observing the specified
+	 * horizontal and vertical boundary conditions when looking up data
+	 * outside of the input domain.
+	 *
+	 * A maximum and maximum image value can be specified to prevent to prevent
+	 * out-of-range values that are created by the filtering process.
+	 * 
+	 * The optional 'temp' parameter can be used to pass an image of
+	 * the same dimensions as the source and target image.
+	 */
+	void filter(const ReconstructionFilter *rfilter,
+		ReconstructionFilter::EBoundaryCondition bch,
+		ReconstructionFilter::EBoundaryCondition bcv,
+		Bitmap *target, Bitmap *temp = NULL,
+		Float minValue = 0.0f, Float maxValue = 1.0f) const;
 
 	/**
 	 * \brief Up- or down-sample this image to a different resolution
@@ -1076,7 +1121,7 @@ public:
 	 * The main use of this feature is when writing \ref EMultiChannel
 	 * images to OpenEXR files. In other cases, the names are ignored.
 	 */
-	inline void setChannelNames(const std::vector<std::string> &names) { m_channelNames = names; }
+	void setChannelNames(const std::vector<std::string> &names);
 
 	/// Return the names of the image channels if explicitly specified (empty by default)
 	inline std::vector<std::string> &getChannelNames() { return m_channelNames; }
