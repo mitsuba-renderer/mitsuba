@@ -13,6 +13,6 @@ plugins += env.SharedLibrary('shapegroup', ['shapegroup.cpp'])
 plugins += env.SharedLibrary('instance', ['instance.cpp'])
 plugins += env.SharedLibrary('cube', ['cube.cpp'])
 plugins += env.SharedLibrary('heightfield', ['heightfield.cpp'])
-#plugins += env.SharedLibrary('deformable', ['deformable.cpp'])
+plugins += env.SharedLibrary('deformable', ['deformable.cpp'])
 
 Export('plugins')

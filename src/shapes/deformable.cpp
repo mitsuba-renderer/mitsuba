@@ -35,20 +35,109 @@ class SpaceTimeKDTree : public SAHKDTree4D<SpaceTimeKDTree> {
 public:
 	/// Temporarily holds some intersection information
 	struct IntersectionCache {
-		Point p[3];
+		IndexType frameIndex;
+		Float alpha;
+		IndexType shapeIndex, primIndex;
 		Float u, v;
 	};
 
-	SpaceTimeKDTree(const std::vector<Float> &frameTimes, std::vector<float *> &positions,
-			Triangle *triangles, size_t vertexCount,  size_t triangleCount)
-		: m_frameTimes(frameTimes), m_positions(positions), m_triangles(triangles),
-		  m_vertexCount(vertexCount), m_triangleCount(triangleCount) {
+	SpaceTimeKDTree(const std::vector<Float> &times) : m_times(times) { }
 
-		Log(EInfo, "Total amount of vertex data: %s",
-				memString(vertexCount*frameTimes.size()*sizeof(float)*3).c_str());
+	SpaceTimeKDTree(Stream *stream, InstanceManager *manager) {
+		size_t times = (size_t) stream->readUInt();
+		m_times.resize(times);
+		m_meshes.resize(times);
+		for (size_t i=0; i<times; ++i) {
+			m_times[i] = stream->readFloat();
+			size_t count = (size_t) stream->readUInt();
+			std::vector<const TriMesh *> &meshes = m_meshes.at(i);
+			meshes.resize(count);
+			for (size_t j=0; j<count; ++j)
+				meshes[j] = static_cast<TriMesh *>(manager->getInstance(stream));
+		}
+	}
 
-		//setClip(false);
-		//setExactPrimitiveThreshold(10);
+	~SpaceTimeKDTree() {
+		for (size_t i=0; i<m_meshes.size(); ++i)
+			for (size_t j=0; j<m_meshes[i].size(); ++j)
+				m_meshes[i][j]->decRef();
+	}
+
+	void serialize(Stream *stream, InstanceManager *manager) const {
+		stream->writeUInt((uint32_t) m_times.size());
+
+		for (size_t i=0; i<m_times.size(); ++i) {
+			const std::vector<const TriMesh *> &meshes = m_meshes.at(i);
+			stream->writeFloat(m_times[i]);
+			stream->writeUInt((uint32_t) meshes.size());
+			for (size_t j=0; j<meshes.size(); ++j)
+				manager->serialize(stream, meshes[j]);
+		}
+	}
+
+	void addShape(Shape *shape) {
+		std::vector<const TriMesh *> vec;
+		size_t index = 0;
+		if (shape->getClass()->derivesFrom(MTS_CLASS(TriMesh))) {
+			shape->incRef();
+			vec.push_back(static_cast<TriMesh *>(shape));
+		} else if (shape->isCompound()) {
+			do {
+				ref<Shape> element = shape->getElement(index++);
+				if (element == NULL)
+					break;
+				if (!element->getClass()->derivesFrom(MTS_CLASS(TriMesh)))
+					Log(EError, "Can only add triangle meshes to the 'deformable' plugin");
+				element->incRef();
+				vec.push_back(static_cast<TriMesh *>(element.get()));
+			} while (true);
+		}
+
+		if (vec.empty())
+			Log(EError, "Can only add triangle meshes to the 'deformable' plugin");
+		else
+			m_meshes.push_back(vec);
+	}
+
+
+	void build() {
+		if (m_meshes.size() < 2)
+			Log(EError, "The deformable shape requires at least two sub-shapes!");
+
+		if (m_meshes.size() != m_times.size()) {
+			Log(EError, "The number of arguments to the 'times' parameter (%u) must "
+				"match the number of sub-shapes (%u).", m_times.size(), m_meshes.size());
+		}
+
+		for (size_t i=1; i<m_meshes.size(); ++i) {
+			const std::vector<const TriMesh *> &meshes = m_meshes[i];
+
+			if (m_times[i] <= m_times[i-1])
+				Log(EError, "Frame times must be increasing!");
+
+			if (meshes.size() != m_meshes[0].size())
+				Log(EError, "The number of compound shapes for each time value must be identical!");
+
+			for (size_t j=0;j<m_meshes[0].size(); ++j) {
+				const TriMesh *mesh0 = m_meshes[0][j];
+				const TriMesh *mesh1 = m_meshes[i][j];
+
+				if (mesh0->getTriangleCount() != mesh1->getTriangleCount())
+					Log(EError, "All sub-meshes must have the exact same number of triangles");
+				if (mesh0->getVertexCount() != mesh1->getVertexCount())
+					Log(EError, "All sub-meshes must have the exact same number of triangles");
+				if (memcmp(mesh0->getTriangles(), mesh1->getTriangles(), sizeof(Triangle) * mesh0->getTriangleCount()) != 0)
+					Log(EError, "All sub-meshes must have the exact same face topology");
+			}
+		}
+
+
+		m_shapeMap.resize(m_meshes[0].size()+1);
+		m_shapeMap[0] = 0;
+		for (size_t i=0; i<m_meshes[0].size(); ++i)
+			m_shapeMap[i+1] = m_shapeMap[i] + (SizeType) m_meshes[0][i]->getTriangleCount();
+
+		this->setClip(false);
 		buildInternal();
 
 		/* Collect some statistics */
@@ -82,17 +171,16 @@ public:
 		);
 	}
 
-	/// Return one of the points stored in the point cache
-	inline Point getPoint(uint32_t frame, uint32_t index) const {
-		float *ptr = m_positions[frame] + index*3;
-#if defined(__LITTLE_ENDIAN__)
-		return Point(
-			(Float) endianness_swap(ptr[0]),
-			(Float) endianness_swap(ptr[1]),
-			(Float) endianness_swap(ptr[2]));
-#else
-		return Point((Float) ptr[0], (Float) ptr[1], (Float) ptr[2]);
-#endif
+	inline IndexType findShape(IndexType &index) const {
+		std::vector<IndexType>::const_iterator it = std::lower_bound(
+				m_shapeMap.begin(), m_shapeMap.end(), index + 1) - 1;
+		index -= *it;
+		return (IndexType) (it - m_shapeMap.begin());
+	}
+
+	inline IndexType findFrame(Float time) const {
+		return (IndexType) std::min(std::max((int) (std::lower_bound(
+			m_times.begin(), m_times.end(), time) - m_times.begin()) - 1, 0), (int) m_times.size()-1);
 	}
 
 	// ========================================================================
@@ -101,137 +189,119 @@ public:
 
 	/// Return the total number of primitives that are organized in the tree
 	inline SizeType getPrimitiveCount() const {
-#ifdef SHAPE_PER_SEGMENT
-		return m_triangleCount * (m_frameTimes.size() - 1);
-#else
-		return m_triangleCount;
-#endif
+		return m_shapeMap[m_shapeMap.size()-1];
 	}
 
 	/// Return the 4D extents for one of the primitives contained in the tree
 	AABB4 getAABB(IndexType index) const {
-#ifdef SHAPE_PER_SEGMENT
-		int frameIdx = index / m_triangleCount;
-		int triangleIdx  = index % m_triangleCount;
-		const Triangle &tri = m_triangles[triangleIdx];
+		IndexType shapeIndex = findShape(index);
+		const Triangle &tri = m_meshes[0][shapeIndex]->getTriangles()[index];
 
 		AABB aabb;
-		for (int i=0; i<3; ++i) {
-			aabb.expandBy(getPoint(frameIdx, tri.idx[i]));
-			aabb.expandBy(getPoint(frameIdx+1, tri.idx[i]));
+		for (size_t frame=0; frame<m_times.size(); ++frame) {
+			const Point *pos = m_meshes[frame][shapeIndex]->getVertexPositions();
+			for (int j=0; j<3; ++j)
+				aabb.expandBy(pos[tri.idx[j]]);
 		}
 
 		return AABB4(
-			Point4(aabb.min.x, aabb.min.y, aabb.min.z, m_frameTimes[frameIdx]),
-			Point4(aabb.max.x, aabb.max.y, aabb.max.z, m_frameTimes[frameIdx+1])
+			Point4(aabb.min.x, aabb.min.y, aabb.min.z, m_times[0]),
+			Point4(aabb.max.x, aabb.max.y, aabb.max.z, m_times[m_times.size()-1])
 		);
-#else
-		AABB aabb;
-		const Triangle &tri = m_triangles[index];
-		for (size_t i=0; i<m_frameTimes.size(); ++i)
-			for (int j=0; j<3; ++j)
-				aabb.expandBy(getPoint(i, tri.idx[j]));
-		return AABB4(
-			Point4(aabb.min.x, aabb.min.y, aabb.min.z, m_frameTimes[0]),
-			Point4(aabb.max.x, aabb.max.y, aabb.max.z, m_frameTimes[m_frameTimes.size()-1])
-		);
-#endif
 	}
 
 	/// Return a clipped 4D AABB for one of the primitives contained in the tree
-	AABB4 getClippedAABB(int index, const AABB4 &box) const {
+	AABB4 getClippedAABB(IndexType index, const AABB4 &box) const {
 		AABB clip(
 			Point(box.min.x, box.min.y, box.min.z),
 			Point(box.max.x, box.max.y, box.max.z)
 		);
-#ifdef NO_CLIPPING_SUPPORT
-		AABB4 aabb = getAABB(index);
-		aabb.clip(box);
-		return aabb;
-#elif SHAPE_PER_SEGMENT
-		int frameIdx = index / m_triangleCount;
-		int triangleIdx  = index % m_triangleCount;
+#if 0
+		int startIndex = findFrame(box.min.w),
+			endIndex   = findFrameUpperBound(box.max.w);
 
-		AABB aabb(m_triangles[triangleIdx].getClippedAABB(m_positions[frameIdx], clip)); /// XXX broken
-		aabb.expandBy(m_triangles[triangleIdx].getClippedAABB(m_positions[frameIdx+1], clip));
-		if (aabb.isValid())
-			return AABB4(
-				Point4(aabb.min.x, aabb.min.y, aabb.min.z, box.min.w),
-				Point4(aabb.max.x, aabb.max.y, aabb.max.z, box.max.w));
-		else
-			return AABB4();
-#else
-		int startIndex = std::max((int) (std::lower_bound(m_frameTimes.begin(), m_frameTimes.end(),
-				box.min.w) - m_frameTimes.begin()) - 1, 0);
-		int endIndex = (int) (std::lower_bound(m_frameTimes.begin(), m_frameTimes.end(),
-				box.max.w) - m_frameTimes.begin());
 		AABB4 result;
-		const Triangle &tri = m_triangles[index];
+		IndexType shapeIndex = findShape(index);
+		const Triangle &tri = m_meshes[0][shapeIndex]->getTriangles()[index];
 
-		for (int i=startIndex; i<=endIndex; ++i) {
-			Point p0 = getPoint(i, tri.idx[0]);
-			Point p1 = getPoint(i, tri.idx[1]);
-			Point p2 = getPoint(i, tri.idx[2]);
-			AABB aabb(Triangle::getClippedAABB(p0, p1, p2, clip));
+		for (int frame=startIndex; frame<=endIndex; ++frame) {
+			const Point *pos = m_meshes[frame][shapeIndex]->getVertexPositions();
+			AABB aabb = tri.getClippedAABB(pos, clip);
 			if (aabb.isValid()) {
-				result.expandBy(Point4(aabb.min.x, aabb.min.y, aabb.min.z, m_frameTimes[i]));
-				result.expandBy(Point4(aabb.max.x, aabb.max.y, aabb.max.z, m_frameTimes[i]));
+				result.expandBy(Point4(aabb.min.x, aabb.min.y, aabb.min.z, m_times[frame]));
+				result.expandBy(Point4(aabb.max.x, aabb.max.y, aabb.max.z, m_times[frame]));
 			}
 		}
+#endif
+
+		AABB4 result = getAABB(index);
 		result.clip(box);
 		return result;
-#endif
 	}
 
 	/// Cast a normal (i.e. non-shadow) ray against a specific animated triangle
-	inline bool intersect(const Ray &ray, IndexType idx,
+	inline bool intersect(const Ray &ray, IndexType index,
 			Float mint, Float maxt, Float &t, void *tmp) const {
-#if SHAPE_PER_SEGMENT
-		IndexType frameIdx = idx / m_triangleCount;
-		IndexType triangleIdx = idx % m_triangleCount;
-#else
-		IndexType triangleIdx = idx;
-		IndexType frameIdx = (IndexType) std::max((int) (std::lower_bound(
-			m_frameTimes.begin(), m_frameTimes.end(), ray.time) -
-			m_frameTimes.begin()) - 1, 0);
-#endif
-		const Triangle &tri = m_triangles[triangleIdx];
+		IntersectionCache *cache = static_cast<IntersectionCache *>(tmp);
+		IndexType shapeIndex = findShape(index);
+		IndexType frameIndex = findFrame(ray.time);
+		Float alpha = std::max((Float) 0.0f, std::min((Float) 1.0f,
+			(ray.time - m_times[frameIndex])
+			/ (m_times[frameIndex + 1] - m_times[frameIndex])));
 
-		Float alpha = (ray.time - m_frameTimes[frameIdx])
-			/ (m_frameTimes[frameIdx + 1] - m_frameTimes[frameIdx]);
+		const Triangle &tri = m_meshes[0][shapeIndex]->getTriangles()[index];
 
-		if (alpha < 0 || alpha > 1)
-			return false;
+		const Point *pos0 = m_meshes[frameIndex  ][shapeIndex]->getVertexPositions();
+		const Point *pos1 = m_meshes[frameIndex+1][shapeIndex]->getVertexPositions();
 
 		/* Compute interpolated positions */
 		Point p[3];
 		for (int i=0; i<3; ++i)
-			p[i] = (1 - alpha) * getPoint(frameIdx, tri.idx[i])
-				+ alpha * getPoint(frameIdx+1, tri.idx[i]);
+			p[i] = (1 - alpha) * pos0[tri.idx[i]] + alpha * pos1[tri.idx[i]];
 
 		Float tempU, tempV, tempT;
 		if (!Triangle::rayIntersect(p[0], p[1], p[2], ray, tempU, tempV, tempT))
 			return false;
+
 		if (tempT < mint || tempT > maxt)
 			return false;
 
-		if (tmp != NULL) {
-			IntersectionCache *cache =
-				static_cast<IntersectionCache *>(tmp);
-			t = tempT;
-			memcpy(cache->p, p, sizeof(Point)*3);
-			cache->u = tempU;
-			cache->v = tempV;
-		}
+		t = tempT;
+		cache->frameIndex = frameIndex;
+		cache->alpha = alpha;
+		cache->shapeIndex = shapeIndex;
+		cache->primIndex = index;
+		cache->u = tempU;
+		cache->v = tempV;
 		return true;
 	}
 
 	/// Cast a shadow ray against a specific triangle
-	inline bool intersect(const Ray &ray, IndexType idx,
-			Float mint, Float maxt) const {
-		Float tempT;
-		/* No optimized version for shadow rays yet */
-		return intersect(ray, idx, mint, maxt, tempT, NULL);
+	inline bool intersect(const Ray &ray, IndexType index, Float mint, Float maxt) const {
+		IndexType shapeIndex = findShape(index);
+		const Triangle &tri = m_meshes[0][shapeIndex]->getTriangles()[index];
+
+		IndexType frameIndex = findFrame(ray.time);
+		Float alpha = std::max((Float) 0.0f, std::min((Float) 1.0f,
+			(ray.time - m_times[frameIndex])
+			/ (m_times[frameIndex + 1] - m_times[frameIndex])));
+
+		const Point *pos0 = m_meshes[frameIndex  ][shapeIndex]->getVertexPositions();
+		const Point *pos1 = m_meshes[frameIndex+1][shapeIndex]->getVertexPositions();
+
+		/* Compute interpolated positions */
+		Point p[3];
+		for (int i=0; i<3; ++i)
+			p[i] = (1 - alpha) * pos0[tri.idx[i]] + alpha * pos1[tri.idx[i]];
+
+		Float tempU, tempV, tempT;
+		if (!Triangle::rayIntersect(p[0], p[1], p[2], ray, tempU, tempV, tempT))
+			return false;
+
+		if (tempT < mint || tempT > maxt)
+			return false;
+
+		return true;
 	}
 
 	// ========================================================================
@@ -241,6 +311,8 @@ public:
 	/// Intersect a ray with all primitives stored in the kd-tree
 	inline bool rayIntersect(const Ray &ray, Float _mint, Float _maxt,
 			Float &t, void *temp) const {
+		IntersectionCache *cache = static_cast<IntersectionCache *>(temp);
+
 		Float tempT = std::numeric_limits<Float>::infinity();
 		Float mint, maxt;
 
@@ -248,8 +320,8 @@ public:
 			if (_mint > mint) mint = _mint;
 			if (_maxt < maxt) maxt = _maxt;
 
-			if (EXPECT_TAKEN(maxt > mint && ray.time >= m_aabb.min.w && ray.time <= m_aabb.max.w)) {
-				if (rayIntersectHavran<false>(ray, mint, maxt, tempT, temp)) {
+			if (EXPECT_TAKEN(maxt > mint)) {
+				if (rayIntersectHavran<false>(ray, mint, maxt, tempT, cache)) {
 					t = tempT;
 					return true;
 				}
@@ -270,15 +342,12 @@ public:
 			if (_mint > mint) mint = _mint;
 			if (_maxt < maxt) maxt = _maxt;
 
-			if (EXPECT_TAKEN(maxt > mint && ray.time >= m_aabb.min.w && ray.time <= m_aabb.max.w))
+			if (EXPECT_TAKEN(maxt > mint)) {
 				if (rayIntersectHavran<true>(ray, mint, maxt, tempT, NULL))
 					return true;
+			}
 		}
 		return false;
-	}
-
-	inline const Triangle *getTriangles() const {
-		return m_triangles;
 	}
 
 	/// Return an AABB with the spatial extents
@@ -286,91 +355,65 @@ public:
 		return m_spatialAABB;
 	}
 
+	/// Return the number of key-framed time values
+	inline size_t getTimeCount() const {
+		return m_times.size();
+	}
+
+	inline const std::vector<Float> getTimes() const {
+		return m_times;
+	}
+
+	inline const TriMesh *getMesh(IndexType frameIndex, IndexType shapeIndex) const {
+		return m_meshes[frameIndex][shapeIndex];
+	}
+
+	inline Triangle getTriangle(IndexType shapeIndex, IndexType primIndex) const {
+		return m_meshes[0][shapeIndex]->getTriangles()[primIndex];
+	}
+
+	inline const std::vector<std::vector<const TriMesh *> > &getMeshes() const {
+		return m_meshes;
+	}
+
 	MTS_DECLARE_CLASS()
 protected:
-	std::vector<Float> m_frameTimes;
-	std::vector<float *> m_positions;
-	Triangle *m_triangles;
-	size_t m_vertexCount;
-	size_t m_triangleCount;
+	std::vector<Float> m_times;
+	std::vector<std::vector<const TriMesh *> > m_meshes;
+	std::vector<IndexType> m_shapeMap;
 	AABB m_spatialAABB;
+	Float m_traceTime;
 };
 
 class Deformable : public Shape {
 public:
 	Deformable(const Properties &props) : Shape(props) {
-		FileResolver *fResolver = Thread::getThread()->getFileResolver();
-		fs::path path = fResolver->resolve(props.getString("filename"));
-		if (path.extension() != ".mdd")
-			Log(EError, "Point cache files must have the extension \".mdd\"");
+		std::vector<std::string> times_str =
+			tokenize(props.getString("times", ""), " ,;");
+		std::vector<Float> times(times_str.size());
 
-		m_mmap = new MemoryMappedFile(path);
-
-		ref<MemoryStream> mStream = new MemoryStream((uint8_t *) m_mmap->getData(),
-				m_mmap->getSize());
-		mStream->setByteOrder(Stream::EBigEndian);
-
-		uint32_t frameCount = mStream->readUInt();
-		m_vertexCount = mStream->readUInt();
-
-		Log(EInfo, "Point cache has %i frames and %i vertices", frameCount, m_vertexCount);
-
-		Float clipStart = props.getFloat("clipStart", 0),
-			  clipEnd   = props.getFloat("clipEnd", 0);
-
-		std::vector<Float> frameTimes;
-		std::vector<float *> positions;
-
-		for (uint32_t i=0; i<frameCount; ++i)
-			frameTimes.push_back((Float) mStream->readSingle());
-
-		for (uint32_t i=0; i<frameCount; ++i) {
-			positions.push_back(reinterpret_cast<float *>(mStream->getCurrentData()));
-			mStream->skip(m_vertexCount * 3 * sizeof(float));
+		char *end_ptr = NULL;
+		for (size_t i=0; i<times_str.size(); ++i) {
+			Float value = (Float) strtod(times_str[i].c_str(), &end_ptr);
+			if (*end_ptr != '\0')
+				SLog(EError, "Could not parse the times parameter!");
+			times[i] = value;
 		}
-
-		if (clipStart != clipEnd) {
-			m_positions.reserve(positions.size());
-			m_frameTimes.reserve(frameTimes.size());
-			for (uint32_t i=0; i<frameCount; ++i) {
-				if (frameTimes[i] >= clipStart && frameTimes[i] <= clipEnd) {
-					m_frameTimes.push_back(frameTimes[i]);
-					m_positions.push_back(positions[i]);
-				}
-			}
-			if (m_frameTimes.empty())
-				Log(EError, "After clipping to the time range [%f, %f] no frames were left!",
-					clipStart, clipEnd);
-			Log(EInfo, "Clipped away %u/%u frames", frameCount - (uint32_t) m_frameTimes.size(), frameCount);
-		} else {
-			m_positions = positions;
-			m_frameTimes = frameTimes;
-		}
+		m_kdtree = new SpaceTimeKDTree(times);
 	}
 
 	Deformable(Stream *stream, InstanceManager *manager)
 		: Shape(stream, manager) {
-		/// TBD
+		m_kdtree = new SpaceTimeKDTree(stream, manager);
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		Shape::serialize(stream, manager);
-		/// TBD
+		m_kdtree->serialize(stream, manager);
 	}
 
 	void configure() {
-		Shape::configure();
-
-		if (m_mesh == NULL)
-			Log(EError, "A nested triangle mesh is required so that "
-				"connectivity information can be extracted!");
-		if (m_mesh->getVertexCount() != m_vertexCount)
-			Log(EError, "Point cache and nested geometry have mismatched "
-				"numbers of vertices!");
-
-		m_kdtree = new SpaceTimeKDTree(m_frameTimes, m_positions, m_mesh->getTriangles(),
-				m_vertexCount, m_mesh->getTriangleCount());
-		m_aabb = m_kdtree->getSpatialAABB();
+		m_kdtree->build();
 	}
 
 	bool rayIntersect(const Ray &ray, Float mint,
@@ -385,83 +428,278 @@ public:
 	void fillIntersectionRecord(const Ray &ray,
 			const void *temp, Intersection &its) const {
 		const SpaceTimeKDTree::IntersectionCache *cache
-			= reinterpret_cast<const SpaceTimeKDTree::IntersectionCache *>(temp);
-
+			= static_cast<const SpaceTimeKDTree::IntersectionCache *>(temp);
+		const TriMesh *trimesh0 = m_kdtree->getMesh(cache->frameIndex,   cache->shapeIndex);
+		const TriMesh *trimesh1 = m_kdtree->getMesh(cache->frameIndex+1, cache->shapeIndex);
 		const Vector b(1 - cache->u - cache->v, cache->u, cache->v);
-		const Point p0 = cache->p[0];
-		const Point p1 = cache->p[1];
-		const Point p2 = cache->p[2];
+		const Triangle tri = m_kdtree->getTriangle(cache->shapeIndex, cache->primIndex);
+		const uint32_t idx0 = tri.idx[0], idx1 = tri.idx[1], idx2 = tri.idx[2];
+		const Float alpha = cache->alpha;
 
-		Normal faceNormal(cross(p1-p0, p2-p0));
+		const Point *vertexPositions0 = trimesh0->getVertexPositions();
+		const Point *vertexPositions1 = trimesh1->getVertexPositions();
+		const Normal *vertexNormals0 = trimesh0->getVertexNormals();
+		const Normal *vertexNormals1 = trimesh1->getVertexNormals();
+		const Point2 *vertexTexcoords0 = trimesh0->getVertexTexcoords();
+		const Point2 *vertexTexcoords1 = trimesh1->getVertexTexcoords();
+		const Color3 *vertexColors0 = trimesh0->getVertexColors();
+		const Color3 *vertexColors1 = trimesh1->getVertexColors();
+		const TangentSpace *vertexTangents0 = trimesh0->getUVTangents();
+		const TangentSpace *vertexTangents1 = trimesh1->getUVTangents();
+
+		const Point p0 = vertexPositions0[idx0] * (1-alpha) + vertexPositions1[idx0] * alpha;
+		const Point p1 = vertexPositions0[idx1] * (1-alpha) + vertexPositions1[idx1] * alpha;
+		const Point p2 = vertexPositions0[idx2] * (1-alpha) + vertexPositions1[idx2] * alpha;
+
+		its.p = p0 * b.x + p1 * b.y + p2 * b.z;
+
+		Vector side1(p1-p0), side2(p2-p0);
+		Normal faceNormal(cross(side1, side2));
 		Float length = faceNormal.length();
 		if (!faceNormal.isZero())
 			faceNormal /= length;
 
-		/* Just the basic attributes for now and geometric normals */
-		its.p = ray(its.t);
-		its.geoFrame = Frame(faceNormal);
-		its.shFrame = its.geoFrame;
+		if (EXPECT_NOT_TAKEN(vertexTangents0 && vertexTangents1)) {
+			const TangentSpace &ts0 = vertexTangents0[cache->primIndex];
+			const TangentSpace &ts1 = vertexTangents1[cache->primIndex];
+			its.dpdu = (1-alpha) * ts0.dpdu + alpha * ts1.dpdu;
+			its.dpdv = (1-alpha) * ts0.dpdv + alpha * ts1.dpdv;
+		} else {
+			its.dpdu = side1;
+			its.dpdv = side2;
+		}
+
+		if (EXPECT_TAKEN(vertexNormals0)) {
+			Normal
+				n0 = (1-alpha) * vertexNormals0[idx0] + alpha * vertexNormals1[idx0],
+				n1 = (1-alpha) * vertexNormals0[idx1] + alpha * vertexNormals1[idx1],
+				n2 = (1-alpha) * vertexNormals0[idx2] + alpha * vertexNormals1[idx2];
+
+			its.shFrame.n = normalize(n0 * b.x + n1 * b.y + n2 * b.z);
+
+			if (EXPECT_TAKEN(!vertexTangents0)) {
+				coordinateSystem(its.shFrame.n, its.shFrame.s, its.shFrame.t);
+			} else {
+				/* Align shFrame.s with dpdu, use Gram-Schmidt to orthogonalize */
+				its.shFrame.s = normalize(its.dpdu - its.shFrame.n
+					* dot(its.shFrame.n, its.dpdu));
+				its.shFrame.t = cross(its.shFrame.n, its.shFrame.s);
+			}
+
+			/* Ensure that the geometric & shading normals face the same direction */
+			if (dot(faceNormal, its.shFrame.n) < 0)
+				faceNormal = -faceNormal;
+
+			its.geoFrame = Frame(faceNormal);
+		} else {
+			its.shFrame = its.geoFrame = Frame(faceNormal);
+		}
+
+		if (EXPECT_TAKEN(vertexTexcoords0)) {
+			Point2
+				t0 = (1-alpha) * vertexTexcoords0[idx0] + alpha * vertexTexcoords1[idx0],
+				t1 = (1-alpha) * vertexTexcoords0[idx1] + alpha * vertexTexcoords1[idx1],
+				t2 = (1-alpha) * vertexTexcoords0[idx2] + alpha * vertexTexcoords1[idx2];
+			its.uv = t0 * b.x + t1 * b.y + t2 * b.z;
+		} else {
+			its.uv = Point2(b.y, b.z);
+		}
+
+		if (EXPECT_NOT_TAKEN(vertexColors0)) {
+			Color3
+				c0 = (1-alpha) * vertexColors0[idx0] + alpha * vertexColors1[idx0],
+				c1 = (1-alpha) * vertexColors0[idx1] + alpha * vertexColors1[idx1],
+				c2 = (1-alpha) * vertexColors0[idx2] + alpha * vertexColors1[idx2];
+			Color3 result(c0 * b.x + c1 * b.y + c2 * b.z);
+			its.color.fromLinearRGB(result[0], result[1],
+				result[2], Spectrum::EReflectance);
+		}
+
 		its.wi = its.toLocal(-ray.d);
-		its.shape = this;
-		its.instance = this;
+		its.shape = m_kdtree->getMesh(0, cache->shapeIndex);
 		its.hasUVPartials = false;
+		its.primIndex = cache->primIndex;
+		its.other = cache->shapeIndex;
+		its.instance = this;
 		its.time = ray.time;
 	}
+
+	void getNormalDerivative(const Intersection &its,
+			Vector &dndu, Vector &dndv, bool shadingFrame) const {
+
+		const std::vector<Float> &times = m_kdtree->getTimes();
+		int frameIndex = m_kdtree->findFrame(its.time);
+		Float alpha = std::max((Float) 0.0f, std::min((Float) 1.0f,
+			(its.time - times[frameIndex])
+			/ (times[frameIndex + 1] - times[frameIndex])));
+
+		uint32_t primIndex = its.primIndex, shapeIndex = its.other;
+		const TriMesh *trimesh0 = m_kdtree->getMesh(frameIndex,   shapeIndex);
+		const TriMesh *trimesh1 = m_kdtree->getMesh(frameIndex+1, shapeIndex);
+		const Point *vertexPositions0 = trimesh0->getVertexPositions();
+		const Point *vertexPositions1 = trimesh1->getVertexPositions();
+		const Point2 *vertexTexcoords0 = trimesh0->getVertexTexcoords();
+		const Point2 *vertexTexcoords1 = trimesh1->getVertexTexcoords();
+		const Normal *vertexNormals0 = trimesh0->getVertexNormals();
+		const Normal *vertexNormals1 = trimesh1->getVertexNormals();
+
+		if (!vertexNormals0 || !vertexNormals1) {
+			dndu = dndv = Vector(0.0f);
+		} else {
+			const Triangle &tri = trimesh0->getTriangles()[primIndex];
+			uint32_t idx0 = tri.idx[0],
+					 idx1 = tri.idx[1],
+					 idx2 = tri.idx[2];
+
+			const Point
+				p0 = (1-alpha)*vertexPositions0[idx0] + alpha*vertexPositions1[idx0],
+				p1 = (1-alpha)*vertexPositions0[idx1] + alpha*vertexPositions1[idx1],
+				p2 = (1-alpha)*vertexPositions0[idx2] + alpha*vertexPositions1[idx2];
+
+			/* Recompute the barycentric coordinates, since 'its.uv' may have been
+			   overwritten with coordinates of the texture "parameterization". */
+			Vector rel = its.p - p0, du = p1 - p0, dv = p2 - p0;
+
+			Float b1  = dot(du, rel), b2 = dot(dv, rel), /* Normal equations */
+				  a11 = dot(du, du), a12 = dot(du, dv),
+				  a22 = dot(dv, dv),
+				  det = a11 * a22 - a12 * a12;
+
+			if (det == 0) {
+				dndu = dndv = Vector(0.0f);
+				return;
+			}
+
+			Float invDet = 1.0f / det,
+				  u = ( a22 * b1 - a12 * b2) * invDet,
+				  v = (-a12 * b1 + a11 * b2) * invDet,
+				  w = 1 - u - v;
+
+			const Normal
+				n0 = normalize((1-alpha)*vertexNormals0[idx0] + alpha*vertexNormals1[idx0]),
+				n1 = normalize((1-alpha)*vertexNormals0[idx1] + alpha*vertexNormals1[idx1]),
+				n2 = normalize((1-alpha)*vertexNormals0[idx2] + alpha*vertexNormals1[idx2]);
+
+			/* Now compute the derivative of "normalize(u*n1 + v*n2 + (1-u-v)*n0)"
+			   with respect to [u, v] in the local triangle parameterization.
+
+			   Since d/du [f(u)/|f(u)|] = [d/du f(u)]/|f(u)|
+				 - f(u)/|f(u)|^3 <f(u), d/du f(u)>, this results in
+			*/
+
+			Normal N(u * n1 + v * n2 + w * n0);
+			Float il = 1.0f / N.length(); N *= il;
+
+			dndu = (n1 - n0) * il; dndu -= N * dot(N, dndu);
+			dndv = (n2 - n0) * il; dndv -= N * dot(N, dndv);
+
+			if (vertexTexcoords0 && vertexTexcoords1) {
+				/* Compute derivatives with respect to a specified texture
+				   UV parameterization.  */
+				const Point2
+					uv0 = (1-alpha)*vertexTexcoords0[idx0] + alpha*vertexTexcoords1[idx0],
+					uv1 = (1-alpha)*vertexTexcoords0[idx1] + alpha*vertexTexcoords1[idx1],
+					uv2 = (1-alpha)*vertexTexcoords0[idx2] + alpha*vertexTexcoords1[idx2];
+
+				Vector2 duv1 = uv1 - uv0, duv2 = uv2 - uv0;
+
+				det = duv1.x * duv2.y - duv1.y * duv2.x;
+
+				if (det == 0) {
+					dndu = dndv = Vector(0.0f);
+					return;
+				}
+
+				invDet = 1.0f / det;
+				Vector dndu_ = ( duv2.y * dndu - duv1.y * dndv) * invDet;
+				Vector dndv_ = (-duv2.x * dndu + duv1.x * dndv) * invDet;
+				dndu = dndu_; dndv = dndv_;
+			}
+		}
+	}
+
+
+	void adjustTime(Intersection &its, Float time) const {
+		SpaceTimeKDTree::IntersectionCache cache;
+
+		const std::vector<Float> &times = m_kdtree->getTimes();
+
+		cache.primIndex = its.primIndex;
+		cache.shapeIndex = its.other;
+		cache.frameIndex = m_kdtree->findFrame(its.time);
+		cache.alpha = std::max((Float) 0.0f, std::min((Float) 1.0f,
+			(its.time - times[cache.frameIndex])
+			/ (times[cache.frameIndex + 1] - times[cache.frameIndex])));
+
+		const TriMesh *trimesh0 = m_kdtree->getMesh(cache.frameIndex,   cache.shapeIndex);
+		const TriMesh *trimesh1 = m_kdtree->getMesh(cache.frameIndex+1, cache.shapeIndex);
+		const Point *vertexPositions0 = trimesh0->getVertexPositions();
+		const Point *vertexPositions1 = trimesh1->getVertexPositions();
+
+		const Triangle tri = m_kdtree->getTriangle(cache.shapeIndex, cache.primIndex);
+		const uint32_t idx0 = tri.idx[0], idx1 = tri.idx[1], idx2 = tri.idx[2];
+		const Point p0 = vertexPositions0[idx0] * (1-cache.alpha) + vertexPositions1[idx0] * cache.alpha;
+		const Point p1 = vertexPositions0[idx1] * (1-cache.alpha) + vertexPositions1[idx1] * cache.alpha;
+		const Point p2 = vertexPositions0[idx2] * (1-cache.alpha) + vertexPositions1[idx2] * cache.alpha;
+
+		Vector rel = its.p - p0, du = p1 - p0, dv = p2 - p0;
+
+		Float b1  = dot(du, rel), b2 = dot(dv, rel),
+			  a11 = dot(du, du), a12 = dot(du, dv),
+			  a22 = dot(dv, dv),
+			  invDet = 1.0f / (a11 * a22 - a12 * a12);
+
+		cache.u = ( a22 * b1 - a12 * b2) * invDet,
+		cache.v = (-a12 * b1 + a11 * b2) * invDet;
+
+		cache.frameIndex = m_kdtree->findFrame(time);
+		cache.alpha = std::max((Float) 0.0f, std::min((Float) 1.0f,
+			(time - times[cache.frameIndex])
+			/ (times[cache.frameIndex + 1] - times[cache.frameIndex])));
+
+		fillIntersectionRecord(Ray(Point(0.0f), its.toWorld(-its.wi), time), &cache, its);
+	}
+
 
 	AABB getAABB() const {
 		return m_kdtree->getSpatialAABB();
 	}
 
 	size_t getPrimitiveCount() const {
-		return m_mesh->getTriangleCount();
+		return m_kdtree->getPrimitiveCount();
 	}
 
 	size_t getEffectivePrimitiveCount() const {
-		return m_mesh->getTriangleCount();
+		return m_kdtree->getPrimitiveCount();
 	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
-		const Class *cClass = child->getClass();
-		if (cClass->derivesFrom(TriMesh::m_theClass)) {
-			Assert(m_mesh == NULL);
-			m_mesh = static_cast<TriMesh *>(child);
-			if (m_mesh->getVertexCount() != m_vertexCount)
-				Log(EError, "Geometry mismatch! MDD file contains %u vertices. "
-					"The attached shape uses %u!", m_vertexCount, m_mesh->getVertexCount());
-		} else if (cClass->derivesFrom(Shape::m_theClass) && static_cast<Shape *>(child)->isCompound()) {
-			size_t index = 0;
-			Shape *shape = static_cast<Shape *>(child);
-			do {
-				ref<Shape> element = shape->getElement(index++);
-				if (element == NULL)
-					break;
-				addChild(name, element);
-			} while (true);
-		} else {
+		if (child->getClass()->derivesFrom(MTS_CLASS(Shape)))
+			m_kdtree->addShape(static_cast<Shape *>(child));
+		else
 			Shape::addChild(name, child);
-		}
+	}
+
+	ref<TriMesh> createTriMesh() {
+		return const_cast<TriMesh *>(m_kdtree->getMesh(0, 0));
 	}
 
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "Deformable[" << endl
-			<< "  mesh = " << indent(m_mesh.toString()) << endl
+			<< "   primitiveCount = " << m_kdtree->getPrimitiveCount() << "," << endl
+			<< "   timeCount = " << m_kdtree->getTimeCount() << "," << endl
+			<< "   aabb = " << indent(m_kdtree->getSpatialAABB().toString()) << endl
 			<< "]";
 		return oss.str();
 	}
 
 	MTS_DECLARE_CLASS()
 private:
-	ref<MemoryMappedFile> m_mmap;
 	ref<SpaceTimeKDTree> m_kdtree;
-	std::vector<Float> m_frameTimes;
-	std::vector<float *> m_positions;
-	ref<TriMesh> m_mesh;
-	uint32_t m_vertexCount;
-	AABB m_aabb;
 };
 
-MTS_IMPLEMENT_CLASS(SpaceTimeKDTree, false, KDTreeBase)
+MTS_IMPLEMENT_CLASS_S(SpaceTimeKDTree, false, KDTreeBase)
 MTS_IMPLEMENT_CLASS_S(Deformable, false, Shape)
 MTS_EXPORT_PLUGIN(Deformable, "Deformable shape");
 MTS_NAMESPACE_END
