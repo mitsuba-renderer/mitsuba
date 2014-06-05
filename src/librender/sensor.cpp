@@ -145,10 +145,8 @@ Float Sensor::pdfTime(const Ray &ray, EMeasure measure) const {
 
 void Sensor::addChild(const std::string &name, ConfigurableObject *child) {
 	if (child->getClass()->derivesFrom(MTS_CLASS(Sampler))) {
-		Assert(m_sampler == NULL);
 		m_sampler = static_cast<Sampler *>(child);
 	} else if (child->getClass()->derivesFrom(MTS_CLASS(Film))) {
-		Assert(m_film == NULL);
 		m_film = static_cast<Film *>(child);
 	} else {
 		AbstractEmitter::addChild(name, child);
