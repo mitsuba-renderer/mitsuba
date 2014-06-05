@@ -820,18 +820,6 @@ public:
 	std::map<std::string, Bitmap *> split() const;
 
 	/**
-	 * \brief Extract several color channels of a multi-channel
-	 * bitmap and return them as a bitmap with the given pixel format
-	 */
-	ref<Bitmap> extractChannels(Bitmap::EPixelFormat fmt, const std::vector<int> &channels) const;
-
-	/**
-	 * \brief Split an multi-channel image buffer (e.g. from an OpenEXR image
-	 * with lots of AOVs) into group of RGB[A]/XYZ[A]/Luminance images
-	 */
-	std::map<std::string, Bitmap *> split() const;
-
-	/**
 	 * \brief Merges multiple bitmaps of the same type and resolution
 	 * into one with a larger number of channels
 	 *
