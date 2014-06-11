@@ -368,8 +368,9 @@ def configure_for_objective_cpp(env):
 		'-fp-model', 'fast=.*', '-wd.*', '-openmp'])
 	env['CCFLAGS'] += ['-fno-strict-aliasing']
 	# Enforce GCC usage (Intel compiler doesn't handle Objective C/C++)
-	env['CXX'] = 'g++'
-	env['CC'] = 'gcc'
+	if 'icpc' in env['CXX']:
+		env['CXX'] = 'g++'
+		env['CC'] = 'gcc'
 
 def relax_compiler_settings(env):
 	# Relax the compiler settings when compiling heavy templated code
