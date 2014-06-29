@@ -378,13 +378,15 @@ public:
 		while (true) {
 			surface = scene->rayIntersect(ray, *its);
 
-			if (surface && (interactions == maxInteractions ||
-				!(its->getBSDF()->getType() & BSDF::ENull)))
-				/* Encountered an occluder -- zero transmittance. */
-				break;
-
 			if (medium)
 				transmittance *= medium->evalTransmittance(Ray(ray, 0, its->t), sampler);
+
+			if (surface && (interactions == maxInteractions ||
+				!(its->getBSDF()->getType() & BSDF::ENull) ||
+				its->isEmitter())) {
+				/* Encountered an occluder / light source */
+				break;
+			}
 
 			if (!surface)
 				break;

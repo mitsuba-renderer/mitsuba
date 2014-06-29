@@ -156,13 +156,13 @@ void Shape::addChild(const std::string &name, ConfigurableObject *child) {
 		m_subsurface = static_cast<Subsurface *>(child);
 	} else if (cClass->derivesFrom(MTS_CLASS(Medium))) {
 		if (name == "interior") {
-			Assert(m_interiorMedium == NULL);
+			Assert(m_interiorMedium == NULL || m_interiorMedium == child);
 			if (m_subsurface != NULL)
 				Log(EError, "Shape \"%s\" has both an interior medium "
 					"and a subsurface scattering model -- please choose one or the other!", getName().c_str());
 			m_interiorMedium = static_cast<Medium *>(child);
 		} else if (name == "exterior") {
-			Assert(m_exteriorMedium == NULL);
+			Assert(m_exteriorMedium == NULL || m_exteriorMedium == child);
 			m_exteriorMedium = static_cast<Medium *>(child);
 			if (m_emitter)
 				m_emitter->setMedium(m_exteriorMedium);
