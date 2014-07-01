@@ -339,8 +339,9 @@ void Thread::setCoreAffinity(int coreID) {
 	}
 
 	const pthread_t threadID = d->thread.native_handle();
-	if (pthread_setaffinity_np(threadID, size, cpuset) != 0)
-		Log(EWarn, "Thread::setCoreAffinity(): pthread_setaffinity_np: failed");
+	int retval = pthread_setaffinity_np(threadID, size, cpuset);
+	if (retval) 
+		Log(EWarn, "Thread::setCoreAffinity(): pthread_setaffinity_np: failed: %s", strerror(errno));
 	CPU_FREE(cpuset);
 #elif defined(__WINDOWS__)
 	int nCores = getCoreCount();
