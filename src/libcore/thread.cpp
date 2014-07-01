@@ -360,7 +360,7 @@ void Thread::setCoreAffinity(int coreID) {
 	}
 
 	int actualCoreID = -1, available = 0;
-	for (int i=0; i<nCores; ++i) {
+	for (int i=0; i<nLogicalCores; ++i) {
 		if (!CPU_ISSET_S(i, size, cpuset))
 			continue;
 		if (available++ == coreID) {

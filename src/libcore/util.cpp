@@ -203,8 +203,9 @@ int getCoreCount() {
 		}
 
 		int availableCores = 0;
-		for (int i=0; i<nCores; ++i)
+		for (int i=0; i<nLogicalCores; ++i)
 			availableCores += CPU_ISSET_S(i, size, cpuset) ? 1 : 0;
+		nCores = availableCores;
 		CPU_FREE(cpuset);
 	}
 
