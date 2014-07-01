@@ -1,4 +1,4 @@
-<scene version="0.4.0">	
+<scene version="0.5.0">
 	<medium id="medium" type="homogeneous">
 		<spectrum name="sigmaS" value="0"/>
 		<spectrum name="sigmaA" value="1"/>

@@ -1,8 +1,8 @@
 <!-- This file defines a series of emitter instances
-	 to be tested for consistency. This is done using the 
+	 to be tested for consistency. This is done using the
 	 testcase 'test_chisquare' -->
-<scene version="0.4.0">
-	<!-- Test the emitter emitter 
+<scene version="0.5.0">
+	<!-- Test the emitter emitter
 	<emitter type="emitter"/>
 	-->
 

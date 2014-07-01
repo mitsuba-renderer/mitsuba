@@ -329,8 +329,8 @@ public:
 				bRec.sampledType = EDeltaReflection;
 				bRec.wo = reflect(bRec.wi);
 
-				return m_specularReflectance->eval(bRec.its) *
-					(Fi / probSpecular);
+				return m_specularReflectance->eval(bRec.its)
+					* Fi / probSpecular;
 			} else {
 				bRec.sampledComponent = 1;
 				bRec.sampledType = EDiffuseReflection;
@@ -354,13 +354,12 @@ public:
 			bRec.wo = reflect(bRec.wi);
 			return m_specularReflectance->eval(bRec.its) * Fi;
 		} else {
-			bRec.wo = Warp::squareToCosineHemisphere(sample);
-			Float Fo = fresnelDielectricExt(Frame::cosTheta(bRec.wo), m_eta);
 			bRec.sampledComponent = 1;
 			bRec.sampledType = EDiffuseReflection;
+			bRec.wo = Warp::squareToCosineHemisphere(sample);
+			Float Fo = fresnelDielectricExt(Frame::cosTheta(bRec.wo), m_eta);
 
 			Spectrum diff = m_diffuseReflectance->eval(bRec.its);
-			diff /= Spectrum(1.0f) - m_fdrInt*diff;
 			if (m_nonlinear)
 				diff /= Spectrum(1.0f) - diff*m_fdrInt;
 			else
