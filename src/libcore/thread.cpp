@@ -324,21 +324,38 @@ void Thread::setCoreAffinity(int coreID) {
 	if (getenv("VALGRIND_OPTS") != NULL)
 		return;
 
-	int nCores = sysconf(_SC_NPROCESSORS_CONF);
-	size_t size = CPU_ALLOC_SIZE(nCores);
-	cpu_set_t *cpuset = CPU_ALLOC(nCores);
-	CPU_ZERO_S(size, cpuset);
-	if (cpuset == NULL) {
-		Log(EWarn, "Thread::setCoreAffinity(): could not allocate cpu_set_t");
-		return;
+	const pthread_t threadID = d->thread.native_handle();
+
+	int nCores = sysconf(_SC_NPROCESSORS_CONF),
+		nLogicalCores = nCores;
+
+	size_t size = 0;
+	cpu_set_t *cpuset = NULL;
+	int retval = 0;
+
+	/* The kernel may expected a larger cpu_set_t than would
+	   be warranted by the physical core count. Keep querying
+	   with increasingly larger buffers if the
+	   pthread_getaffinity_np operation fails */
+	for (int i = 0; i<6; ++i) { 
+		size = CPU_ALLOC_SIZE(nLogicalCores);
+		cpuset = CPU_ALLOC(nLogicalCores);
+		if (!cpuset) {
+			Log(EWarn, "Thread::setCoreAffinity(): could not allocate cpu_set_t");
+			return;
+		}
+		CPU_ZERO_S(size, cpuset);
+
+		int retval = pthread_getaffinity_np(threadID, size, cpuset);
+		if (retval == 0)
+			break;
+		CPU_FREE(cpuset);
+		nLogicalCores *= 2;
 	}
 
-	const pthread_t threadID = d->thread.native_handle();
-	int retval = pthread_getaffinity_np(threadID, size, cpuset);
 	if (retval) {
 		Log(EWarn, "Thread::setCoreAffinity(): pthread_getaffinity_np(): could "
 			"not read thread affinity map: %s", strerror(retval));
-		CPU_FREE(cpuset);
 		return;
 	}
 

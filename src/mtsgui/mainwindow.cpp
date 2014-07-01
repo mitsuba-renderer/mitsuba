@@ -1358,7 +1358,7 @@ void MainWindow::on_actionSettings_triggered() {
 			ref<Scheduler> sched = Scheduler::getInstance();
 			sched->pause();
 
-			if (localWorkers.size() != d.getLocalWorkerCount()) {
+			if ((int) localWorkers.size() != d.getLocalWorkerCount()) {
 				/* Completely remove old workers so that CPU affinities can be reassigned */
 				while (!localWorkers.empty()) {
 					Worker *worker = localWorkers.back();

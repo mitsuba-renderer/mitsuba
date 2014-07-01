@@ -166,27 +166,51 @@ int getCoreCount() {
 	/* Determine the number of present cores */
 	int nCores = sysconf(_SC_NPROCESSORS_CONF);
 
-	/* Some of the cores may not be available to the user
-	   (e.g. on certain cluster nodes) -- determine the number
-	   of actual available cores here. */
-	size_t size = CPU_ALLOC_SIZE(nCores);
-	cpu_set_t *cpuset = CPU_ALLOC(nCores);
-	CPU_ZERO_S(size, cpuset);
-	int retval = pthread_getaffinity_np(pthread_self(), size, cpuset);
-	if (retval) {
-		SLog(EWarn, "getCoreCount(): pthread_getaffinity_np(): could "
-			"not read thread affinity map: %s", strerror(retval));
-		__cached_core_count = nCores;
+	/* Don't try to query CPU affinity if running inside Valgrind */
+	if (getenv("VALGRIND_OPTS") == NULL) {
+		/* Some of the cores may not be available to the user
+		   (e.g. on certain cluster nodes) -- determine the number
+		   of actual available cores here. */
+		int nLogicalCores = nCores;
+		size_t size = 0;
+		cpu_set_t *cpuset = NULL;
+		int retval = 0;
+
+		/* The kernel may expected a larger cpu_set_t than would
+		   be warranted by the physical core count. Keep querying
+		   with increasingly larger buffers if the
+		   pthread_getaffinity_np operation fails */
+		for (int i = 0; i<6; ++i) { 
+			size = CPU_ALLOC_SIZE(nLogicalCores);
+			cpuset = CPU_ALLOC(nLogicalCores);
+			if (!cpuset) {
+				SLog(EWarn, "getCoreCount(): could not allocate cpu_set_t");
+				goto done;
+			}
+			CPU_ZERO_S(size, cpuset);
+
+			int retval = pthread_getaffinity_np(pthread_self(), size, cpuset);
+			if (retval == 0)
+				break;
+			CPU_FREE(cpuset);
+			nLogicalCores *= 2;
+		}
+
+		if (retval) {
+			SLog(EWarn, "getCoreCount(): pthread_getaffinity_np(): could "
+				"not read thread affinity map: %s", strerror(retval));
+			goto done;
+		}
+
+		int availableCores = 0;
+		for (int i=0; i<nCores; ++i)
+			availableCores += CPU_ISSET_S(i, size, cpuset) ? 1 : 0;
 		CPU_FREE(cpuset);
-		return nCores;
 	}
 
-	int availableCores = 0;
-	for (int i=0; i<nCores; ++i)
-		availableCores += CPU_ISSET_S(i, size, cpuset) ? 1 : 0;
-	CPU_FREE(cpuset);
-	__cached_core_count = availableCores;
-	return availableCores;
+done:
+	__cached_core_count = nCores;
+	return nCores;
 #endif
 }
 
