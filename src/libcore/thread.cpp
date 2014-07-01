@@ -333,7 +333,7 @@ void Thread::setCoreAffinity(int coreID) {
 	cpu_set_t *cpuset = NULL;
 	int retval = 0;
 
-	/* The kernel may expected a larger cpu_set_t than would
+	/* The kernel may expect a larger cpu_set_t than would
 	   be warranted by the physical core count. Keep querying
 	   with increasingly larger buffers if the
 	   pthread_getaffinity_np operation fails */
