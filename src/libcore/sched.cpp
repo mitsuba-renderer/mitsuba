@@ -633,7 +633,8 @@ void Worker::start(Scheduler *scheduler, int workerIndex, int coreOffset) {
 
 LocalWorker::LocalWorker(int coreID, const std::string &name,
 		Thread::EThreadPriority priority) : Worker(name) {
-	setCoreAffinity(coreID);
+	if (coreID >= 0)
+		setCoreAffinity(coreID);
 	m_coreCount = 1;
 #if !defined(__LINUX__)
 	/* Don't set thead priority on Linux, since it uses

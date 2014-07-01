@@ -53,7 +53,7 @@
 
 extern bool create_symlinks();
 
-static int localWorkerCtr = 0, remoteWorkerCtr = 0;
+static int remoteWorkerCtr = 0;
 
 MainWindow::MainWindow(QWidget *parent) :
 	QMainWindow(parent), ui(new Ui::MainWindow),
@@ -310,8 +310,10 @@ bool MainWindow::initWorkersProcessArgv() {
 
 	m_workerPriority = (Thread::EThreadPriority)
 		settings.value("workerPriority", (int) Thread::ELowPriority).toInt();
+	bool useCoreAffinity = localWorkerCount == getCoreCount();
 	for (int i=0; i<localWorkerCount; ++i)
-		scheduler->registerWorker(new LocalWorker(i, formatString("wrk%i", localWorkerCtr++), m_workerPriority));
+		scheduler->registerWorker(new LocalWorker(useCoreAffinity ? i : -1,
+			formatString("wrk%i", i), m_workerPriority));
 
 	int networkConnections = 0;
 	QList<QVariant> connectionData = settings.value("connections").toList();
@@ -359,7 +361,7 @@ bool MainWindow::initWorkersProcessArgv() {
 		QMessageBox::warning(this, tr("Scheduler warning"),
 			tr("There must be at least one worker thread -- forcing creation of one."),
 			QMessageBox::Ok);
-		scheduler->registerWorker(new LocalWorker(0, formatString("wrk%i", localWorkerCtr++), m_workerPriority));
+		scheduler->registerWorker(new LocalWorker(-1, formatString("wrk%i", 0), m_workerPriority));
 	}
 
 	for (int i=0; i<toBeLoaded.size(); ++i)
@@ -1355,17 +1357,24 @@ void MainWindow::on_actionSettings_triggered() {
 		if (localWorkersChanged || m_connections != d.getConnections()) {
 			ref<Scheduler> sched = Scheduler::getInstance();
 			sched->pause();
-			while (d.getLocalWorkerCount() > (int) localWorkers.size()) {
-				LocalWorker *worker = new LocalWorker(localWorkerCtr, formatString("wrk%i", localWorkerCtr), m_workerPriority);
-				localWorkerCtr++;
-				sched->registerWorker(worker);
-				localWorkers.push_back(worker);
+
+			if (localWorkers.size() != d.getLocalWorkerCount()) {
+				/* Completely remove old workers so that CPU affinities can be reassigned */
+				while (!localWorkers.empty()) {
+					Worker *worker = localWorkers.back();
+					sched->unregisterWorker(worker);
+					localWorkers.pop_back();
+				}
+				int workerCount = std::max(1, d.getLocalWorkerCount());
+				bool useCoreAffinity = workerCount == getCoreCount();
+				for (int i=0; i<workerCount; ++i) {
+					LocalWorker *worker = new LocalWorker(useCoreAffinity ? i : -1,
+						formatString("wrk%i", i), m_workerPriority);
+					sched->registerWorker(worker);
+					localWorkers.push_back(worker);
+				}
 			}
-			while (d.getLocalWorkerCount() < (int) localWorkers.size()) {
-				Worker *worker = localWorkers.back();
-				sched->unregisterWorker(worker);
-				localWorkers.pop_back();
-			}
+
 			QList<ServerConnection> removeList,
 				&newConnections = d.getConnections();
 			for (int i=0; i<m_connections.size(); ++i) {

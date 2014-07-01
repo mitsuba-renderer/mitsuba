@@ -130,7 +130,8 @@ int mitsuba_app(int argc, char **argv) {
 
 	try {
 		/* Default settings */
-		int nprocs = getCoreCount(), numParallelScenes = 1;
+		int nprocs_avail = getCoreCount(), nprocs = nprocs_avail;
+		int numParallelScenes = 1;
 		std::string nodeName = getHostName(),
 					networkHosts = "", destFile="";
 		bool quietMode = false, progressBars = true, skipExisting = false;
@@ -257,8 +258,10 @@ int mitsuba_app(int argc, char **argv) {
 
 		/* Configure the scheduling subsystem */
 		Scheduler *scheduler = Scheduler::getInstance();
+		bool useCoreAffinity = nprocs == nprocs_avail;
 		for (int i=0; i<nprocs; ++i)
-			scheduler->registerWorker(new LocalWorker(i, formatString("wrk%i", i)));
+			scheduler->registerWorker(new LocalWorker(useCoreAffinity ? i : -1,
+				formatString("wrk%i", i)));
 		std::vector<std::string> hosts = tokenize(networkHosts, ";");
 
 		/* Establish network connections to nested servers */

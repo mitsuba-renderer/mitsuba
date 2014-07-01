@@ -141,7 +141,7 @@ int mtsutil(int argc, char **argv) {
 
 	try {
 		/* Default settings */
-		int nprocs = getCoreCount();
+		int nprocs_avail = getCoreCount(), nprocs = nprocs_avail;
 		std::string nodeName = getHostName(),
 					networkHosts = "", destFile="";
 		bool quietMode = false;
@@ -233,8 +233,11 @@ int mtsutil(int argc, char **argv) {
 
 		/* Configure the scheduling subsystem */
 		Scheduler *scheduler = Scheduler::getInstance();
+		bool useCoreAffinity = nprocs == nprocs_avail;
 		for (int i=0; i<nprocs; ++i)
-			scheduler->registerWorker(new LocalWorker(i, formatString("wrk%i", i)));
+			scheduler->registerWorker(new LocalWorker(useCoreAffinity ? i : -1,
+				formatString("wrk%i", i)));
+
 		std::vector<std::string> hosts = tokenize(networkHosts, ";");
 
 		/* Establish network connections to nested servers */

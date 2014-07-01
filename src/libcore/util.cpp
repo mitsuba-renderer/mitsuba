@@ -143,19 +143,50 @@ void freeAligned(void *ptr) {
 #endif
 }
 
+static int __cached_core_count = 0;
+
 int getCoreCount() {
+	// assumes atomic word size memory access
+	if (__cached_core_count)
+		return __cached_core_count;
+
 #if defined(__WINDOWS__)
 	SYSTEM_INFO sys_info;
 	GetSystemInfo(&sys_info);
+	__cached_core_count = sys_info.dwNumberOfProcessors;
 	return sys_info.dwNumberOfProcessors;
 #elif defined(__OSX__)
 	int nprocs;
 	size_t nprocsSize = sizeof(int);
 	if (sysctlbyname("hw.activecpu", &nprocs, &nprocsSize, NULL, 0))
 		SLog(EError, "Could not detect the number of processors!");
-	return (int) nprocs;
+	__cached_core_count = nprocs;
+	return nprocs;
 #else
-	return sysconf(_SC_NPROCESSORS_CONF);
+	/* Determine the number of present cores */
+	int nCores = sysconf(_SC_NPROCESSORS_CONF);
+
+	/* Some of the cores may not be available to the user
+	   (e.g. on certain cluster nodes) -- determine the number
+	   of actual available cores here. */
+	size_t size = CPU_ALLOC_SIZE(nCores);
+	cpu_set_t *cpuset = CPU_ALLOC(nCores);
+	CPU_ZERO_S(size, cpuset);
+	int retval = pthread_getaffinity_np(pthread_self(), size, cpuset);
+	if (retval) {
+		SLog(EWarn, "getCoreCount(): pthread_getaffinity_np(): could "
+			"not read thread affinity map: %s", strerror(retval));
+		__cached_core_count = nCores;
+		CPU_FREE(cpuset);
+		return nCores;
+	}
+
+	int availableCores = 0;
+	for (int i=0; i<nCores; ++i)
+		availableCores += CPU_ISSET_S(i, size, cpuset) ? 1 : 0;
+	CPU_FREE(cpuset);
+	__cached_core_count = availableCores;
+	return availableCores;
 #endif
 }
 

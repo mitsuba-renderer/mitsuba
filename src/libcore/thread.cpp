@@ -324,24 +324,51 @@ void Thread::setCoreAffinity(int coreID) {
 	if (getenv("VALGRIND_OPTS") != NULL)
 		return;
 
-	int nCores = getCoreCount();
-	cpu_set_t *cpuset = CPU_ALLOC(nCores);
-	if (cpuset == NULL)
-		Log(EError, "Thread::setCoreAffinity(): could not allocate cpu_set_t");
-
+	int nCores = sysconf(_SC_NPROCESSORS_CONF);
 	size_t size = CPU_ALLOC_SIZE(nCores);
+	cpu_set_t *cpuset = CPU_ALLOC(nCores);
 	CPU_ZERO_S(size, cpuset);
-	if (coreID != -1 && coreID < nCores) {
-		CPU_SET_S(coreID, size, cpuset);
-	} else {
-		for (int i=0; i<nCores; ++i)
-			CPU_SET_S(i, size, cpuset);
+	if (cpuset == NULL) {
+		Log(EWarn, "Thread::setCoreAffinity(): could not allocate cpu_set_t");
+		return;
 	}
 
 	const pthread_t threadID = d->thread.native_handle();
-	int retval = pthread_setaffinity_np(threadID, size, cpuset);
-	if (retval) 
-		Log(EWarn, "Thread::setCoreAffinity(): pthread_setaffinity_np: failed: %s", strerror(errno));
+	int retval = pthread_getaffinity_np(threadID, size, cpuset);
+	if (retval) {
+		Log(EWarn, "Thread::setCoreAffinity(): pthread_getaffinity_np(): could "
+			"not read thread affinity map: %s", strerror(retval));
+		CPU_FREE(cpuset);
+		return;
+	}
+
+	int actualCoreID = -1, available = 0;
+	for (int i=0; i<nCores; ++i) {
+		if (!CPU_ISSET_S(i, size, cpuset))
+			continue;
+		if (available++ == coreID) {
+			actualCoreID = i; 
+			break;
+		}
+	}
+
+	if (actualCoreID == -1) {
+		Log(EWarn, "Thread::setCoreAffinity(): out of bounds: %i/%i cores available, requested #%i!",
+			available, nCores, coreID);
+		CPU_FREE(cpuset);
+		return;
+	}
+
+	CPU_ZERO_S(size, cpuset);
+	CPU_SET_S(actualCoreID, size, cpuset);
+
+	retval = pthread_setaffinity_np(threadID, size, cpuset);
+	if (retval) {
+		Log(EWarn, "Thread::setCoreAffinity(): pthread_setaffinity_np: failed: %s", strerror(retval));
+		CPU_FREE(cpuset);
+		return;
+	}
+
 	CPU_FREE(cpuset);
 #elif defined(__WINDOWS__)
 	int nCores = getCoreCount();

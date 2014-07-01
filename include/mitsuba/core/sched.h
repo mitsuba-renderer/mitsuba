@@ -758,6 +758,21 @@ protected:
  */
 class MTS_EXPORT_CORE LocalWorker : public Worker {
 public:
+	/**
+	 * \brief Create a new local worker thread
+	 *
+	 * \param coreID
+	 *   When an CPU core ID (>=0) is specified here, the worker
+	 *   thread will attempt to register core affinity with the
+	 *   operating system. Passing -1 disables this.
+	 *
+	 * \param name
+	 *   An identifying string for this thread
+	 *
+	 * \param priority
+	 *   The desired thread priority (not supported on some
+	 *   operating systems)
+	 */
 	LocalWorker(int coreID, const std::string &name,
 		Thread::EThreadPriority priority = Thread::ENormalPriority);
 
