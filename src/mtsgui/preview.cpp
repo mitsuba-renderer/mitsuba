@@ -397,6 +397,22 @@ void PreviewThread::run() {
 					m_backgroundScaleFactor = m_vplSampleOffset - oldOffset;
 				}
 
+				if (m_vpls.empty()) {
+					/* Unable to generate any VPLs for this scene. Give up. */
+					lock.lock();
+					target.buffer->activateTarget();
+					target.buffer->clear();
+					target.buffer->releaseTarget();
+					m_accumBuffer = target.buffer;
+					m_readyQueue.push_back(target);
+					if (m_useSync)
+						target.sync->init();
+					m_queueCV->signal();
+					lock.unlock();
+					sleep(100);
+					continue;
+				}
+
 				VPL vpl = m_vpls.front();
 				m_vpls.pop_front();
 

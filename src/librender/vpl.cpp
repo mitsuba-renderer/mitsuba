@@ -93,9 +93,15 @@ size_t generateVPLs(const Scene *scene, Random *random,
 		+ sensor->getShutterOpenTime() * sampler->next1D();
 
 	const Frame stdFrame(Vector(1,0,0), Vector(0,1,0), Vector(0,0,1));
+	int retries = 0;
 
 	while (vpls.size() < count) {
 		sampler->setSampleIndex(++offset);
+
+		if (vpls.empty() && ++retries > 10000) {
+			/* Unable to generate VPLs in this scene -- give up. */
+			return 0;
+		}
 
 		PositionSamplingRecord pRec(time);
 		DirectionSamplingRecord dRec;
