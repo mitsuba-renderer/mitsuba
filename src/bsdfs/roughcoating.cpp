@@ -438,7 +438,7 @@ public:
 	}
 
 	Float getRoughness(const Intersection &its, int component) const {
-		return component < (int) m_components.size()
+		return component < (int) m_components.size() - 1
 			? m_nested->getRoughness(its, component)
 			: m_alpha->eval(its).average();
 	}
