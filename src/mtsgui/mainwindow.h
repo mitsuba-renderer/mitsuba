@@ -136,6 +136,7 @@ protected:
 	void checkForUpdates(bool notifyIfNone = false);
 	void saveAs(SceneContext *ctx, const QString &targetFile);
 	void refresh(const RenderJob *job);
+	void updateCameraMenu();
 	QSize sizeHint() const;
 
 signals:

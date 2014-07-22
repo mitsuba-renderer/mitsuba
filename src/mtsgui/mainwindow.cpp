@@ -934,7 +934,7 @@ void MainWindow::on_tabBar_currentChanged(int index) {
 	m_statusMessage = "";
 	updateStatus();
 	updateUI();
-	ui->menuCamera->clear();
+	updateCameraMenu();
 
 	if (index != -1) {
 		SceneContext *context = m_context[index];
@@ -958,26 +958,39 @@ void MainWindow::on_tabBar_currentChanged(int index) {
 
 		m_lastTab = context;
 
-		const Scene *scene = context->scene;
-		if (scene) {
-			const ref_vector<Sensor> &sensors = scene->getSensors();
-			for (size_t i = 0; i < sensors.size(); ++i) {
-				const Sensor *sensor = sensors[i].get();
-				const Properties &props = sensor->getProperties();
-				QAction *act = new QAction(ui->menuCamera);
-				act->setText(formatString("\"%s\" (%s)",
-					props.getID().c_str(), props.getPluginName().c_str()).c_str());
-				act->setData(qVariantFromValue((void *) sensor));
-				ui->menuCamera->addAction(act);
-				connect(act, SIGNAL(triggered()), this, SLOT(onActivateCamera()));
-			}
-		}
 	} else {
 		adjustSize();
 		m_lastTab = NULL;
-		ui->menuCamera->clear();
 	}
 	ui->glView->setFocus();
+}
+
+void MainWindow::updateCameraMenu() {
+	ui->menuCamera->clear();
+	int currentIndex = ui->tabBar->currentIndex();
+	if (currentIndex < 0)
+		return;
+	SceneContext *context = m_context[currentIndex];
+	const Scene *scene = context->scene;
+	if (!scene)
+		return;
+
+	bool isRendering = context->renderJob != NULL;
+
+	const ref_vector<Sensor> &sensors = scene->getSensors();
+	for (size_t i = 0; i < sensors.size(); ++i) {
+		const Sensor *sensor = sensors[i].get();
+		const Properties &props = sensor->getProperties();
+		QAction *act = new QAction(ui->menuCamera);
+		act->setCheckable(true);
+		act->setChecked(sensor == scene->getSensor());
+		act->setEnabled(!isRendering);
+		act->setText(formatString("\"%s\" (%s)",
+			props.getID().c_str(), props.getPluginName().c_str()).c_str());
+		act->setData(qVariantFromValue((void *) sensor));
+		ui->menuCamera->addAction(act);
+		connect(act, SIGNAL(triggered()), this, SLOT(onActivateCamera()));
+	}
 }
 
 void MainWindow::on_actionClose_triggered() {
@@ -1451,6 +1464,7 @@ void MainWindow::on_actionRender_triggered() {
 	context->mode = ERender;
 	m_statusMessage = "";
 	updateUI();
+	updateCameraMenu();
 	context->sizeIncrease = QSize(0, m_progressWidget->sizeHint().height());
 
 #if defined(__LINUX__)
@@ -1732,6 +1746,7 @@ void MainWindow::onJobFinished(const RenderJob *job, bool cancelled) {
 	refresh(job);
 	context->renderJob = NULL;
 	updateUI();
+	updateCameraMenu();
 	if (ui->tabBar->currentIndex() != -1 &&
 		m_context[ui->tabBar->currentIndex()] == context)
 		resize(size() - context->sizeIncrease);
@@ -1929,7 +1944,8 @@ void MainWindow::refresh(const RenderJob *job) {
 
 void MainWindow::onActivateCamera() {
 	int index = ui->tabBar->currentIndex();
-	if (index == -1 || m_context[index]->scene == NULL)
+	if (index == -1 || m_context[index]->scene == NULL ||
+		m_context[index]->renderJob != NULL)
 		return;
 	QAction *action = qobject_cast<QAction *>(sender());
 	Sensor *sensor = static_cast<Sensor *>(action->data().value<void *>());
@@ -1956,6 +1972,7 @@ void MainWindow::onActivateCamera() {
 	on_tabBar_currentChanged(index);
 	updateUI();
 	adjustSize();
+	updateCameraMenu();
 }
 
 void MainWindow::on_glView_loadFileRequest(const QString &string) {
