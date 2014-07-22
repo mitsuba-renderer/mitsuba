@@ -298,10 +298,12 @@ public:
 						if (m_fileFormat == EMATLAB) {
 							os << *ptr;
 						} else {
+							/* Mathematica uses the peculiar '*^' notation rather than the standard 'e' notation. */
 							std::ostringstream oss;
+							oss << std::setprecision(m_digits);
 							oss << *ptr;
 							std::string str = oss.str();
-							boost::replace_first(str, "e", " * 10^");
+							boost::replace_first(str, "e", "*^");
 							os << str;
 						}
 
