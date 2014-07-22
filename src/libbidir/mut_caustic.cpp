@@ -31,7 +31,7 @@ CausticPerturbation::CausticPerturbation(const Scene *scene, Sampler *sampler,
 	m_scene(scene), m_sampler(sampler), m_pool(pool) {
 
 	if (!scene->getSensor()->getClass()->derivesFrom(MTS_CLASS(PerspectiveCamera)))
-		Log(EError, "The lens perturbation requires a perspective camera.");
+		Log(EError, "The caustic perturbation requires a perspective camera.");
 
 	const PerspectiveCamera *camera = static_cast<const PerspectiveCamera *>(scene->getSensor());
 	Vector2i filmSize = camera->getFilm()->getSize(),
