@@ -73,6 +73,14 @@ public:
 	void initialize();
 
 	/**
+	 *\brief Invalidate the kd-tree
+	 *
+	 * This function must be called if, after running \ref initialize(),
+	 * additional geometry is added to the scene.
+	 */
+	void invalidate();
+
+	/**
 	 * \brief Initialize the scene for bidirectional rendering algorithms.
 	 *
 	 * This ensures that certain "special" shapes (such as the aperture

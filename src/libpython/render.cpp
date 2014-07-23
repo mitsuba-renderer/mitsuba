@@ -330,6 +330,7 @@ void export_render() {
 		.def("getPrimitiveCount", &ShapeKDTree::getPrimitiveCount)
 		.def("addShape", &ShapeKDTree::addShape)
 		.def("build", &ShapeKDTree::build)
+		.def("isBuilt", &ShapeKDTree::isBuilt)
 		.def("getAABB", &shapekdtree_getAABB, BP_RETURN_VALUE)
 		.def("getShapes", &shapekdtree_getShapes)
 		.def("rayIntersect", &shapekdtree_rayIntersect);
@@ -343,6 +344,7 @@ void export_render() {
 		.def(bp::init<Scene *>())
 		.def(bp::init<Stream *, InstanceManager *>())
 		.def("initialize", &Scene::initialize)
+		.def("invalidate", &Scene::invalidate)
 		.def("preprocess", &Scene::preprocess)
 		.def("render", &Scene::render)
 		.def("postprocess", &Scene::postprocess)

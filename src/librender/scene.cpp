@@ -315,6 +315,10 @@ void Scene::configure() {
 	m_integrator->configureSampler(this, m_sampler);
 }
 
+void Scene::invalidate() {
+	m_kdtree = new ShapeKDTree();
+}
+
 void Scene::initialize() {
 	if (!m_kdtree->isBuilt()) {
 		/* Expand all geometry */
