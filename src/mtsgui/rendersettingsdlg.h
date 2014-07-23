@@ -40,6 +40,8 @@ public:
 		const QModelIndex &index) const;
 	void updateEditorGeometry(QWidget *editor,
 		const QStyleOptionViewItem &option, const QModelIndex &index) const;
+protected slots:
+	void updateWidgetData();
 };
 
 class RenderSettingsDialog : public QDialog {

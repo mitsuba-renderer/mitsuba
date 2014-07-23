@@ -184,11 +184,11 @@ void RenderSettingsDialog::setDocumentation(const QString &text) {
 		ui->groupBox->setTitle(tr("Documentation"));
 	}
 
-#if defined(__OSX__)
-	ui->helpViewer->setHtml(comments + "<div style='font-size:12pt'>" + m_currentDocumentation + "</div>");
-#else
-	ui->helpViewer->setHtml(comments + "<div style='font-size:10pt'>" + m_currentDocumentation + "</div>");
-#endif
+	#if defined(__OSX__)
+		ui->helpViewer->setHtml(comments + "<div style='font-size:12pt'>" + m_currentDocumentation + "</div>");
+	#else
+		ui->helpViewer->setHtml(comments + "<div style='font-size:10pt'>" + m_currentDocumentation + "</div>");
+	#endif
    	ui->buttonBox->button(QDialogButtonBox::Ok)->setEnabled(!hasErrors);
 }
 
@@ -546,33 +546,40 @@ QString	PropertyDelegate::displayText(const QVariant &value, const QLocale &loca
 	return QStyledItemDelegate::displayText(value, locale);
 }
 
+void PropertyDelegate::updateWidgetData() {
+	emit commitData((QWidget *) sender());
+}
+
 QWidget *PropertyDelegate::createEditor(QWidget *parent, const QStyleOptionViewItem &option,
 		const QModelIndex &index) const {
 	if (index.data().type() == QVariant::Bool) {
 		#if defined(BOOLEAN_AS_COMBOBOXES)
 			QComboBox *cbox = new QComboBox(parent);
-			/* Nicer boolean editor -- by default, Qt creates a True/False combo box */
 			cbox->addItem(tr("No"));
 			cbox->addItem(tr("Yes"));
 			return cbox;
 		#else
-			return new QCheckBox(parent);
+			QCheckBox *box = new QCheckBox(parent);
+			connect(box, SIGNAL(toggled(bool)), this, SLOT(updateWidgetData()));
+			return box;
 		#endif
 	}
+
 	QWidget *widget;
 	if (index.data().type() == QVariant::Double)
 		widget = new BetterDoubleSpinBox(parent);
 	else
 		widget = QStyledItemDelegate::createEditor(parent, option, index);
-#if defined(__OSX__)
-	/* Don't draw focus halos on OSX, they're really distracting */
-	if (widget != NULL && widget->testAttribute(Qt::WA_MacShowFocusRect))
-		widget->setAttribute(Qt::WA_MacShowFocusRect, false);
-	if (index.data().type() != QVariant::Bool) {
-		widget->setAttribute(Qt::WA_MacMiniSize, true);
-		widget->setStyleSheet("font-size: 13pt;");
-	}
-#endif
+
+	#if defined(__OSX__)
+		/* Don't draw focus halos on OSX, they're really distracting */
+		if (widget != NULL && widget->testAttribute(Qt::WA_MacShowFocusRect))
+			widget->setAttribute(Qt::WA_MacShowFocusRect, false);
+		if (index.data().type() != QVariant::Bool) {
+			widget->setAttribute(Qt::WA_MacMiniSize, true);
+			widget->setStyleSheet("font-size: 13pt;");
+		}
+	#endif
 	return widget;
 }
 
