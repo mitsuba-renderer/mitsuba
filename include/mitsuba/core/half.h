@@ -221,8 +221,8 @@ class MTS_EXPORT_CORE half
 
     unsigned short	_h;
 
-    static MTS_EXPORT_CORE uif		_toFloat[1 << 16];
-    static MTS_EXPORT_CORE unsigned short _eLut[1 << 9];
+    static uif		_toFloat[1 << 16];
+    static unsigned short _eLut[1 << 9];
 };
 
 //-----------

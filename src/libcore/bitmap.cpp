@@ -1884,7 +1884,7 @@ std::map<std::string, Bitmap *> Bitmap::split() const {
 
 	ChannelMap channels;
 	for (size_t i=0; i<m_channelNames.size(); ++i)
-		channels[boost::to_lower_copy(m_channelNames[i])] = i;
+		channels[boost::to_lower_copy(m_channelNames[i])] = (int) i;
 
 	for (size_t i=0; i<m_channelNames.size(); ++i) {
 		std::string name = boost::to_lower_copy(m_channelNames[i]);
@@ -1951,7 +1951,7 @@ std::map<std::string, Bitmap *> Bitmap::split() const {
 			channels.erase(prefix + "y");
 		} else {
 			extractFormat = ELuminance;
-			extractChannels.push_back(i);
+			extractChannels.push_back((int) i);
 			channels.erase(name);
 		}
 
@@ -1989,7 +1989,7 @@ ref<Bitmap> Bitmap::extractChannels(EPixelFormat fmt, const std::vector<int> &ch
 			Log(EError, "Bitmap::extractChannel(%i): channel index "
 				"must be between 0 and %i", channels[i], channelCount-1);
 
-	ref<Bitmap> result = new Bitmap(fmt, m_componentFormat, m_size, channels.size());
+	ref<Bitmap> result = new Bitmap(fmt, m_componentFormat, m_size, (int) channels.size());
 	result->setMetadata(m_metadata);
 	result->setGamma(m_gamma);
 
@@ -2851,7 +2851,7 @@ void Bitmap::readOpenEXR(Stream *stream, const std::string &_prefix) {
 	if (multichannel) {
 		for (Imf::ChannelList::ConstIterator it = channels.begin(); it != channels.end(); ++it)
 			sourceChannels.push_back(it.name());
-		m_channelCount = sourceChannels.size();
+		m_channelCount = (int) sourceChannels.size();
 		m_pixelFormat = EMultiChannel;
 		formatString = "Multichannel";
 	} else if (spectral) {
