@@ -53,6 +53,10 @@ static AABB shapekdtree_getAABB(const ShapeKDTree *kdtree) {
 	return kdtree->getAABB();
 }
 
+static bool shapekdtree_isBuilt(const ShapeKDTree *kdtree) {
+	return kdtree->isBuilt();
+}
+
 static bp::object shapekdtree_rayIntersect(const ShapeKDTree *kdtree, const Ray &ray) {
 	Intersection its;
 
@@ -330,7 +334,7 @@ void export_render() {
 		.def("getPrimitiveCount", &ShapeKDTree::getPrimitiveCount)
 		.def("addShape", &ShapeKDTree::addShape)
 		.def("build", &ShapeKDTree::build)
-		.def("isBuilt", &ShapeKDTree::isBuilt)
+		.def("isBuilt", &shapekdtree_isBuilt)
 		.def("getAABB", &shapekdtree_getAABB, BP_RETURN_VALUE)
 		.def("getShapes", &shapekdtree_getShapes)
 		.def("rayIntersect", &shapekdtree_rayIntersect);

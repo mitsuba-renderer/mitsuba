@@ -179,9 +179,9 @@ template <typename Scalar> struct Resampler {
 			m_weights = new Scalar[m_taps];
 			Float sum = 0;
 			for (int i=0; i<m_taps; i++) {
-				Float weight = (Scalar) rfilter->eval((Float) (i-m_halfTaps));
+				Scalar weight = (Scalar) rfilter->eval((Float) (i-m_halfTaps));
 				m_weights[i] = weight;
-				sum += weight;
+				sum += (Float) weight;
 			}
 			Float normalization = 1.0f / sum;
 			for (int i=0; i<m_taps; i++) {
