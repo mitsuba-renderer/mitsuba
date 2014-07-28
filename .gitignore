@@ -1,0 +1,49 @@
+# Documentation
+doc/apidocs/*
+doc/*.aux
+doc/*.log
+doc/*.out
+doc/*.toc
+doc/*.bbl
+doc/*.blg
+doc/main.pdf
+doc/plugins_generated.tex
+
+# Build-related
+.sconf_temp
+build/release
+build/debug
+debian
+.sconsign.dblite
+config.py
+config.log
+*.pyc
+
+# MSVC++-related
+build/mitsuba-msvc2010.sdf
+build/mitsuba-msvc2010.suo
+build/mitsuba-msvc2010.vcxproj.user
+data/windows/mitsuba_res.res
+dist
+
+# Debugging history files
+\.gdb_history
+
+# Dependencies
+dependencies
+
+# OSX binaries and byproducts
+Mitsuba.app
+.DS_Store
+
+# Imported geometry and some default output types
+meshes
+textures
+mitsuba.*.log
+*.exr
+
+# Eclipse CDT project files
+.externalToolBuilders
+.settings
+.cproject
+.project

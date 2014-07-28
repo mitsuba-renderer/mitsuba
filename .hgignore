@@ -14,7 +14,6 @@
 ^build/release/.*$
 ^build/debug/.*$
 ^debian/.*$
-^plugins/.*$
 ^.sconsign.dblite$
 ^config.py$
 ^config.log$
@@ -24,9 +23,6 @@
 ^build/mitsuba-msvc2010.sdf$
 ^build/mitsuba-msvc2010.suo$
 ^build/mitsuba-msvc2010.vcxproj.user$
-^build/mitsuba-msvc2008.ncb$
-^build/mitsuba-msvc2008.suo$
-^build/mitsuba-msvc2008\..*\.user$
 ^data/windows/mitsuba_res.res$
 ^dist/.*$
 
@@ -38,6 +34,7 @@
 
 # OSX binaries and byproducts
 ^Mitsuba.app/.*$
+^\.DS_Store$
 
 # Imported geometry and some default output types
 ^meshes/.*$
