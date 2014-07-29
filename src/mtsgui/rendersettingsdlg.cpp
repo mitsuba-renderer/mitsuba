@@ -21,6 +21,24 @@
 #include <mitsuba/core/plugin.h>
 #include <mitsuba/core/fresolver.h>
 
+class BetterSpinBox : public QSpinBox {
+public:
+	BetterSpinBox(QWidget *parent) : QSpinBox(parent) {
+		setFrame(false);
+		setFocusPolicy(Qt::StrongFocus);
+		setMinimum(-1);
+		setMaximum(INT_MAX);
+	}
+
+	bool event(QEvent *event) {
+		if(event->type() == QEvent::Wheel) {
+			event->ignore();
+			return false;
+		}
+		return QSpinBox::event(event);
+	}
+};
+
 class BetterDoubleSpinBox : public QDoubleSpinBox {
 public:
 	BetterDoubleSpinBox(QWidget *parent) : QDoubleSpinBox(parent) {
@@ -28,6 +46,7 @@ public:
 		setMinimum(-std::numeric_limits<double>::max());
 		setMaximum(std::numeric_limits<double>::max());
 		setFrame(false);
+		setFocusPolicy(Qt::StrongFocus);
 	}
 
 	void morphNumericString(char *s) const {
@@ -46,6 +65,14 @@ public:
 		snprintf(tmp, sizeof(tmp), "%f", value);
 		morphNumericString(tmp);
 		return QString::fromAscii(tmp);
+	}
+
+	bool event(QEvent *event) {
+		if(event->type() == QEvent::Wheel) {
+			event->ignore();
+			return false;
+		}
+		return QDoubleSpinBox::event(event);
 	}
 };
 
@@ -566,7 +593,9 @@ QWidget *PropertyDelegate::createEditor(QWidget *parent, const QStyleOptionViewI
 	}
 
 	QWidget *widget;
-	if (index.data().type() == QVariant::Double)
+	if (index.data().type() == QVariant::Int)
+		widget = new BetterSpinBox(parent);
+	else if (index.data().type() == QVariant::Double)
 		widget = new BetterDoubleSpinBox(parent);
 	else
 		widget = QStyledItemDelegate::createEditor(parent, option, index);
