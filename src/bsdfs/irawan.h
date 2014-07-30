@@ -1,7 +1,7 @@
 /*
     This file is part of Mitsuba, a physically based rendering system.
 
-    Copyright (c) 2007-2012 by Wenzel Jakob and others.
+    Copyright (c) 2007-2014 by Wenzel Jakob and others.
 
 	This particular file is based on code by Piti Irawan, which is
 	redistributed with permission.
