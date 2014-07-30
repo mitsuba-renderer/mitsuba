@@ -477,7 +477,7 @@ FINLINE void transpose(SSEVector4f& row0, SSEVector4f& row1,
 	row3 = _mm_movehl_ps(tmp3, tmp1);
 }
 
-} // namespace math
+} // namespace sse
 
 MTS_NAMESPACE_END
 

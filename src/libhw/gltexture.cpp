@@ -121,7 +121,7 @@ void GLTexture::init() {
 						glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT,
 							GL_COLOR_ATTACHMENT0_EXT, m_glType, m_id, 0);
 					} else if (m_type == ETextureCubeMap) {
-						Assert(m_size.x == m_size.y && isPowerOfTwo(m_size.x));
+						Assert(m_size.x == m_size.y && math::isPowerOfTwo(m_size.x));
 						Assert(m_fbType == EColorBuffer);
 						Assert(m_samples == 1);
 
@@ -178,7 +178,7 @@ void GLTexture::init() {
 					glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT,
 						GL_DEPTH_ATTACHMENT_EXT, m_glType, m_id, 0);
 				} else if (m_type == ETextureCubeMap) {
-					Assert(m_size.x == m_size.y && isPowerOfTwo(m_size.x));
+					Assert(m_size.x == m_size.y && math::isPowerOfTwo(m_size.x));
 					for (int i=0; i<6; i++)
 						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, m_internalFormat,
 							m_size.x, m_size.y, 0, m_format, m_dataFormat, NULL);
@@ -260,8 +260,8 @@ void GLTexture::refresh() {
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
 	if (m_type == ETexture1D) {
-		Assert((isPowerOfTwo(m_size.x) && m_size.y == 1)
-			|| (isPowerOfTwo(m_size.y) && m_size.x == 1));
+		Assert((math::isPowerOfTwo(m_size.x) && m_size.y == 1)
+			|| (math::isPowerOfTwo(m_size.y) && m_size.x == 1));
 
 		if (isMipMapped()) {
 			/* Let GLU generate mipmaps for us */
@@ -282,7 +282,7 @@ void GLTexture::refresh() {
 	} else if (m_type == ETextureCubeMap) {
 		Assert(bitmap != NULL);
 		Assert(bitmap->getWidth() == bitmap->getHeight());
-		Assert(isPowerOfTwo(bitmap->getWidth()));
+		Assert(math::isPowerOfTwo(bitmap->getWidth()));
 		if (isMipMapped())
 			glTexParameteri(m_glType, GL_GENERATE_MIPMAP, GL_TRUE);
 

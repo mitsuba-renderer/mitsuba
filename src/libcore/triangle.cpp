@@ -27,7 +27,7 @@ Point Triangle::sample(const Point *positions, const Normal *normals,
 	const Point &p1 = positions[idx[1]];
 	const Point &p2 = positions[idx[2]];
 
-	Point2 bary = Warp::squareToUniformTriangle(sample);
+	Point2 bary = warp::squareToUniformTriangle(sample);
 	Vector sideA = p1 - p0, sideB = p2 - p0;
 	Point p = p0 + (sideA * bary.x) + (sideB * bary.y);
 

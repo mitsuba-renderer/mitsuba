@@ -38,7 +38,7 @@ Float VonMisesFisherDistr::eval(Float cosTheta) const {
 
 Vector VonMisesFisherDistr::sample(const Point2 &sample) const {
 	if (m_kappa == 0)
-		return Warp::squareToUniformSphere(sample);
+		return warp::squareToUniformSphere(sample);
 
 #if 0
 	Float cosTheta = math::fastlog(math::fastexp(-m_kappa) + 2 *

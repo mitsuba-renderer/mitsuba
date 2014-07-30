@@ -813,9 +813,9 @@ void Bitmap::convolve(const Bitmap *_kernel) {
 				/* Copy and zero-pad the convolution kernel in a wraparound fashion */
 				if (ch < channelCountKernel) {
 					for (size_t y=0; y<kernelSize; ++y) {
-						ssize_t wrappedY = modulo(hKernelSize - (ssize_t) y, (ssize_t) paddedHeight);
+						ssize_t wrappedY = math::modulo(hKernelSize - (ssize_t) y, (ssize_t) paddedHeight);
 						for (size_t x=0; x<kernelSize; ++x) {
-							ssize_t wrappedX = modulo(hKernelSize - (ssize_t) x, (ssize_t) paddedWidth);
+							ssize_t wrappedX = math::modulo(hKernelSize - (ssize_t) x, (ssize_t) paddedWidth);
 							kernel[wrappedX+wrappedY*paddedWidth] = _kernel->getFloat16Data()[(x+y*kernelSize)*channelCountKernel+ch];
 						}
 					}
@@ -831,9 +831,9 @@ void Bitmap::convolve(const Bitmap *_kernel) {
 				/* Copy and zero-pad the convolution kernel in a wraparound fashion */
 				if (ch < channelCountKernel) {
 					for (size_t y=0; y<kernelSize; ++y) {
-						ssize_t wrappedY = modulo(hKernelSize - (ssize_t) y, (ssize_t) paddedHeight);
+						ssize_t wrappedY = math::modulo(hKernelSize - (ssize_t) y, (ssize_t) paddedHeight);
 						for (size_t x=0; x<kernelSize; ++x) {
-							ssize_t wrappedX = modulo(hKernelSize - (ssize_t) x, (ssize_t) paddedWidth);
+							ssize_t wrappedX = math::modulo(hKernelSize - (ssize_t) x, (ssize_t) paddedWidth);
 							kernel[wrappedX+wrappedY*paddedWidth] = _kernel->getFloat32Data()[(x+y*kernelSize)*channelCountKernel+ch];
 						}
 					}
@@ -849,9 +849,9 @@ void Bitmap::convolve(const Bitmap *_kernel) {
 				/* Copy and zero-pad the convolution kernel in a wraparound fashion */
 				if (ch < channelCountKernel) {
 					for (size_t y=0; y<kernelSize; ++y) {
-						ssize_t wrappedY = modulo(hKernelSize - (ssize_t) y, (ssize_t) paddedHeight);
+						ssize_t wrappedY = math::modulo(hKernelSize - (ssize_t) y, (ssize_t) paddedHeight);
 						for (size_t x=0; x<kernelSize; ++x) {
-							ssize_t wrappedX = modulo(hKernelSize - (ssize_t) x, (ssize_t) paddedWidth);
+							ssize_t wrappedX = math::modulo(hKernelSize - (ssize_t) x, (ssize_t) paddedWidth);
 							kernel[wrappedX+wrappedY*paddedWidth] = _kernel->getFloat64Data()[(x+y*kernelSize)*channelCountKernel+ch];
 						}
 					}

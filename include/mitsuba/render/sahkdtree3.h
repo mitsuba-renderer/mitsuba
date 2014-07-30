@@ -518,8 +518,8 @@ public:
 		for (int i=0; i<nRays; ++i) {
 			Point2 sample1(random->nextFloat(), random->nextFloat()),
 				sample2(random->nextFloat(), random->nextFloat());
-			Point p1 = bsphere.center + Warp::squareToUniformSphere(sample1) * bsphere.radius;
-			Point p2 = bsphere.center + Warp::squareToUniformSphere(sample2) * bsphere.radius;
+			Point p1 = bsphere.center + warp::squareToUniformSphere(sample1) * bsphere.radius;
+			Point p2 = bsphere.center + warp::squareToUniformSphere(sample2) * bsphere.radius;
 			Ray ray(p1, normalize(p2-p1), 0.0f);
 			Float mint, maxt, t;
 			if (m_aabb.rayIntersect(ray, mint, maxt)) {

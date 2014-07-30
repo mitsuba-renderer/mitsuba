@@ -23,7 +23,143 @@
 
 MTS_NAMESPACE_BEGIN
 
+/**
+ * Contains elementary 1D math functions that were either not provided by the standard,
+ * or which are not consistently provided on all platforms/compilers
+ */
 namespace math {
+
+/// Cross-platform implementation of the error function
+extern MTS_EXPORT_CORE Float erf(Float x);
+
+/// Cross-platform implementation of the inverse error function
+extern MTS_EXPORT_CORE Float erfinv(Float x);
+
+/// sqrt(a^2 + b^2) without range issues (like 'hypot' on compilers that support C99, single precision)
+extern MTS_EXPORT_CORE float hypot2(float a, float b);
+
+/// sqrt(a^2 + b^2) without range issues (like 'hypot' on compilers that support C99, double precision)
+extern MTS_EXPORT_CORE double hypot2(double a, double b);
+
+/// Base-2 logarithm (single precision)
+extern MTS_EXPORT_CORE float log2(float value);
+
+/// Base-2 logarithm (double precision)
+extern MTS_EXPORT_CORE double log2(double value);
+
+/// Generic clamping function
+template <typename Scalar> inline Scalar clamp(Scalar value, Scalar min, Scalar max) {
+	return std::min(max, std::max(min, value));
+}
+
+/// Linearly interpolate between two values
+template <typename Scalar> inline Scalar lerp(Scalar t, Scalar v1, Scalar v2) {
+    return ((Scalar) 1 - t) * v1 + t * v2;
+}
+
+/// S-shaped smoothly varying interpolation between two values
+template <typename Scalar> inline Scalar smoothStep(Scalar min, Scalar max, Scalar value) {
+    Scalar v = clamp((value - min) / (max - min), (Scalar) 0, (Scalar) 1);
+    return v * v * (-2 * v  + 3);
+}
+
+/// Always-positive modulo function (assumes b > 0)
+inline int32_t modulo(int32_t a, int32_t b) {
+	int32_t r = a % b;
+	return (r < 0) ? r+b : r;
+}
+
+/// Always-positive modulo function (assumes b > 0)
+inline int64_t modulo(int64_t a, int64_t b) {
+	int64_t r = a % b;
+	return (r < 0) ? r+b : r;
+}
+
+#if defined(MTS_AMBIGUOUS_SIZE_T)
+inline ssize_t modulo(ssize_t a, ssize_t b) {
+	if (sizeof(ssize_t) == 8)
+		return modulo((int64_t) a, (int64_t) b);
+	else
+		return modulo((int32_t) a, (int32_t) b);
+}
+#endif
+
+/// Always-positive modulo function, single precision version (assumes b > 0)
+inline float modulo(float a, float b) {
+	float r = std::fmod(a, b);
+	return (r < 0.0f) ? r+b : r;
+}
+
+/// Always-positive modulo function, double precision version (assumes b > 0)
+inline double modulo(double a, double b) {
+	double r = std::fmod(a, b);
+	return (r < 0.0) ? r+b : r;
+}
+
+/// Integer floor function (single precision)
+template <typename Scalar> inline int floorToInt(Scalar value) { return (int) std::floor(value); }
+
+/// Integer ceil function (single precision)
+template <typename Scalar> inline int ceilToInt(Scalar value) { return (int) std::ceil(value); }
+
+/// Integer round function (single precision)
+inline int roundToInt(float value)  { return (int) ::roundf(value); }
+
+/// Integer round function (double precision)
+inline int roundToInt(double value) { return (int) ::round(value); }
+
+/// Base-2 logarithm (32-bit integer version)
+extern MTS_EXPORT_CORE int log2i(uint32_t value);
+
+/// Base-2 logarithm (64-bit integer version)
+extern MTS_EXPORT_CORE int log2i(uint64_t value);
+
+#if defined(MTS_AMBIGUOUS_SIZE_T)
+inline int log2i(size_t value) {
+	if (sizeof(size_t) == 8)
+		return log2i((uint64_t) value);
+	else
+		return log2i((uint32_t) value);
+}
+#endif
+
+/// Check if an integer is a power of two (unsigned 32 bit version)
+inline bool isPowerOfTwo(uint32_t i) { return (i & (i-1)) == 0; }
+
+/// Check if an integer is a power of two (signed 32 bit version)
+inline bool isPowerOfTwo(int32_t i) { return i > 0 && (i & (i-1)) == 0; }
+
+/// Check if an integer is a power of two (64 bit version)
+inline bool isPowerOfTwo(uint64_t i) { return (i & (i-1)) == 0; }
+
+/// Check if an integer is a power of two (signed 64 bit version)
+inline bool isPowerOfTwo(int64_t i) { return i > 0 && (i & (i-1)) == 0; }
+
+#if defined(MTS_AMBIGUOUS_SIZE_T)
+inline bool isPowerOfTwo(size_t value) {
+	if (sizeof(size_t) == 8) /// will be optimized away
+		return isPowerOfTwo((uint64_t) value);
+	else
+		return isPowerOfTwo((uint32_t) value);
+}
+#endif
+
+/// Round an integer to the next power of two
+extern MTS_EXPORT_CORE uint32_t roundToPowerOfTwo(uint32_t i);
+
+/// Round an integer to the next power of two (64 bit version)
+extern MTS_EXPORT_CORE uint64_t roundToPowerOfTwo(uint64_t i);
+
+#if defined(MTS_AMBIGUOUS_SIZE_T)
+/// Round an integer to the next power of two
+inline size_t roundToPowerOfTwo(size_t value) {
+	if (sizeof(size_t) == 8) /// will be optimized away
+		return (size_t) roundToPowerOfTwo((uint64_t) value);
+	else
+		return (size_t) roundToPowerOfTwo((uint32_t) value);
+}
+#endif
+
 #if defined(__LINUX__) && defined(__x86_64__)
 	/*
 	   The Linux/x86_64 single precision implementations of 'exp'

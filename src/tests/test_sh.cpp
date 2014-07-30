@@ -41,7 +41,7 @@ public:
 			for (int m=-l; m<=l; ++m)
 				vec1(l, m) = random->nextFloat();
 
-		Vector axis(Warp::squareToUniformSphere(Point2(random->nextFloat(), random->nextFloat())));
+		Vector axis(warp::squareToUniformSphere(Point2(random->nextFloat(), random->nextFloat())));
 		Transform trafo = Transform::rotate(axis, random->nextFloat()*360);
 		SHRotation rot(vec1.getBands());
 
@@ -51,7 +51,7 @@ public:
 		rot(vec1, vec2);
 
 		for (int i=0; i<100; ++i) {
-			Vector dir1(Warp::squareToUniformSphere(Point2(random->nextFloat(), random->nextFloat()))), dir2;
+			Vector dir1(warp::squareToUniformSphere(Point2(random->nextFloat(), random->nextFloat()))), dir2;
 			trafo(dir1, dir2);
 
 			Float value1 = vec1.eval(dir2);

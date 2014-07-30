@@ -199,6 +199,15 @@ public:
 		return (size_t) m_levelSize[0].x * (size_t) m_levelSize[0].y;
 	}
 
+	inline static int signumToInt(Float value) {
+		if (value < 0)
+			return -1;
+		else if (value > 0)
+			return 1;
+		else
+			return 0;
+	}
+
 	bool rayIntersect(const Ray &_ray, Float mint, Float maxt, Float &t, void *tmp) const {
 		StackEntry stack[MTS_QTREE_MAXDEPTH];
 
@@ -233,14 +242,14 @@ public:
 				    maxY = (int) std::max(enterPt.y, exitPt.y);
 
 				/* Determine quadtree level */
-				int level = clamp(1 + log2i(
+				int level = math::clamp(1 + math::log2i(
 					std::max((uint32_t) (minX ^ maxX), (uint32_t) (minY ^ maxY))),
 					0, m_levelCount-1);
 
 				/* Compute X and Y coordinates at that level */
 				const Vector2i &blockSize = m_blockSize[level];
-				int x = clamp(minX / blockSize.x, 0, m_levelSize[level].x-1),
-				    y = clamp(minY / blockSize.y, 0, m_levelSize[level].y-1);
+				int x = math::clamp(minX / blockSize.x, 0, m_levelSize[level].x-1),
+				    y = math::clamp(minY / blockSize.y, 0, m_levelSize[level].y-1);
 
 				stack[stackIdx].level = level;
 				stack[stackIdx].x = x;
@@ -504,8 +513,8 @@ public:
 		m_dataSize = m_bitmap->getSize();
 		if (m_dataSize.x < 2) m_dataSize.x = 2;
 		if (m_dataSize.y < 2) m_dataSize.y = 2;
-		if (!isPowerOfTwo(m_dataSize.x - 1)) m_dataSize.x = (int) roundToPowerOfTwo((uint32_t) m_dataSize.x - 1) + 1;
-		if (!isPowerOfTwo(m_dataSize.y - 1)) m_dataSize.y = (int) roundToPowerOfTwo((uint32_t) m_dataSize.y - 1) + 1;
+		if (!math::isPowerOfTwo(m_dataSize.x - 1)) m_dataSize.x = (int) math::roundToPowerOfTwo((uint32_t) m_dataSize.x - 1) + 1;
+		if (!math::isPowerOfTwo(m_dataSize.y - 1)) m_dataSize.y = (int) math::roundToPowerOfTwo((uint32_t) m_dataSize.y - 1) + 1;
 
 		if (m_bitmap->getSize() != m_dataSize) {
 			m_bitmap = m_bitmap->convert(Bitmap::ELuminance, Bitmap::EFloat);
@@ -533,7 +542,7 @@ public:
 		Log(EInfo, "Building acceleration data structure for %ix%i height field ..", m_dataSize.x, m_dataSize.y);
 
 		ref<Timer> timer = new Timer();
-		m_levelCount = (int) std::max(log2i((uint32_t) m_dataSize.x-1), log2i((uint32_t) m_dataSize.y-1)) + 1;
+		m_levelCount = (int) std::max(math::log2i((uint32_t) m_dataSize.x-1), math::log2i((uint32_t) m_dataSize.y-1)) + 1;
 
 		m_levelSize = new Vector2i[m_levelCount];
 		m_numChildren = new Vector2i[m_levelCount];

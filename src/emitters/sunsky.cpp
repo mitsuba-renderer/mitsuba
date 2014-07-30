@@ -201,7 +201,7 @@ public:
 
 			for (size_t i=0; i<nSamples; ++i) {
 				Vector dir = sunFrame.toWorld(
-					Warp::squareToUniformCone(cosTheta, sample02(i)));
+					warp::squareToUniformCone(cosTheta, sample02(i)));
 
 				Float sinTheta = math::safe_sqrt(1-dir.y*dir.y);
 				SphericalCoordinates sphCoords = fromSphere(dir);

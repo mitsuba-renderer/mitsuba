@@ -399,11 +399,6 @@ std::string getFQDN() {
 	return fqdn;
 }
 
-Float log2(Float value) {
-	const Float invLn2 = (Float) 1.0f / math::fastlog((Float) 2.0f);
-	return math::fastlog(value) * invLn2;
-}
-
 std::string formatString(const char *fmt, ...) {
 	char tmp[512];
 	va_list iterator;
@@ -442,37 +437,6 @@ std::string formatString(const char *fmt, ...) {
 #endif
 
 	return std::string(tmp);
-}
-
-int log2i(uint32_t value) {
-	int r = 0;
-	while ((value >> r) != 0)
-		r++;
-	return r-1;
-}
-
-int log2i(uint64_t value) {
-	int r = 0;
-	while ((value >> r) != 0)
-		r++;
-	return r-1;
-}
-
-/* Fast rounding & power-of-two test algorithms from PBRT */
-uint32_t roundToPowerOfTwo(uint32_t i) {
-	i--;
-	i |= i >> 1; i |= i >> 2;
-	i |= i >> 4; i |= i >> 8;
-	i |= i >> 16;
-	return i+1;
-}
-
-uint64_t roundToPowerOfTwo(uint64_t i) {
-	i--;
-	i |= i >> 1;  i |= i >> 2;
-	i |= i >> 4;  i |= i >> 8;
-	i |= i >> 16; i |= i >> 32;
-	return i+1;
 }
 
 // -----------------------------------------------------------------------
@@ -908,20 +872,6 @@ std::string memString(size_t size, bool precise) {
 	   << std::fixed << value << " " << suffixes[suffix];
 
 	return os.str();
-}
-
-Float hypot2(Float a, Float b) {
-	Float r;
-	if (std::abs(a) > std::abs(b)) {
-		r = b / a;
-		r = std::abs(a) * std::sqrt(1 + r*r);
-	} else if (b != 0) {
-		r = a / b;
-		r = std::abs(b) * std::sqrt(1 + r*r);
-	} else {
-		r = 0;
-	}
-	return r;
 }
 
 MTS_NAMESPACE_END

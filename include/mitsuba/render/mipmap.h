@@ -508,15 +508,15 @@ public:
 			switch (m_bcu) {
 				case ReconstructionFilter::ERepeat:
 					// Assume that the input repeats in a periodic fashion
-					x = modulo(x, size.x);
+					x = math::modulo(x, size.x);
 					break;
 				case ReconstructionFilter::EClamp:
 					// Clamp to the outermost sample position
-					x = clamp(x, 0, size.x - 1);
+					x = math::clamp(x, 0, size.x - 1);
 					break;
 				case ReconstructionFilter::EMirror:
 					// Assume that the input is mirrored along the boundary
-					x = modulo(x, 2*size.x);
+					x = math::modulo(x, 2*size.x);
 					if (x >= size.x)
 						x = 2*size.x - x - 1;
 					break;
@@ -536,15 +536,15 @@ public:
 			switch (m_bcv) {
 				case ReconstructionFilter::ERepeat:
 					// Assume that the input repeats in a periodic fashion
-					y = modulo(y, size.y);
+					y = math::modulo(y, size.y);
 					break;
 				case ReconstructionFilter::EClamp:
 					// Clamp to the outermost sample position
-					y = clamp(y, 0, size.y - 1);
+					y = math::clamp(y, 0, size.y - 1);
 					break;
 				case ReconstructionFilter::EMirror:
 					// Assume that the input is mirrored along the boundary
-					y = modulo(y, 2*size.y);
+					y = math::modulo(y, 2*size.y);
 					if (y >= size.y)
 						y = 2*size.y - y - 1;
 					break;
@@ -565,7 +565,7 @@ public:
 	/// Evaluate the texture at the given resolution using a box filter
 	inline Value evalBox(int level, const Point2 &uv) const {
 		const Vector2i &size = m_pyramid[level].getSize();
-		return evalTexel(level, floorToInt(uv.x*size.x), floorToInt(uv.y*size.y));
+		return evalTexel(level, math::floorToInt(uv.x*size.x), math::floorToInt(uv.y*size.y));
 	}
 
 	/**
@@ -585,7 +585,7 @@ public:
 		const Vector2i &size = m_pyramid[level].getSize();
 		Float u = uv.x * size.x - 0.5f, v = uv.y * size.y - 0.5f;
 
-		int xPos = floorToInt(u), yPos = floorToInt(v);
+		int xPos = math::floorToInt(u), yPos = math::floorToInt(v);
 		Float dx1 = u - xPos, dx2 = 1.0f - dx1,
 		      dy1 = v - yPos, dy2 = 1.0f - dy1;
 
@@ -612,7 +612,7 @@ public:
 		const Vector2i &size = m_pyramid[level].getSize();
 		Float u = uv.x * size.x - 0.5f, v = uv.y * size.y - 0.5f;
 
-		int xPos = floorToInt(u), yPos = floorToInt(v);
+		int xPos = math::floorToInt(u), yPos = math::floorToInt(v);
 		Float dx = u - xPos, dy = v - yPos;
 
 		const Value p00 = evalTexel(level, xPos,   yPos);
@@ -645,7 +645,7 @@ public:
 		      F = A*C - B*B*0.25f;
 
 		/* Compute the major and minor radii */
-		Float root = hypot2(A-C, B),
+		Float root = math::hypot2(A-C, B),
 		      Aprime = 0.5f * (A + C - root),
 		      Cprime = 0.5f * (A + C + root),
 		      majorRadius = Aprime != 0 ? std::sqrt(F / Aprime) : 0,
@@ -654,8 +654,8 @@ public:
 		if (m_filterType == ETrilinear || !(minorRadius > 0) || !(majorRadius > 0) || F < 0) {
 			/* Determine a suitable mip map level, while preferring
 			   blurring over aliasing */
-			Float level = log2(std::max(majorRadius, Epsilon));
-			int ilevel = floorToInt(level);
+			Float level = math::log2(std::max(majorRadius, Epsilon));
+			int ilevel = math::floorToInt(level);
 
 			if (ilevel < 0) {
 				/* Bilinear interpolation (lookup is smaller than 1 pixel) */
@@ -701,7 +701,7 @@ public:
 
 			/* Determine a suitable MIP map level, such that the filter
 			   covers a reasonable amount of pixels */
-			Float level = std::max((Float) 0.0f, log2(minorRadius));
+			Float level = std::max((Float) 0.0f, math::log2(minorRadius));
 			int ilevel = (int) level;
 			Float a = level - ilevel;
 
@@ -786,8 +786,8 @@ protected:
 		Float invDet = 1.0f / (-B*B + 4.0f*A*C),
 		      deltaU = 2.0f * std::sqrt(C * invDet),
 		      deltaV = 2.0f * std::sqrt(A * invDet);
-		int u0 = ceilToInt(u - deltaU), u1 = floorToInt(u + deltaU);
-		int v0 = ceilToInt(v - deltaV), v1 = floorToInt(v + deltaV);
+		int u0 = math::ceilToInt(u - deltaU), u1 = math::floorToInt(u + deltaU);
+		int v0 = math::ceilToInt(v - deltaV), v1 = math::floorToInt(v + deltaV);
 
 		/* Scale the coefficients by the size of the Gaussian lookup table */
 		Float As = A * MTS_MIPMAP_LUT_SIZE,

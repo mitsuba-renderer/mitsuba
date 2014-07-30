@@ -105,9 +105,9 @@ void ChiSquare::fill(
 		Point2 sphCoords = toSphericalCoordinates(boost::get<0>(sample));
 
 		int thetaBin = std::min(std::max(0,
-			floorToInt(sphCoords.x * factor.x)), m_thetaBins-1);
+			math::floorToInt(sphCoords.x * factor.x)), m_thetaBins-1);
 		int phiBin = std::min(std::max(0,
-			floorToInt(sphCoords.y * factor.y)), m_phiBins-1);
+			math::floorToInt(sphCoords.y * factor.y)), m_phiBins-1);
 		m_table[thetaBin * m_phiBins + phiBin] += boost::get<1>(sample);
 		if (boost::get<1>(sample) > 0 && boost::get<2>(sample) == EDiscrete)
 			discreteDirections.insert(boost::get<0>(sample));
@@ -123,9 +123,9 @@ void ChiSquare::fill(
 			Float pdf = pdfFn(direction, EDiscrete);
 
 			int thetaBin = std::min(std::max(0,
-				floorToInt(sphCoords.x * factor.x)), m_thetaBins-1);
+				math::floorToInt(sphCoords.x * factor.x)), m_thetaBins-1);
 			int phiBin = std::min(std::max(0,
-				floorToInt(sphCoords.y * factor.y)), m_phiBins-1);
+				math::floorToInt(sphCoords.y * factor.y)), m_phiBins-1);
 
 			m_refTable[thetaBin * m_phiBins + phiBin] += pdf * m_sampleCount;
 		}

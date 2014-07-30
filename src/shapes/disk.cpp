@@ -249,7 +249,7 @@ public:
 
 	void samplePosition(PositionSamplingRecord &pRec, const Point2 &sample) const {
 		const Transform &trafo = m_objectToWorld->eval(pRec.time);
-		Point2 p = Warp::squareToUniformDiskConcentric(sample);
+		Point2 p = warp::squareToUniformDiskConcentric(sample);
 
 		pRec.p = trafo(Point3(p.x, p.y, 0));
 		pRec.n = trafo(normalize(Normal(0,0,1)));

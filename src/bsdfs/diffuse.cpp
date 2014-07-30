@@ -123,14 +123,14 @@ public:
 			|| Frame::cosTheta(bRec.wo) <= 0)
 			return 0.0f;
 
-		return Warp::squareToCosineHemispherePdf(bRec.wo);
+		return warp::squareToCosineHemispherePdf(bRec.wo);
 	}
 
 	Spectrum sample(BSDFSamplingRecord &bRec, const Point2 &sample) const {
 		if (!(bRec.typeMask & EDiffuseReflection) || Frame::cosTheta(bRec.wi) <= 0)
 			return Spectrum(0.0f);
 
-		bRec.wo = Warp::squareToCosineHemisphere(sample);
+		bRec.wo = warp::squareToCosineHemisphere(sample);
 		bRec.eta = 1.0f;
 		bRec.sampledComponent = 0;
 		bRec.sampledType = EDiffuseReflection;
@@ -141,11 +141,11 @@ public:
 		if (!(bRec.typeMask & EDiffuseReflection) || Frame::cosTheta(bRec.wi) <= 0)
 			return Spectrum(0.0f);
 
-		bRec.wo = Warp::squareToCosineHemisphere(sample);
+		bRec.wo = warp::squareToCosineHemisphere(sample);
 		bRec.eta = 1.0f;
 		bRec.sampledComponent = 0;
 		bRec.sampledType = EDiffuseReflection;
-		pdf = Warp::squareToCosineHemispherePdf(bRec.wo);
+		pdf = warp::squareToCosineHemispherePdf(bRec.wo);
 		return m_reflectance->eval(bRec.its);
 	}
 

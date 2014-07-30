@@ -31,29 +31,28 @@ MTS_NAMESPACE_BEGIN
  * The main application of this class is to generate uniformly
  * distributed or weighted point sets in certain common target domains.
  */
-class MTS_EXPORT_CORE Warp {
-public:
+namespace warp {
 	// =============================================================
 	//! @{ \name Warping techniques related to spheres and subsets
 	// =============================================================
 
 	/// Uniformly sample a vector on the unit sphere with respect to solid angles
-	static Vector squareToUniformSphere(const Point2 &sample);
+	extern MTS_EXPORT_CORE Vector squareToUniformSphere(const Point2 &sample);
 
 	/// Density of \ref squareToUniformSphere() with respect to solid angles
-	static inline Float squareToUniformSpherePdf() { return INV_FOURPI; }
+	extern MTS_EXPORT_CORE inline Float squareToUniformSpherePdf() { return INV_FOURPI; }
 
 	/// Uniformly sample a vector on the unit hemisphere with respect to solid angles
-	static Vector squareToUniformHemisphere(const Point2 &sample);
+	extern MTS_EXPORT_CORE Vector squareToUniformHemisphere(const Point2 &sample);
 
 	/// Density of \ref squareToUniformHemisphere() with respect to solid angles
-	static inline Float squareToUniformHemispherePdf() { return INV_TWOPI; }
+	extern MTS_EXPORT_CORE inline Float squareToUniformHemispherePdf() { return INV_TWOPI; }
 
 	/// Sample a cosine-weighted vector on the unit hemisphere with respect to solid angles
-	static Vector squareToCosineHemisphere(const Point2 &sample);
+	extern MTS_EXPORT_CORE Vector squareToCosineHemisphere(const Point2 &sample);
 
 	/// Density of \ref squareToCosineHemisphere() with respect to solid angles
-	static inline Float squareToCosineHemispherePdf(const Vector &d)
+	extern MTS_EXPORT_CORE inline Float squareToCosineHemispherePdf(const Vector &d)
 		{ return INV_PI * Frame::cosTheta(d); }
 
 	/**
@@ -63,7 +62,7 @@ public:
 	 * \param cosCutoff Cosine of the cutoff angle
 	 * \param sample A uniformly distributed sample on \f$[0,1]^2\f$
 	 */
-	static Vector squareToUniformCone(Float cosCutoff, const Point2 &sample);
+	extern MTS_EXPORT_CORE Vector squareToUniformCone(Float cosCutoff, const Point2 &sample);
 
 	/**
 	 * \brief Uniformly sample a vector that lies within a given
@@ -72,7 +71,7 @@ public:
 	 * \param cosCutoff Cosine of the cutoff angle
 	 * \param sample A uniformly distributed sample on \f$[0,1]^2\f$
 	 */
-	static inline Float squareToUniformConePdf(Float cosCutoff) {
+	extern MTS_EXPORT_CORE inline Float squareToUniformConePdf(Float cosCutoff) {
 		return INV_TWOPI / (1-cosCutoff);
 	}
 
@@ -84,41 +83,41 @@ public:
 	// =============================================================
 
 	/// Uniformly sample a vector on a 2D disk
-	static Point2 squareToUniformDisk(const Point2 &sample);
+	extern MTS_EXPORT_CORE Point2 squareToUniformDisk(const Point2 &sample);
 
 	/// Density of \ref squareToUniformDisk per unit area
-	static inline Float squareToUniformDiskPdf() { return INV_PI; }
+	extern MTS_EXPORT_CORE inline Float squareToUniformDiskPdf() { return INV_PI; }
 
 	/// Low-distortion concentric square to disk mapping by Peter Shirley (PDF: 1/PI)
-	static Point2 squareToUniformDiskConcentric(const Point2 &sample);
+	extern MTS_EXPORT_CORE Point2 squareToUniformDiskConcentric(const Point2 &sample);
 
 	/// Inverse of the mapping \ref squareToUniformDiskConcentric
-	static Point2 uniformDiskToSquareConcentric(const Point2 &p);
+	extern MTS_EXPORT_CORE Point2 uniformDiskToSquareConcentric(const Point2 &p);
 
 	/// Density of \ref squareToUniformDisk per unit area
-	static inline Float squareToUniformDiskConcentricPdf() { return INV_PI; }
+	extern MTS_EXPORT_CORE inline Float squareToUniformDiskConcentricPdf() { return INV_PI; }
 
 	/// Convert an uniformly distributed square sample into barycentric coordinates
-	static Point2 squareToUniformTriangle(const Point2 &sample);
+	extern MTS_EXPORT_CORE Point2 squareToUniformTriangle(const Point2 &sample);
 
 	/**
 	 * \brief Sample a point on a 2D standard normal distribution
 	 *
 	 * Internally uses the Box-Muller transformation
 	 */
-	static Point2 squareToStdNormal(const Point2 &sample);
+	extern MTS_EXPORT_CORE Point2 squareToStdNormal(const Point2 &sample);
 
 	/// Density of \ref squareToStdNormal per unit area
-	static Float squareToStdNormalPdf(const Point2 &pos);
+	extern MTS_EXPORT_CORE Float squareToStdNormalPdf(const Point2 &pos);
 
 	/// Warp a uniformly distributed square sample to a 2D tent distribution
-	static Point2 squareToTent(const Point2 &sample);
+	extern MTS_EXPORT_CORE Point2 squareToTent(const Point2 &sample);
 
 	/**
 	 * \brief Warp a uniformly distributed sample on [0, 1] to a nonuniform
 	 * tent distribution with nodes <tt>{a, b, c}</tt>
 	 */
-	static Float intervalToNonuniformTent(Float a, Float b, Float c, Float sample);
+	extern MTS_EXPORT_CORE Float intervalToNonuniformTent(Float a, Float b, Float c, Float sample);
 
 	//! @}
 	// =============================================================

@@ -440,7 +440,7 @@ bool ManifoldPerturbation::sampleMutation(
 
 			cosTheta = dot(wo_old, n_old);
 
-			Float dTheta = Warp::squareToStdNormal(m_sampler->next2D()).x
+			Float dTheta = warp::squareToStdNormal(m_sampler->next2D()).x
 				* 0.5f * M_PI / m_probFactor;
 			math::sincos(dTheta, &sinPhi, &cosPhi);
 

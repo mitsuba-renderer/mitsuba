@@ -64,8 +64,8 @@ public:
 	}
 
 	inline Spectrum eval(const Point2 &uv) const {
-		int x = 2*modulo((int) (uv.x * 2), 2) - 1,
-			y = 2*modulo((int) (uv.y * 2), 2) - 1;
+		int x = 2*math::modulo((int) (uv.x * 2), 2) - 1,
+			y = 2*math::modulo((int) (uv.y * 2), 2) - 1;
 
 		if (x*y == 1)
 			return m_color0;

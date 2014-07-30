@@ -93,6 +93,8 @@ inline mitsuba::math::SSEVector4f am_log(const mitsuba::math::SSEVector4f& x) {
 	typedef mitsuba::math::SSEVector4f v4f;
 	typedef mitsuba::math::SSEVector4i v4i;
 	using mitsuba::math::castAsFloat;
+	using mitsuba::math::clamp_ps;
+	using mitsuba::math::fastpow_ps;
 
 	// Constants
 	const v4f min_normal(castAsFloat(v4i::constant<0x00800000>()));
@@ -280,7 +282,7 @@ void tonemap(const PixelRGBA32FGroup* const begin,
 			buffer[aOffset+i] = it->p[3];
 			transpose(buffer[rOffset+i], buffer[gOffset+i],
 				buffer[bOffset+i], buffer[aOffset+i]);
-			buffer[aOffset+i] = clamp(buffer[aOffset+i],
+			buffer[aOffset+i] = clamp_ps(buffer[aOffset+i],
 				V4f::zero(), const_1f);
 		}
 
@@ -299,12 +301,12 @@ void tonemap(const PixelRGBA32FGroup* const begin,
 		// Clamp and nonlinear display transform of the color components
 		if (displayMethod == ESRGB) {
 			for (ptrdiff_t i = 0; i != numColorIter; ++i) {
-				const V4f s = clamp(buffer[i], V4f::zero(), const_1f);
+				const V4f s = clamp_ps(buffer[i], V4f::zero(), const_1f);
 				buffer[i] = sRGB_Remez43(s);
 			}
 		} else if (displayMethod == EGamma) {
 			for (ptrdiff_t i = 0; i != numColorIter; ++i) {
-				const V4f s = clamp(buffer[i], V4f::zero(), const_1f);
+				const V4f s = clamp_ps(buffer[i], V4f::zero(), const_1f);
 				buffer[i] = fastpow_ps(s, invGamma);
 			}
 		}
@@ -534,9 +536,13 @@ bool luminance(const mitsuba::Bitmap* source, const float multiplier,
 		result.maxLuminance = max(rTail.maxLuminance, result.maxLuminance);
 	}
 
-	outMaxLuminance = hmax(result.maxLuminance);
-	const float sumLogLuminance = hsum(result.sumLogLuminance);
-	outAvgLogLuminance =  mitsuba::math::fastexp(sumLogLuminance / pixelCount);
+	using mitsuba::math::hmax_ps;
+	using mitsuba::math::hsum_ps;
+	using mitsuba::math::fastexp;
+
+	outMaxLuminance = hmax_ps(result.maxLuminance);
+	const float sumLogLuminance = hsum_ps(result.sumLogLuminance);
+	outAvgLogLuminance =  fastexp(sumLogLuminance / pixelCount);
 	return true;
 };
 

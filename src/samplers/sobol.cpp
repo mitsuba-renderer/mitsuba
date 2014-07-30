@@ -149,11 +149,11 @@ public:
 			m_resolution = 1;
 			m_logResolution = 0;
 		} else {
-			uint32_t resolution = roundToPowerOfTwo(
+			uint32_t resolution = math::roundToPowerOfTwo(
 				(uint32_t) std::max(res.x, res.y));
 
 			m_resolution = (Float) resolution;
-			m_logResolution = log2i(resolution);
+			m_logResolution = math::log2i(resolution);
 		}
 	}
 

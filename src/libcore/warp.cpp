@@ -20,7 +20,9 @@
 
 MTS_NAMESPACE_BEGIN
 
-Vector Warp::squareToUniformSphere(const Point2 &sample) {
+namespace warp {
+
+Vector squareToUniformSphere(const Point2 &sample) {
 	Float z = 1.0f - 2.0f * sample.y;
 	Float r = math::safe_sqrt(1.0f - z*z);
 	Float sinPhi, cosPhi;
@@ -28,7 +30,7 @@ Vector Warp::squareToUniformSphere(const Point2 &sample) {
 	return Vector(r * cosPhi, r * sinPhi, z);
 }
 
-Vector Warp::squareToUniformHemisphere(const Point2 &sample) {
+Vector squareToUniformHemisphere(const Point2 &sample) {
 	Float z = sample.x;
 	Float tmp = math::safe_sqrt(1.0f - z*z);
 
@@ -38,8 +40,8 @@ Vector Warp::squareToUniformHemisphere(const Point2 &sample) {
 	return Vector(cosPhi * tmp, sinPhi * tmp, z);
 }
 
-Vector Warp::squareToCosineHemisphere(const Point2 &sample) {
-	Point2 p = Warp::squareToUniformDiskConcentric(sample);
+Vector squareToCosineHemisphere(const Point2 &sample) {
+	Point2 p = squareToUniformDiskConcentric(sample);
 	Float z = math::safe_sqrt(1.0f - p.x*p.x - p.y*p.y);
 
 	/* Guard against numerical imprecisions */
@@ -49,7 +51,7 @@ Vector Warp::squareToCosineHemisphere(const Point2 &sample) {
 	return Vector(p.x, p.y, z);
 }
 
-Vector Warp::squareToUniformCone(Float cosCutoff, const Point2 &sample) {
+Vector squareToUniformCone(Float cosCutoff, const Point2 &sample) {
 	Float cosTheta = (1-sample.x) + sample.x * cosCutoff;
 	Float sinTheta = math::safe_sqrt(1.0f - cosTheta * cosTheta);
 
@@ -60,7 +62,7 @@ Vector Warp::squareToUniformCone(Float cosCutoff, const Point2 &sample) {
 		sinPhi * sinTheta, cosTheta);
 }
 
-Point2 Warp::squareToUniformDisk(const Point2 &sample) {
+Point2 squareToUniformDisk(const Point2 &sample) {
 	Float r = std::sqrt(sample.x);
 	Float sinPhi, cosPhi;
 	math::sincos(2.0f * M_PI * sample.y, &sinPhi, &cosPhi);
@@ -71,12 +73,12 @@ Point2 Warp::squareToUniformDisk(const Point2 &sample) {
 	);
 }
 
-Point2 Warp::squareToUniformTriangle(const Point2 &sample) {
+Point2 squareToUniformTriangle(const Point2 &sample) {
 	Float a = math::safe_sqrt(1.0f - sample.x);
 	return Point2(1 - a, a * sample.y);
 }
 
-Point2 Warp::squareToUniformDiskConcentric(const Point2 &sample) {
+Point2 squareToUniformDiskConcentric(const Point2 &sample) {
 	Float r1 = 2.0f*sample.x - 1.0f;
 	Float r2 = 2.0f*sample.y - 1.0f;
 
@@ -99,7 +101,7 @@ Point2 Warp::squareToUniformDiskConcentric(const Point2 &sample) {
 	return Point2(r * cosPhi, r * sinPhi);
 }
 
-Point2 Warp::uniformDiskToSquareConcentric(const Point2 &p) {
+Point2 uniformDiskToSquareConcentric(const Point2 &p) {
 	Float r   = std::sqrt(p.x * p.x + p.y * p.y),
 		  phi = std::atan2(p.y, p.x),
 		  a, b;
@@ -126,7 +128,7 @@ Point2 Warp::uniformDiskToSquareConcentric(const Point2 &p) {
 	return Point2(0.5f * (a+1), 0.5f * (b+1));
 }
 
-Point2 Warp::squareToStdNormal(const Point2 &sample) {
+Point2 squareToStdNormal(const Point2 &sample) {
 	Float r   = std::sqrt(-2 * math::fastlog(1-sample.x)),
 		  phi = 2 * M_PI * sample.y;
 	Point2 result;
@@ -134,7 +136,7 @@ Point2 Warp::squareToStdNormal(const Point2 &sample) {
 	return result * r;
 }
 
-Float Warp::squareToStdNormalPdf(const Point2 &pos) {
+Float squareToStdNormalPdf(const Point2 &pos) {
 	return INV_TWOPI * math::fastexp(-(pos.x*pos.x + pos.y*pos.y)/2.0f);
 }
 
@@ -152,14 +154,14 @@ static Float intervalToTent(Float sample) {
 	return sign * (1 - std::sqrt(sample));
 }
 
-Point2 Warp::squareToTent(const Point2 &sample) {
+Point2 squareToTent(const Point2 &sample) {
 	return Point2(
 		intervalToTent(sample.x),
 		intervalToTent(sample.y)
 	);
 }
 
-Float Warp::intervalToNonuniformTent(Float a, Float b, Float c, Float sample) {
+Float intervalToNonuniformTent(Float a, Float b, Float c, Float sample) {
 	Float factor;
 
 	if (sample * (c-a) < b-a) {
@@ -172,5 +174,7 @@ Float Warp::intervalToNonuniformTent(Float a, Float b, Float c, Float sample) {
 
 	return b + factor * (1-math::safe_sqrt(sample));
 }
+
+};
 
 MTS_NAMESPACE_END

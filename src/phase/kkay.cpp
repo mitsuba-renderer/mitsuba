@@ -84,19 +84,19 @@ public:
 
 	Float sample(PhaseFunctionSamplingRecord &pRec,
 			Sampler *sampler) const {
-		pRec.wo = Warp::squareToUniformSphere(sampler->next2D());
+		pRec.wo = warp::squareToUniformSphere(sampler->next2D());
 		return eval(pRec) * (4 * M_PI);
 	}
 
 	Float sample(PhaseFunctionSamplingRecord &pRec,
 			Float &pdf, Sampler *sampler) const {
-		pRec.wo = Warp::squareToUniformSphere(sampler->next2D());
-		pdf = Warp::squareToUniformSpherePdf();
+		pRec.wo = warp::squareToUniformSphere(sampler->next2D());
+		pdf = warp::squareToUniformSpherePdf();
 		return eval(pRec) * (4 * M_PI);
 	}
 
 	Float pdf(const PhaseFunctionSamplingRecord &pRec) const {
-		return Warp::squareToUniformSpherePdf();
+		return warp::squareToUniformSpherePdf();
 	}
 
 	Float eval(const PhaseFunctionSamplingRecord &pRec) const {

@@ -155,8 +155,8 @@ public:
 			Spectrum result(0.0f);
 			m_initialization = true;
 			for (size_t i=0; i<nSamples; ++i) {
-				bRec.wi = Warp::squareToCosineHemisphere(Point2(random->nextFloat(), random->nextFloat()));
-				bRec.wo = Warp::squareToCosineHemisphere(Point2(random->nextFloat(), random->nextFloat()));
+				bRec.wi = warp::squareToCosineHemisphere(Point2(random->nextFloat(), random->nextFloat()));
+				bRec.wo = warp::squareToCosineHemisphere(Point2(random->nextFloat(), random->nextFloat()));
 				its.uv = Point2(random->nextFloat(), random->nextFloat());
 
 				result += eval(bRec, ESolidAngle) / Frame::cosTheta(bRec.wo);
@@ -177,8 +177,8 @@ public:
 			(1 - its.uv.y) * m_repeatV);
 		Point2 xy(uv.x * m_pattern.tileWidth, uv.y * m_pattern.tileHeight);
 		Point2i lookup(
-			modulo((int) xy.x, m_pattern.tileWidth),
-			modulo((int) xy.y, m_pattern.tileHeight));
+			math::modulo((int) xy.x, m_pattern.tileWidth),
+			math::modulo((int) xy.y, m_pattern.tileHeight));
 		int yarnID = m_pattern.pattern[lookup.x + lookup.y * m_pattern.tileWidth] - 1;
 		const Yarn &yarn = m_pattern.yarns.at(yarnID);
 
@@ -203,8 +203,8 @@ public:
 		Point2 xy(uv.x * m_pattern.tileWidth, uv.y * m_pattern.tileHeight);
 
 		Point2i lookup(
-			modulo((int) xy.x, m_pattern.tileWidth),
-			modulo((int) xy.y, m_pattern.tileHeight));
+			math::modulo((int) xy.x, m_pattern.tileWidth),
+			math::modulo((int) xy.y, m_pattern.tileHeight));
 
 		int yarnID = m_pattern.pattern[lookup.x + lookup.y * m_pattern.tileWidth] - 1;
 
@@ -330,7 +330,7 @@ public:
 			measure != ESolidAngle)
 			return 0.0f;
 
-		return Warp::squareToCosineHemispherePdf(bRec.wo);
+		return warp::squareToCosineHemispherePdf(bRec.wo);
 	}
 
 	Spectrum sample(BSDFSamplingRecord &bRec, const Point2 &sample) const {
@@ -344,7 +344,7 @@ public:
 			return Spectrum(0.0f);
 
 		/* Lacking a better sampling method, generate cosine-weighted directions */
-		bRec.wo = Warp::squareToCosineHemisphere(sample);
+		bRec.wo = warp::squareToCosineHemisphere(sample);
 		bRec.eta = 1.0f;
 		bRec.sampledComponent = 0;
 		bRec.sampledType = EGlossyReflection;
@@ -362,11 +362,11 @@ public:
 			return Spectrum(0.0f);
 
 		/* Lacking a better sampling method, generate cosine-weighted directions */
-		bRec.wo = Warp::squareToCosineHemisphere(sample);
+		bRec.wo = warp::squareToCosineHemisphere(sample);
 		bRec.eta = 1.0f;
 		bRec.sampledComponent = 0;
 		bRec.sampledType = EGlossyReflection;
-		pdf = Warp::squareToCosineHemispherePdf(bRec.wo);
+		pdf = warp::squareToCosineHemispherePdf(bRec.wo);
 		return eval(bRec, ESolidAngle) / pdf;
 	}
 
@@ -437,7 +437,7 @@ public:
 			if (ss == 0.0f)
 				As = A;
 			else
-				As = A * (1.0f - smoothStep(0, 1, (std::abs(u_of_v)
+				As = A * (1.0f - math::smoothStep((Float) 0, (Float) 1, (std::abs(u_of_v)
 					- (1.0f - ss) * umax) / (ss * umax)));
 
 			// fs is scattering function.

@@ -442,7 +442,7 @@ protected:
 		result.clampNegative();
 
 		if (m_extend)
-			result *= smoothStep(0, 1, 2 - 2*coords.elevation*INV_PI);
+			result *= math::smoothStep((Float) 0, (Float) 1, 2 - 2*coords.elevation*INV_PI);
 
 		return result * m_scale;
 	}

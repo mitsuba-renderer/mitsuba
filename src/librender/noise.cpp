@@ -63,9 +63,9 @@ inline static Float noiseWeight(Float t) {
 
 Float Noise::perlinNoise(const Point &p) {
     // Compute noise cell coordinates and offsets
-    int ix = floorToInt(p.x),
-		iy = floorToInt(p.y),
-		iz = floorToInt(p.z);
+    int ix = math::floorToInt(p.x),
+		iy = math::floorToInt(p.y),
+		iz = math::floorToInt(p.z);
 
     Float dx = p.x - ix,
 		  dy = p.y - iy,
@@ -90,21 +90,21 @@ Float Noise::perlinNoise(const Point &p) {
 		  wy = noiseWeight(dy),
 		  wz = noiseWeight(dz);
 
-	Float x00 = lerp(wx, w000, w100),
-		  x10 = lerp(wx, w010, w110),
-		  x01 = lerp(wx, w001, w101),
-		  x11 = lerp(wx, w011, w111),
-		  y0 = lerp(wy, x00, x10),
-		  y1 = lerp(wy, x01, x11);
+	Float x00 = math::lerp(wx, w000, w100),
+		  x10 = math::lerp(wx, w010, w110),
+		  x01 = math::lerp(wx, w001, w101),
+		  x11 = math::lerp(wx, w011, w111),
+		  y0 = math::lerp(wy, x00, x10),
+		  y1 = math::lerp(wy, x01, x11);
 
-    return lerp(wz, y0, y1);
+    return math::lerp(wz, y0, y1);
 }
 
 Float Noise::fbm(const Point &p, const Vector &dpdx,
 		const Vector &dpdy, Float omega, int maxOctaves) {
     // Compute number of octaves for antialiased FBm
     Float s2 = std::max(dpdx.lengthSquared(), dpdy.lengthSquared());
-    Float foctaves = std::min((Float) maxOctaves, 1.f - .5f * log2(s2));
+    Float foctaves = std::min((Float) maxOctaves, 1.f - .5f * math::log2(s2));
     int octaves = (int) foctaves;
 
     // Compute sum of octaves of noise for FBm
@@ -115,7 +115,7 @@ Float Noise::fbm(const Point &p, const Vector &dpdx,
         o *= omega;
     }
     Float partialOctave = foctaves - octaves;
-    sum += o * smoothStep(.3f, .7f, partialOctave)
+    sum += o * math::smoothStep((Float) .3f, (Float) .7f, partialOctave)
 		* perlinNoise(lambda * p);
     return sum;
 }
@@ -124,7 +124,7 @@ Float Noise::turbulence(const Point &p, const Vector &dpdx,
 		const Vector &dpdy, Float omega, int maxOctaves) {
     // Compute number of octaves for antialiased FBm
     Float s2 = std::max(dpdx.lengthSquared(), dpdy.lengthSquared());
-    Float foctaves = std::min((Float) maxOctaves, 1.f - .5f * log2(s2));
+    Float foctaves = std::min((Float) maxOctaves, 1.f - .5f * math::log2(s2));
     int octaves = (int) foctaves;
 
     // Compute sum of octaves of noise for turbulence
@@ -135,7 +135,7 @@ Float Noise::turbulence(const Point &p, const Vector &dpdx,
         o *= omega;
     }
     Float partialOctave = foctaves - octaves;
-    sum += o * smoothStep(.3f, .7f, partialOctave)
+    sum += o * math::smoothStep((Float) .3f, (Float) .7f, partialOctave)
 		* std::abs(perlinNoise(lambda * p));
     return sum;
 }

@@ -978,7 +978,7 @@ protected:
 
 		/* Establish an ad-hoc depth cutoff value (Formula from PBRT) */
 		if (m_maxDepth == 0)
-			m_maxDepth = (int) (8 + 1.3f * log2i(primCount));
+			m_maxDepth = (int) (8 + 1.3f * math::log2i(primCount));
 		m_maxDepth = std::min(m_maxDepth, (SizeType) MTS_KD_MAXDEPTH);
 
 		KDLog(m_logLevel, "Creating a preliminary index list (%s)",

@@ -262,7 +262,7 @@ public:
 		if (hasSpecular && Frame::cosTheta(bRec.wo) * Frame::cosTheta(bRec.wi) > 0) {
 			/* Calculate the reflection half-vector */
 			const Vector H = normalize(bRec.wo+bRec.wi)
-				* signum(Frame::cosTheta(bRec.wo));
+				* math::signum(Frame::cosTheta(bRec.wo));
 
 			/* Evaluate the microsurface normal distribution */
 			const Float D = m_distribution.eval(H, alphaT);
@@ -317,7 +317,7 @@ public:
 
 		/* Calculate the reflection half-vector */
 		const Vector H = normalize(bRec.wo+bRec.wi)
-				* signum(Frame::cosTheta(bRec.wo));
+				* math::signum(Frame::cosTheta(bRec.wo));
 
 		/* Evaluate the roughness texture */
 		Float alpha = m_alpha->eval(bRec.its).average();

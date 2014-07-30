@@ -133,7 +133,7 @@ template <typename Scalar> struct Resampler {
 			filterRadius *= scale;
 		}
 
-		m_taps = ceilToInt(filterRadius * 2);
+		m_taps = math::ceilToInt(filterRadius * 2);
 		if (sourceRes == targetRes && (m_taps % 2) != 1)
 			--m_taps;
 		m_halfTaps = m_taps / 2;
@@ -149,7 +149,7 @@ template <typename Scalar> struct Resampler {
 				Float center = (i + (Float) 0.5f) / targetRes * sourceRes;
 
 				/* Determine the index of the first original sample that might contribute */
-				m_start[i] = floorToInt(center - filterRadius + (Float) 0.5f);
+				m_start[i] = math::floorToInt(center - filterRadius + (Float) 0.5f);
 
 				/* Determine the size of center region, on which to run fast non condition-aware code */
 				if (m_start[i] < 0)
@@ -438,13 +438,13 @@ private:
 		if (EXPECT_NOT_TAKEN(pos < 0 || pos >= m_sourceRes)) {
 			switch (m_bc) {
 				case ReconstructionFilter::EClamp:
-					pos = clamp(pos, 0, m_sourceRes - 1);
+					pos = math::clamp(pos, 0, m_sourceRes - 1);
 					break;
 				case ReconstructionFilter::ERepeat:
-					pos = modulo(pos, m_sourceRes);
+					pos = math::modulo(pos, m_sourceRes);
 					break;
 				case ReconstructionFilter::EMirror:
-					pos = modulo(pos, 2*m_sourceRes);
+					pos = math::modulo(pos, 2*m_sourceRes);
 					if (pos >= m_sourceRes)
 						pos = 2*m_sourceRes - pos - 1;
 					break;

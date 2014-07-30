@@ -101,7 +101,7 @@ public:
 			PositionSamplingRecord &pRec,
 			const Point2 &sample,
 			const Point2 *extra) const {
-		dRec.d = Warp::squareToUniformSphere(sample);
+		dRec.d = warp::squareToUniformSphere(sample);
 		dRec.pdf = INV_FOURPI;
 		dRec.measure = ESolidAngle;
 		return Spectrum(1.0f);
@@ -124,7 +124,7 @@ public:
 		const Transform &trafo = m_worldTransform->eval(time);
 		ray.setTime(time);
 		ray.setOrigin(trafo(Point(0.0f)));
-		ray.setDirection(Warp::squareToUniformSphere(directionalSample));
+		ray.setDirection(warp::squareToUniformSphere(directionalSample));
 		return m_intensity * (4 * M_PI);
 	}
 

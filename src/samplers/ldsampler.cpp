@@ -80,8 +80,8 @@ public:
 		/* Dimension, up to which which low discrepancy samples are guaranteed to be available. */
 		m_maxDimension = props.getInteger("dimension", 4);
 
-		if (!isPowerOfTwo(m_sampleCount)) {
-			m_sampleCount = roundToPowerOfTwo(m_sampleCount);
+		if (!math::isPowerOfTwo(m_sampleCount)) {
+			m_sampleCount = math::roundToPowerOfTwo(m_sampleCount);
 			Log(EWarn, "Sample count should be a power of two -- rounding to "
 					SIZE_T_FMT, m_sampleCount);
 		}

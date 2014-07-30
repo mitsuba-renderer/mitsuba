@@ -141,7 +141,7 @@ size_t generateVPLs(const Scene *scene, Random *random,
 			appendVPL(scene, random, lumVPL, false, vpls);
 			dRec.d = -diRec.d;
 
-			Point2 offset = Warp::squareToUniformDiskConcentric(sampler->next2D());
+			Point2 offset = warp::squareToUniformDiskConcentric(sampler->next2D());
 			Vector perpOffset = Frame(diRec.d).toWorld(Vector(offset.x, offset.y, 0));
 			BSphere geoBSphere = scene->getKDTree()->getAABB().getBSphere();
 			pRec.p = geoBSphere.center + (perpOffset - dRec.d) * geoBSphere.radius;

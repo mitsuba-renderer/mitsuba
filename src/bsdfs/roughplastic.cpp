@@ -420,7 +420,7 @@ public:
 		}
 
 		if (hasDiffuse)
-			result += probDiffuse * Warp::squareToCosineHemispherePdf(bRec.wo);
+			result += probDiffuse * warp::squareToCosineHemispherePdf(bRec.wo);
 
 		return result;
 	}
@@ -472,7 +472,7 @@ public:
 		} else {
 			bRec.sampledComponent = 1;
 			bRec.sampledType = EDiffuseReflection;
-			bRec.wo = Warp::squareToCosineHemisphere(sample);
+			bRec.wo = warp::squareToCosineHemisphere(sample);
 		}
 		bRec.eta = 1.0f;
 

@@ -159,7 +159,7 @@ public:
 		Float diffuseProb = 0.0f, specProb = 0.0f;
 
 		if (hasDiffuse)
-			diffuseProb = Warp::squareToCosineHemispherePdf(bRec.wo);
+			diffuseProb = warp::squareToCosineHemispherePdf(bRec.wo);
 
 		if (hasSpecular) {
 			Float alpha    = dot(bRec.wo, reflect(bRec.wi)),
@@ -225,7 +225,7 @@ public:
 			if (Frame::cosTheta(bRec.wo) <= 0)
 				return Spectrum(0.0f);
 		} else {
-			bRec.wo = Warp::squareToCosineHemisphere(sample);
+			bRec.wo = warp::squareToCosineHemisphere(sample);
 			bRec.sampledComponent = 0;
 			bRec.sampledType = EDiffuseReflection;
 		}

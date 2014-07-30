@@ -147,16 +147,16 @@ public:
 			const Point2 &sample,
 			const Point2 *extra) const {
 		const Transform &trafo = m_worldTransform->eval(pRec.time);
-		Vector d = Warp::squareToUniformCone(m_cosCutoffAngle, sample);
+		Vector d = warp::squareToUniformCone(m_cosCutoffAngle, sample);
 		dRec.d = trafo(d);
-		dRec.pdf = Warp::squareToUniformConePdf(m_cosCutoffAngle);
+		dRec.pdf = warp::squareToUniformConePdf(m_cosCutoffAngle);
 		dRec.measure = ESolidAngle;
 		return evalDirection(dRec, pRec)/dRec.pdf;
 	}
 
 	Float pdfDirection(const DirectionSamplingRecord &dRec,
 			const PositionSamplingRecord &pRec) const {
-		return (dRec.measure == ESolidAngle) ? Warp::squareToUniformConePdf(m_cosCutoffAngle) : 0.0f;
+		return (dRec.measure == ESolidAngle) ? warp::squareToUniformConePdf(m_cosCutoffAngle) : 0.0f;
 	}
 
 	Spectrum evalDirection(const DirectionSamplingRecord &dRec,
@@ -172,12 +172,12 @@ public:
 			Float time) const {
 		const Transform &trafo = m_worldTransform->eval(time);
 
-		Vector local = Warp::squareToUniformCone(
+		Vector local = warp::squareToUniformCone(
 			m_cosCutoffAngle, directionalSample);
 		ray.setTime(time);
 		ray.setOrigin(trafo.transformAffine(Point(0.0f)));
 		ray.setDirection(trafo(local));
-		Float dirPdf = Warp::squareToUniformConePdf(m_cosCutoffAngle);
+		Float dirPdf = warp::squareToUniformConePdf(m_cosCutoffAngle);
 		return m_intensity * falloffCurve(local) / dirPdf;
 	}
 

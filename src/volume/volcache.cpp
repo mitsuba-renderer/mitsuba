@@ -86,7 +86,7 @@ public:
 		/// Size of an individual block (must be a power of 2)
 		m_blockSize = props.getInteger("blockSize", 8);
 
-		if (!isPowerOfTwo(m_blockSize))
+		if (!math::isPowerOfTwo(m_blockSize))
 			Log(EError, "Block size must be a power of two!");
 
 		/* Width of an individual voxel. Will use the step size of the
@@ -150,7 +150,7 @@ public:
 			 * Transform::translate(-Vector(m_aabb.min)) * m_worldToVolume;
 		m_voxelMask = m_blockSize-1;
 		m_blockMask = ~(m_blockSize-1);
-		m_blockShift = log2i((uint32_t) m_blockSize);
+		m_blockShift = math::log2i((uint32_t) m_blockSize);
 
 		Log(EInfo, "Volume cache configuration");
 		Log(EInfo, "   Block size in voxels      = %i", m_blockSize);

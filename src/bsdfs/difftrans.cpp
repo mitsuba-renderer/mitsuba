@@ -93,7 +93,7 @@ public:
 	Spectrum sample(BSDFSamplingRecord &bRec, const Point2 &sample) const {
 		if (!(bRec.typeMask & EDiffuseTransmission))
 			return Spectrum(0.0f);
-		bRec.wo = Warp::squareToCosineHemisphere(sample);
+		bRec.wo = warp::squareToCosineHemisphere(sample);
 		if (Frame::cosTheta(bRec.wi) > 0)
 			bRec.wo.z *= -1;
 		bRec.eta = 1.0f;
@@ -105,7 +105,7 @@ public:
 	Spectrum sample(BSDFSamplingRecord &bRec, Float &pdf, const Point2 &sample) const {
 		if (!(bRec.typeMask & m_combinedType))
 			return Spectrum(0.0f);
-		bRec.wo = Warp::squareToCosineHemisphere(sample);
+		bRec.wo = warp::squareToCosineHemisphere(sample);
 		if (Frame::cosTheta(bRec.wi) > 0)
 			bRec.wo.z *= -1;
 		bRec.eta = 1.0f;

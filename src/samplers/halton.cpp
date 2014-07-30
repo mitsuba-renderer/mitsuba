@@ -226,21 +226,15 @@ public:
 		y = x_ - (int64_t) (d * y_);
 	}
 
-	/// Positive modulo for 64-bit integers
-	uint64_t modulo(int64_t a, int64_t b) {
-		int64_t result = a - (a/b) * b;
-		return (uint64_t) ((result < 0) ? result+b : result);
-	}
-
 	/**
-	 * \brief Compute the multiplicative inverse of a modulo n,
+	 * \brief Compute the multiplicative inverse of a math::modulo n,
 	 * where a and n a re relative prime. The result is in the
 	 * range 1, ..., n - 1.
 	 */
 	uint64_t multiplicativeInverse(int64_t a, int64_t n) {
 		int64_t x, y;
 		extendedGCD(a, n, x, y);
-		return modulo(x, n);
+		return math::modulo(x, n);
 	}
 
 	void setFilmResolution(const Vector2i &res, bool blocked) {

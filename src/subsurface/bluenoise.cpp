@@ -100,7 +100,7 @@ void blueNoisePointSet(const Scene *scene, const std::vector<Shape *> &shapes,
 	sa = areaDistr.getSum();
 
 	/* Start with a fairly dense set of white noise points */
-	int nsamples = ceilToInt(15 * sa / (M_PI * radius * radius));
+	int nsamples = math::ceilToInt(15 * sa / (M_PI * radius * radius));
 
 	SLog(EInfo, "Creating a blue noise point set (radius=%f, "
 		"surface area = %f)", radius, sa);
@@ -145,7 +145,7 @@ void blueNoisePointSet(const Scene *scene, const std::vector<Shape *> &shapes,
 
 	Vector3i cellCount;
 	for (int i=0; i<3; ++i)
-		cellCount[i] = std::max(1, ceilToInt(extents[i] * invCellWidth));
+		cellCount[i] = std::max(1, math::ceilToInt(extents[i] * invCellWidth));
 
 	SLog(EInfo, "  phase 2: computing cell indices ..");
 	#if defined(MTS_OPENMP)

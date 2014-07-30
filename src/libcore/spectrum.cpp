@@ -196,7 +196,7 @@ Float Spectrum::eval(Float lambda) const {
 		"is configured for RGB-based rendering");
 	return 0.0f;
 #else
-	int index = floorToInt((lambda - SPECTRUM_MIN_WAVELENGTH) *
+	int index = math::floorToInt((lambda - SPECTRUM_MIN_WAVELENGTH) *
 		((Float) SPECTRUM_SAMPLES / (Float) SPECTRUM_RANGE));
 
 	if (index < 0 || index >= SPECTRUM_SAMPLES)
@@ -676,8 +676,8 @@ Float InterpolatedSpectrum::average(Float lambdaMin, Float lambdaMax) const {
 		if (cb <= ca)
 			continue;
 
-		Float interpA = lerp((ca - a) * invAB, fa, fb);
-		Float interpB = lerp((cb - a) * invAB, fa, fb);
+		Float interpA = math::lerp((ca - a) * invAB, fa, fb);
+		Float interpB = math::lerp((cb - a) * invAB, fa, fb);
 
 		result += 0.5f * (interpA + interpB) * (cb-ca);
 	}
@@ -703,7 +703,7 @@ Float InterpolatedSpectrum::eval(Float lambda) const {
 			  b  = m_wavelengths[idx1],
 			  fa = m_values[idx1-1],
 			  fb = m_values[idx1];
-		return lerp((lambda - a) / (b-a), fb, fa);
+		return math::lerp((lambda - a) / (b-a), fb, fa);
 	} else if (idx2 == idx1+1) {
 		/* Hit a value exactly */
 		return m_values[idx1];

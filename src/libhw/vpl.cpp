@@ -319,7 +319,7 @@ void VPLShaderManager::setVPL(const VPL &vpl) {
 			if (vpl.type == ESurfaceVPL || (vpl.type == EPointEmitterVPL &&
 						vpl.emitter->getType() & Emitter::EOnSurface)) {
 				ray = Ray(vpl.its.p, vpl.its.shFrame.toWorld(
-							Warp::squareToCosineHemisphere(sample)), 0);
+							warp::squareToCosineHemisphere(sample)), 0);
 
 				#if defined(MTS_VPL_USE_PARABOLOID_MAPS)
 					m_shadowMapType = ShadowMapGenerator::EParaboloid;
@@ -329,7 +329,7 @@ void VPLShaderManager::setVPL(const VPL &vpl) {
 					m_shadowMapType = ShadowMapGenerator::EHemicube;
 				#endif
 			} else if (vpl.type == EPointEmitterVPL) {
-				ray = Ray(vpl.its.p, Warp::squareToUniformSphere(sample), 0);
+				ray = Ray(vpl.its.p, warp::squareToUniformSphere(sample), 0);
 				#if defined(MTS_VPL_USE_SINGLE_PASS)
 					m_shadowMapType = ShadowMapGenerator::ECubeSinglePass;
 				#else

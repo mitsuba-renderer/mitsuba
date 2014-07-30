@@ -250,7 +250,7 @@ public:
 		}
 
 		if (hasDiffuse)
-			diffuseProb = Warp::squareToCosineHemispherePdf(bRec.wo);
+			diffuseProb = warp::squareToCosineHemispherePdf(bRec.wo);
 
 		if (hasDiffuse && hasSpecular)
 			return m_specularSamplingWeight * specProb +
@@ -311,7 +311,7 @@ public:
 			if (Frame::cosTheta(bRec.wo) <= 0.0f)
 				return Spectrum(0.0f);
 		} else {
-			bRec.wo = Warp::squareToCosineHemisphere(sample);
+			bRec.wo = warp::squareToCosineHemisphere(sample);
 			bRec.sampledComponent = 0;
 			bRec.sampledType = EDiffuseReflection;
 		}

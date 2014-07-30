@@ -341,7 +341,7 @@ template <int M, int N, typename T> void
 				// Compute implicit shift
 				T g = d[l];
 				T p = (d[l + 1] - g) / (2.0f * e[l]);
-				T r = hypot2(1, p);
+				T r = math::hypot2((T) 1, p);
 
 				if (p < 0)
 					r = -r;
@@ -368,7 +368,7 @@ template <int M, int N, typename T> void
 					s2 = s;
 					g = c * e[i];
 					h = c * p;
-					r = hypot2(p, e[i]);
+					r = math::hypot2(p, e[i]);
 					e[i + 1] = s * r;
 					s = e[i] / r;
 					c = p / r;

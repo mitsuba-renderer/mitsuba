@@ -256,7 +256,7 @@ public:
 	}
 
 	void samplePosition(PositionSamplingRecord &pRec, const Point2 &sample) const {
-		Vector v = Warp::squareToUniformSphere(sample);
+		Vector v = warp::squareToUniformSphere(sample);
 
 		pRec.p = Point(v * m_radius) + m_center;
 		pRec.n = Normal(v);
@@ -300,8 +300,8 @@ public:
 			Float cosAlpha = math::safe_sqrt(1.0f - sinAlpha * sinAlpha);
 
 			dRec.d = Frame(refToCenter * invRefDist).toWorld(
-				Warp::squareToUniformCone(cosAlpha, sample));
-			dRec.pdf = Warp::squareToUniformConePdf(cosAlpha);
+				warp::squareToUniformCone(cosAlpha, sample));
+			dRec.pdf = warp::squareToUniformConePdf(cosAlpha);
 
 			/* Distance to the projection of the sphere center
 			   onto the ray (dRec.ref, dRec.d) */
@@ -336,7 +336,7 @@ public:
 		} else {
 			/* The reference point lies inside the sphere
 			   => use uniform sphere sampling. */
-			Vector d = Warp::squareToUniformSphere(sample);
+			Vector d = warp::squareToUniformSphere(sample);
 
 			dRec.p = m_center + d * m_radius;
 			dRec.n = Normal(d);
@@ -366,7 +366,7 @@ public:
 		if (sinAlpha < 1-Epsilon) {
 			/* The reference point lies outside the sphere */
 			Float cosAlpha = math::safe_sqrt(1 - sinAlpha*sinAlpha);
-			Float pdfSA = Warp::squareToUniformConePdf(cosAlpha);
+			Float pdfSA = warp::squareToUniformConePdf(cosAlpha);
 
 			if (dRec.measure == ESolidAngle)
 				return pdfSA;

@@ -194,7 +194,7 @@ public:
 
 	Spectrum sampleRay(Ray &ray, const Point2 &pixelSample,
 			const Point2 &otherSample, Float timeSample) const {
-		Point2 diskSample = Warp::squareToUniformDiskConcentric(otherSample)
+		Point2 diskSample = warp::squareToUniformDiskConcentric(otherSample)
 			* (m_apertureRadius / m_scale.x);
 		ray.time = sampleTime(timeSample);
 
@@ -223,7 +223,7 @@ public:
 
 	Spectrum sampleRayDifferential(RayDifferential &ray, const Point2 &pixelSample,
 			const Point2 &otherSample, Float timeSample) const {
-		Point2 diskSample = Warp::squareToUniformDiskConcentric(otherSample)
+		Point2 diskSample = warp::squareToUniformDiskConcentric(otherSample)
 			* (m_apertureRadius / m_scale.x);
 		ray.time = sampleTime(timeSample);
 
@@ -285,7 +285,7 @@ public:
 			double rand4 = (tmp2 & 0x3FFFFFF) * (1.0 / 0x3FFFFFF);
 		#endif
 
-		Point2 aperturePos = Warp::squareToUniformDiskConcentric(Point2(rand1, rand2))
+		Point2 aperturePos = warp::squareToUniformDiskConcentric(Point2(rand1, rand2))
 			* (m_apertureRadius / m_scale.x);
 		Point2 samplePos(rand3, rand4);
 
@@ -382,7 +382,7 @@ public:
 		radius += apertureRadius;
 
 		/* Sample the ray origin */
-		Point2 disk = Warp::squareToUniformDiskConcentric(sample);
+		Point2 disk = warp::squareToUniformDiskConcentric(sample);
 		Point diskP(disk.x*radius+localP.x, disk.y*radius+localP.y, 0.0f);
 
 		/* Compute the intersection with the focal plane */

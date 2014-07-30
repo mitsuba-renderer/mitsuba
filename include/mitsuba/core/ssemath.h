@@ -81,7 +81,7 @@ namespace math {
 	 * holds column 1 of the original matrix, and so on.
 	 * \author Intel Intrinsics Guide for AVX2
 	 */
-	FINLINE void transpose(__m128& row0, __m128& row1,
+	FINLINE void transpose_ps(__m128& row0, __m128& row1,
 		__m128& row2, __m128& row3) {
 		__m128 tmp3, tmp2, tmp1, tmp0;
 		tmp0 = _mm_unpacklo_ps(row0, row1);
@@ -96,12 +96,12 @@ namespace math {
 	}
 
 	/// Component-wise clamp: <tt>max(min(x, maxVal), minVal)</tt>
-	inline __m128 clamp(__m128 x, __m128 minVal, __m128 maxVal) {
+	inline __m128 clamp_ps(__m128 x, __m128 minVal, __m128 maxVal) {
 		return _mm_max_ps(_mm_min_ps(x, maxVal), minVal);
 	}
 
 	/// Sum of all elements in the vector
-	inline float hsum(__m128 vec) {
+	inline float hsum_ps(__m128 vec) {
 		__m128 tmp = _mm_shuffle_ps(vec, vec,  _MM_SHUFFLE(1,0,3,2));
 		__m128 sum_tmp = _mm_add_ps(vec, tmp);
 		tmp = _mm_shuffle_ps(sum_tmp, sum_tmp, _MM_SHUFFLE(2,3,0,1));
@@ -110,7 +110,7 @@ namespace math {
 	}
 
 	/// Maximum across all the elements of a vector
-	inline float hmax(__m128 vec) {
+	inline float hmax_ps(__m128 vec) {
 		__m128 tmp = _mm_shuffle_ps(vec, vec,  _MM_SHUFFLE(1,0,3,2));
 		__m128 tmp_max = _mm_max_ps(vec, tmp);
 		tmp = _mm_shuffle_ps(tmp_max, tmp_max, _MM_SHUFFLE(2,3,0,1));
@@ -119,7 +119,7 @@ namespace math {
 	}
 
 	/// Minimum across all the elements of a vector
-	inline float hmin(__m128 vec) {
+	inline float hmin_ps(__m128 vec) {
 		__m128 tmp = _mm_shuffle_ps(vec, vec,  _MM_SHUFFLE(1,0,3,2));
 		__m128 tmp_min = _mm_min_ps(vec, tmp);
 		tmp = _mm_shuffle_ps(tmp_min, tmp_min, _MM_SHUFFLE(2,3,0,1));

@@ -419,9 +419,9 @@ public:
 				Vector wi;
 
 				if (bsdf->getType() & BSDF::EBackSide)
-					wi = Warp::squareToUniformSphere(sampler->next2D());
+					wi = warp::squareToUniformSphere(sampler->next2D());
 				else
-					wi = Warp::squareToCosineHemisphere(sampler->next2D());
+					wi = warp::squareToCosineHemisphere(sampler->next2D());
 
 				BSDFAdapter adapter(bsdf, sampler, wi, -1);
 				ref<ChiSquare> chiSqr = new ChiSquare(thetaBins, 2*thetaBins, wiSamples);
@@ -466,9 +466,9 @@ public:
 						Vector wi;
 
 						if (bsdf->getType(comp) & BSDF::EBackSide)
-							wi = Warp::squareToUniformSphere(sampler->next2D());
+							wi = warp::squareToUniformSphere(sampler->next2D());
 						else
-							wi = Warp::squareToCosineHemisphere(sampler->next2D());
+							wi = warp::squareToCosineHemisphere(sampler->next2D());
 
 						BSDFAdapter adapter(bsdf, sampler, wi, comp);
 
@@ -533,11 +533,11 @@ public:
 			MediumSamplingRecord mRec;
 
 			/* Sampler fiber/particle orientation */
-			mRec.orientation = Warp::squareToUniformSphere(sampler->next2D());
+			mRec.orientation = warp::squareToUniformSphere(sampler->next2D());
 
 			/* Test for a number of different incident directions */
 			for (int j=0; j<wiSamples; ++j) {
-				Vector wi = Warp::squareToUniformSphere(sampler->next2D());
+				Vector wi = warp::squareToUniformSphere(sampler->next2D());
 
 				PhaseFunctionAdapter adapter(mRec, phase, sampler, wi);
 				ref<ChiSquare> chiSqr = new ChiSquare(thetaBins, 2*thetaBins, wiSamples);

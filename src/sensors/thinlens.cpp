@@ -292,7 +292,7 @@ public:
 
 	Spectrum sampleRay(Ray &ray, const Point2 &pixelSample,
 			const Point2 &otherSample, Float timeSample) const {
-		Point2 tmp = Warp::squareToUniformDiskConcentric(otherSample)
+		Point2 tmp = warp::squareToUniformDiskConcentric(otherSample)
 			* m_apertureRadius;
 		ray.time = sampleTime(timeSample);
 
@@ -323,7 +323,7 @@ public:
 
 	Spectrum sampleRayDifferential(RayDifferential &ray, const Point2 &pixelSample,
 			const Point2 &otherSample, Float timeSample) const {
-		Point2 tmp = Warp::squareToUniformDiskConcentric(otherSample)
+		Point2 tmp = warp::squareToUniformDiskConcentric(otherSample)
 			* m_apertureRadius;
 		ray.time = sampleTime(timeSample);
 
@@ -364,7 +364,7 @@ public:
 			const Point2 &sample, const Point2 *extra) const {
 		const Transform &trafo = m_worldTransform->eval(pRec.time);
 
-		Point2 aperturePos = Warp::squareToUniformDiskConcentric(sample)
+		Point2 aperturePos = warp::squareToUniformDiskConcentric(sample)
 			* m_apertureRadius;
 
 		pRec.p = trafo.transformAffine(
@@ -449,7 +449,7 @@ public:
 		}
 
 		/* Sample a position on the aperture (in local coordinates) */
-		Point2 tmp = Warp::squareToUniformDiskConcentric(sample)
+		Point2 tmp = warp::squareToUniformDiskConcentric(sample)
 			* m_apertureRadius;
 		Point apertureP(tmp.x, tmp.y, 0);
 
@@ -495,7 +495,7 @@ public:
 			const Point2 &aaSample) const {
 		Float right = std::tan(m_xfov * M_PI/360) * m_nearClip, left = -right;
 		Float top = right / m_aspect, bottom = -top;
-		Point2 apertureP = Warp::squareToUniformDiskConcentric(apertureSample)
+		Point2 apertureP = warp::squareToUniformDiskConcentric(apertureSample)
 			* m_apertureRadius;
 
 		Vector2 jitterScale(

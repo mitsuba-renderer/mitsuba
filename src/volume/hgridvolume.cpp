@@ -143,9 +143,9 @@ public:
 
 	Float lookupFloat(const Point &_p) const {
 		const Point p = m_worldToGrid.transformAffine(_p);
-		const int x = floorToInt(p.x),
-			  y = floorToInt(p.y),
-			  z = floorToInt(p.z);
+		const int x = math::floorToInt(p.x),
+			  y = math::floorToInt(p.y),
+			  z = math::floorToInt(p.z);
 		if (x < 0 || x >= m_res.x ||
 			y < 0 || y >= m_res.y ||
 			z < 0 || z >= m_res.z)
@@ -160,9 +160,9 @@ public:
 
 	Spectrum lookupSpectrum(const Point &_p) const {
 		const Point p = m_worldToGrid.transformAffine(_p);
-		const int x = floorToInt(p.x),
-			  y = floorToInt(p.y),
-			  z = floorToInt(p.z);
+		const int x = math::floorToInt(p.x),
+			  y = math::floorToInt(p.y),
+			  z = math::floorToInt(p.z);
 		if (x < 0 || x >= m_res.x ||
 			y < 0 || y >= m_res.y ||
 			z < 0 || z >= m_res.z)
@@ -177,9 +177,9 @@ public:
 
 	Vector lookupVector(const Point &_p) const {
 		const Point p = m_worldToGrid.transformAffine(_p);
-		const int x = floorToInt(p.x),
-			  y = floorToInt(p.y),
-			  z = floorToInt(p.z);
+		const int x = math::floorToInt(p.x),
+			  y = math::floorToInt(p.y),
+			  z = math::floorToInt(p.z);
 		if (x < 0 || x >= m_res.x ||
 			y < 0 || y >= m_res.y ||
 			z < 0 || z >= m_res.z)

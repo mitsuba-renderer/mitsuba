@@ -184,8 +184,8 @@ public:
 			   dimensions. This is required to support blocked rendering. */
 			for (int i=0; i<2; ++i)
 				m_resolution[i] = std::min((uint32_t) MAX_RESOLUTION,
-					roundToPowerOfTwo((uint32_t) res[i]));
-			m_logHeight = log2i((uint32_t) m_resolution.y);
+					math::roundToPowerOfTwo((uint32_t) res[i]));
+			m_logHeight = math::log2i((uint32_t) m_resolution.y);
 
 			m_samplesPerBatch = m_sampleCount;
 			m_factor = (Float) 1.0f / (m_sampleCount *

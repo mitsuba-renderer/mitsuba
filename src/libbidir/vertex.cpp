@@ -383,7 +383,7 @@ int PathVertex::sampleSensor(const Scene *scene, Sampler *sampler,
 }
 
 bool PathVertex::perturbPosition(const Scene *scene, Sampler *sampler, Float stddev) {
-	Point2 step = Warp::squareToStdNormal(sampler->next2D()) * stddev;
+	Point2 step = warp::squareToStdNormal(sampler->next2D()) * stddev;
 	EVertexType type = (EVertexType) this->type;
 	Ray ray;
 
@@ -462,7 +462,7 @@ Float PathVertex::perturbPositionPdf(const PathVertex *target, Float stddev) con
 				Vector rel = itsOld.geoFrame.toLocal(itsOld.p - itsNew.p);
 				Point2 rel2 = Point2(rel.x, rel.y) / stddev;
 
-				return Warp::squareToStdNormalPdf(rel2) * absDot(itsOld.geoFrame.n, itsNew.geoFrame.n) / (stddev*stddev);
+				return warp::squareToStdNormalPdf(rel2) * absDot(itsOld.geoFrame.n, itsNew.geoFrame.n) / (stddev*stddev);
 			}
 			break;
 
@@ -473,7 +473,7 @@ Float PathVertex::perturbPositionPdf(const PathVertex *target, Float stddev) con
 				Vector rel = Frame(prOld.n).toLocal(prOld.p - prNew.p);
 				Point2 rel2 = Point2(rel.x, rel.y) / stddev;
 
-				return Warp::squareToStdNormalPdf(rel2) * absDot(prOld.n, prNew.n) / (stddev*stddev);
+				return warp::squareToStdNormalPdf(rel2) * absDot(prOld.n, prNew.n) / (stddev*stddev);
 			}
 			break;
 

@@ -2352,7 +2352,6 @@ void export_core() {
 	bp::def("getTotalSystemMemory", &getTotalSystemMemory);
 	bp::def("getFQDN", &getFQDN);
 	bp::def("rdtsc", &rdtsc);
-	bp::def("hypot2", &hypot2);
 
 	/* Functions from qmc.h */
 	bp::def("radicalInverse2Single", radicalInverse2Single);

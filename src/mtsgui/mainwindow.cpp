@@ -1080,17 +1080,17 @@ void MainWindow::on_glView_crop(int type, int x, int y, int width, int height) {
 		int maxNewSize = std::max(width, height);
 		Float magnification = maxOldSize / (Float) maxNewSize;
 
-		width = floorToInt(width*magnification);
-		height = floorToInt(height*magnification);
+		width = math::floorToInt(width*magnification);
+		height = math::floorToInt(height*magnification);
 
-		filmProps.setInteger("cropOffsetX", floorToInt(magnification
+		filmProps.setInteger("cropOffsetX", math::floorToInt(magnification
 				* (x + oldCropOffset.x)), false);
-		filmProps.setInteger("cropOffsetY", floorToInt(magnification
+		filmProps.setInteger("cropOffsetY", math::floorToInt(magnification
 				* (y + oldCropOffset.y)), false);
 		filmProps.setInteger("cropWidth", width);
 		filmProps.setInteger("cropHeight", height);
-		filmProps.setInteger("width", ceilToInt(oldSize.x*magnification), false);
-		filmProps.setInteger("height", ceilToInt(oldSize.y*magnification), false);
+		filmProps.setInteger("width", math::ceilToInt(oldSize.x*magnification), false);
+		filmProps.setInteger("height", math::ceilToInt(oldSize.y*magnification), false);
 	} else {
 		width = context->originalSize.x;
 		height = context->originalSize.y;

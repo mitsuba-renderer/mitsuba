@@ -367,7 +367,7 @@ template <typename T> inline TQuaternion<T> slerp(const TQuaternion<T> &q1,
 		// Revert to plain linear interpolation
 		return normalize(q1 * (1.0f - t) +  q2 * t);
 	} else {
-		Float theta = math::safe_acos(clamp(cosTheta, (Float) -1.0f, (Float) 1.0f));
+		Float theta = math::safe_acos(math::clamp(cosTheta, (Float) -1.0f, (Float) 1.0f));
 		Float thetap = theta * t;
 		TQuaternion<T> qperp = normalize(q2 - q1 * cosTheta);
 		return q1 * std::cos(thetap) + qperp * std::sin(thetap);

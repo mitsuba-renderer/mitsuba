@@ -73,8 +73,8 @@ public:
 	}
 
 	inline Spectrum eval(const Point2 &uv) const {
-		Float x = uv.x - floorToInt(uv.x);
-		Float y = uv.y - floorToInt(uv.y);
+		Float x = uv.x - math::floorToInt(uv.x);
+		Float y = uv.y - math::floorToInt(uv.y);
 
 		if (x > .5)
 			x -= 1;

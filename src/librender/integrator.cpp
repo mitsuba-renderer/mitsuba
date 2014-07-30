@@ -75,7 +75,7 @@ Spectrum SamplingIntegrator::E(const Scene *scene, const Intersection &its,
 		/* Sample the indirect illumination component */
 		if (handleIndirect) {
 			query.newQuery(RadianceQueryRecord::ERadianceNoEmission, medium);
-			Vector d = frame.toWorld(Warp::squareToCosineHemisphere(query.nextSample2D()));
+			Vector d = frame.toWorld(warp::squareToCosineHemisphere(query.nextSample2D()));
 			++query.depth;
 			query.medium = medium;
 			E += Li(RayDifferential(its.p, d, its.time), query) * M_PI;

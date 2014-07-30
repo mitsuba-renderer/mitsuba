@@ -115,7 +115,7 @@ public:
 
 		ray.setOrigin(pRec.p);
 		ray.setDirection(Frame(pRec.n).toWorld(
-			Warp::squareToCosineHemisphere(otherSample)));
+			warp::squareToCosineHemisphere(otherSample)));
 
 		return Spectrum(M_PI);
 	}
@@ -149,9 +149,9 @@ public:
 	Spectrum sampleDirection(DirectionSamplingRecord &dRec,
 			PositionSamplingRecord &pRec,
 			const Point2 &sample, const Point2 *extra) const {
-		Vector local = Warp::squareToCosineHemisphere(sample);
+		Vector local = warp::squareToCosineHemisphere(sample);
 		dRec.d = Frame(pRec.n).toWorld(local);
-		dRec.pdf = Warp::squareToCosineHemispherePdf(local);
+		dRec.pdf = warp::squareToCosineHemispherePdf(local);
 		dRec.measure = ESolidAngle;
 		return Spectrum(1.0f);
 	}

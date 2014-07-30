@@ -118,7 +118,7 @@ public:
 			minDist = std::min(minDist, (cur + d1 * dot(d1, d2) - its.p).lengthSquared());
 		}
 
-		Float a = smoothStep(m_lineWidth*(1.f-m_stepWidth), m_lineWidth, std::sqrt(minDist));
+		Float a = math::smoothStep(m_lineWidth*(1.f-m_stepWidth), m_lineWidth, std::sqrt(minDist));
 		return m_edgeColor*(1-a) + m_interiorColor*a;
 	}
 

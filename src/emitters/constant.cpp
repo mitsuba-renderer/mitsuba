@@ -108,7 +108,7 @@ public:
 
 	Spectrum samplePosition(PositionSamplingRecord &pRec,
 			const Point2 &sample, const Point2 *extra) const {
-		Vector d = Warp::squareToUniformSphere(sample);
+		Vector d = warp::squareToUniformSphere(sample);
 
 		pRec.p = m_sceneBSphere.center + d * m_sceneBSphere.radius;
 		pRec.n = -d;
@@ -129,9 +129,9 @@ public:
 	Spectrum sampleDirection(DirectionSamplingRecord &dRec,
 			PositionSamplingRecord &pRec,
 			const Point2 &sample, const Point2 *extra) const {
-		Vector local = Warp::squareToCosineHemisphere(sample);
+		Vector local = warp::squareToCosineHemisphere(sample);
 		dRec.d = Frame(pRec.n).toWorld(local);
-		dRec.pdf = Warp::squareToCosineHemispherePdf(local);
+		dRec.pdf = warp::squareToCosineHemispherePdf(local);
 		dRec.measure = ESolidAngle;
 		return Spectrum(1.0f);
 	}
@@ -160,8 +160,8 @@ public:
 			const Point2 &spatialSample,
 			const Point2 &directionalSample,
 			Float time) const {
-		Vector v0 = Warp::squareToUniformSphere(spatialSample);
-		Vector v1 = Warp::squareToCosineHemisphere(directionalSample);
+		Vector v0 = warp::squareToUniformSphere(spatialSample);
+		Vector v1 = warp::squareToCosineHemisphere(directionalSample);
 
 		ray.setOrigin(m_geoBSphere.center + v0 * m_geoBSphere.radius);
 		ray.setDirection(Frame(-v0).toWorld(v1));
@@ -176,12 +176,12 @@ public:
 		Float pdf;
 
 		if (!dRec.refN.isZero()) {
-			d = Warp::squareToCosineHemisphere(sample);
-			pdf = Warp::squareToCosineHemispherePdf(d);
+			d = warp::squareToCosineHemisphere(sample);
+			pdf = warp::squareToCosineHemispherePdf(d);
 			d = Frame(dRec.refN).toWorld(d);
 		} else {
-			d = Warp::squareToUniformSphere(sample);
-			pdf = Warp::squareToUniformSpherePdf();
+			d = warp::squareToUniformSphere(sample);
+			pdf = warp::squareToUniformSpherePdf();
 		}
 
 		/* Intersect against the bounding sphere. This is not really
@@ -220,7 +220,7 @@ public:
 		if (!dRec.refN.isZero())
 			pdfSA = INV_PI * std::max((Float) 0.0f, dot(dRec.d, dRec.refN));
 		else
-			pdfSA = Warp::squareToUniformSpherePdf();
+			pdfSA = warp::squareToUniformSpherePdf();
 
 		if (dRec.measure == ESolidAngle)
 			return pdfSA;

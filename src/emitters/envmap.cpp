@@ -411,7 +411,7 @@ public:
 
 	Spectrum samplePosition(PositionSamplingRecord &pRec, const Point2 &sample,
 			const Point2 *extra) const {
-		Vector d = Warp::squareToUniformSphere(sample);
+		Vector d = warp::squareToUniformSphere(sample);
 
 		pRec.p = m_sceneBSphere.center + d * m_sceneBSphere.radius;
 		pRec.n = -d;
@@ -503,7 +503,7 @@ public:
 		Vector d; Spectrum value; Float pdf;
 		internalSampleDirection(directionalSample, d, value, pdf);
 		d = -trafo(d);
-		Point2 offset = Warp::squareToUniformDiskConcentric(spatialSample);
+		Point2 offset = warp::squareToUniformDiskConcentric(spatialSample);
 		Vector perpOffset = Frame(d).toWorld(Vector(offset.x, offset.y, 0));
 
 		ray.setOrigin(m_geoBSphere.center + (perpOffset - d) * m_geoBSphere.radius);
@@ -572,10 +572,10 @@ public:
 		/* Using the remaining bits of precision to shift the sample by an offset
 		   drawn from a tent function. This effectively creates a sampling strategy
 		   for a linearly interpolated environment map */
-		Point2 pos = Point2((Float) col, (Float) row) + Warp::squareToTent(sample);
+		Point2 pos = Point2((Float) col, (Float) row) + warp::squareToTent(sample);
 
 		/* Bilinearly interpolate colors from the adjacent four neighbors */
-		int xPos = floorToInt(pos.x), yPos = floorToInt(pos.y);
+		int xPos = math::floorToInt(pos.x), yPos = math::floorToInt(pos.y);
 		Float dx1 = pos.x - xPos, dx2 = 1.0f - dx1,
 		      dy1 = pos.y - yPos, dy2 = 1.0f - dy1;
 
@@ -587,8 +587,8 @@ public:
 
 		/* Compute the final color and probability density of the sample */
 		value = (value1 + value2) * m_scale;
-		pdf = (value1.getLuminance() * m_rowWeights[clamp(yPos,   0, m_size.y-1)] +
-		       value2.getLuminance() * m_rowWeights[clamp(yPos+1, 0, m_size.y-1)]) * m_normalization;
+		pdf = (value1.getLuminance() * m_rowWeights[math::clamp(yPos,   0, m_size.y-1)] +
+		       value2.getLuminance() * m_rowWeights[math::clamp(yPos+1, 0, m_size.y-1)]) * m_normalization;
 
 		/* Turn into a proper direction on the sphere */
 		Float sinPhi, cosPhi, sinTheta, cosTheta;
@@ -616,7 +616,7 @@ public:
 		Float u = uv.x * m_size.x - 0.5f, v = uv.y * m_size.y - 0.5f;
 
 		/* Bilinearly interpolate colors from the adjacent four neighbors */
-		int xPos = floorToInt(u), yPos = floorToInt(v);
+		int xPos = math::floorToInt(u), yPos = math::floorToInt(v);
 		Float dx1 = u - xPos, dx2 = 1.0f - dx1,
 		      dy1 = v - yPos, dy2 = 1.0f - dy1;
 
@@ -627,8 +627,8 @@ public:
 		stats::filteredLookups.incrementBase();
 
 		Float sinTheta = math::safe_sqrt(1-d.y*d.y);
-		return (value1.getLuminance() * m_rowWeights[clamp(yPos,   0, m_size.y-1)] +
-		        value2.getLuminance() * m_rowWeights[clamp(yPos+1, 0, m_size.y-1)])
+		return (value1.getLuminance() * m_rowWeights[math::clamp(yPos,   0, m_size.y-1)] +
+		        value2.getLuminance() * m_rowWeights[math::clamp(yPos+1, 0, m_size.y-1)])
 			* m_normalization / std::max(std::abs(sinTheta), Epsilon);
 	}
 

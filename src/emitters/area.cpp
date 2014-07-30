@@ -115,9 +115,9 @@ public:
 	Spectrum sampleDirection(DirectionSamplingRecord &dRec,
 			PositionSamplingRecord &pRec,
 			const Point2 &sample, const Point2 *extra) const {
-		Vector local = Warp::squareToCosineHemisphere(sample);
+		Vector local = warp::squareToCosineHemisphere(sample);
 		dRec.d = Frame(pRec.n).toWorld(local);
-		dRec.pdf = Warp::squareToCosineHemispherePdf(local);
+		dRec.pdf = warp::squareToCosineHemispherePdf(local);
 		dRec.measure = ESolidAngle;
 		return Spectrum(1.0f);
 	}
@@ -148,7 +148,7 @@ public:
 			Float time) const {
 		PositionSamplingRecord pRec(time);
 		m_shape->samplePosition(pRec, spatialSample);
-		Vector local = Warp::squareToCosineHemisphere(directionalSample);
+		Vector local = warp::squareToCosineHemisphere(directionalSample);
 		ray.setTime(time);
 		ray.setOrigin(pRec.p);
 		ray.setDirection(Frame(pRec.n).toWorld(local));

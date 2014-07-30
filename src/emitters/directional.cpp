@@ -103,7 +103,7 @@ public:
 	Spectrum samplePosition(PositionSamplingRecord &pRec, const Point2 &sample, const Point2 *extra) const {
 		const Transform &trafo = m_worldTransform->eval(pRec.time);
 
-		Point2 p = Warp::squareToUniformDiskConcentric(sample);
+		Point2 p = warp::squareToUniformDiskConcentric(sample);
 
 		Vector perpOffset = trafo(Vector(p.x, p.y, 0) * m_bsphere.radius);
 		Vector d = trafo(Vector(0, 0, 1));
@@ -147,7 +147,7 @@ public:
 			const Point2 &directionalSample,
 			Float time) const {
 		const Transform &trafo = m_worldTransform->eval(time);
-		Point2 p = Warp::squareToUniformDiskConcentric(spatialSample);
+		Point2 p = warp::squareToUniformDiskConcentric(spatialSample);
 		Vector perpOffset = trafo(Vector(p.x, p.y, 0) * m_bsphere.radius);
 		Vector d = trafo(Vector(0, 0, 1));
 		ray.setOrigin(m_bsphere.center - d*m_bsphere.radius + perpOffset);

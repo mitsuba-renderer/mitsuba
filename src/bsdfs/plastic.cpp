@@ -270,7 +270,7 @@ public:
 			else
 				diff /= 1 - m_fdrInt;
 
-			return diff * (Warp::squareToCosineHemispherePdf(bRec.wo)
+			return diff * (warp::squareToCosineHemispherePdf(bRec.wo)
 				* m_invEta2 * (1-Fi) * (1-Fo));
 		}
 
@@ -300,7 +300,7 @@ public:
 			if (std::abs(dot(reflect(bRec.wi), bRec.wo)-1) < DeltaEpsilon)
 				return probSpecular;
 		} else if (hasDiffuse && measure == ESolidAngle) {
-			return Warp::squareToCosineHemispherePdf(bRec.wo) * (1-probSpecular);
+			return warp::squareToCosineHemispherePdf(bRec.wo) * (1-probSpecular);
 		}
 
 		return 0.0f;
@@ -334,7 +334,7 @@ public:
 			} else {
 				bRec.sampledComponent = 1;
 				bRec.sampledType = EDiffuseReflection;
-				bRec.wo = Warp::squareToCosineHemisphere(Point2(
+				bRec.wo = warp::squareToCosineHemisphere(Point2(
 					(sample.x - probSpecular) / (1 - probSpecular),
 					sample.y
 				));
@@ -356,7 +356,7 @@ public:
 		} else {
 			bRec.sampledComponent = 1;
 			bRec.sampledType = EDiffuseReflection;
-			bRec.wo = Warp::squareToCosineHemisphere(sample);
+			bRec.wo = warp::squareToCosineHemisphere(sample);
 			Float Fo = fresnelDielectricExt(Frame::cosTheta(bRec.wo), m_eta);
 
 			Spectrum diff = m_diffuseReflectance->eval(bRec.its);
@@ -398,7 +398,7 @@ public:
 			} else {
 				bRec.sampledComponent = 1;
 				bRec.sampledType = EDiffuseReflection;
-				bRec.wo = Warp::squareToCosineHemisphere(Point2(
+				bRec.wo = warp::squareToCosineHemisphere(Point2(
 					(sample.x - probSpecular) / (1 - probSpecular),
 					sample.y
 				));
@@ -411,7 +411,7 @@ public:
 					diff /= 1 - m_fdrInt;
 
 				pdf = (1-probSpecular) *
-					Warp::squareToCosineHemispherePdf(bRec.wo);
+					warp::squareToCosineHemispherePdf(bRec.wo);
 
 				return diff * (m_invEta2 * (1-Fi) * (1-Fo) / (1-probSpecular));
 			}
@@ -424,7 +424,7 @@ public:
 		} else {
 			bRec.sampledComponent = 1;
 			bRec.sampledType = EDiffuseReflection;
-			bRec.wo = Warp::squareToCosineHemisphere(sample);
+			bRec.wo = warp::squareToCosineHemisphere(sample);
 			Float Fo = fresnelDielectricExt(Frame::cosTheta(bRec.wo), m_eta);
 
 			Spectrum diff = m_diffuseReflectance->eval(bRec.its);
@@ -433,7 +433,7 @@ public:
 			else
 				diff /= 1 - m_fdrInt;
 
-			pdf = Warp::squareToCosineHemispherePdf(bRec.wo);
+			pdf = warp::squareToCosineHemispherePdf(bRec.wo);
 
 			return diff * (m_invEta2 * (1-Fi) * (1-Fo));
 		}

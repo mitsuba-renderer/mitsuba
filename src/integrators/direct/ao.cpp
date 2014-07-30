@@ -112,7 +112,7 @@ public:
 
 		const Intersection &its = rRec.its;
 		for (size_t i=0; i<numShadingSamples; ++i) {
-			Vector d = its.toWorld(Warp::squareToCosineHemisphere(sampleArray[i]));
+			Vector d = its.toWorld(warp::squareToCosineHemisphere(sampleArray[i]));
 
 			Ray shadowRay(its.p, d, Epsilon, m_rayLength, ray.time);
 			if (!rRec.scene->rayIntersect(shadowRay))

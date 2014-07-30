@@ -474,11 +474,11 @@ void RenderSettingsDialog::apply(SceneContext *ctx) {
 	Vector2i oldCropSize = oldFilm->getCropSize();
 	Point2i oldCropOffset = oldFilm->getCropOffset();
 
-	Vector2i size(std::ceil((oldSize.x * cropSize.x) / (Float) oldCropSize.x),
-			      std::ceil((oldSize.y * cropSize.y) / (Float) oldCropSize.y));
+	Vector2i size(math::roundToInt((oldSize.x * cropSize.x / (Float) oldCropSize.x)),
+			      math::roundToInt((oldSize.y * cropSize.y / (Float) oldCropSize.y)));
 
-	Point2i cropOffset(std::floor((oldCropOffset.x * cropSize.x) / (Float) oldCropSize.x),
-			           std::floor((oldCropOffset.y * cropSize.y) / (Float) oldCropSize.y));
+	Point2i cropOffset(math::roundToInt((oldCropOffset.x * cropSize.x / (Float) oldCropSize.x)),
+			           math::roundToInt((oldCropOffset.y * cropSize.y / (Float) oldCropSize.y)));
 
 	filmProps.setInteger("width", size.x, false);
 	filmProps.setInteger("height", size.y, false);

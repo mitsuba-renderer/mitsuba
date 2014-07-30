@@ -155,7 +155,7 @@ public:
 		Vector d = normalize(m_worldTransform->eval(pRec.time).inverse()(dRec.d));
 
 		samplePosition = Point2(
-			modulo(std::atan2(d.x, -d.z) * INV_TWOPI, (Float) 1) * m_resolution.x,
+			math::modulo(std::atan2(d.x, -d.z) * INV_TWOPI, (Float) 1) * m_resolution.x,
 			math::safe_acos(d.y) * INV_PI * m_resolution.y
 		);
 
@@ -173,7 +173,7 @@ public:
 		d *= invDist;
 
 		dRec.uv = Point2(
-			modulo(std::atan2(d.x, -d.z) * INV_TWOPI, (Float) 1) * m_resolution.x,
+			math::modulo(std::atan2(d.x, -d.z) * INV_TWOPI, (Float) 1) * m_resolution.x,
 			math::safe_acos(d.y) * INV_PI * m_resolution.y
 		);
 

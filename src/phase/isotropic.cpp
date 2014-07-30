@@ -62,19 +62,19 @@ public:
 	Float sample(PhaseFunctionSamplingRecord &pRec,
 			Sampler *sampler) const {
 		Point2 sample(sampler->next2D());
-		pRec.wo = Warp::squareToUniformSphere(sample);
+		pRec.wo = warp::squareToUniformSphere(sample);
 		return 1.0f;
 	}
 
 	Float sample(PhaseFunctionSamplingRecord &pRec,
 			Float &pdf, Sampler *sampler) const {
-		pRec.wo = Warp::squareToUniformSphere(sampler->next2D());
-		pdf = Warp::squareToUniformSpherePdf();
+		pRec.wo = warp::squareToUniformSphere(sampler->next2D());
+		pdf = warp::squareToUniformSpherePdf();
 		return 1.0f;
 	}
 
 	Float eval(const PhaseFunctionSamplingRecord &pRec) const {
-		return Warp::squareToUniformSpherePdf();
+		return warp::squareToUniformSpherePdf();
 	}
 
 	Float getMeanCosine() const {
