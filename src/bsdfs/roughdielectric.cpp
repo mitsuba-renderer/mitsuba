@@ -24,12 +24,6 @@
 
 MTS_NAMESPACE_BEGIN
 
-/* Suggestion by Bruce Walter: sample the model using a slightly
-   wider density function. This in practice limits the importance
-   weights to values <= 4.
-*/
-#define ENLARGE_LOBE_TRICK 1
-
 /*!\plugin{roughdielectric}{Rough dielectric material}
  * \order{5}
  * \icon{bsdf_roughdielectric}
@@ -37,42 +31,44 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{distribution}{\String}{
  *          Specifies the type of microfacet normal distribution
  *          used to model the surface roughness.
+ *          \vspace{-1mm}
  *       \begin{enumerate}[(i)]
  *           \item \code{beckmann}: Physically-based distribution derived from
- *               Gaussian random surfaces. This is the default.
- *           \item \code{ggx}: New distribution proposed by
- *              Walter et al. \cite{Walter07Microfacet}, which is meant to better handle
- *              the long tails observed in measurements of ground surfaces.
- *              Renderings with this distribution may converge slowly.
- *           \item \code{phong}: Classical $\cos^p\theta$ distribution.
- *              Due to the underlying microfacet theory,
- *              the use of this distribution here leads to more realistic
- *              behavior than the separately available \pluginref{phong} plugin.
- *           \item \code{as}: Anisotropic Phong-style microfacet distribution proposed by
- *              Ashikhmin and Shirley \cite{Ashikhmin2005Anisotropic}.\vspace{-3mm}
+ *               Gaussian random surfaces. This is the default.\vspace{-1.5mm}
+ *           \item \code{ggx}: The GGX \cite{Walter07Microfacet} distribution (also known as
+ *               Trowbridge-Reitz \cite{Trowbridge19975Average} distribution)
+ *               was designed to better approximate the long tails observed in measurements
+ *               of ground surfaces, which are not modeled by the Beckmann distribution.
+ *           \vspace{-1.5mm}
+ *           \item \code{phong}: Anisotropic Phong distribution by
+ *              Ashikhmin and Shirley \cite{Ashikhmin2005Anisotropic}.
+ *              In most cases, the \code{ggx} and \code{beckmann} distributions
+ *              should be preferred, since they provide better importance sampling
+ *              and accurate shadowing/masking computations.
+ *              \vspace{-4mm}
  *       \end{enumerate}
  *     }
- *     \parameter{alpha}{\Float\Or\Texture}{
- *         Specifies the roughness of the unresolved surface micro-geometry.
- *         When the Beckmann distribution is used, this parameter is equal to the
- *         \emph{root mean square} (RMS) slope of the microfacets. This
- *         parameter is only valid when \texttt{distribution=beckmann/phong/ggx}.
- *         \default{0.1}.
- *     }
- *     \parameter{alphaU, alphaV}{\Float\Or\Texture}{
- *         Specifies the anisotropic roughness values along the tangent and
- *         bitangent directions. These parameter are only valid when
- *         \texttt{distribution=as}. \default{0.1}.
+ *     \parameter{alpha, alphaU, alphaV}{\Float\Or\Texture}{
+ *         Specifies the roughness of the unresolved surface micro-geometry
+ *         along the tangent and bitangent directions. When the Beckmann
+ *         distribution is used, this parameter is equal to the
+ *         \emph{root mean square} (RMS) slope of the microfacets.
+ *         \code{alpha} is a convenience parameter to initialize both
+ *         \code{alphaU} and \code{alphaV} to the same value. \default{0.1}.
  *     }
  *     \parameter{intIOR}{\Float\Or\String}{Interior index of refraction specified
- *      numerically or using a known material name. \default{\texttt{bk7} / 1.5046}}
+ *         numerically or using a known material name. \default{\texttt{bk7} / 1.5046}}
  *     \parameter{extIOR}{\Float\Or\String}{Exterior index of refraction specified
- *      numerically or using a known material name. \default{\texttt{air} / 1.000277}}
- *     \parameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
- *         factor that can be used to modulate the specular reflection component. Note
- *         that for physical realism, this parameter should never be touched. \default{1.0}}
- *     \parameter{specular\showbreak Transmittance}{\Spectrum\Or\Texture}{Optional
- *         factor that can be used to modulate the specular transmission component. Note
+ *         numerically or using a known material name. \default{\texttt{air} / 1.000277}}
+ *     \parameter{sampleVisible}{\Boolean}{
+ *         Enables a sampling technique proposed by Heitz and D'Eon~\cite{Heitz1014Importance},
+ *         which focuses computation on the visible parts of the microfacet normal
+ *         distribution, considerably reducing variance in some cases.
+ *         \default{\code{true}, i.e. use visible normal sampling}
+ *     }
+ *     \parameter{specular\showbreak Reflectance,\newline
+ *         specular\showbreak Transmittance}{\Spectrum\Or\Texture}{Optional
+ *         factor that can be used to modulate the specular reflection/transmission component. Note
  *         that for physical realism, this parameter should never be touched. \default{1.0}}
  * }\vspace{4mm}
  *
@@ -98,7 +94,7 @@ MTS_NAMESPACE_BEGIN
  *
  * The implementation is based on the paper ``Microfacet Models
  * for Refraction through Rough Surfaces'' by Walter et al.
- * \cite{Walter07Microfacet}. It supports several different types of microfacet
+ * \cite{Walter07Microfacet}. It supports three different types of microfacet
  * distributions and has a texturable roughness parameter. Exterior and
  * interior IOR values can be specified independently, where ``exterior''
  * refers to the side that contains the surface normal. Similar to the
@@ -109,13 +105,12 @@ MTS_NAMESPACE_BEGIN
  * glass BK7/air interface with a light amount of roughness modeled using a
  * Beckmann distribution.
  *
- * To get an intuition about the effect of the surface roughness
- * parameter $\alpha$, consider the following approximate classification:
- * a value of $\alpha=0.001-0.01$ corresponds to a material
- * with slight imperfections on an
- * otherwise smooth surface finish, $\alpha=0.1$ is relatively rough,
+ * To get an intuition about the effect of the surface roughness parameter
+ * $\alpha$, consider the following approximate classification: a value of
+ * $\alpha=0.001-0.01$ corresponds to a material with slight imperfections
+ * on an otherwise smooth surface finish, $\alpha=0.1$ is relatively rough,
  * and $\alpha=0.3-0.7$ is \emph{extremely} rough (e.g. an etched or ground
- * finish).
+ * finish). Values significantly above that are probably not too realistic.
  *
  * Please note that when using this plugin, it is crucial that the scene contains
  * meaningful and mutually compatible index of refraction changes---see
@@ -127,20 +122,33 @@ MTS_NAMESPACE_BEGIN
  * converge slowly.
  *
  * \subsubsection*{Technical details}
- * When rendering with the Ashikhmin-Shirley or Phong microfacet
- * distributions, a conversion is used to turn the specified
- * $\alpha$ roughness value into the exponents of these distributions.
- * This is done in a way, such that the different
- * distributions all produce a similar appearance for the same value of
- * $\alpha$.
+ * All microfacet distributions allow the specification of two distinct
+ * roughness values along the tangent and bitangent directions. This can be
+ * used to provide a material with a ``brushed'' appearance. The alignment
+ * of the anisotropy will follow the UV parameterization of the underlying
+ * mesh. This means that such an anisotropic material cannot be applied to
+ * triangle meshes that are missing texture coordinates.
  *
- * The Ashikhmin-Shirley microfacet distribution allows the specification
- * of two distinct roughness values along the tangent and bitangent
- * directions. This can be used to provide a material with a ``brushed''
- * appearance. The alignment of the anisotropy will follow the UV
- * parameterization of the underlying mesh in this case. This also means that
- * such an anisotropic material cannot be applied to triangle meshes that
- * are missing texture coordinates.\newpage
+ * Since Mitsuba 0.5.1, this plugin uses a new importance sampling technique
+ * contributed by Eric Heitz and Eugene D'Eon, which restricts the sampling
+ * domain to the set of visible (unmasked) microfacet normals. The previous
+ * approach of sampling all normals is still available and can be enabled
+ * by setting \code{sampleVisible} to \code{false}.
+ * Note that this new method is only available for the \code{beckmann} and
+ * \code{ggx} microfacet distributions. When the \code{phong} distribution
+ * is selected, the parameter has no effect.
+ *
+ * When rendering with the Phong microfacet distribution, a conversion is
+ * used to turn the specified Beckmann-equivalent $\alpha$ roughness value
+ * into the exponent parameter of this distribution. This is done in a way,
+ * such that the same value $\alpha$ will produce a similar appearance across
+ * different microfacet distributions.
+ *
+ * When rendering with the Phong microfacet distribution, a conversion is
+ * used to turn the specified Beckmann-equivalent $\alpha$ roughness value
+ * into the exponents of the distribution. This is done in a way, such that
+ * the different distributions all produce a similar appearance for the
+ * same value of $\alpha$.
  *
  * \renderings{
  *     \rendering{Ground glass (GGX, $\alpha$=0.304,
@@ -191,26 +199,21 @@ public:
 		m_eta = intIOR / extIOR;
 		m_invEta = 1 / m_eta;
 
-		m_distribution = MicrofacetDistribution(
-			props.getString("distribution", "beckmann")
-		);
+		MicrofacetDistribution distr(props);
+		m_type = distr.getType();
+		m_sampleVisible = distr.getSampleVisible();
 
-		Float alpha = props.getFloat("alpha", 0.1f),
-			  alphaU = props.getFloat("alphaU", alpha),
-			  alphaV = props.getFloat("alphaV", alpha);
-
-		m_alphaU = new ConstantFloatTexture(alphaU);
-		if (alphaU == alphaV)
+		m_alphaU = new ConstantFloatTexture(distr.getAlphaU());
+		if (distr.getAlphaU() == distr.getAlphaV())
 			m_alphaV = m_alphaU;
 		else
-			m_alphaV = new ConstantFloatTexture(alphaV);
+			m_alphaV = new ConstantFloatTexture(distr.getAlphaV());
 	}
 
 	RoughDielectric(Stream *stream, InstanceManager *manager)
 	 : BSDF(stream, manager) {
-		m_distribution = MicrofacetDistribution(
-			(MicrofacetDistribution::EType) stream->readUInt()
-		);
+		m_type = (MicrofacetDistribution::EType) stream->readUInt();
+		m_sampleVisible = stream->readBool();
 		m_alphaU = static_cast<Texture *>(manager->getInstance(stream));
 		m_alphaV = static_cast<Texture *>(manager->getInstance(stream));
 		m_specularReflectance = static_cast<Texture *>(manager->getInstance(stream));
@@ -221,17 +224,22 @@ public:
 		configure();
 	}
 
+	void serialize(Stream *stream, InstanceManager *manager) const {
+		BSDF::serialize(stream, manager);
+
+		stream->writeUInt((uint32_t) m_type);
+		stream->writeBool(m_sampleVisible);
+		manager->serialize(stream, m_alphaU.get());
+		manager->serialize(stream, m_alphaV.get());
+		manager->serialize(stream, m_specularReflectance.get());
+		manager->serialize(stream, m_specularTransmittance.get());
+		stream->writeFloat(m_eta);
+	}
+
 	void configure() {
 		unsigned int extraFlags = 0;
-		if (m_alphaU != m_alphaV) {
+		if (m_alphaU != m_alphaV)
 			extraFlags |= EAnisotropic;
-			if (m_distribution.getType() !=
-				MicrofacetDistribution::EAshikhminShirley)
-				Log(EError, "Different roughness values along the tangent and "
-						"bitangent directions are only supported when using the "
-						"anisotropic Ashikhmin-Shirley microfacet distribution "
-						"(named \"as\")");
-		}
 
 		if (!m_alphaU->isConstant() || !m_alphaV->isConstant())
 			extraFlags |= ESpatiallyVarying;
@@ -293,14 +301,17 @@ public:
 		   same hemisphere as the macrosurface normal */
 		H *= math::signum(Frame::cosTheta(H));
 
-		/* Evaluate the roughness */
-		Float alphaU = m_distribution.transformRoughness(
-					m_alphaU->eval(bRec.its).average()),
-			  alphaV = m_distribution.transformRoughness(
-					m_alphaV->eval(bRec.its).average());
+		/* Construct the microfacet distribution matching the
+		   roughness values at the current surface position. */
+		MicrofacetDistribution distr(
+			m_type,
+			m_alphaU->eval(bRec.its).average(),
+			m_alphaV->eval(bRec.its).average(),
+			m_sampleVisible
+		);
 
-		/* Evaluate the microsurface normal distribution */
-		const Float D = m_distribution.eval(H, alphaU, alphaV);
+		/* Evaluate the microfacet normal distribution */
+		const Float D = distr.eval(H);
 		if (D == 0)
 			return Spectrum(0.0f);
 
@@ -308,7 +319,7 @@ public:
 		const Float F = fresnelDielectricExt(dot(bRec.wi, H), m_eta);
 
 		/* Smith's shadow-masking function */
-		const Float G = m_distribution.G(bRec.wi, bRec.wo, H, alphaU, alphaV);
+		const Float G = distr.G(bRec.wi, bRec.wo, H);
 
 		if (reflect) {
 			/* Calculate the total amount of reflection */
@@ -383,21 +394,24 @@ public:
 		   same hemisphere as the macrosurface normal */
 		H *= math::signum(Frame::cosTheta(H));
 
-		/* Evaluate the roughness */
-		Float alphaU = m_alphaU->eval(bRec.its).average(),
-			  alphaV = m_alphaV->eval(bRec.its).average();
+		/* Construct the microfacet distribution matching the
+		   roughness values at the current surface position. */
+		MicrofacetDistribution sampleDistr(
+			m_type,
+			m_alphaU->eval(bRec.its).average(),
+			m_alphaV->eval(bRec.its).average(),
+			m_sampleVisible
+		);
 
-#if ENLARGE_LOBE_TRICK == 1
-		Float factor = (1.2f - 0.2f * std::sqrt(
-			std::abs(Frame::cosTheta(bRec.wi))));
-		alphaU *= factor; alphaV *= factor;
-#endif
+		/* Trick by Walter et al.: slightly scale the roughness values to
+		   reduce importance sampling weights. Not needed for the
+		   Heitz and D'Eon sampling technique. */
+		if (!m_sampleVisible)
+			sampleDistr.scaleAlpha(1.2f - 0.2f * std::sqrt(
+				std::abs(Frame::cosTheta(bRec.wi))));
 
-		alphaU = m_distribution.transformRoughness(alphaU);
-		alphaV = m_distribution.transformRoughness(alphaV);
-
-		/* Evaluate the microsurface normal sampling density */
-		Float prob = m_distribution.pdf(H, alphaU, alphaV);
+		/* Evaluate the microfacet model sampling density function */
+		Float prob = sampleDistr.pdf(math::signum(Frame::cosTheta(bRec.wi)) * bRec.wi, H);
 
 		if (hasTransmission && hasReflection) {
 			Float F = fresnelDielectricExt(dot(bRec.wi, H), m_eta);
@@ -419,44 +433,42 @@ public:
 		if (!hasReflection && !hasTransmission)
 			return Spectrum(0.0f);
 
-		/* Evaluate the roughness */
-		Float alphaU = m_alphaU->eval(bRec.its).average(),
-		      alphaV = m_alphaV->eval(bRec.its).average(),
-		      sampleAlphaU = alphaU,
-		      sampleAlphaV = alphaV;
+		/* Construct the microfacet distribution matching the
+		   roughness values at the current surface position. */
+		MicrofacetDistribution distr(
+			m_type,
+			m_alphaU->eval(bRec.its).average(),
+			m_alphaV->eval(bRec.its).average(),
+			m_sampleVisible
+		);
 
-#if ENLARGE_LOBE_TRICK == 1
-		Float factor = (1.2f - 0.2f * std::sqrt(
-			std::abs(Frame::cosTheta(bRec.wi))));
-		sampleAlphaU *= factor; sampleAlphaV *= factor;
-#endif
+		/* Trick by Walter et al.: slightly scale the roughness values to
+		   reduce importance sampling weights. Not needed for the
+		   Heitz and D'Eon sampling technique. */
+		MicrofacetDistribution sampleDistr(distr);
+		if (!m_sampleVisible)
+			sampleDistr.scaleAlpha(1.2f - 0.2f * std::sqrt(
+				std::abs(Frame::cosTheta(bRec.wi))));
 
-		alphaU = m_distribution.transformRoughness(alphaU);
-		alphaV = m_distribution.transformRoughness(alphaV);
-		sampleAlphaU = m_distribution.transformRoughness(sampleAlphaU);
-		sampleAlphaV = m_distribution.transformRoughness(sampleAlphaV);
-
-		/* Sample M, the microsurface normal */
+		/* Sample M, the microfacet normal */
 		Float microfacetPDF;
-		const Normal m = m_distribution.sample(sample,
-				sampleAlphaU, sampleAlphaV, microfacetPDF);
-
+		const Normal m = sampleDistr.sample(math::signum(Frame::cosTheta(bRec.wi)) * bRec.wi, sample, microfacetPDF);
 		if (microfacetPDF == 0)
 			return Spectrum(0.0f);
 
-		Float cosThetaT, numerator = 1.0f;
+		Float cosThetaT;
 		Float F = fresnelDielectricExt(dot(bRec.wi, m), cosThetaT, m_eta);
+		Spectrum weight(1.0f);
 
 		if (hasReflection && hasTransmission) {
 			if (bRec.sampler->next1D() > F)
 				sampleReflection = false;
 		} else {
-			numerator = hasReflection ? F : (1-F);
+			weight = Spectrum(hasReflection ? F : (1-F));
 		}
 
-		Spectrum result;
 		if (sampleReflection) {
-			/* Perfect specular reflection based on the microsurface normal */
+			/* Perfect specular reflection based on the microfacet normal */
 			bRec.wo = reflect(bRec.wi, m);
 			bRec.eta = 1.0f;
 			bRec.sampledComponent = 0;
@@ -466,12 +478,12 @@ public:
 			if (Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo) <= 0)
 				return Spectrum(0.0f);
 
-			result = m_specularReflectance->eval(bRec.its);
+			weight *= m_specularReflectance->eval(bRec.its);
 		} else {
 			if (cosThetaT == 0)
 				return Spectrum(0.0f);
 
-			/* Perfect specular transmission based on the microsurface normal */
+			/* Perfect specular transmission based on the microfacet normal */
 			bRec.wo = refract(bRec.wi, m, m_eta, cosThetaT);
 			bRec.eta = cosThetaT < 0 ? m_eta : m_invEta;
 			bRec.sampledComponent = 1;
@@ -486,17 +498,16 @@ public:
 			Float factor = (bRec.mode == ERadiance)
 				? (cosThetaT < 0 ? m_invEta : m_eta) : 1.0f;
 
-			result = m_specularTransmittance->eval(bRec.its) * (factor * factor);
+			weight *= m_specularTransmittance->eval(bRec.its) * (factor * factor);
 		}
 
-		numerator *= m_distribution.eval(m, alphaU, alphaV)
-			* m_distribution.G(bRec.wi, bRec.wo, m, alphaU, alphaV)
-			* dot(bRec.wi, m);
+		if (m_sampleVisible)
+			weight *= distr.smithG1(bRec.wo, m);
+		else
+			weight *= std::abs(distr.eval(m) * distr.G(bRec.wi, bRec.wo, m)
+				* dot(bRec.wi, m) / (microfacetPDF * Frame::cosTheta(bRec.wi)));
 
-		Float denominator = microfacetPDF
-			* Frame::cosTheta(bRec.wi);
-
-		return result * std::abs(numerator / denominator);
+		return weight;
 	}
 
 	Spectrum sample(BSDFSamplingRecord &bRec, Float &pdf, const Point2 &_sample) const {
@@ -511,35 +522,33 @@ public:
 		if (!hasReflection && !hasTransmission)
 			return Spectrum(0.0f);
 
-		/* Evaluate the roughness */
-		Float alphaU = m_alphaU->eval(bRec.its).average(),
-		      alphaV = m_alphaV->eval(bRec.its).average(),
-		      sampleAlphaU = alphaU,
-		      sampleAlphaV = alphaV;
+		/* Construct the microfacet distribution matching the
+		   roughness values at the current surface position. */
+		MicrofacetDistribution distr(
+			m_type,
+			m_alphaU->eval(bRec.its).average(),
+			m_alphaV->eval(bRec.its).average(),
+			m_sampleVisible
+		);
 
-#if ENLARGE_LOBE_TRICK == 1
-		Float factor = (1.2f - 0.2f * std::sqrt(
-			std::abs(Frame::cosTheta(bRec.wi))));
-		sampleAlphaU *= factor; sampleAlphaV *= factor;
-#endif
+		/* Trick by Walter et al.: slightly scale the roughness values to
+		   reduce importance sampling weights. Not needed for the
+		   Heitz and D'Eon sampling technique. */
+		MicrofacetDistribution sampleDistr(distr);
+		if (!m_sampleVisible)
+			sampleDistr.scaleAlpha(1.2f - 0.2f * std::sqrt(
+				std::abs(Frame::cosTheta(bRec.wi))));
 
-		alphaU = m_distribution.transformRoughness(alphaU);
-		alphaV = m_distribution.transformRoughness(alphaV);
-		sampleAlphaU = m_distribution.transformRoughness(sampleAlphaU);
-		sampleAlphaV = m_distribution.transformRoughness(sampleAlphaV);
-
-		/* Sample M, the microsurface normal */
+		/* Sample M, the microfacet normal */
 		Float microfacetPDF;
-		const Normal m = m_distribution.sample(sample,
-				sampleAlphaU, sampleAlphaV, microfacetPDF);
-
+		const Normal m = sampleDistr.sample(math::signum(Frame::cosTheta(bRec.wi)) * bRec.wi, sample, microfacetPDF);
 		if (microfacetPDF == 0)
 			return Spectrum(0.0f);
-
 		pdf = microfacetPDF;
 
-		Float cosThetaT, numerator = 1.0f;
+		Float cosThetaT;
 		Float F = fresnelDielectricExt(dot(bRec.wi, m), cosThetaT, m_eta);
+		Spectrum weight(1.0f);
 
 		if (hasReflection && hasTransmission) {
 			if (bRec.sampler->next1D() > F) {
@@ -549,14 +558,12 @@ public:
 				pdf *= F;
 			}
 		} else {
-			numerator = hasReflection ? F : (1-F);
+			weight *= hasReflection ? F : (1-F);
 		}
 
-		Spectrum result;
 		Float dwh_dwo;
-
 		if (sampleReflection) {
-			/* Perfect specular reflection based on the microsurface normal */
+			/* Perfect specular reflection based on the microfacet normal */
 			bRec.wo = reflect(bRec.wi, m);
 			bRec.eta = 1.0f;
 			bRec.sampledComponent = 0;
@@ -566,7 +573,7 @@ public:
 			if (Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo) <= 0)
 				return Spectrum(0.0f);
 
-			result = m_specularReflectance->eval(bRec.its);
+			weight *= m_specularReflectance->eval(bRec.its);
 
 			/* Jacobian of the half-direction mapping */
 			dwh_dwo = 1.0f / (4.0f * dot(bRec.wo, m));
@@ -574,7 +581,7 @@ public:
 			if (cosThetaT == 0)
 				return Spectrum(0.0f);
 
-			/* Perfect specular transmission based on the microsurface normal */
+			/* Perfect specular transmission based on the microfacet normal */
 			bRec.wo = refract(bRec.wi, m, m_eta, cosThetaT);
 			bRec.eta = cosThetaT < 0 ? m_eta : m_invEta;
 			bRec.sampledComponent = 1;
@@ -589,22 +596,22 @@ public:
 			Float factor = (bRec.mode == ERadiance)
 				? (cosThetaT < 0 ? m_invEta : m_eta) : 1.0f;
 
-			result = m_specularTransmittance->eval(bRec.its) * (factor * factor);
+			weight *= m_specularTransmittance->eval(bRec.its) * (factor * factor);
 
 			/* Jacobian of the half-direction mapping */
 			Float sqrtDenom = dot(bRec.wi, m) + bRec.eta * dot(bRec.wo, m);
 			dwh_dwo = (bRec.eta*bRec.eta * dot(bRec.wo, m)) / (sqrtDenom*sqrtDenom);
 		}
 
-		numerator *= m_distribution.eval(m, alphaU, alphaV)
-			* m_distribution.G(bRec.wi, bRec.wo, m, alphaU, alphaV)
-			* dot(bRec.wi, m);
-
-		Float denominator = microfacetPDF * Frame::cosTheta(bRec.wi);
+		if (m_sampleVisible)
+			weight *= distr.smithG1(bRec.wo, m);
+		else
+			weight *= std::abs(distr.eval(m) * distr.G(bRec.wi, bRec.wo, m)
+				* dot(bRec.wi, m) / (microfacetPDF * Frame::cosTheta(bRec.wi)));
 
 		pdf *= std::abs(dwh_dwo);
 
-		return result * std::abs(numerator / denominator);
+		return weight;
 	}
 
 	void addChild(const std::string &name, ConfigurableObject *child) {
@@ -626,17 +633,6 @@ public:
 		}
 	}
 
-	void serialize(Stream *stream, InstanceManager *manager) const {
-		BSDF::serialize(stream, manager);
-
-		stream->writeUInt((uint32_t) m_distribution.getType());
-		manager->serialize(stream, m_alphaU.get());
-		manager->serialize(stream, m_alphaV.get());
-		manager->serialize(stream, m_specularReflectance.get());
-		manager->serialize(stream, m_specularTransmittance.get());
-		stream->writeFloat(m_eta);
-	}
-
 	Float getEta() const {
 		return m_eta;
 	}
@@ -650,7 +646,8 @@ public:
 		std::ostringstream oss;
 		oss << "RoughDielectric[" << endl
 			<< "  id = \"" << getID() << "\"," << endl
-			<< "  distribution = " << m_distribution.toString() << "," << endl
+			<< "  distribution = " << MicrofacetDistribution::distributionName(m_type) << "," << endl
+			<< "  sampleVisible = " << m_sampleVisible << "," << endl
 			<< "  eta = " << m_eta << "," << endl
 			<< "  alphaU = " << indent(m_alphaU->toString()) << "," << endl
 			<< "  alphaV = " << indent(m_alphaV->toString()) << "," << endl
@@ -664,11 +661,12 @@ public:
 
 	MTS_DECLARE_CLASS()
 private:
-	MicrofacetDistribution m_distribution;
+	MicrofacetDistribution::EType m_type;
 	ref<Texture> m_specularTransmittance;
 	ref<Texture> m_specularReflectance;
 	ref<Texture> m_alphaU, m_alphaV;
 	Float m_eta, m_invEta;
+	bool m_sampleVisible;
 };
 
 /* Fake glass shader -- it is really hopeless to visualize

@@ -32,18 +32,20 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{distribution}{\String}{
  *          Specifies the type of microfacet normal distribution
  *          used to model the surface roughness.
+ *          \vspace{-1mm}
  *       \begin{enumerate}[(i)]
  *           \item \code{beckmann}: Physically-based distribution derived from
- *               Gaussian random surfaces. This is the default.
- *           \item \code{ggx}: New distribution proposed by
- *              Walter et al. \cite{Walter07Microfacet}, which is meant to better handle
- *              the long tails observed in measurements of ground surfaces.
- *              Renderings with this distribution may converge slowly.
- *           \item \code{phong}: Classical $\cos^p\theta$ distribution.
- *              Due to the underlying microfacet theory,
- *              the use of this distribution here leads to more realistic
- *              behavior than the separately available \pluginref{phong} plugin.
- *              \vspace{-3mm}
+ *               Gaussian random surfaces. This is the default.\vspace{-1.5mm}
+ *           \item \code{ggx}: The GGX \cite{Walter07Microfacet} distribution (also known as
+ *               Trowbridge-Reitz \cite{Trowbridge19975Average} distribution)
+ *               was designed to better approximate the long tails observed in measurements
+ *               of ground surfaces, which are not modeled by the Beckmann distribution.
+ *           \vspace{-1.5mm}
+ *           \item \code{phong}: Classical Phong distribution.
+ *              In most cases, the \code{ggx} and \code{beckmann} distributions
+ *              should be preferred, since they provide better importance sampling
+ *              and accurate shadowing/masking computations.
+ *              \vspace{-4mm}
  *       \end{enumerate}
  *     }
  *     \parameter{alpha}{\Float\Or\Texture}{
@@ -52,10 +54,16 @@ MTS_NAMESPACE_BEGIN
  *         \emph{root mean square} (RMS) slope of the microfacets.
  *         \default{0.1}.
  *     }
+ *
  *     \parameter{intIOR}{\Float\Or\String}{Interior index of refraction specified
  *      numerically or using a known material name. \default{\texttt{polypropylene} / 1.49}}
  *     \parameter{extIOR}{\Float\Or\String}{Exterior index of refraction specified
  *      numerically or using a known material name. \default{\texttt{air} / 1.000277}}
+ *     \parameter{sampleVisible}{\Boolean}{
+ *	       Enables an improved importance sampling technique. Refer to
+ *	       pages \pageref{plg:roughconductor} and \pageref{sec:visiblenormal-sampling}
+ *	       for details. \default{\code{true}}
+ *     }
  *     \parameter{specular\showbreak Reflectance}{\Spectrum\Or\Texture}{Optional
  *         factor that can be used to modulate the specular reflection component. Note
  *         that for physical realism, this parameter should never be touched. \default{1.0}}
@@ -75,12 +83,12 @@ MTS_NAMESPACE_BEGIN
  * preferred over heuristic models like \pluginref{phong} and \pluginref{ward}
  * when possible.
  *
- * Microfacet theory describes rough surfaces as an arrangement of unresolved and
- * ideally specular facets, whose normal directions are given by a specially
- * chosen \emph{microfacet distribution}.
- * By accounting for shadowing and masking effects between these facets, it is
- * possible to reproduce the important off-specular reflections peaks observed
- * in real-world measurements of such materials.
+ * Microfacet theory describes rough surfaces as an arrangement of
+ * unresolved and ideally specular facets, whose normal directions are given by
+ * a specially chosen \emph{microfacet distribution}. By accounting for shadowing
+ * and masking effects between these facets, it is possible to reproduce the important
+ * off-specular reflections peaks observed in real-world measurements of such
+ * materials.
  *
  * \renderings{
  *     \rendering{Beckmann, $\alpha=0.1$}{bsdf_roughplastic_beckmann}
@@ -112,12 +120,10 @@ MTS_NAMESPACE_BEGIN
  * of this parameter given in the \pluginref{plastic} plugin section
  * on \pluginpage{plastic}.
  *
- *
- * To get an intuition about the effect of the surface roughness
- * parameter $\alpha$, consider the following approximate classification:
- * a value of $\alpha=0.001-0.01$ corresponds to a material
- * with slight imperfections on an
- * otherwise smooth surface finish, $\alpha=0.1$ is relatively rough,
+ * To get an intuition about the effect of the surface roughness parameter
+ * $\alpha$, consider the following approximate classification: a value of
+ * $\alpha=0.001-0.01$ corresponds to a material with slight imperfections
+ * on an otherwise smooth surface finish, $\alpha=0.1$ is relatively rough,
  * and $\alpha=0.3-0.7$ is \emph{extremely} rough (e.g. an etched or ground
  * finish). Values significantly above that are probably not too realistic.
  *
@@ -133,7 +139,6 @@ MTS_NAMESPACE_BEGIN
  *        \pluginref{roughplastic} and support for nonlinear color shifts.
  *     }
  * }
- * \newpage
  * \renderings{
  *     \rendering{Wood material with smooth horizontal stripes}{bsdf_roughplastic_roughtex1}
  *     \rendering{A material with imperfections at a much smaller scale than what
@@ -181,11 +186,11 @@ MTS_NAMESPACE_BEGIN
  * values of this function over a large range of parameter values. At runtime,
  * the relevant parts are extracted using tricubic interpolation.
  *
- * When rendering with the Phong microfacet distributions, a conversion
- * is used to turn the specified $\alpha$ roughness value into the Phong
- * exponent. This is done in a way, such that the different distributions
- * all produce a similar appearance for the same value of $\alpha$.
- *
+ * When rendering with the Phong microfacet distribution, a conversion is
+ * used to turn the specified Beckmann-equivalent $\alpha$ roughness value
+ * into the exponent parameter of this distribution. This is done in a way,
+ * such that the same value $\alpha$ will produce a similar appearance across
+ * different microfacet distributions.
  */
 class RoughPlastic : public BSDF {
 public:
@@ -207,27 +212,25 @@ public:
 
 		m_eta = intIOR / extIOR;
 
-		m_distribution = MicrofacetDistribution(
-			props.getString("distribution", "beckmann")
-		);
+		m_nonlinear = props.getBoolean("nonlinear", false);
 
-		if (m_distribution.isAnisotropic())
+		MicrofacetDistribution distr(props);
+		m_type = distr.getType();
+		m_sampleVisible = distr.getSampleVisible();
+
+		if (distr.isAnisotropic())
 			Log(EError, "The 'roughplastic' plugin currently does not support "
 				"anisotropic microfacet distributions!");
 
-		m_nonlinear = props.getBoolean("nonlinear", false);
-
-		m_alpha = new ConstantFloatTexture(
-			props.getFloat("alpha", 0.1f));
+		m_alpha = new ConstantFloatTexture(distr.getAlpha());
 
 		m_specularSamplingWeight = 0.0f;
 	}
 
 	RoughPlastic(Stream *stream, InstanceManager *manager)
 	 : BSDF(stream, manager) {
-		m_distribution = MicrofacetDistribution(
-			(MicrofacetDistribution::EType) stream->readUInt()
-		);
+		m_type = (MicrofacetDistribution::EType) stream->readUInt();
+		m_sampleVisible = stream->readBool();
 		m_specularReflectance = static_cast<Texture *>(manager->getInstance(stream));
 		m_diffuseReflectance = static_cast<Texture *>(manager->getInstance(stream));
 		m_alpha = static_cast<Texture *>(manager->getInstance(stream));
@@ -240,7 +243,8 @@ public:
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		BSDF::serialize(stream, manager);
 
-		stream->writeUInt((uint32_t) m_distribution.getType());
+		stream->writeUInt((uint32_t) m_type);
+		stream->writeBool(m_sampleVisible);
 		manager->serialize(stream, m_specularReflectance.get());
 		manager->serialize(stream, m_diffuseReflectance.get());
 		manager->serialize(stream, m_alpha.get());
@@ -277,8 +281,7 @@ public:
 		if (!m_externalRoughTransmittance.get()) {
 			/* Load precomputed data used to compute the rough
 			   transmittance through the dielectric interface */
-			m_externalRoughTransmittance = new RoughTransmittance(
-				m_distribution.getType());
+			m_externalRoughTransmittance = new RoughTransmittance(m_type);
 
 			m_externalRoughTransmittance->checkEta(m_eta);
 			m_externalRoughTransmittance->checkAlpha(m_alpha->getMinimum().average());
@@ -332,23 +335,27 @@ public:
 			(!hasSpecular && !hasDiffuse))
 			return Spectrum(0.0f);
 
-		/* Evaluate the roughness texture */
-		Float alpha = m_alpha->eval(bRec.its).average();
-		Float alphaT = m_distribution.transformRoughness(alpha);
+		/* Construct the microfacet distribution matching the
+		   roughness values at the current surface position. */
+		MicrofacetDistribution distr(
+			m_type,
+			m_alpha->eval(bRec.its).average(),
+			m_sampleVisible
+		);
 
 		Spectrum result(0.0f);
 		if (hasSpecular) {
 			/* Calculate the reflection half-vector */
 			const Vector H = normalize(bRec.wo+bRec.wi);
 
-			/* Evaluate the microsurface normal distribution */
-			const Float D = m_distribution.eval(H, alphaT);
+			/* Evaluate the microfacet normal distribution */
+			const Float D = distr.eval(H);
 
 			/* Fresnel term */
 			const Float F = fresnelDielectricExt(dot(bRec.wi, H), m_eta);
 
 			/* Smith's shadow-masking function */
-			const Float G = m_distribution.G(bRec.wi, bRec.wo, H, alphaT);
+			const Float G = distr.G(bRec.wi, bRec.wo, H);
 
 			/* Calculate the specular reflection component */
 			Float value = F * D * G /
@@ -359,9 +366,9 @@ public:
 
 		if (hasDiffuse) {
 			Spectrum diff = m_diffuseReflectance->eval(bRec.its);
-			Float T12 = m_externalRoughTransmittance->eval(Frame::cosTheta(bRec.wi), alpha);
-			Float T21 = m_externalRoughTransmittance->eval(Frame::cosTheta(bRec.wo), alpha);
-			Float Fdr = 1-m_internalRoughTransmittance->evalDiffuse(alpha);
+			Float T12 = m_externalRoughTransmittance->eval(Frame::cosTheta(bRec.wi), distr.getAlpha());
+			Float T21 = m_externalRoughTransmittance->eval(Frame::cosTheta(bRec.wo), distr.getAlpha());
+			Float Fdr = 1-m_internalRoughTransmittance->evalDiffuse(distr.getAlpha());
 
 			if (m_nonlinear)
 				diff /= Spectrum(1.0f) - diff * Fdr;
@@ -386,9 +393,13 @@ public:
 			(!hasSpecular && !hasDiffuse))
 			return 0.0f;
 
-		/* Evaluate the roughness texture */
-		Float alpha = m_alpha->eval(bRec.its).average();
-		Float alphaT = m_distribution.transformRoughness(alpha);
+		/* Construct the microfacet distribution matching the
+		   roughness values at the current surface position. */
+		MicrofacetDistribution distr(
+			m_type,
+			m_alpha->eval(bRec.its).average(),
+			m_sampleVisible
+		);
 
 		/* Calculate the reflection half-vector */
 		const Vector H = normalize(bRec.wo+bRec.wi);
@@ -396,7 +407,7 @@ public:
 		Float probDiffuse, probSpecular;
 		if (hasSpecular && hasDiffuse) {
 			/* Find the probability of sampling the specular component */
-			probSpecular = 1-m_externalRoughTransmittance->eval(Frame::cosTheta(bRec.wi), alpha);
+			probSpecular = 1-m_externalRoughTransmittance->eval(Frame::cosTheta(bRec.wi), distr.getAlpha());
 
 			/* Reallocate samples */
 			probSpecular = (probSpecular*m_specularSamplingWeight) /
@@ -413,8 +424,8 @@ public:
 			/* Jacobian of the half-direction mapping */
 			const Float dwh_dwo = 1.0f / (4.0f * dot(bRec.wo, H));
 
-			/* Evaluate the microsurface normal distribution */
-			const Float prob = m_distribution.pdf(H, alphaT);
+			/* Evaluate the microfacet model sampling density function */
+			const Float prob = distr.pdf(bRec.wi, H);
 
 			result = prob * dwh_dwo * probSpecular;
 		}
@@ -437,14 +448,18 @@ public:
 		bool choseSpecular = hasSpecular;
 		Point2 sample(_sample);
 
-		/* Evaluate the roughness texture */
-		Float alpha = m_alpha->eval(bRec.its).average();
-		Float alphaT = m_distribution.transformRoughness(alpha);
+		/* Construct the microfacet distribution matching the
+		   roughness values at the current surface position. */
+		MicrofacetDistribution distr(
+			m_type,
+			m_alpha->eval(bRec.its).average(),
+			m_sampleVisible
+		);
 
 		Float probSpecular;
 		if (hasSpecular && hasDiffuse) {
 			/* Find the probability of sampling the specular component */
-			probSpecular = 1 - m_externalRoughTransmittance->eval(Frame::cosTheta(bRec.wi), alpha);
+			probSpecular = 1 - m_externalRoughTransmittance->eval(Frame::cosTheta(bRec.wi), distr.getAlpha());
 
 			/* Reallocate samples */
 			probSpecular = (probSpecular*m_specularSamplingWeight) /
@@ -460,8 +475,8 @@ public:
 		}
 
 		if (choseSpecular) {
-			/* Perfect specular reflection based on the microsurface normal */
-			Normal m = m_distribution.sample(sample, alphaT);
+			/* Perfect specular reflection based on the microfacet normal */
+			Normal m = distr.sample(bRec.wi, sample);
 			bRec.wo = reflect(bRec.wi, m);
 			bRec.sampledComponent = 0;
 			bRec.sampledType = EGlossyReflection;
@@ -518,7 +533,8 @@ public:
 		std::ostringstream oss;
 		oss << "RoughPlastic[" << endl
 			<< "  id = \"" << getID() << "\"," << endl
-			<< "  distribution = " << m_distribution.toString() << "," << endl
+			<< "  distribution = " << MicrofacetDistribution::distributionName(m_type) << "," << endl
+			<< "  sampleVisible = " << m_sampleVisible << "," << endl
 			<< "  alpha = " << indent(m_alpha->toString()) << "," << endl
 			<< "  specularReflectance = " << indent(m_specularReflectance->toString()) << "," << endl
 			<< "  diffuseReflectance = " << indent(m_diffuseReflectance->toString()) << "," << endl
@@ -534,7 +550,7 @@ public:
 
 	MTS_DECLARE_CLASS()
 private:
-	MicrofacetDistribution m_distribution;
+	MicrofacetDistribution::EType m_type;
 	ref<RoughTransmittance> m_externalRoughTransmittance;
 	ref<RoughTransmittance> m_internalRoughTransmittance;
 	ref<Texture> m_diffuseReflectance;
@@ -543,6 +559,7 @@ private:
 	Float m_eta, m_invEta2;
 	Float m_specularSamplingWeight;
 	bool m_nonlinear;
+	bool m_sampleVisible;
 };
 
 /**
