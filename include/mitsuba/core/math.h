@@ -103,10 +103,22 @@ template <typename Scalar> inline int floorToInt(Scalar value) { return (int) st
 template <typename Scalar> inline int ceilToInt(Scalar value) { return (int) std::ceil(value); }
 
 /// Integer round function (single precision)
-inline int roundToInt(float value)  { return (int) ::roundf(value); }
+inline int roundToInt(float value)  {
+	#if defined(__MSVC__)
+		return (int) (value < 0.0f ? std::ceil(value - 0.5f) : std::floor(value + 0.5f));
+	#else
+		return (int) ::roundf(value);
+	#endif
+}
 
 /// Integer round function (double precision)
-inline int roundToInt(double value) { return (int) ::round(value); }
+inline int roundToInt(double value) {
+	#if defined(__MSVC__)
+		return (int) (value < 0.0f ? std::ceil(value - 0.5f) : std::floor(value + 0.5f));
+	#else
+		return (int) ::round(value);
+	#endif
+}
 
 /// Base-2 logarithm (32-bit integer version)
 extern MTS_EXPORT_CORE int log2i(uint32_t value);
