@@ -864,6 +864,7 @@ void TriMesh::serialize(Stream *stream, InstanceManager *manager) const {
 
 ref<TriMesh> TriMesh::fromBlender(const std::string &name,
 		size_t faceCount, void *_facePtr, size_t vertexCount, void *_vertexPtr, void *_uvPtr, void *_colPtr, short mat_nr) {
+	const int ME_SMOOTH = 1;
 	struct MFace {
 		uint32_t v[4];
 		int16_t mat_nr;
@@ -880,30 +881,44 @@ ref<TriMesh> TriMesh::fromBlender(const std::string &name,
 		uint8_t a, r, g, b;
 	};
 
-	struct MLoopUV {
-		float uv[2];
-		int32_t flag;
+	struct MTFace {
+		float uv[4][2];
+		void *tpage;
+		uint8_t flag, transp;
+		uint16_t mode, tile, unwrap;
 	};
 
 	MFace *facePtr   = (MFace *) _facePtr;
 	MVert *vertexPtr = (MVert *) _vertexPtr;
 	MCol *colPtr     = (MCol *)  _colPtr;
-	MLoopUV *uvPtr   = (MLoopUV *) _uvPtr;
+	MTFace *uvPtr   = (MTFace *) _uvPtr;
 
-	boost::unordered_map<uint32_t, uint32_t> vertexMap;
+	boost::unordered_map<uint64_t, uint32_t> vertexMap;
+	boost::unordered_map<uint64_t, uint8_t> vertexFaceMap;
 	uint32_t triangleCtr = 0, vertexCtr = 0;
 
-	for (uint32_t i=0; i<faceCount; ++i) {
-		const MFace &face = facePtr[i];
+	for (uint32_t faceID=0; faceID<faceCount; ++faceID) {
+		const MFace &face = facePtr[faceID];
 
 		if (face.mat_nr == mat_nr) {
+			uint64_t base = ((face.flag & ME_SMOOTH) && (uvPtr == NULL) && (colPtr == NULL)) ? 0ULL : ((uint64_t) (faceID + 1) << 32ULL);
 			bool triangle = face.v[3] == 0;
-			for (int j=0; j<(triangle ? 3 : 4); ++j) {
-				if (vertexMap.find(face.v[j]) == vertexMap.end())
-					vertexMap[face.v[j]] = vertexCtr++;
+			int nVertices = triangle ? 3 : 4;
+
+			for (int j=0; j<nVertices; ++j) {
+				uint64_t key = face.v[j] + base;
+				if (vertexMap.find(key) == vertexMap.end()) {
+					vertexMap[key] = vertexCtr++;
+					vertexFaceMap[key] = (uint8_t) j;
+				}
 			}
 			triangleCtr += triangle ? 1 : 2;
 		}
+	}
+
+	if (triangleCtr == 0) {
+		/* There were no faces with this material -- return NULL */
+		return NULL;
 	}
 
 	ref<TriMesh> triMesh = new TriMesh(name, triangleCtr, vertexCtr, true,
@@ -915,49 +930,79 @@ ref<TriMesh> TriMesh::fromBlender(const std::string &name,
 	Color3   *vertexColors    = (Color3 *)   triMesh->getVertexColors();
 	Point2   *vertexTexcoords = (Point2 *)   triMesh->getVertexTexcoords();
 
-	for (uint32_t i=0; i<faceCount; ++i) {
-		const MFace &face = facePtr[i];
+	for (uint32_t faceID=0; faceID<faceCount; ++faceID) {
+		const MFace &face = facePtr[faceID];
 
 		if (face.mat_nr == mat_nr) {
-			*triangles++ = vertexMap[face.v[0]];
-			*triangles++ = vertexMap[face.v[1]];
-			*triangles++ = vertexMap[face.v[2]];
+			uint64_t base = ((face.flag & ME_SMOOTH) && (uvPtr == NULL) && (colPtr == NULL)) ? 0ULL : ((uint64_t) (faceID + 1) << 32ULL);
+			bool triangle = face.v[3] == 0;
 
-			if (face.v[3] != 0) {
-				*triangles++ = vertexMap[face.v[0]];
-				*triangles++ = vertexMap[face.v[2]];
-				*triangles++ = vertexMap[face.v[3]];
+			*triangles++ = vertexMap[base + face.v[0]];
+			*triangles++ = vertexMap[base + face.v[1]];
+			*triangles++ = vertexMap[base + face.v[2]];
+
+			if (!triangle) {
+				*triangles++ = vertexMap[base + face.v[0]];
+				*triangles++ = vertexMap[base + face.v[2]];
+				*triangles++ = vertexMap[base + face.v[3]];
+			}
+
+			if ((face.flag & ME_SMOOTH) == 0) {
+				Point p0(vertexPtr[face.v[0]].co[0], vertexPtr[face.v[0]].co[1], vertexPtr[face.v[0]].co[2]);
+				Point p1(vertexPtr[face.v[1]].co[0], vertexPtr[face.v[1]].co[1], vertexPtr[face.v[1]].co[2]);
+				Point p2(vertexPtr[face.v[2]].co[0], vertexPtr[face.v[2]].co[1], vertexPtr[face.v[2]].co[2]);
+				Vector side1(p1-p0), side2(p2-p0);
+				Normal faceNormal(cross(side1, side2));
+				Float length = faceNormal.length();
+				if (!faceNormal.isZero())
+					faceNormal /= length;
+
+				int nVertices = triangle ? 3 : 4;
+				for (int i=0; i<nVertices; ++i)
+					vertexNormals[vertexMap[base + face.v[i]]] = faceNormal;
 			}
 		}
 	}
 
 	const float normalScale = 1.0f / 32767.0f;
 	const float rgbScale = 1.0f / 255.0f;
+	const uint64_t vertexMask = 0x00000000FFFFFFFFULL;
+	const uint64_t faceMask = 0xFFFFFFFF00000000ULL;
 
-	for (boost::unordered_map<uint32_t, uint32_t>::iterator it = vertexMap.begin();
+	for (boost::unordered_map<uint64_t, uint32_t>::iterator it = vertexMap.begin();
 			it != vertexMap.end(); ++it) {
-		const MVert &vertex = vertexPtr[it->first];
+		const MVert &vertex = vertexPtr[it->first & vertexMask];
+		bool isSmooth = (it->first & faceMask) == 0;
 		uint32_t idx = it->second;
 
-		vertexPositions[idx] = Point3(vertex.co[0], vertex.co[1], vertex.co[2]);
-		vertexNormals[idx] = normalize(Normal(
-			vertex.no[0] * normalScale,
-			vertex.no[1] * normalScale,
-			vertex.no[2] * normalScale
-		));
+		vertexPositions[idx] = Point(vertex.co[0], vertex.co[1], vertex.co[2]);
 
-		if (uvPtr) {
-			const MLoopUV &uv = uvPtr[it->first];
-			vertexTexcoords[idx] = Point2(uv.uv[0], uv.uv[1]);
+		if ((it->first & faceMask) != 0) {
+			uint32_t faceID = (uint32_t)((it->first >> 32ULL) & 0xFFFFFFFFULL) - 1;
+			const MFace &face = facePtr[faceID];
+			isSmooth = (face.flag & ME_SMOOTH) != 0;
+
+			if (uvPtr) {
+				const MTFace &uv = uvPtr[faceID];
+				vertexTexcoords[idx] = Point2(uv.uv[vertexFaceMap[it->first]][0], 1 - uv.uv[vertexFaceMap[it->first]][1]);
+			}
+
+			if (colPtr) {
+				const MCol &col = colPtr[(uint32_t) ( faceID * 4 ) + (uint32_t) vertexFaceMap[it->first]];
+				vertexColors[idx] = Color3(
+					col.b * rgbScale,
+					col.g * rgbScale,
+					col.r * rgbScale
+				);
+			}
 		}
 
-		if (colPtr) {
-			const MCol &col = colPtr[it->first];
-			vertexColors[idx] = Color3(
-				col.r * rgbScale,
-				col.g * rgbScale,
-				col.b * rgbScale
-			);
+		if (isSmooth) {
+			vertexNormals[idx] = normalize(Normal(
+				vertex.no[0] * normalScale,
+				vertex.no[1] * normalScale,
+				vertex.no[2] * normalScale
+			));
 		}
 	}
 
