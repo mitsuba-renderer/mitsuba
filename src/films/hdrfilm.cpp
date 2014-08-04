@@ -233,7 +233,8 @@ public:
 		if (pixelFormats.empty())
 			Log(EError, "At least one pixel format must be specified!");
 
-		if (pixelFormats.size() != 1 && channelNames.size() != pixelFormats.size())
+		if ((pixelFormats.size() != 1 && channelNames.size() != pixelFormats.size()) ||
+			(pixelFormats.size() == 1 && channelNames.size() > 1))
 			Log(EError, "Number of channel names must match the number of specified pixel formats!");
 
 		if (pixelFormats.size() != 1 && m_fileFormat != Bitmap::EOpenEXR)
@@ -486,6 +487,7 @@ public:
 		ref<Bitmap> bitmap;
 		if (m_pixelFormats.size() == 1) {
 			bitmap = m_storage->getBitmap()->convert(m_pixelFormats[0], m_componentFormat);
+			bitmap->setChannelNames(m_channelNames);
 		} else {
 			bitmap = m_storage->getBitmap()->convertMultiSpectrumAlphaWeight(m_pixelFormats,
 					m_componentFormat, m_channelNames);
