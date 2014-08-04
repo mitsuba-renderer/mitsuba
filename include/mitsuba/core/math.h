@@ -114,7 +114,7 @@ inline int roundToInt(float value)  {
 /// Integer round function (double precision)
 inline int roundToInt(double value) {
 	#if defined(__MSVC__)
-		return (int) (value < 0.0f ? std::ceil(value - 0.5f) : std::floor(value + 0.5f));
+		return (int) (value < 0.0 ? std::ceil(value - 0.5) : std::floor(value + 0.5));
 	#else
 		return (int) ::round(value);
 	#endif

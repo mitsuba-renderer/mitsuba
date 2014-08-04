@@ -67,6 +67,8 @@ public:
 	inline MicrofacetDistribution(EType type, Float alpha, bool sampleVisible = true)
 		: m_type(type), m_alphaU(alpha), m_alphaV(alpha), m_sampleVisible(sampleVisible),
 	      m_exponentU(0.0f), m_exponentV(0.0f) {
+		m_alphaU = std::max(m_alphaU, (Float) 1e-4f);
+		m_alphaV = std::max(m_alphaV, (Float) 1e-4f);
 		if (m_type == EPhong)
 			computePhongExponent();
 	}
@@ -84,6 +86,8 @@ public:
 	inline MicrofacetDistribution(EType type, Float alphaU, Float alphaV, bool sampleVisible = true)
 		: m_type(type), m_alphaU(alphaU), m_alphaV(alphaV), m_sampleVisible(sampleVisible),
 	      m_exponentU(0.0f), m_exponentV(0.0f) {
+		m_alphaU = std::max(m_alphaU, (Float) 1e-4f);
+		m_alphaV = std::max(m_alphaV, (Float) 1e-4f);
 		if (m_type == EPhong)
 			computePhongExponent();
 	}
@@ -122,6 +126,14 @@ public:
 			m_alphaU = props.getFloat("alphaU");
 			m_alphaV = props.getFloat("alphaV");
 		}
+
+		if (m_alphaU == 0 || m_alphaV == 0) {
+			SLog(EWarn, "Cannot create a microfacet distribution with alphaU/alphaV=0 (clamped to 0.0001)."
+					"Please use the corresponding smooth reflectance model to get zero roughness.");
+		}
+
+		m_alphaU = std::max(m_alphaU, (Float) 1e-4f);
+		m_alphaV = std::max(m_alphaV, (Float) 1e-4f);
 
 		m_sampleVisible = props.getBoolean("sampleVisible", sampleVisible);
 
