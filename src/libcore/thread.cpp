@@ -92,6 +92,9 @@ struct Thread::ThreadPrivate {
 	static ThreadLocal<Thread> *self;
 	bool critical;
 	boost::thread thread;
+	#if defined(__LINUX__) || defined(__OSX__)
+		pthread_t native_handle;
+	#endif
 
 	ThreadPrivate(const std::string & name_) :
 		name(name_), running(false), joined(false),
@@ -249,7 +252,7 @@ bool Thread::setPriority(EThreadPriority priority) {
 		default: factor = 0.0f; break;
 	}
 
-	const pthread_t threadID = d->thread.native_handle();
+	const pthread_t threadID = d->native_handle;
 	struct sched_param param;
 	int policy;
 	int retval = pthread_getschedparam(threadID, &policy, &param);
@@ -320,14 +323,8 @@ void Thread::setCoreAffinity(int coreID) {
 #if defined(__OSX__)
 	/* CPU affinity not supported on OSX */
 #elif defined(__LINUX__)
-	/* Don't try to set CPU affinity if running inside Valgrind */
-	if (getenv("VALGRIND_OPTS") != NULL)
-		return;
-
-	const pthread_t threadID = d->thread.native_handle();
-
 	int nCores = sysconf(_SC_NPROCESSORS_CONF),
-		nLogicalCores = nCores;
+	    nLogicalCores = nCores;
 
 	size_t size = 0;
 	cpu_set_t *cpuset = NULL;
@@ -337,20 +334,29 @@ void Thread::setCoreAffinity(int coreID) {
 	   be warranted by the physical core count. Keep querying
 	   with increasingly larger buffers if the
 	   pthread_getaffinity_np operation fails */
-	for (int i = 0; i<6; ++i) { 
+	for (int i = 0; i<6; ++i) {
 		size = CPU_ALLOC_SIZE(nLogicalCores);
 		cpuset = CPU_ALLOC(nLogicalCores);
 		if (!cpuset) {
 			Log(EWarn, "Thread::setCoreAffinity(): could not allocate cpu_set_t");
 			return;
 		}
+
 		CPU_ZERO_S(size, cpuset);
 
-		int retval = pthread_getaffinity_np(threadID, size, cpuset);
+		int retval = pthread_getaffinity_np(d->native_handle, size, cpuset);
 		if (retval == 0)
 			break;
+
+		/* Something went wrong -- release memory */
 		CPU_FREE(cpuset);
-		nLogicalCores *= 2;
+
+		if (retval == EINVAL) {
+			/* Retry with a larger cpuset */
+			nLogicalCores *= 2;
+		} else {
+			break;
+		}
 	}
 
 	if (retval) {
@@ -364,7 +370,7 @@ void Thread::setCoreAffinity(int coreID) {
 		if (!CPU_ISSET_S(i, size, cpuset))
 			continue;
 		if (available++ == coreID) {
-			actualCoreID = i; 
+			actualCoreID = i;
 			break;
 		}
 	}
@@ -379,7 +385,7 @@ void Thread::setCoreAffinity(int coreID) {
 	CPU_ZERO_S(size, cpuset);
 	CPU_SET_S(actualCoreID, size, cpuset);
 
-	retval = pthread_setaffinity_np(threadID, size, cpuset);
+	retval = pthread_setaffinity_np(d->native_handle, size, cpuset);
 	if (retval) {
 		Log(EWarn, "Thread::setCoreAffinity(): pthread_setaffinity_np: failed: %s", strerror(retval));
 		CPU_FREE(cpuset);
@@ -421,6 +427,7 @@ void Thread::dispatch(Thread *thread) {
 	int id = atomicAdd(&__thread_id_ctr, 1);
 	#if defined(__LINUX__) || defined(__OSX__)
 		pthread_setspecific(__thread_id, reinterpret_cast<void *>(id));
+		thread->d->native_handle = pthread_self();
 	#elif defined(__WINDOWS__)
 		__thread_id = id;
 	#endif
