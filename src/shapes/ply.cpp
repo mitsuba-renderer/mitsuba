@@ -118,6 +118,9 @@ public:
 		if (m_triangleCount == 0 || m_vertexCount == 0)
 			Log(EError, "Unable to load \"%s\" (no triangles or vertices found)!");
 
+		Assert(m_faceCtr   == m_faceCount);
+		Assert(m_vertexCtr == m_vertexCount);
+
 		if (props.hasProperty("maxSmoothAngle")) {
 			if (m_faceNormals)
 				Log(EError, "The properties 'maxSmoothAngle' and 'faceNormals' "
@@ -132,10 +135,8 @@ public:
 			delete[] m_triangles;
 			m_triangles = temp;
 		}
-
-		Assert(m_faceCtr   == m_faceCount);
-		Assert(m_vertexCtr == m_vertexCount);
 	}
+
 
 	PLYLoader(Stream *stream, InstanceManager *manager) : TriMesh(stream, manager) { }
 
