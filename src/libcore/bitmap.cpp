@@ -3247,13 +3247,16 @@ void Bitmap::writeOpenEXR(Stream *stream) const {
 		return;
 	}
 
+	if (!m_channelNames.empty() && m_channelNames.size() != (size_t) getChannelCount())
+		Log(EWarn, "writeOpenEXR(): 'channelNames' has the wrong number of entries (%i, expected %i), ignoring..!",
+			(int) m_channelNames.size(), (int) m_channelCount);
+
+	bool explicitChannelNames = false;
 	Imf::ChannelList &channels = header.channels();
-	if (!m_channelNames.empty()) {
-		if (m_channelNames.size() != (size_t) m_channelCount)
-			Log(EError, "writeOpenEXR(): 'channelNames' has the wrong number of entries (%i, expected %i)!",
-				(int) m_channelNames.size(), (int) m_channelCount);
+	if (m_channelNames.size() == (size_t) getChannelCount()) {
 		for (size_t i=0; i<m_channelNames.size(); ++i)
 			channels.insert(m_channelNames[i].c_str(), Imf::Channel(compType));
+		explicitChannelNames = true;
 	} else if (pixelFormat == ELuminance || pixelFormat == ELuminanceAlpha) {
 		channels.insert("Y", Imf::Channel(compType));
 	} else if (pixelFormat == ERGB || pixelFormat == ERGBA ||
@@ -3275,8 +3278,8 @@ void Bitmap::writeOpenEXR(Stream *stream) const {
 		return;
 	}
 
-	if (pixelFormat == ELuminanceAlpha || pixelFormat == ERGBA ||
-	    pixelFormat == EXYZA || pixelFormat == ESpectrumAlpha)
+	if ((pixelFormat == ELuminanceAlpha || pixelFormat == ERGBA ||
+	    pixelFormat == EXYZA || pixelFormat == ESpectrumAlpha) && !explicitChannelNames)
 		channels.insert("A", Imf::Channel(compType));
 
 	size_t pixelStride = m_channelCount * compStride,
@@ -3285,7 +3288,7 @@ void Bitmap::writeOpenEXR(Stream *stream) const {
 
 	Imf::FrameBuffer frameBuffer;
 
-	if (!m_channelNames.empty()) {
+	if (explicitChannelNames) {
 		for (size_t i=0; i<m_channelNames.size(); ++i) {
 			frameBuffer.insert(m_channelNames[i].c_str(), Imf::Slice(compType, ptr, pixelStride, rowStride));
 			ptr += compStride;
@@ -3309,8 +3312,8 @@ void Bitmap::writeOpenEXR(Stream *stream) const {
 		}
 	}
 
-	if (pixelFormat == ELuminanceAlpha || pixelFormat == ERGBA ||
-		pixelFormat == EXYZA || pixelFormat == ESpectrumAlpha)
+	if ((pixelFormat == ELuminanceAlpha || pixelFormat == ERGBA ||
+		 pixelFormat == EXYZA || pixelFormat == ESpectrumAlpha) && !explicitChannelNames)
 		frameBuffer.insert("A", Imf::Slice(compType, ptr, pixelStride, rowStride));
 
 	EXROStream ostr(stream);
