@@ -21,6 +21,12 @@ static const Intersection &bsdfsamplingrecord_get_its(const BSDFSamplingRecord &
 	return bRec.its;
 }
 
+static bp::tuple texture_evalGradient(const Texture *texture, const Intersection &its) {
+	Spectrum grad[2];
+	texture->evalGradient(its, grad);
+	return bp::make_tuple(grad[0], grad[1]);
+}
+
 static unsigned int bsdf_getType_1(const BSDF *bsdf) {
 	return bsdf->getType();
 }
@@ -300,6 +306,8 @@ bp::tuple Sensor_getSamplePosition(Sensor *sensor, const PositionSamplingRecord 
 	bool result = sensor->getSamplePosition(pRec, dRec, samplePos);
 	return bp::make_tuple(result, samplePos);
 }
+
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(getBitmap_overloads, getBitmap, 0, 1)
 
 void export_render() {
 	bp::object renderModule(
@@ -756,12 +764,16 @@ void export_render() {
 
 	BP_CLASS(Texture, ConfigurableObject, bp::no_init)
 		.def("eval", &Texture::eval, BP_RETURN_VALUE)
+		.def("evalGradient", &texture_evalGradient)
 		.def("getAverage", &Texture::getAverage, BP_RETURN_VALUE)
 		.def("getMinimum", &Texture::getMinimum, BP_RETURN_VALUE)
 		.def("getMaximum", &Texture::getMaximum, BP_RETURN_VALUE)
 		.def("getResolution", &Texture::getResolution, BP_RETURN_VALUE)
 		.def("isConstant", &Texture::isConstant)
-		.def("usesRayDifferentials", &Texture::usesRayDifferentials);
+		.def("isMonochromatic", &Texture::isMonochromatic)
+		.def("expand", &Texture::expand, BP_RETURN_VALUE)
+		.def("usesRayDifferentials", &Texture::usesRayDifferentials)
+		.def("getBitmap", &Texture::getBitmap, getBitmap_overloads()[BP_RETURN_VALUE]);
 
 	bp::class_<Noise>("Noise")
 		.def("perlinNoise", &Noise::perlinNoise)

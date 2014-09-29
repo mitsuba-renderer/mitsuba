@@ -48,6 +48,7 @@ public:
 	 * two \ref Spectrum data structures corresponding to the U and V derivative.
 	 *
 	 * \remark This function is usually implemented pointwise without any kind of filtering.
+	 * The Python signature is <tt>dx, dy = tex.evalGradient(its)</tt>.
 	 */
 	virtual void evalGradient(const Intersection &its, Spectrum *gradient) const;
 
