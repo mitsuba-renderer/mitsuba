@@ -1465,6 +1465,9 @@ void export_core() {
 		.def("clear", &InterpolatedSpectrum::clear)
 		.def("zeroExtend", &InterpolatedSpectrum::zeroExtend);
 
+	bp::class_<BlackBodySpectrum, bp::bases<ContinuousSpectrum>, boost::noncopyable>
+			("BlackBodySpectrum", bp::init<Float>());
+
 	void (Bitmap::*accumulate_1)(const Bitmap *bitmap, Point2i sourceOffset, Point2i targetOffset, Vector2i size) = &Bitmap::accumulate;
 	void (Bitmap::*accumulate_2)(const Bitmap *bitmap, Point2i targetOffset) = &Bitmap::accumulate;
 	void (Bitmap::*accumulate_3)(const Bitmap *bitmap) = &Bitmap::accumulate;
