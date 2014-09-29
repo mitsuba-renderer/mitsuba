@@ -304,8 +304,11 @@ public:
 	static ref<TriMesh> fromBlender(const std::string &name, size_t faceCount, void *facePtr,
 		size_t vertexCount, void *vertexPtr, void *uvPtr, void *colPtr, short matNr);
 
-	/// Export an Wavefront OBJ version of this file
+	/// Export a Wavefront OBJ version of this file
 	void writeOBJ(const fs::path &path) const;
+
+	/// Export a Stanford PLY version of this file
+	void writePLY(const fs::path &path) const;
 
 	/// Return a string representation
 	std::string toString() const;

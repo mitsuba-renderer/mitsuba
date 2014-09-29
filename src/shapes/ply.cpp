@@ -273,7 +273,8 @@ public:
 
 	void face_vertex_indices_begin_uint8(ply::uint8 size) {
 		if (size != 3 && size != 4)
-			Log(EError, "Only triangle and quad-based PLY meshes are supported for now.");
+			Log(EError, "Encountered a face with %i vertices! "
+				"Only triangle and quad-based PLY meshes are supported for now.", size);
 		m_indexCtr = 0;
 	}
 

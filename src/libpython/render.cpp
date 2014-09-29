@@ -565,6 +565,7 @@ void export_render() {
 		.def("serialize", triMesh_serialize1)
 		.def("serialize", triMesh_serialize2)
 		.def("writeOBJ", &TriMesh::writeOBJ)
+		.def("writePLY", &TriMesh::writePLY)
 		.def("fromBlender", trimesh_fromBlender)
 		.staticmethod("fromBlender");
 
