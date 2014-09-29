@@ -534,6 +534,24 @@ public:
 	 */
 	inline Float getSamplingWeight() const { return m_samplingWeight; }
 
+	/**
+	 * \brief Return a bitmap representation of the emitter
+	 *
+	 * Some types of light sources (projection lights, environment maps)
+	 * are closely tied to an underlying bitmap data structure. This function
+	 * can be used to return this information for various purposes.
+	 *
+	 * When the class implementing this interface is a bitmap-backed texture,
+	 * this function directly returns the underlying bitmap. When it is procedural,
+	 * a bitmap version must first be generated. In this case, the parameter
+	 * \ref sizeHint is used to control the target size. The default
+	 * value <tt>-1, -1</tt> allows the implementation to choose a suitable
+	 * size by itself.
+	 *
+	 * \remark The default implementation throws an exception
+	 */
+	virtual ref<Bitmap> getBitmap(const Vector2i &sizeHint = Vector2i(-1, -1)) const;
+
 	/// Serialize this emitter to a binary data stream
 	virtual void serialize(Stream *stream, InstanceManager *manager) const;
 

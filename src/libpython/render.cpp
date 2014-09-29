@@ -607,7 +607,10 @@ void export_render() {
 		.def("eval", &Emitter::eval, BP_RETURN_VALUE)
 		.def("getSamplingWeight", &Emitter::getSamplingWeight)
 		.def("isEnvironmentEmitter", &Emitter::isEnvironmentEmitter)
-		.def("evalEnvironment", &Emitter::evalEnvironment, BP_RETURN_VALUE);
+		.def("evalEnvironment", &Emitter::evalEnvironment, BP_RETURN_VALUE)
+		.def("isCompound", &Emitter::isCompound)
+		.def("getElement", &Emitter::getElement, BP_RETURN_VALUE)
+		.def("getBitmap", &Emitter::getBitmap, getBitmap_overloads()[BP_RETURN_VALUE]);
 
 	BP_SETSCOPE(Emitter_class);
 	bp::enum_<Emitter::EEmitterFlags>("EEmitterFlags")

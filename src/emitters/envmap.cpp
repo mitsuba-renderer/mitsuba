@@ -632,6 +632,10 @@ public:
 			* m_normalization / std::max(std::abs(sinTheta), Epsilon);
 	}
 
+	ref<Bitmap> getBitmap(const Vector2i &/* unused */) const {
+		return m_mipmap->toBitmap();
+	}
+
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "EnvironmentMap[" << endl

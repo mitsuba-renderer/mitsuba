@@ -144,6 +144,10 @@ bool Emitter::isCompound() const {
 	return false;
 }
 
+ref<Bitmap> Emitter::getBitmap(const Vector2i &sizeHint) const {
+	NotImplementedError("getBitmap");
+}
+
 MTS_IMPLEMENT_CLASS(Emitter, false, AbstractEmitter)
 MTS_IMPLEMENT_CLASS(AbstractEmitter, true, ConfigurableObject)
 MTS_NAMESPACE_END
