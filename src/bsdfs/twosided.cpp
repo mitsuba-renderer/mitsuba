@@ -195,6 +195,13 @@ public:
 		}
 	}
 
+	Spectrum getDiffuseReflectance(const Intersection &its) const {
+		if (its.wi.z > 0)
+			return m_nestedBRDF[0]->getDiffuseReflectance(its);
+		else
+			return m_nestedBRDF[1]->getDiffuseReflectance(its);
+	}
+
 	Float getRoughness(const Intersection &its, int component) const {
 		if (component < m_nestedBRDF[0]->getComponentCount()) {
 			return m_nestedBRDF[0]->getRoughness(its, component);
