@@ -8,7 +8,7 @@ plugins = []
 stubs = []
 winstubs = []
 
-Export('SCons', 'sys', 'os', 'glob', 'resources', 
+Export('SCons', 'sys', 'os', 'glob', 'resources',
 	'plugins', 'stubs', 'winstubs')
 
 # Configure the build framework
@@ -25,7 +25,7 @@ if sys.platform == 'win32':
 
 def build(scriptFile, exports = [], duplicate = 0):
 	dirname = '/'.join(os.path.dirname(scriptFile).split('/')[1:])
-	return SConscript(scriptFile, exports, 
+	return SConscript(scriptFile, exports,
 		variant_dir=os.path.join(env['BUILDDIR'], dirname), duplicate=duplicate)
 
 # ===== Build the support libraries ====
@@ -59,7 +59,7 @@ env['SHLIBPREFIX']=''
 
 Export('env')
 
-# Utilities 
+# Utilities
 build('src/utils/SConscript')
 # Surface scattering models
 build('src/bsdfs/SConscript')

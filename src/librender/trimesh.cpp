@@ -1109,9 +1109,9 @@ void TriMesh::writePLY(const fs::path &path) const {
 			Vector2f uv(m_texcoords[i]); memcpy(ptr, &uv, sizeof(Vector2f)); ptr += sizeof(Vector2f);
 		}
 		if (m_colors) {
-			*ptr += (uint8_t) std::max(0.0f, std::min(255.0f, m_colors[i][0] * 255.0f + 0.5f));
-			*ptr += (uint8_t) std::max(0.0f, std::min(255.0f, m_colors[i][1] * 255.0f + 0.5f));
-			*ptr += (uint8_t) std::max(0.0f, std::min(255.0f, m_colors[i][2] * 255.0f + 0.5f));
+			*ptr += (uint8_t) std::max(0.0f, std::min(255.0f, (float) m_colors[i][0] * 255.0f + 0.5f));
+			*ptr += (uint8_t) std::max(0.0f, std::min(255.0f, (float) m_colors[i][1] * 255.0f + 0.5f));
+			*ptr += (uint8_t) std::max(0.0f, std::min(255.0f, (float) m_colors[i][2] * 255.0f + 0.5f));
 		}
 	}
 	Assert(ptr-vertexStorage == vertexStorageSize);
