@@ -197,6 +197,16 @@ struct TSpectrum_to_Spectrum {
 	}
 };
 
+static void scheduler_cancel(Scheduler *scheduler, ParallelProcess *proc) {
+	ReleaseGIL gil;
+	scheduler->cancel(proc);
+}
+
+static void scheduler_wait(Scheduler *scheduler, const ParallelProcess *proc) {
+	ReleaseGIL gil;
+	scheduler->wait(proc);
+}
+
 static Matrix4x4 *Matrix4x4_fromList(bp::list list) {
 	if (bp::len(list) == 4) {
 		Float buf[4][4];
@@ -1769,10 +1779,9 @@ void export_core() {
 	bp::class_<SerializableObjectVector>("SerializableObjectVector")
 		.def(bp::vector_indexing_suite<SerializableObjectVector>());
 
-	bool (Scheduler::*scheduler_cancel)(ParallelProcess *)= &Scheduler::cancel;
 	BP_CLASS(Scheduler, Object, bp::no_init)
 		.def("schedule", &Scheduler::schedule)
-		.def("wait", &Scheduler::wait)
+		.def("wait", scheduler_wait)
 		.def("cancel", scheduler_cancel)
 		.def("registerResource", &Scheduler::registerResource)
 		.def("registerMultiResource", &Scheduler::registerMultiResource)
