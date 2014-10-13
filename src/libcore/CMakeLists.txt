@@ -30,6 +30,7 @@ set(HDRS
   ${INCLUDE_DIR}/lock.h
   ${INCLUDE_DIR}/logger.h
   ${INCLUDE_DIR}/lrucache.h
+  ${INCLUDE_DIR}/math.h
   ${INCLUDE_DIR}/matrix.h
   ${INCLUDE_DIR}/matrix.inl
   ${INCLUDE_DIR}/mempool.h
@@ -95,6 +96,7 @@ set(SRCS
   half.cpp
   lock.cpp
   logger.cpp
+  math.cpp
   mmap.cpp
   mstream.cpp
   object.cpp

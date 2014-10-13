@@ -40,7 +40,8 @@ function (mts_check_configurations)
 endfunction()
 
 # Check the standard configurations
-mts_check_configurations (Debug Release MinSizeRel RelWithDebInfo)
+# NO Debug! Does not work under windows as dependencies do not include debug libraries
+mts_check_configurations (Release MinSizeRel RelWithDebInfo)
 
 
 # Option to enable interprocedural optimizations
@@ -199,7 +200,7 @@ endif ()
 #
 # Each time this macro adds a target, it adds a new element to the
 # variable "MTS_CORELIBS", which will contain all the generated core libs
-#
+
 macro (add_mts_corelib _corelib_name)
   CMAKE_PARSE_ARGUMENTS(_corelib "" "" "LINK_LIBRARIES" ${ARGN})
   set (_corelib_srcs ${_corelib_UNPARSED_ARGUMENTS})
@@ -276,7 +277,7 @@ endif()
 # The plugin type (i.e. camera, bsdf, luminaire) may be specified
 # after the TYPE keyword. Currently doing this modifies the IDE project name
 # in order to have a nicer organization.
-#
+
 macro (add_mts_plugin _plugin_name)
   CMAKE_PARSE_ARGUMENTS(_plugin "MTS_HW;MTS_BIDIR;NO_MTS_PCH"
     "TYPE" "LINK_LIBRARIES" ${ARGN})
@@ -394,7 +395,7 @@ endif()
 # executable. This only works on Windows builds. The optional RES_DESCRIPTION
 # parameters sets a specific executable description to be used in the Windows
 # builds; other platforms simply ignore this value as with RES_ICON.
-#
+
 macro (add_mts_exe _exe_name)
   CMAKE_PARSE_ARGUMENTS(_exe "WIN32;NO_INSTALL;MTS_HW;MTS_BIDIR;NO_MTS_PCH"
     "PCH;RES_ICON;RES_DESCRIPTION" "LINK_LIBRARIES" ${ARGN})
