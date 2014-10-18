@@ -30,6 +30,7 @@ class SceneLoader : public Thread {
 public:
 	SceneLoader(FileResolver *resolver,
 			const fs::path &filename,
+			const fs::path &destFile,
 			const std::map<std::string, std::string, SimpleStringOrdering> &parameters);
 	void run();
 
@@ -47,6 +48,7 @@ private:
 	SceneContext *m_result;
 	std::string m_error;
 	const QString m_filename;
+	fs::path m_destFile;
 	bool m_versionError;
 	Version m_version;
 	const std::map<std::string, std::string, SimpleStringOrdering> &m_parameters;

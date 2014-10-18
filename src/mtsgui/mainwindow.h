@@ -117,13 +117,13 @@ class MainWindow : public QMainWindow {
 public:
     MainWindow(QWidget *parent = 0);
     ~MainWindow();
-	void loadFile(QString filename);
+	void loadFile(QString filename, const QString &destFile = "");
 	void adjustSize();
 	bool isActive();
 	bool initWorkersProcessArgv();
 
 protected:
-	SceneContext *loadScene(const QString &filename);
+	SceneContext *loadScene(const QString &filename, const QString &destFile = "");
 	void resizeEvent(QResizeEvent *event);
     void changeEvent(QEvent *e);
 	void updateRecentFileActions();

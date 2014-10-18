@@ -32,8 +32,8 @@
 XERCES_CPP_NAMESPACE_USE
 
 SceneLoader::SceneLoader(FileResolver *resolver, const fs::path &filename,
-	const std::map<std::string, std::string, SimpleStringOrdering> &parameters)
-	: Thread("load"), m_resolver(resolver), m_filename(fromFsPath(filename)),
+		const fs::path &destFile, const std::map<std::string, std::string, SimpleStringOrdering> &parameters)
+	: Thread("load"), m_resolver(resolver), m_filename(fromFsPath(filename)), m_destFile(destFile),
 	  m_parameters(parameters) {
 	m_wait = new WaitFlag();
 	m_versionError = false;
@@ -115,7 +115,7 @@ void SceneLoader::run() {
 			ref<Scene> scene = handler->getScene();
 
 			scene->setSourceFile(filename);
-			scene->setDestinationFile(filePath / baseName);
+			scene->setDestinationFile(m_destFile.empty() ? (filePath / baseName) : m_destFile);
 			scene->initialize();
 
 			if (scene->getIntegrator() == NULL)

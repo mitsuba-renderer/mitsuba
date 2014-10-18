@@ -264,9 +264,11 @@ MainWindow::~MainWindow() {
 
 bool MainWindow::initWorkersProcessArgv() {
 	QSettings settings;
-	QStringList args = qApp->arguments(), toBeLoaded;
+	QStringList args = qApp->arguments();
+	std::vector<std::pair<QString, QString> > toBeLoaded;
 	int localWorkerCount = settings.value("localWorkers", getCoreCount()).toInt();
 	ref<Scheduler> scheduler = Scheduler::getInstance();
+	QString outputFile("");
 
 	for (int i=1; i<args.count(); ++i) {
 		if (args[i].startsWith("-D")) {
@@ -282,6 +284,10 @@ bool MainWindow::initWorkersProcessArgv() {
 			if (value.length() == 0 && i+1<args.count())
 				value = args[++i];
 			resolver->appendPath(value.toStdString());
+		} else if (args[i].startsWith("-o")) {
+			outputFile = args[i].mid(2);
+			if (outputFile.length() == 0 && i+1<args.count())
+				outputFile = args[++i];
 		} else if (args[i].startsWith("-p")) {
 			QString value = args[i].mid(2);
 			if (value.length() == 0 && i+1<args.count())
@@ -297,6 +303,7 @@ bool MainWindow::initWorkersProcessArgv() {
 			cout <<  "Options/Arguments:" << endl;
 			cout <<  "   -h          Display this help text" << endl << endl;
 			cout <<  "   -D key=val  Define a constant, which can referenced as \"$key\" in the scene" << endl << endl;
+			cout <<  "   -o fname    Write the output image to the file denoted by \"fname\"" << endl << endl;
 			cout <<  "   -a p1;p2;.. Add one or more entries to the resource search path" << endl << endl;
 			cout <<  "   -p count    Override the detected number of processors." << endl << endl;
 			cout <<  " For documentation, please refer to http://www.mitsuba-renderer.org/docs.html" << endl;
@@ -304,7 +311,8 @@ bool MainWindow::initWorkersProcessArgv() {
 		} else if (args[i].startsWith("-")) {
 			cerr << "Unknown option \"" << args[i].toStdString() << "\"" << endl;
 		} else {
-			toBeLoaded.append(args[i]);
+			toBeLoaded.push_back(std::make_pair(args[i], outputFile));
+			outputFile = QString("");
 		}
 	}
 
@@ -365,7 +373,7 @@ bool MainWindow::initWorkersProcessArgv() {
 	}
 
 	for (int i=0; i<toBeLoaded.size(); ++i)
-		loadFile(toBeLoaded[i]);
+		loadFile(toBeLoaded[i].first, toBeLoaded[i].second);
 
 	scheduler->start();
 	raise();
@@ -657,7 +665,7 @@ void MainWindow::onClearRecent() {
 	settings.setValue("recentFileList", QStringList());
 }
 
-SceneContext *MainWindow::loadScene(const QString &qFileName) {
+SceneContext *MainWindow::loadScene(const QString &qFileName, const QString &destFile) {
 	ref<FileResolver> resolver = Thread::getThread()->getFileResolver();
 	fs::path filename = resolver->resolve(toFsPath(qFileName));
 	fs::path filePath = fs::absolute(filename).parent_path();
@@ -674,7 +682,7 @@ SceneContext *MainWindow::loadScene(const QString &qFileName) {
 	loaddlg->show();
 
 retry:
-	loadingThread = new SceneLoader(newResolver, filename, m_parameters);
+	loadingThread = new SceneLoader(newResolver, filename, toFsPath(destFile), m_parameters);
 	loadingThread->start();
 
 	while (loadingThread->isRunning()) {
@@ -735,11 +743,11 @@ retry:
 	return result;
 }
 
-void MainWindow::loadFile(QString filename) {
+void MainWindow::loadFile(QString filename, const QString &destFile) {
 	QFileInfo fInfo(filename);
 	fInfo.makeAbsolute();
 
-	SceneContext *context = loadScene(filename);
+	SceneContext *context = loadScene(filename, destFile);
 	if (context == NULL)
 		return;
 	m_contextMutex.lock();
