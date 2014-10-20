@@ -11,11 +11,18 @@ Menu}$\to$\emph{Command-line access}'' menu item from within Mitsuba.
 If you compiled Mitsuba yourself, then an alternative way of setting the appropriate
 environment variables without making changes to the system is by sourcing the
 \code{setpath.sh} script located in the main Mitsuba directory.
+It is possible to specify the desired Python plugin version using the \texttt{MITSUBA\_PYVER}
+environment variable, e.g.
+\begin{python}
+export MITSUBA_PYVER=3.3
+source $\langle$Mitsuba directory$\rangle$/setpath.sh
+\end{python}
 
 \paragraph{Linux:}
 If you installed one of the official Mitsuba packages for your distribution, then everything should work out of the box.
 If you compiled Mitsuba yourself, you will need to source the
 \code{setpath.sh} script located in the main Mitsuba directory before starting Python.
+See the Mac OS example above with regards to requesting a specific version of the Python plugin.
 
 \paragraph{Windows}
 On Windows it is necessary to explicitly specify the required extension search path within Python
