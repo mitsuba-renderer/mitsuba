@@ -184,7 +184,6 @@ public:
 	/// Return the name of this shape (e.g. the filename)
 	virtual std::string getName() const;
 
-
 	/// Is this a compound shape consisting of several sub-objects?
 	virtual bool isCompound() const;
 
@@ -519,6 +518,7 @@ protected:
 	/// Virtual destructor
 	virtual ~Shape();
 protected:
+	std::string m_name;
 	ref<BSDF> m_bsdf;
 	ref<Subsurface> m_subsurface;
 	ref<Emitter> m_emitter;

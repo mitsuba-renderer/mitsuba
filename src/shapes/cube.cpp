@@ -73,7 +73,6 @@ static uint32_t CubeData_triangles[][3] = {{0, 1, 2}, {3, 0, 2}, {4, 5, 6}, {7, 
 class Cube : public TriMesh {
 public:
 	Cube(const Properties &props) : TriMesh(props) {
-		m_name = props.getID();
 		m_triangleCount = 12;
 		m_vertexCount = 24;
 		m_positions = new Point[m_vertexCount];

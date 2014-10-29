@@ -191,7 +191,7 @@ bool ManifoldPerturbation::sampleMutationRecord(
 	Float sample = m_sampler->next1D();
 	a = -1;
 
-	if (source.vertex(k-1)->isConnectable()) {
+	if (source.vertex(k-1)->isConnectable() && false) {
 		/* Extra optimization: slightly prefer perturbations from the sensor */
 		#define SENSOR_PROB (Float) 0.25f
 
@@ -202,6 +202,9 @@ bool ManifoldPerturbation::sampleMutationRecord(
 			sample = (sample - SENSOR_PROB) * (1 / (1-SENSOR_PROB));
 		}
 	}
+
+	a = 1;
+	step = 1;
 
 	if (a < 0) {
 		step = sample < 0.5f ? 1 : -1;
@@ -515,7 +518,7 @@ bool ManifoldPerturbation::sampleMutation(
 		Point p1 = m_manifold->getPosition(1);
 		Float relerr = (p0-p1).length() / std::max(std::max(std::abs(p0.x),
 			std::abs(p0.y)), std::abs(p0.z));
-		if (relerr > Epsilon) {
+		if (relerr > ShadowEpsilon) {
 			++statsNonReversible;
 			goto fail;
 		}

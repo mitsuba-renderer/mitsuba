@@ -350,7 +350,6 @@ public:
 
 	WavefrontOBJ(Stream *stream, InstanceManager *manager) : Shape(stream, manager) {
 		m_aabb = AABB(stream);
-		m_name = stream->readString();
 		uint32_t meshCount = stream->readUInt();
 		m_meshes.resize(meshCount);
 
@@ -364,7 +363,6 @@ public:
 		Shape::serialize(stream, manager);
 
 		m_aabb.serialize(stream);
-		stream->writeString(m_name);
 		stream->writeUInt((uint32_t) m_meshes.size());
 		for (size_t i=0; i<m_meshes.size(); ++i)
 			manager->serialize(stream, m_meshes[i]);
@@ -806,10 +804,6 @@ public:
 		return shape;
 	}
 
-	std::string getName() const {
-		return m_name;
-	}
-
 	AABB getAABB() const {
 		return m_aabb;
 	}
@@ -840,7 +834,6 @@ private:
 	std::vector<TriMesh *> m_meshes;
 	std::vector<std::string> m_materialAssignment;
 	bool m_flipNormals, m_faceNormals;
-	std::string m_name;
 	AABB m_aabb;
 	bool m_collapse;
 };

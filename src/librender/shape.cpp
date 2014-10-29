@@ -28,10 +28,13 @@
 MTS_NAMESPACE_BEGIN
 
 Shape::Shape(const Properties &props)
- : ConfigurableObject(props) { }
+ : ConfigurableObject(props) {
+	m_name = props.getID();
+}
 
 Shape::Shape(Stream *stream, InstanceManager *manager)
  : ConfigurableObject(stream, manager) {
+	m_name = stream->readString();
 	m_bsdf = static_cast<BSDF *>(manager->getInstance(stream));
 	m_subsurface = static_cast<Subsurface *>(manager->getInstance(stream));
 	m_emitter = static_cast<Emitter *>(manager->getInstance(stream));
@@ -83,7 +86,7 @@ bool Shape::isCompound() const {
 }
 
 std::string Shape::getName() const {
-	return "Unnamed";
+	return m_name;
 }
 
 Shape *Shape::getElement(int i) {
@@ -183,6 +186,7 @@ const KDTreeBase<AABB> *Shape::getKDTree() const {
 
 void Shape::serialize(Stream *stream, InstanceManager *manager) const {
 	ConfigurableObject::serialize(stream, manager);
+	stream->writeString(m_name);
 	manager->serialize(stream, m_bsdf.get());
 	manager->serialize(stream, m_subsurface.get());
 	manager->serialize(stream, m_emitter.get());

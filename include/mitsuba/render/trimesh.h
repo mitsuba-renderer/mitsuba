@@ -94,9 +94,6 @@ public:
 	//! @{ \name General query functions
 	// =============================================================
 
-	/// Return the name of this shape (e.g. the filename)
-	std::string getName() const;
-
 	/// Return the total surface area
 	Float getSurfaceArea() const;
 
@@ -356,7 +353,6 @@ protected:
 	/// Prepare internal tables for sampling uniformly wrt. area
 	void prepareSamplingTable();
 protected:
-	std::string m_name;
 	AABB m_aabb;
 	Triangle *m_triangles;
 	Point *m_positions;

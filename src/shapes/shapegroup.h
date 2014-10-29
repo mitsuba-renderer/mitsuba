@@ -68,16 +68,12 @@ public:
 	/// Return the effective primitive count of this shape (always zero)
 	size_t getEffectivePrimitiveCount() const;
 
-	/// Return the name of the geometry group
-	std::string getName() const;
-
 	/// Return a string representation
 	std::string toString() const;
 
 	MTS_DECLARE_CLASS()
 private:
 	ref<ShapeKDTree> m_kdtree;
-	std::string m_name;
 };
 
 MTS_NAMESPACE_END

@@ -351,10 +351,6 @@ TriMesh::~TriMesh() {
 		delete[] m_triangles;
 }
 
-std::string TriMesh::getName() const {
-	return m_name;
-}
-
 AABB TriMesh::getAABB() const {
 	return m_aabb;
 }
