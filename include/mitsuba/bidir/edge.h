@@ -53,6 +53,8 @@ struct MTS_EXPORT_BIDIR PathEdge {
 
 	/**
 	 * \brief Normalized direction vector associated with this edge
+	 *
+	 * The direction always points along the light path (from the light)
 	 */
 	Vector d;
 

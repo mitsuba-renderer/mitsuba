@@ -63,6 +63,9 @@ bool PathEdge::sampleNext(const Scene *scene, Sampler *sampler,
 		weight[1-mode] = mRec.transmittance / pdf[1-mode];
 	}
 	d = ray.d;
+	/* Direction always points along the light path (from the light source along the path) */
+	if(mode == ERadiance)
+		d = -d;
 
 	return true;
 }
@@ -105,6 +108,9 @@ bool PathEdge::perturbDirection(const Scene *scene,
 		return false;
 	}
 	d = ray.d;
+	/* Direction always points along the light path (from the light source along the path) */
+	if(mode == ERadiance)
+		d = -d;
 
 	if (length == 0)
 		return false;
@@ -274,6 +280,9 @@ bool PathEdge::connect(const Scene *scene,
 		}
 	}
 
+	/* Direction always points along the light path (from the light source along the path) */
+	d = -d;
+
 	return true;
 }
 
@@ -330,7 +339,8 @@ bool PathEdge::pathConnect(const Scene *scene, const PathEdge *predEdge,
 			result.append(edge);
 			edge->length = std::min(its.t, remaining);
 			edge->medium = medium;
-			edge->d = d;
+			/* Direction always points along the light path (from the light source along the path) */
+			edge->d = -d;
 
 			if (medium) {
 				MediumSamplingRecord mRec;
@@ -556,6 +566,9 @@ bool PathEdge::pathConnectAndCollapse(const Scene *scene, const PathEdge *predEd
 			return false;
 		}
 	}
+
+	/* Direction always points along the light path (from the light source along the path) */
+	d = -d;
 
 	return true;
 }
