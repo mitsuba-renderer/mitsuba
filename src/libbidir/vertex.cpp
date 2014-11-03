@@ -1398,6 +1398,8 @@ std::string PathVertex::toString() const {
 		case EMediumInteraction:
 			oss << "  data = " << indent(getMediumSamplingRecord().toString()) << "," << endl;
 			break;
+		default:
+			break;
 	}
 
 	oss << "  degenerate = " << (degenerate ? "true" : "false") << "," << endl
