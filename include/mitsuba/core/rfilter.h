@@ -124,7 +124,7 @@ template <typename Scalar> struct Resampler {
 			int sourceRes, int targetRes) : m_bc(bc), m_sourceRes(sourceRes), m_targetRes(targetRes),
 			m_start(NULL), m_weights(NULL) {
 		SAssert(sourceRes > 0 && targetRes > 0);
-		Float filterRadius = rfilter->getRadius(), scale = 1.0f, invScale = 1.0f;
+		Float filterRadius = rfilter->getRadius(), scale = (Float)1.0, invScale = (Float)1.0;
 
 		/* Low-pass filter: scale reconstruction filters when downsampling */
 		if (targetRes < sourceRes) {

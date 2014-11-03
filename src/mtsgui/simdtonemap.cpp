@@ -520,13 +520,13 @@ bool luminance(const mitsuba::Bitmap* source, const float multiplier,
 		V4i tailMask = V4i::zero();
 		switch (pixelCount % 4) {
 		case 1:
-			tailMask = V4i::constant<0, 0x00000000, 0x00000000, 0xffffffff>();
+			tailMask = V4i::constant<0, 0, 0, -1>();
 			break;
 		case 2:
-			tailMask = V4i::constant<0, 0x00000000, 0xffffffff, 0xffffffff>();
+			tailMask = V4i::constant<0, 0, -1, -1>();
 			break;
 		case 3:
-			tailMask = V4i::constant<0, 0xffffffff, 0xffffffff, 0xffffffff>();
+			tailMask = V4i::constant<0, -1, -1, -1>();
 			break;
 		}
 		// maxLuminance contains zeros in the invalid positions which is OK
