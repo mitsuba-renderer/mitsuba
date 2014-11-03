@@ -75,7 +75,7 @@ struct RestoreMeasureHelper {
 		: vertex(vertex), measure(vertex->measure) { }
 	~RestoreMeasureHelper() { vertex->measure = measure; }
 	PathVertex *vertex;
-	uint8_t measure;
+	EMeasure measure;
 };
 
 MTS_NAMESPACE_END

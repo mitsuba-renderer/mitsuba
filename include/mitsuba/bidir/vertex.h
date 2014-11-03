@@ -91,7 +91,7 @@ struct MTS_EXPORT_BIDIR PathVertex {
 	 *
 	 * \sa EVertexType
 	 */
-	uint8_t type : 7;
+	EVertexType type : 7;
 
 	/**
 	 * \brief Denotes whether this vertex \a only supports
@@ -129,7 +129,7 @@ struct MTS_EXPORT_BIDIR PathVertex {
 	 *
 	 * \sa EMeasure
 	 */
-	uint8_t measure;
+	EMeasure measure : 8;
 
 	/**
 	 * \brief When the current vertex supports sampling

@@ -165,7 +165,14 @@ struct RayDifferential : public Ray {
 		ryOrigin = o + (ryOrigin - o) * amount;
 		rxDirection = d + (rxDirection - d) * amount;
 		ryDirection = d + (ryDirection - d) * amount;
-    }
+	}
+
+	void scaleDifferentialUV(const Vector2 amountUV) {
+		rxOrigin = o + (rxOrigin - o) * amountUV.x;
+		ryOrigin = o + (ryOrigin - o) * amountUV.y;
+		rxDirection = d + (rxDirection - d) * amountUV.x;
+		ryDirection = d + (ryDirection - d) * amountUV.y;
+	}
 
 	inline void operator=(const RayDifferential &ray) {
 		o = ray.o;

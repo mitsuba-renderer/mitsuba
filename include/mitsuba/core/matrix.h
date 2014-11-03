@@ -37,7 +37,7 @@ public:
 	/**
 	 * \brief Construct a new MxN matrix without initializing it.
 	 *
-	 * This construtor is useful when the matrix will either not
+	 * This constructor is useful when the matrix will either not
 	 * be used at all (it might be part of a larger data structure)
 	 * or initialized at a later point in time. Always make sure
 	 * that one of the two is the case! Otherwise your program will do
@@ -291,7 +291,7 @@ public:
 	 * and a permutation vector piv of length m so that A(piv,:) = L*U.
 	 * If m < n, then L is m-by-m and U is m-by-n.
 	 *
-	 * The LU decompostion with pivoting always exists, even if the matrix is
+	 * The LU decomposition with pivoting always exists, even if the matrix is
 	 * singular, so the constructor will never fail.
 	 * The primary use of the
 	 *
@@ -361,7 +361,7 @@ public:
 
 	T cholDet() const;
 
-	/// Check if the matrix is identically zeor
+	/// Check if the matrix is identically zero
 	inline bool isZero() const {
 		for (int i=0; i<M; ++i)
 			for (int j=0; j<N; ++j)
@@ -489,7 +489,7 @@ public:
 	}
 
 	/// Compute the inverse (Faster than Matrix::invert)
-	FINLINE bool invert(Matrix2x2 &target) const {
+	FINLINE bool invert2x2(Matrix2x2 &target) const {
 		Float det = m[0][0]*m[1][1] - m[0][1]*m[1][0];
 		if (std::abs(det) <= RCPOVERFLOW)
 			return false;
@@ -500,9 +500,25 @@ public:
 		target.m[1][0] = -m[1][0] * invDet;
 		return true;
 	}
+	FINLINE bool invert(Matrix2x2 &target) const {
+		return invert2x2(target);
+	}
+
+	 /// Compute the inverse with det (Faster than Matrix::invert)
+	 FINLINE bool invert2x2(Matrix2x2 &target, Float& det) const {
+		det = m[0][0]*m[1][1] - m[0][1]*m[1][0];
+		if(std::abs(det) <= RCPOVERFLOW)
+			return false;
+		Float invDet = 1/det;
+		target.m[0][0] = m[1][1] * invDet;
+		target.m[0][1] = -m[0][1] * invDet;
+		target.m[1][1] = m[0][0] * invDet;
+		target.m[1][0] = -m[1][0] * invDet;
+		return true;
+	 }
 
 	/// Matrix-vector multiplication
-    inline Vector2 operator*(const Vector2 &v) const {
+	inline Vector2 operator*(const Vector2 &v) const {
 		return Vector2(
 			m[0][0] * v.x + m[0][1] * v.y,
 			m[1][0] * v.x + m[1][1] * v.y
@@ -584,7 +600,7 @@ public:
 	}
 
 	/// Matrix-vector multiplication
-    inline Vector operator*(const Vector &v) const {
+	inline Vector operator*(const Vector &v) const {
 		return Vector(
 			m[0][0] * v.x + m[0][1] * v.y + m[0][2] * v.z,
 			m[1][0] * v.x + m[1][1] * v.y + m[1][2] * v.z,
@@ -675,7 +691,7 @@ struct MTS_EXPORT_CORE Matrix4x4 : public Matrix<4, 4, Float> {
 	}
 
 	/// Matrix-vector multiplication
-    inline Vector4 operator*(const Vector4 &v) const {
+	inline Vector4 operator*(const Vector4 &v) const {
 		return Vector4(
 			m[0][0] * v.x + m[0][1] * v.y + m[0][2] * v.z + m[0][3] * v.w,
 			m[1][0] * v.x + m[1][1] * v.y + m[1][2] * v.z + m[1][3] * v.w,

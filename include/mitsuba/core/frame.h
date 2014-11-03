@@ -97,6 +97,12 @@ struct Frame {
 	}
 
 	/** \brief Assuming that the given direction is in the local coordinate
+	 * system, return the u and v coordinates of the vector 'v' */
+	inline static Vector2 uv(const Vector &v) {
+		return Vector2(v.x, v.y);
+	}
+
+	/** \brief Assuming that the given direction is in the local coordinate
 	 * system, return the squared sine of the angle between the normal and v */
 	inline static Float sinTheta2(const Vector &v) {
 		return 1.0f - v.z * v.z;

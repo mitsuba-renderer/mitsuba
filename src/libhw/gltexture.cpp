@@ -362,7 +362,18 @@ void GLTexture::lookupGLConstants() {
 			return;
 	}
 
-	if (m_componentFormat == EFloat16) {
+  if (m_componentFormat == EUInt8) {
+		switch (m_pixelFormat) {
+		case ELuminance: m_internalFormat = GL_LUMINANCE8; break;
+		case ELuminanceAlpha: m_internalFormat = GL_LUMINANCE8_ALPHA8; break;
+		case ERGB: m_internalFormat = GL_RGB8; break;
+		case ERGBA: m_internalFormat = GL_RGBA8; break;
+		default:
+			Log(EError, "Unknown/unsupported pixel format!");
+			return;
+		}
+  }
+  else if (m_componentFormat == EFloat16) {
 		switch (m_pixelFormat) {
 			case ELuminance: m_internalFormat = GL_LUMINANCE16F_ARB; break;
 			case ELuminanceAlpha: m_internalFormat = GL_LUMINANCE_ALPHA16F_ARB; break;
