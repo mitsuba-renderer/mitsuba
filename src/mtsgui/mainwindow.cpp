@@ -166,7 +166,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
 	connect(ui->glView, SIGNAL(quit()), this, SLOT(on_actionExit_triggered()));
 	connect(ui->glView, SIGNAL(beginRendering()), this, SLOT(on_actionRender_triggered()));
-	connect(ui->glView, SIGNAL(stopRendering()), this, SLOT(updateUI()));
+	connect(ui->glView, SIGNAL(stopRendering()), this, SLOT(on_actionStop_triggered()));
 	connect(ui->glView, SIGNAL(statusMessage(const QString &)), this, SLOT(onStatusMessage(const QString &)),
 		Qt::QueuedConnection);
 	connect(ui->glView, SIGNAL(selectionChanged()), this, SLOT(onSelectionChanged()));
@@ -269,6 +269,7 @@ bool MainWindow::initWorkersProcessArgv() {
 	int localWorkerCount = settings.value("localWorkers", getCoreCount()).toInt();
 	ref<Scheduler> scheduler = Scheduler::getInstance();
 	QString outputFile("");
+	bool beginRendering = false;
 
 	for (int i=1; i<args.count(); ++i) {
 		if (args[i].startsWith("-D")) {
@@ -296,6 +297,29 @@ bool MainWindow::initWorkersProcessArgv() {
 			unsigned int numCores = value.toUInt(&ok, 10);
 			if (ok)
 				localWorkerCount = numCores;
+		} else if (args[i].startsWith("-r")) {
+			beginRendering = true;
+		} else if (args[i].startsWith("-L")) {
+			Logger *logger = Thread::getThread()->getLogger();
+			QString value = args[i].mid(2);
+			if (value.length() == 0 && i+1<args.count())
+				value = args[++i];
+			value = value.toLower();
+			ELogLevel logLevel = EDebug;
+			if (value == "trace")
+				logLevel = ETrace;
+			else if (value == "debug")
+				logLevel = EDebug;
+			else if (value == "info")
+				logLevel = EInfo;
+			else if (value == "warn")
+				logLevel = EWarn;
+			else if (value == "error")
+				logLevel = EError;
+			else
+				SLog(EError, "Invalid log level!");
+			logger->setLogLevel(logLevel);
+			settings.setValue("verbosity", logLevel);
 		} else if (args[i] == "-h") {
 			cout <<  "Mitsuba version " << Version(MTS_VERSION).toStringComplete()
 				 << ", Copyright (c) " MTS_YEAR " Wenzel Jakob" << endl;
@@ -306,6 +330,8 @@ bool MainWindow::initWorkersProcessArgv() {
 			cout <<  "   -o fname    Write the output image to the file denoted by \"fname\"" << endl << endl;
 			cout <<  "   -a p1;p2;.. Add one or more entries to the resource search path" << endl << endl;
 			cout <<  "   -p count    Override the detected number of processors." << endl << endl;
+			cout <<  "   -L level    Explicitly specify the log level (trace/debug/info/warn/error)" << endl << endl;
+			cout <<  "   -r          Immediately begin rendering" << endl << endl;
 			cout <<  " For documentation, please refer to http://www.mitsuba-renderer.org/docs.html" << endl;
 			return false;
 		} else if (args[i].startsWith("-")) {
@@ -376,6 +402,14 @@ bool MainWindow::initWorkersProcessArgv() {
 		loadFile(toBeLoaded[i].first, toBeLoaded[i].second);
 
 	scheduler->start();
+
+	if (beginRendering) {
+		for (int i=0; i<ui->tabBar->count(); ++i) {
+			ui->tabBar->setCurrentIndex(i);
+			on_actionRender_triggered();
+		}
+	}
+
 	raise();
 	return true;
 }
@@ -667,6 +701,7 @@ void MainWindow::onClearRecent() {
 
 SceneContext *MainWindow::loadScene(const QString &qFileName, const QString &destFile) {
 	ref<FileResolver> resolver = Thread::getThread()->getFileResolver();
+	ref<Logger> logger = Thread::getThread()->getLogger();
 	fs::path filename = resolver->resolve(toFsPath(qFileName));
 	fs::path filePath = fs::absolute(filename).parent_path();
 	ref<FileResolver> newResolver = resolver->clone();

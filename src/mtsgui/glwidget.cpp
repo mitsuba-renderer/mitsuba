@@ -499,6 +499,9 @@ void GLWidget::keyPressEvent(QKeyEvent *event) {
 	} else if (event->key() == Qt::Key_R) {
 		emit beginRendering();
 	}
+	else if (event->key() == Qt::Key_S) {
+		emit stopRendering();
+	}
 
 	if (event->isAutoRepeat() || !m_context)
 		return;

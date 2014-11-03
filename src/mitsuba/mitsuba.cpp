@@ -36,6 +36,7 @@
 #include <mitsuba/render/scenehandler.h>
 #include <fstream>
 #include <stdexcept>
+#include <boost/algorithm/string.hpp>
 
 #if defined(__WINDOWS__)
 #include <mitsuba/core/getopt.h>
@@ -78,7 +79,8 @@ void help() {
 	cout <<  "   -r sec      Write (partial) output images every 'sec' seconds" << endl << endl;
 	cout <<  "   -b res      Specify the block resolution used to split images into parallel" << endl;
 	cout <<  "               workloads (default: 32). Only applies to some integrators." << endl << endl;
-	cout <<  "   -v          Be more verbose" << endl << endl;
+	cout <<  "   -v          Be more verbose (can be specified twice)" << endl << endl;
+	cout <<  "   -L level    Explicitly specify the log level (trace/debug/info/warn/error)" << endl << endl;
 	cout <<  "   -w          Treat warnings as errors" << endl << endl;
 	cout <<  "   -z          Disable progress bars" << endl << endl;
 	cout <<  " For documentation, please refer to http://www.mitsuba-renderer.org/docs.html" << endl;
@@ -149,7 +151,7 @@ int mitsuba_app(int argc, char **argv) {
 
 		optind = 1;
 		/* Parse command-line arguments */
-		while ((optchar = getopt(argc, argv, "a:c:D:s:j:n:o:r:b:p:qhzvtwx")) != -1) {
+		while ((optchar = getopt(argc, argv, "a:c:D:s:j:n:o:r:b:p:L:qhzvtwx")) != -1) {
 			switch (optchar) {
 				case 'a': {
 						std::vector<std::string> paths = tokenize(optarg, ";");
@@ -193,6 +195,22 @@ int mitsuba_app(int argc, char **argv) {
 						logLevel = EDebug;
 					else
 						logLevel = ETrace;
+					break;
+				case 'L': {
+						std::string arg = boost::to_lower_copy(std::string(optarg));
+						if (arg == "trace")
+							logLevel = ETrace;
+						else if (arg == "debug")
+							logLevel = EDebug;
+						else if (arg == "info")
+							logLevel = EInfo;
+						else if (arg == "warn")
+							logLevel = EWarn;
+						else if (arg == "error")
+							logLevel = EError;
+						else
+							SLog(EError, "Invalid log level!");
+					}
 					break;
 				case 'x':
 					skipExisting = true;

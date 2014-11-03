@@ -32,7 +32,7 @@ LoadDialog::LoadDialog(QWidget *parent) :
 	m_consoleAppender = new QConsoleAppender();
 	Logger *logger = Thread::getThread()->getLogger();
 	m_oldLogLevel = logger->getLogLevel();
-	logger->setLogLevel(EDebug);
+	//logger->setLogLevel(EDebug);
 	logger->addAppender(m_consoleAppender);
 	connect(m_consoleAppender, SIGNAL(textMessage(ELogLevel, const QString &)),
 		this, SLOT(onTextMessage(ELogLevel, const QString &)), Qt::QueuedConnection);

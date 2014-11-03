@@ -30,6 +30,7 @@
 #include <mitsuba/core/bitmap.h>
 #include <fstream>
 #include <stdexcept>
+#include <boost/algorithm/string.hpp>
 
 #ifdef __WINDOWS__
 #include <io.h>
@@ -108,7 +109,7 @@ int mtssrv(int argc, char **argv) {
 
 		optind = 1;
 		/* Parse command-line arguments */
-		while ((optchar = getopt(argc, argv, "a:c:s:n:p:i:l:qhv")) != -1) {
+		while ((optchar = getopt(argc, argv, "a:c:s:n:p:i:l:L:qhv")) != -1) {
 			switch (optchar) {
 				case 'a': {
 						std::vector<std::string> paths = tokenize(optarg, ";");
@@ -145,6 +146,22 @@ int mtssrv(int argc, char **argv) {
 					break;
 				case 'v':
 					logLevel = EDebug;
+					break;
+				case 'L': {
+						std::string arg = boost::to_lower_copy(std::string(optarg));
+						if (arg == "trace")
+							logLevel = ETrace;
+						else if (arg == "debug")
+							logLevel = EDebug;
+						else if (arg == "info")
+							logLevel = EInfo;
+						else if (arg == "warn")
+							logLevel = EWarn;
+						else if (arg == "error")
+							logLevel = EError;
+						else
+							SLog(EError, "Invalid log level!");
+					}
 					break;
 				case 'l':
 					if (!strcmp("s", optarg)) {
@@ -184,7 +201,8 @@ int mtssrv(int argc, char **argv) {
 					cout <<  "   -l port     Listen for connections on a certain port (Default: " << MTS_DEFAULT_PORT << ")." << endl;
 					cout <<  "               To listen on stdin, specify \"-ls\" (implies -q)" << endl << endl;
 					cout <<  "   -n name     Assign a node name to this instance (Default: host name)" << endl << endl;
-					cout <<  "   -v          Be more verbose" << endl << endl;
+					cout <<  "   -v          Be more verbose (can be specified twice)" << endl << endl;
+					cout <<  "   -L level    Explicitly specify the log level (trace/debug/info/warn/error)" << endl << endl;
 					cout <<  " For documentation, please refer to http://www.mitsuba-renderer.org/docs.html" << endl;
 					return 0;
 			}
