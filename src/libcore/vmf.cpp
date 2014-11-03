@@ -31,7 +31,7 @@ Float VonMisesFisherDistr::eval(Float cosTheta) const {
 		* m_kappa / (4 * M_PI * std::sinh(m_kappa));
 #else
 	/* Numerically stable version */
-	return math::fastexp(m_kappa * (cosTheta - 1))
+	return math::fastexp(m_kappa * std::min((Float)0, cosTheta - 1))
 		* m_kappa / (2 * M_PI * (1-math::fastexp(-2*m_kappa)));
 #endif
 }
