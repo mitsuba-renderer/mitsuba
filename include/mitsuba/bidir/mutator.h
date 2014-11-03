@@ -64,13 +64,17 @@ public:
 	 * \param muRec
 	 *     Data record that describes the sampled mutation strategy
 	 *
+	 * \param sourceMuRec
+	 *     Data record that describes the last successful mutation strategy
+	 *	   (for the source path)
+	 *
 	 * \return \a true upon success. When the sampling step is
 	 *     unsuccessful (this could happen due to various
 	 *     reasons), the function returns <tt>false</tt>.
 
-     */
+	 */
 	virtual bool sampleMutation(Path &source, Path &proposal,
-			MutationRecord &muRec) = 0;
+			MutationRecord &muRec, const MutationRecord& sourceMuRec) = 0;
 
 	/**
 	 * \brief For a pair of paths, this function computes the inverse

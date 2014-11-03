@@ -174,7 +174,7 @@ public:
 		std::ostringstream oss;
 		Spectrum relWeight(0.0f);
 		Float accumulatedWeight = 0;
-		MutationRecord muRec;
+		MutationRecord muRec, currentMuRec(Mutator::EMutationTypeCount, 0, 0, 0, Spectrum(0.f));
 		Path *current = new Path(),
 			 *proposed = new Path();
 		size_t mutations = 0;
@@ -211,7 +211,7 @@ public:
 				mutator = m_mutators[mutatorIdx].get();
 
 				/* Sample a mutated path */
-				success = mutator->sampleMutation(*current, *proposed, muRec);
+				success = mutator->sampleMutation(*current, *proposed, muRec, currentMuRec);
 
 				statsAccepted.incrementBase(1);
 				if (success) {
@@ -258,6 +258,7 @@ public:
 						std::swap(current, proposed);
 						relWeight = current->getRelativeWeight();
 						mutator->accept(muRec);
+						currentMuRec = muRec;
 						accumulatedWeight = a;
 						++statsAccepted;
 						++mutations;

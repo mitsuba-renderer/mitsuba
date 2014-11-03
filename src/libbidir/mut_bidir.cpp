@@ -44,7 +44,7 @@ Float BidirectionalMutator::suitability(const Path &path) const {
 }
 
 bool BidirectionalMutator::sampleMutation(
-		Path &source, Path &proposal, MutationRecord &muRec) {
+		Path &source, Path &proposal, MutationRecord &muRec, const MutationRecord& sourceMuRec) {
 	TwoTailedGeoDistr desiredLength(2), deletionLength(2);
 	int k = source.length();
 

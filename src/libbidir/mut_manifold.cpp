@@ -230,7 +230,7 @@ bool ManifoldPerturbation::sampleMutationRecord(
 }
 
 bool ManifoldPerturbation::sampleMutation(
-		Path &source, Path &proposal, MutationRecord &muRec) {
+		Path &source, Path &proposal, MutationRecord &muRec, const MutationRecord& sourceMuRec) {
 	int k = source.length();
 
 	int a, b, c, step, tries = 0;

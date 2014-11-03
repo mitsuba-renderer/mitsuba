@@ -127,7 +127,7 @@ public:
 		BDAssert(!relWeight.isZero());
 
 		DiscreteDistribution suitabilities(m_mutators.size());
-		MutationRecord muRec;
+		MutationRecord muRec, currentMuRec(Mutator::EMutationTypeCount,0,0,0,Spectrum(0.f));
 		ref<Timer> timer = new Timer();
 
 		size_t consecRejections = 0;
@@ -171,7 +171,7 @@ public:
 			mutator = m_mutators[mutatorIdx].get();
 
 			/* Sample a mutated path */
-			success = mutator->sampleMutation(*current, *proposed, muRec);
+			success = mutator->sampleMutation(*current, *proposed, muRec, currentMuRec);
 
 			#if defined(MTS_BD_DEBUG_HEAVY)
 				if (backup != *current)
@@ -263,11 +263,12 @@ public:
 					std::swap(current, proposed);
 					relWeight = current->getRelativeWeight();
 					mutator->accept(muRec);
+					currentMuRec = muRec;
 					accumulatedWeight = a;
 					consecRejections = 0;
 					++statsAccepted;
 				} else {
-	 				/* The mutation was rejected */
+					/* The mutation was rejected */
 					proposed->release(muRec.l, muRec.l + muRec.ka + 1, *m_pool);
 					consecRejections++;
 					if (a > 0) {

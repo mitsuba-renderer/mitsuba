@@ -66,7 +66,7 @@ Float MultiChainPerturbation::suitability(const Path &path) const {
 }
 
 bool MultiChainPerturbation::sampleMutation(
-		Path &source, Path &proposal, MutationRecord &muRec) {
+		Path &source, Path &proposal, MutationRecord &muRec, const MutationRecord& sourceMuRec) {
 	int k = source.length(), m = k - 1, l = m-1, nChains = 1;
 
 	while (l-1 >= 0 && (!source.vertex(l)->isConnectable()

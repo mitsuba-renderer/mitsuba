@@ -70,7 +70,7 @@ Float LensPerturbation::suitability(const Path &path) const {
 }
 
 bool LensPerturbation::sampleMutation(
-		Path &source, Path &proposal, MutationRecord &muRec) {
+		Path &source, Path &proposal, MutationRecord &muRec, const MutationRecord& sourceMuRec) {
 	int k = source.length(), m = k-1, l = m-1;
 	while (!source.vertex(l)->isConnectable() && l >= 0)
 		--l;

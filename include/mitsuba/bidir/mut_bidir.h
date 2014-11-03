@@ -64,7 +64,7 @@ public:
 
 	EMutationType getType() const;
 	Float suitability(const Path &path) const;
-	bool sampleMutation(Path &source, Path &proposal, MutationRecord &muRec);
+	bool sampleMutation(Path &source, Path &proposal, MutationRecord &muRec, const MutationRecord& sourceMuRec);
 	Float Q(const Path &source, const Path &proposal,
 			const MutationRecord &muRec) const;
 	void accept(const MutationRecord &muRec);
