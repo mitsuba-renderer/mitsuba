@@ -663,9 +663,18 @@ Float ManifoldPerturbation::Q(const Path &source, const Path &proposal,
 		/* Convert to area density at x_b */
 		prob *= m_manifold->G(proposal, a, b);
 
-		if (prob == 0)
+		if (prob <= RCPOVERFLOW)
 			return 0.0f;
+
+#if defined(MTS_DEBUG_FP)
+		disableFPExceptions();
+#endif
+
 		weight /= prob;
+
+#if defined(MTS_DEBUG_FP)
+		enableFPExceptions();
+#endif
 
 		/* Catch very low probabilities which round to +inf in the above division operation */
 		if (!std::isfinite(weight.average()))
@@ -677,7 +686,7 @@ Float ManifoldPerturbation::Q(const Path &source, const Path &proposal,
 			source.vertex(a)->pdf[mode] * m_probFactor * m_probFactor);
 
 		Float pdf = source.vertex(a+step)->perturbPositionPdf(proposal.vertex(a+step), stddev);
-		if (pdf == 0)
+		if (pdf <= RCPOVERFLOW)
 			return 0.0f;
 
 		weight /= pdf;
@@ -743,7 +752,7 @@ Float ManifoldPerturbation::Q(const Path &source, const Path &proposal,
 
 	Float lum = weight.getLuminance();
 
-	if (lum <= 0 || !std::isfinite(lum)) {
+	if (lum <= RCPOVERFLOW || !std::isfinite(lum)) {
 		Log(EWarn, "Internal error in manifold perturbation: luminance = %f!", lum);
 		return 0.f;
 	}

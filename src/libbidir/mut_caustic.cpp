@@ -212,7 +212,11 @@ Float CausticPerturbation::Q(const Path &source, const Path &proposal,
 					source.edge(i), edge);
 	}
 
-	return solidAngleDensity / weight.getLuminance();
+	const Float lumWeight = weight.getLuminance();
+	if(lumWeight <= RCPOVERFLOW)
+		return 0.f;
+
+	return solidAngleDensity / lumWeight;
 }
 
 void CausticPerturbation::accept(const MutationRecord &) {

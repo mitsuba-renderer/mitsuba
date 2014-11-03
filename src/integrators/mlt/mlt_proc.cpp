@@ -206,7 +206,10 @@ public:
 
 				Float a;
 				if (!m_config.importanceMap) {
+					if(Qxy > RCPOVERFLOW)
 					a = std::min((Float) 1, Qyx / Qxy);
+					else
+						a = 0.f;
 				} else {
 					const Float *luminanceValues = m_config.importanceMap->getFloatData();
 					const Point2 &curPos = current->getSamplePosition();

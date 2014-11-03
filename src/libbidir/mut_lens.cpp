@@ -196,7 +196,11 @@ Float LensPerturbation::Q(const Path &source, const Path &proposal,
 					source.edge(i-1), edge);
 	}
 
-	return 1.0f / weight.getLuminance();
+	const Float lumWeight = weight.getLuminance();
+	if(lumWeight <= RCPOVERFLOW)
+		return 0.f;
+
+	return 1.0f / lumWeight;
 }
 
 void LensPerturbation::accept(const MutationRecord &) {

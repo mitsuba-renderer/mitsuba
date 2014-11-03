@@ -192,7 +192,7 @@ bool PathVertex::sampleNext(const Scene *scene, Sampler *sampler,
 				/* Compute the reverse quantities */
 				bRec.reverse();
 				pdf[1-mode] = bsdf->pdf(bRec, (EMeasure) measure);
-				if (pdf[1-mode] == 0) {
+				if (pdf[1-mode] <= RCPOVERFLOW) {
 					/* This can happen rarely due to roundoff errors -- be strict */
 					return false;
 				}
@@ -508,7 +508,7 @@ bool PathVertex::perturbDirection(const Scene *scene, const PathVertex *pred,
 				Spectrum value = emitter->evalDirection(dRec, pRec);
 				Float prob = emitter->pdfDirection(dRec, pRec);
 
-				if (value.isZero() || prob == 0)
+				if (value.isZero() || prob <= RCPOVERFLOW)
 					return false;
 
 				weight[EImportance] = value/prob;
@@ -531,7 +531,7 @@ bool PathVertex::perturbDirection(const Scene *scene, const PathVertex *pred,
 				Spectrum value = sensor->evalDirection(dRec, pRec);
 				Float prob = sensor->pdfDirection(dRec, pRec);
 
-				if (value.isZero() || prob == 0)
+				if (value.isZero() || prob <= RCPOVERFLOW)
 					return false;
 
 				weight[EImportance] = value * (
@@ -556,7 +556,7 @@ bool PathVertex::perturbDirection(const Scene *scene, const PathVertex *pred,
 				Spectrum value = bsdf->eval(bRec);
 				Float prob = bsdf->pdf(bRec);
 
-				if (value.isZero() || prob == 0)
+				if (value.isZero() || prob <= RCPOVERFLOW)
 					return false;
 
 				weight[mode] = value/prob;
@@ -592,7 +592,7 @@ bool PathVertex::perturbDirection(const Scene *scene, const PathVertex *pred,
 				/* Compute the reverse quantities */
 				bRec.reverse();
 				pdf[1-mode] = bsdf->pdf(bRec, ESolidAngle);
-				if (pdf[1-mode] == 0) {
+				if (pdf[1-mode] <= RCPOVERFLOW) {
 					/* This can happen rarely due to roundoff errors -- be strict */
 					return false;
 				}
@@ -628,7 +628,7 @@ bool PathVertex::perturbDirection(const Scene *scene, const PathVertex *pred,
 				Float value = phase->eval(pRec);
 				Float prob = phase->pdf(pRec);
 
-				if (value == 0 || prob == 0)
+				if (value == 0 || prob <= RCPOVERFLOW)
 					return false;
 
 				pdf[mode] = prob;
@@ -710,7 +710,7 @@ bool PathVertex::propagatePerturbation(const Scene *scene, const PathVertex *pre
 
 	bRec.typeMask = BSDF::EAll;
 	Float prob = bsdf->pdf(bRec, EDiscrete);
-	if (prob == 0) {
+	if (prob <= RCPOVERFLOW) {
 		SLog(EWarn, "Unable to recreate specular vertex in perturbation (bsdf=%s)",
 			bsdf->toString().c_str());
 		return false;
@@ -721,7 +721,7 @@ bool PathVertex::propagatePerturbation(const Scene *scene, const PathVertex *pre
 	measure = EDiscrete;
 	componentType = componentType_;
 
-	if (weight[mode].isZero() || prob == 0)
+	if (weight[mode].isZero() || prob <= RCPOVERFLOW)
 		return false;
 
 	/* Account for medium changes if applicable */
@@ -747,7 +747,7 @@ bool PathVertex::propagatePerturbation(const Scene *scene, const PathVertex *pre
 	/* Compute the reverse quantities */
 	bRec.reverse();
 	pdf[1-mode] = bsdf->pdf(bRec, EDiscrete);
-	if (pdf[1-mode] == 0) {
+	if (pdf[1-mode] <= RCPOVERFLOW) {
 		/* This can happen rarely due to roundoff errors -- be strict */
 		return false;
 	}
@@ -1128,6 +1128,7 @@ bool PathVertex::cast(const Scene *scene, EVertexType desired) {
 		pRec.object = emitter;
 		pRec.pdf = 0.0f;
 		getPositionSamplingRecord() = pRec;
+		measure = pRec.measure;
 		degenerate = emitter->getType() & Emitter::EDeltaDirection;
 
 		return true;
@@ -1149,6 +1150,7 @@ bool PathVertex::cast(const Scene *scene, EVertexType desired) {
 		Vector2i size = sensor->getFilm()->getSize();
 		pRec.uv.x *= size.x; pRec.uv.y *= size.y;
 		getPositionSamplingRecord() = pRec;
+		measure = pRec.measure;
 		degenerate = sensor->getType() & Sensor::EDeltaDirection;
 
 		return true;
@@ -1167,11 +1169,11 @@ bool PathVertex::update(const Scene *scene, const PathVertex *pred,
 	weight[mode]    = eval(scene, pred, succ, mode, measure);
 	weight[1-mode]  = eval(scene, succ, pred, (ETransportMode) (1-mode), measure);
 
-	if (weight[mode].isZero() || pdf[mode] == 0)
+	if (weight[mode].isZero() || pdf[mode] <= RCPOVERFLOW)
 		return false;
 
-	Float weightFwd = pdf[mode]   == 0 ? 0.0f : 1.0f / pdf[mode],
-	      weightBkw = pdf[1-mode] == 0 ? 0.0f : 1.0f / pdf[1-mode];
+	Float weightFwd = pdf[mode]   <= RCPOVERFLOW ? 0 : 1 / pdf[mode],
+		  weightBkw = pdf[1-mode] <= RCPOVERFLOW ? 0 : 1 / pdf[1-mode];
 
 	this->measure = measure;
 
@@ -1331,12 +1333,10 @@ bool PathVertex::connect(const Scene *scene,
 	if (vs->isDegenerate() || vt->isDegenerate())
 		return false;
 
-	vs->update(scene, pred, vt, EImportance);
-	if (vs->weight[EImportance].isZero())
+	if (!vs->update(scene, pred, vt, EImportance))
 		return false;
 
-	vt->update(scene, succ, vs, ERadiance);
-	if (vt->weight[ERadiance].isZero())
+	if (!vt->update(scene, succ, vs, ERadiance))
 		return false;
 
 	return edge->connect(scene, predEdge, vs, vt, succEdge);
@@ -1357,12 +1357,10 @@ bool PathVertex::connect(const Scene *scene,
 			return false;
 	}
 
-	vs->update(scene, pred, vt, EImportance, vsMeasure);
-	if (vs->weight[EImportance].isZero() || vs->pdf[EImportance] == 0.f)
+	if (!vs->update(scene, pred, vt, EImportance, vsMeasure))
 		return false;
 
-	vt->update(scene, succ, vs, ERadiance, vtMeasure);
-	if (vt->weight[ERadiance].isZero() || vt->pdf[ERadiance] == 0.f)
+	if (!vt->update(scene, succ, vs, ERadiance, vtMeasure))
 		return false;
 
 	return edge->connect(scene, predEdge, vs, vt, succEdge);

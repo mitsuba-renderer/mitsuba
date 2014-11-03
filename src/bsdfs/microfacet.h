@@ -550,11 +550,12 @@ protected:
 
 	/// Compute the interpolated roughness for the Phong model
 	inline Float interpolatePhongExponent(const Vector &v) const {
-		Float invSinTheta2 = 1 / Frame::sinTheta2(v);
+		const Float sinTheta2 = Frame::sinTheta2(v);
 
-		if (isIsotropic() || invSinTheta2 <= 0)
+		if (isIsotropic() || sinTheta2 <= RCPOVERFLOW)
 			return m_exponentU;
 
+		Float invSinTheta2 = 1 / sinTheta2;
 		Float cosPhi2 = v.x * v.x * invSinTheta2;
 		Float sinPhi2 = v.y * v.y * invSinTheta2;
 

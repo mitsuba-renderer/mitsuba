@@ -257,8 +257,8 @@ public:
 	Spectrum eval(const BSDFSamplingRecord &bRec, EMeasure measure) const {
 		/* Stop if this component was not requested */
 		if (measure != ESolidAngle ||
-			Frame::cosTheta(bRec.wi) < 0 ||
-			Frame::cosTheta(bRec.wo) < 0 ||
+			Frame::cosTheta(bRec.wi) <= 0 ||
+			Frame::cosTheta(bRec.wo) <= 0 ||
 			((bRec.component != -1 && bRec.component != 0) ||
 			!(bRec.typeMask & EGlossyReflection)))
 			return Spectrum(0.0f);
@@ -295,8 +295,8 @@ public:
 
 	Float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const {
 		if (measure != ESolidAngle ||
-			Frame::cosTheta(bRec.wi) < 0 ||
-			Frame::cosTheta(bRec.wo) < 0 ||
+			Frame::cosTheta(bRec.wi) <= 0 ||
+			Frame::cosTheta(bRec.wo) <= 0 ||
 			((bRec.component != -1 && bRec.component != 0) ||
 			!(bRec.typeMask & EGlossyReflection)))
 			return 0.0f;
