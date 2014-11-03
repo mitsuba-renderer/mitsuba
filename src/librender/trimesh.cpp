@@ -40,7 +40,7 @@ MTS_NAMESPACE_BEGIN
 TriMesh::TriMesh(const std::string &name, size_t triangleCount,
 		size_t vertexCount, bool hasNormals, bool hasTexcoords,
 		bool hasVertexColors, bool flipNormals, bool faceNormals)
- 	: Shape(Properties()), m_triangleCount(triangleCount),
+	: Shape(Properties()), m_triangleCount(triangleCount),
 	  m_vertexCount(vertexCount), m_flipNormals(flipNormals),
 	  m_faceNormals(faceNormals) {
 	m_name = name;
@@ -762,7 +762,7 @@ void TriMesh::getNormalDerivative(const Intersection &its,
 
 		/* Recompute the barycentric coordinates, since 'its.uv' may have been
 		   overwritten with coordinates of the texture "parameterization". */
- 		Vector rel = its.p - p0, du = p1 - p0, dv = p2 - p0;
+		Vector rel = its.p - p0, du = p1 - p0, dv = p2 - p0;
 
 		Float b1  = dot(du, rel), b2 = dot(dv, rel), /* Normal equations */
 			  a11 = dot(du, du), a12 = dot(du, dv),

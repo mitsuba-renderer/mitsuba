@@ -330,6 +330,14 @@ extern MTS_EXPORT_CORE bool solveLinearSystem2x2(const Float a[2][2], const Floa
 extern MTS_EXPORT_CORE void coordinateSystem(const Vector &a, Vector &b, Vector &c);
 
 /**
+ * \brief Derivatives of a frame formed by coordinateSystem
+ * \param n Source tangent frame that was created with coordinateSystem
+ * \param ds derivative of the frame with respect to s. ds.n should already contain normal derivative along s
+ * \param dt derivative of the frame with respect to t. dt.n should already contain normal derivative along t
+ */
+extern MTS_EXPORT_CORE void coordinateSystemDerivatives(const Frame &frame, Frame &ds, Frame &dt);
+
+/**
  * \brief Generate (optionally jittered) stratified 1D samples
  * \param random Source of random numbers
  * \param dest A pointer to a floating point array with at least

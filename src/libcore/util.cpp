@@ -21,6 +21,7 @@
 #include <mitsuba/core/random.h>
 #include <mitsuba/core/quad.h>
 #include <mitsuba/core/sse.h>
+#include <mitsuba/core/frame.h>
 #include <boost/bind.hpp>
 #include <stdarg.h>
 #include <iomanip>
@@ -597,6 +598,29 @@ void coordinateSystem(const Vector &a, Vector &b, Vector &c) {
 		c = Vector(0.0f, a.z * invLen, -a.y * invLen);
 	}
 	b = cross(c, a);
+}
+
+void coordinateSystemDerivatives(const Frame &frame, Frame &ds, Frame &dt) {
+
+	const Vector n = frame.n;
+	const Vector s = frame.s;
+
+	if(std::abs(n.x) > std::abs(n.y)) {
+		const Float invLen = 1 / std::sqrt(n.x * n.x + n.z * n.z);
+		ds.s = Vector(ds.n.z * invLen, 0, -ds.n.x * invLen);
+		ds.s -= s * dot(ds.s, s);
+		dt.s = Vector(dt.n.z * invLen, 0, -dt.n.x * invLen);
+		dt.s -= s * dot(dt.s, s);
+	} else {
+		const Float invLen = 1 / std::sqrt(n.y * n.y + n.z * n.z);
+		ds.s = Vector(0, ds.n.z * invLen, -ds.n.y * invLen);
+		ds.s -= s * dot(ds.s, s);
+		dt.s = Vector(0, dt.n.z * invLen, -dt.n.y * invLen);
+		dt.s -= s * dot(dt.s, s);
+	}
+
+	dt.t = cross(s, ds.n) + cross(dt.s, n);
+	ds.t = cross(s, dt.n) + cross(ds.s, n);
 }
 
 Point2 toSphericalCoordinates(const Vector &v) {
