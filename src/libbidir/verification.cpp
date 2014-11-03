@@ -62,6 +62,25 @@ static bool validateValue(const std::string name, Float value, Float cached, std
 	return valid;
 }
 
+static bool validateValue(const std::string name, Vector value, Vector cached, std::ostream &os) {
+	bool valid = true;
+
+	Float err = (cached-value).length();
+	Float mag = std::max(cached.length(), value.length());
+
+	if(std::isnan(err))
+		valid = false;
+	else if(mag < MTS_BD_MAXERR && err > MTS_BD_MAXERR) // absolute error threshold
+		valid = false;
+	else if(mag > MTS_BD_MAXERR && err/mag > MTS_BD_MAXERR) // relative error threshold
+		valid = false;
+
+	if(!valid)
+		os << "  " << name << " mismatch: cached=" << cached.toString() << ", computed=" << value.toString() << endl;
+
+	return valid;
+}
+
 bool PathVertex::verify(const Scene *scene, const PathVertex *pred, const PathVertex *succ,
 		ETransportMode mode, std::ostream &os) const {
 	if (mode == ERadiance)
@@ -151,9 +170,13 @@ bool PathEdge::verify(const Scene *scene, const PathVertex *pred,
 	bool valid = true;
 
 	if (!pred->isSupernode() && !succ->isSupernode()) {
-		Float refLength = (pred->getPosition()-succ->getPosition()).length();
-		valid &= validateValue("length",  refLength, length, os);
+		Vector refDireciton = succ->getPosition()-pred->getPosition();
+		Float refLength = refDireciton.length();
+		refDireciton /= refLength;
+		valid &= validateValue("length", refLength, length, os);
+		valid &= validateValue("d", refDireciton, d, os);
 	}
+
 
 	valid &= validateValue("weight[ERadiance]",   weightE, weight[ERadiance], os);
 	valid &= validateValue("weight[EImportance]", weightL, weight[EImportance], os);
@@ -172,7 +195,14 @@ bool Path::verify(const Scene *scene, ETransportMode mode, std::ostream &os) con
 		oss << "Vertex " << i << ":" << endl;
 		if (!m_vertices[i]->verify(scene, pred, succ, mode, oss))
 			valid = false;
+		if(i > 0 && i < m_edges.size())
+		{
+			oss << "Edge " << i << ":" << endl;
+			if(!m_edges[i-1]->verify(scene, pred, m_vertices[i], mode, oss))
+				valid = false;
+		}
 	}
+
 	if (!valid) {
 		os << "Detected an inconsistency in the path " << endl;
 		os << toString() << endl;
