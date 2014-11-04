@@ -593,6 +593,9 @@
 			Specifies the minimum path depth, after which the implementation will start to use the
 			"russian roulette" path termination criterion (set to <tt>-1</tt> to disable).
 		</param>
+		<param name="timeout" readableName="Timeout" type="integer" default="0">
+			Rendering budget in seconds
+		</param>
 	</plugin>
 
 	<plugin type="integrator" name="mlt" readableName="Path Space MLT" show="true"
@@ -662,6 +665,9 @@
 		</param>
 		<param name="probFactor" readableName="Probability factor" type="float" default="50" importance="1">
 			Probability factor ("lambda") of the manifold perturbation
+		</param>
+		<param name="timeout" readableName="Timeout" type="integer" default="0">
+			Rendering budget in seconds
 		</param>
 	</plugin>
 
