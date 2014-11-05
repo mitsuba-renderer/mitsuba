@@ -600,27 +600,29 @@ void coordinateSystem(const Vector &a, Vector &b, Vector &c) {
 	b = cross(c, a);
 }
 
-void coordinateSystemDerivatives(const Frame &frame, Frame &ds, Frame &dt) {
+void computeShadingFrame(const Vector &n, const Vector &dpdu, Frame &frame) {
+	frame.n = n;
+	frame.s = normalize(dpdu - frame.n
+		* dot(frame.n, dpdu));
+	frame.t = cross(frame.n, frame.s);
+}
 
-	const Vector n = frame.n;
-	const Vector s = frame.s;
+void computeShadingFrameDerivative(const Vector &n, const Vector &dpdu, const Vector &dndu, const Vector &dndv, Frame &du, Frame &dv) {
+	Vector s = dpdu - n * dot(n, dpdu);
+	Float invLen_s = 1.0f / s.length();
+	s *= invLen_s;
 
-	if(std::abs(n.x) > std::abs(n.y)) {
-		const Float invLen = 1 / std::sqrt(n.x * n.x + n.z * n.z);
-		ds.s = Vector(ds.n.z * invLen, 0, -ds.n.x * invLen);
-		ds.s -= s * dot(ds.s, s);
-		dt.s = Vector(dt.n.z * invLen, 0, -dt.n.x * invLen);
-		dt.s -= s * dot(dt.s, s);
-	} else {
-		const Float invLen = 1 / std::sqrt(n.y * n.y + n.z * n.z);
-		ds.s = Vector(0, ds.n.z * invLen, -ds.n.y * invLen);
-		ds.s -= s * dot(ds.s, s);
-		dt.s = Vector(0, dt.n.z * invLen, -dt.n.y * invLen);
-		dt.s -= s * dot(dt.s, s);
-	}
+	du.s = invLen_s * (-dndu * dot(n, dpdu) - n * dot(dndu, dpdu));
+	dv.s = invLen_s * (-dndv * dot(n, dpdu) - n * dot(dndv, dpdu));
 
-	dt.t = cross(s, ds.n) + cross(dt.s, n);
-	ds.t = cross(s, dt.n) + cross(ds.s, n);
+	du.s -= s * dot(du.s, s);
+	dv.s -= s * dot(dv.s, s);
+
+	du.t = cross(dndu, s) + cross(n, du.s);
+	dv.t = cross(dndv, s) + cross(n, dv.s);
+
+	du.n = dndu;
+	dv.n = dndv;
 }
 
 Point2 toSphericalCoordinates(const Vector &v) {

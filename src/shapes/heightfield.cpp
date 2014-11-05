@@ -402,11 +402,8 @@ public:
 			its.shFrame.n = normalize(m_objectToWorld(Normal(
 				(1 - temp.p.x) * ((1-temp.p.y) * n00 + temp.p.y * n01)
 				   + temp.p.x  * ((1-temp.p.y) * n10 + temp.p.y * n11))));
-
-			its.shFrame.s = normalize(its.geoFrame.s - dot(its.geoFrame.s, its.shFrame.n) * its.shFrame.n);
-			its.shFrame.t = cross(its.shFrame.n, its.shFrame.s);
 		} else {
-			its.shFrame = its.geoFrame;
+			its.shFrame.n = its.geoFrame.n;
 		}
 
 		if (m_flipNormals) {
@@ -415,7 +412,6 @@ public:
 		}
 
 		its.shape = this;
- 		its.wi = its.toLocal(-ray.d);
  		its.hasUVPartials = false;
 		its.instance = NULL;
 		its.time = ray.time;

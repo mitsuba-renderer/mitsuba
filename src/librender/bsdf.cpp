@@ -65,31 +65,14 @@ Float BSDF::getEta() const {
 
 Frame BSDF::getFrame(const Intersection &its) const {
 	Frame result;
-
-	result.n = its.shFrame.n;
-	result.s = normalize(its.dpdu - result.n
-		* dot(result.n, its.dpdu));
-	result.t = cross(result.n, result.s);
-
+	computeShadingFrame(its.shFrame.n, its.dpdu, result);
 	return result;
 }
 
 void BSDF::getFrameDerivative(const Intersection &its, Frame &du, Frame &dv) const {
-	(its.instance ? its.instance : its.shape)->getNormalDerivative(its, du.n, dv.n, true);
-
-	Vector n = its.shFrame.n;
-	Vector s = its.dpdu - n * dot(n, its.dpdu);
-	Float invLen_s = 1.0f / s.length();
-	s *= invLen_s;
-
-	du.s = invLen_s * (-du.n * dot(n, its.dpdu) - n * dot(du.n, its.dpdu));
-	dv.s = invLen_s * (-dv.n * dot(n, its.dpdu) - n * dot(dv.n, its.dpdu));
-
-	du.s -= s * dot(du.s, s);
-	dv.s -= s * dot(dv.s, s);
-
-	du.t = cross(du.n, s) + cross(n, du.s);
-	dv.t = cross(dv.n, s) + cross(n, dv.s);
+	Vector dndu, dndv;
+	(its.instance ? its.instance : its.shape)->getNormalDerivative(its, dndu, dndv, true);
+	computeShadingFrameDerivative(its.shFrame.n, its.dpdu, dndu, dndv, du, dv);
 }
 
 Float BSDF::getRoughness(const Intersection &its, int component) const {

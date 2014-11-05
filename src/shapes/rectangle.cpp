@@ -155,13 +155,13 @@ public:
 	void fillIntersectionRecord(const Ray &ray,
 			const void *temp, Intersection &its) const {
 		const Float *data = static_cast<const Float *>(temp);
-		its.shFrame = its.geoFrame = m_frame;
+		its.geoFrame = m_frame;
+		its.shFrame = its.geoFrame.n;
 		its.shape = this;
 		its.dpdu = m_dpdu;
 		its.dpdv = m_dpdv;
 		its.uv = Point2(0.5f * (data[0]+1), 0.5f * (data[1]+1));
 		its.p = ray(its.t);
-		its.wi = its.toLocal(-ray.d);
  		its.hasUVPartials = false;
 		its.instance = NULL;
 		its.time = ray.time;

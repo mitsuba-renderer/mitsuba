@@ -329,13 +329,42 @@ extern MTS_EXPORT_CORE bool solveLinearSystem2x2(const Float a[2][2], const Floa
  */
 extern MTS_EXPORT_CORE void coordinateSystem(const Vector &a, Vector &b, Vector &c);
 
+
 /**
- * \brief Derivatives of a frame formed by coordinateSystem
- * \param n Source tangent frame that was created with coordinateSystem
- * \param ds derivative of the frame with respect to s. ds.n should already contain normal derivative along s
- * \param dt derivative of the frame with respect to t. dt.n should already contain normal derivative along t
+ * \brief Given a smoothly varying shading normal and a tangent of a shape parameterization,
+ * compute a smoothly varying orthonormal frame
+ *
+ * \param n
+ *    A shading normal at a surface position
+ * \param dpdu
+ *    Position derivative of the underlying parameterization with respect to the 'u' coordinate
+ * \param frame
+ *    Used to return the computed frame
+ *
+ * Mitsuba uses this function to compute the field \ref Intersection::shFrame
  */
-extern MTS_EXPORT_CORE void coordinateSystemDerivatives(const Frame &frame, Frame &ds, Frame &dt);
+extern MTS_EXPORT_CORE void computeShadingFrame(const Vector &n, const Vector &dpdu, Frame &frame);
+
+/**
+ * \brief Compute the spatial derivative of \ref computeShadingFrame
+ *
+ * This is used by Manifold Exploration and Half Vector Light Transport
+ *
+ * \param n
+ *    A shading normal at a surface position
+ * \param dpdu
+ *    Position derivative of the underlying parameterization with respect to the 'u' coordinate
+ * \param dndu
+ *    Derivative of the shading normal along the 'u' coordinate
+ * \param dndv
+ *    Derivative of the shading normal along the 'v' coordinate
+ * \param du
+ *    Used to return the 'u' derivative of the frame
+ * \param dv
+ *    Used to return the 'v' derivative of the frame
+ */
+extern MTS_EXPORT_CORE void computeShadingFrameDerivative(const Vector &n, const Vector &dpdu, 
+		const Vector &dndu, const Vector &dndv, Frame &du, Frame &dv);
 
 /**
  * \brief Generate (optionally jittered) stratified 1D samples

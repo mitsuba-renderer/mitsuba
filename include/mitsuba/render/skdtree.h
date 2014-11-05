@@ -376,6 +376,7 @@ protected:
 				its.dpdu = side1;
 				its.dpdv = side2;
 			}
+
 			if (EXPECT_TAKEN(vertexNormals)) {
 				const Normal
 					&n0 = vertexNormals[idx0],
@@ -384,23 +385,13 @@ protected:
 
 				its.shFrame.n = normalize(n0 * b.x + n1 * b.y + n2 * b.z);
 
-				if (EXPECT_TAKEN(!vertexTangents)) {
-					coordinateSystem(its.shFrame.n, its.shFrame.s, its.shFrame.t);
-				} else {
-					/* Align shFrame.s with dpdu, use Gram-Schmidt to orthogonalize */
-					its.shFrame.s = normalize(its.dpdu - its.shFrame.n
-						* dot(its.shFrame.n, its.dpdu));
-					its.shFrame.t = cross(its.shFrame.n, its.shFrame.s);
-				}
-
 				/* Ensure that the geometric & shading normals face the same direction */
 				if (dot(faceNormal, its.shFrame.n) < 0)
 					faceNormal = -faceNormal;
-
-				its.geoFrame = Frame(faceNormal);
 			} else {
-				its.shFrame = its.geoFrame = Frame(faceNormal);
+				its.shFrame.n = faceNormal;
 			}
+			its.geoFrame = Frame(faceNormal);
 
 			if (EXPECT_TAKEN(vertexTexcoords)) {
 				const Point2 &t0 = vertexTexcoords[idx0];
@@ -420,7 +411,6 @@ protected:
 					result[2], Spectrum::EReflectance);
 			}
 
-			its.wi = its.toLocal(-ray.d);
 			its.shape = trimesh;
 			its.hasUVPartials = false;
 			its.primIndex = cache->primIndex;
@@ -430,6 +420,9 @@ protected:
 			shape->fillIntersectionRecord(ray,
 				reinterpret_cast<const uint8_t*>(temp) + 2*sizeof(IndexType), its);
 		}
+
+		computeShadingFrame(its.shFrame.n, its.dpdu, its.shFrame);
+		its.wi = its.toLocal(-ray.d);
 	}
 
 	/// Plain shadow ray query (used by the 'instance' plugin)

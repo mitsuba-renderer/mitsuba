@@ -133,15 +133,11 @@ void Instance::adjustTime(Intersection &its, Float time) const {
 	Transform trafo = m_transform->eval(its.time).inverse();
 	trafo = m_transform->eval(time) * trafo;
 
-	Vector s = trafo(its.shFrame.s);
-	its.shFrame.n = normalize(trafo(its.shFrame.n));
-	its.shFrame.s = normalize(s - its.shFrame.n
-		* dot(its.shFrame.n, s));
-	its.shFrame.t = cross(its.shFrame.n, its.shFrame.s);
-	its.geoFrame = Frame(normalize(trafo(its.geoFrame.n)));
 	its.dpdu = trafo(its.dpdu);
 	its.dpdv = trafo(its.dpdv);
+	its.geoFrame = Frame(normalize(trafo(its.geoFrame.n)));
 	its.p = trafo(its.p);
+	computeShadingFrame(normalize(trafo(its.shFrame.n)), its.dpdu, its.shFrame);
 	its.wi = normalize(trafo(its.wi));
 	its.instance = this;
 	its.time = time;
@@ -155,16 +151,11 @@ void Instance::fillIntersectionRecord(const Ray &_ray,
 	trafo.inverse()(_ray, ray);
 	kdtree->fillIntersectionRecord<false>(ray, temp, its);
 
-	Vector s = trafo(its.shFrame.s);
 	its.shFrame.n = normalize(trafo(its.shFrame.n));
-	its.shFrame.s = normalize(s - its.shFrame.n
-		* dot(its.shFrame.n, s));
-	its.shFrame.t = cross(its.shFrame.n, its.shFrame.s);
 	its.geoFrame = Frame(normalize(trafo(its.geoFrame.n)));
 	its.dpdu = trafo(its.dpdu);
 	its.dpdv = trafo(its.dpdv);
 	its.p = trafo(its.p);
-	its.wi = normalize(its.shFrame.toLocal(-_ray.d));
 	its.instance = this;
 }
 

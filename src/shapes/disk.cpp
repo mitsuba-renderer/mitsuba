@@ -189,12 +189,9 @@ public:
 			its.dpdv = trafo(Vector(0, 1, 0));
 		}
 
-		its.shFrame = its.geoFrame = Frame(
-			normalize(its.dpdu), normalize(its.dpdv),
-			normalize(trafo(Normal(0, 0, 1))));
+		its.shFrame.n = normalize(trafo(Normal(0, 0, 1)));
 		its.uv = Point2(r, phi * INV_TWOPI);
 		its.p = ray(its.t);
-		its.wi = its.toLocal(-ray.d);
  		its.hasUVPartials = false;
 		its.instance = NULL;
 		its.time = ray.time;

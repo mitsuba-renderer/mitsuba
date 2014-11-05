@@ -477,23 +477,13 @@ public:
 
 			its.shFrame.n = normalize(n0 * b.x + n1 * b.y + n2 * b.z);
 
-			if (EXPECT_TAKEN(!vertexTangents0)) {
-				coordinateSystem(its.shFrame.n, its.shFrame.s, its.shFrame.t);
-			} else {
-				/* Align shFrame.s with dpdu, use Gram-Schmidt to orthogonalize */
-				its.shFrame.s = normalize(its.dpdu - its.shFrame.n
-					* dot(its.shFrame.n, its.dpdu));
-				its.shFrame.t = cross(its.shFrame.n, its.shFrame.s);
-			}
-
 			/* Ensure that the geometric & shading normals face the same direction */
 			if (dot(faceNormal, its.shFrame.n) < 0)
 				faceNormal = -faceNormal;
-
-			its.geoFrame = Frame(faceNormal);
 		} else {
-			its.shFrame = its.geoFrame = Frame(faceNormal);
+			its.shFrame.n = faceNormal;
 		}
+		its.geoFrame = Frame(faceNormal);
 
 		if (EXPECT_TAKEN(vertexTexcoords0)) {
 			Point2
@@ -515,7 +505,6 @@ public:
 				result[2], Spectrum::EReflectance);
 		}
 
-		its.wi = its.toLocal(-ray.d);
 		its.shape = m_kdtree->getMesh(0, cache->shapeIndex);
 		its.hasUVPartials = false;
 		its.primIndex = cache->primIndex;

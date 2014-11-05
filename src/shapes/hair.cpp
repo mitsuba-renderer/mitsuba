@@ -845,8 +845,7 @@ void HairShape::fillIntersectionRecord(const Ray &ray,
 	const Vector local = its.geoFrame.toLocal(relHitPoint);
 	its.p += its.geoFrame.n * (m_kdtree->getRadius() - std::sqrt(local.y*local.y+local.z*local.z));
 
-	its.shFrame = its.geoFrame;
-	its.wi = its.toLocal(-ray.d);
+	its.shFrame.n = its.geoFrame.n;
 	its.hasUVPartials = false;
 	its.instance = this;
 	its.time = ray.time;
