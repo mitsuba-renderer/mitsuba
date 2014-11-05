@@ -276,15 +276,40 @@ inline size_t roundToPowerOfTwo(size_t value) {
 			return copysign((double) 1.0, value);
 		#endif
 	}
+
+	/// Cast to single precision and round up if not exactly representable (passthrough)
+	inline float castflt_up(float val) { return val; }
+
+	/// Cast to single precision and round up if not exactly representable
+	inline float castflt_up(double val) {
+		union {
+			float a;
+			int b;
+		};
+
+		a = (float) val;
+		if ((double) a < val)
+			b += a < 0 ? -1 : 1;
+		return a;
+	}
+
+	/// Cast to single precision and round down if not exactly representable (passthrough)
+	inline float castflt_down(float val) { return val; }
+
+	/// Cast to single precision and round down if not exactly representable
+	inline float castflt_down(double val) {
+		union {
+			float a;
+			int b;
+		};
+
+		a = (float) val;
+		if ((double) a > val)
+			b += a > 0 ? -1 : 1;
+		return a;
+	}
 }; /* namespace math */
 
 MTS_NAMESPACE_END
-
-#if defined(_MSC_VER) && _MSC_VER < 1800
-extern "C" {
-	extern MTS_EXPORT_CORE float nextafterf(float x, float y);
-	extern MTS_EXPORT_CORE double nextafter(double x, double y);
-};
-#endif
 
 #endif /* __MITSUBA_CORE_MATH_H_ */

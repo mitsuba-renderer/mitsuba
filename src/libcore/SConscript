@@ -55,7 +55,6 @@ if sys.platform == 'darwin':
 	libcore_objects += coreEnv_osx.SharedObject('platform_darwin.mm')
 elif sys.platform == 'win32':
 	libcore_objects += coreEnv.SharedObject('getopt.c')
-	libcore_objects += coreEnv.SharedObject('platform_win32.cpp')
 
 libcore = coreEnv.SharedLibrary('mitsuba-core', libcore_objects)
 

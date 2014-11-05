@@ -135,7 +135,7 @@ if (APPLE)
   list(APPEND SRCS platform_darwin.mm)
 elseif (WIN32)
   list(APPEND HDRS ${INCLUDE_DIR}/getopt.h)
-  list(APPEND SRCS getopt.c platform_win32.cpp)
+  list(APPEND SRCS getopt.c)
 endif()
 
 include_directories(

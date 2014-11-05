@@ -59,6 +59,7 @@
 
 MTS_NAMESPACE_BEGIN
 
+
 /**
  * \brief Special "ordered" memory allocator
  *
@@ -997,10 +998,8 @@ protected:
 
 		#if defined(DOUBLE_PRECISION)
 			for (int i=0; i<3; ++i) {
-				aabb.min[i] = nextafterf((float) aabb.min[i],
-						  -std::numeric_limits<float>::max());
-				aabb.max[i] = nextafterf((float) aabb.max[i],
-						  std::numeric_limits<float>::max());
+				aabb.min[i] = math::castflt_down(aabb.min[i]);
+				aabb.max[i] = math::castflt_up(aabb.max[i]);
 			}
 		#endif
 
@@ -1346,10 +1345,11 @@ protected:
 		int axis;
 		SizeType numLeft, numRight;
 		bool planarLeft;
+		int leftBin;
 
 		inline SplitCandidate() :
 			cost(std::numeric_limits<Float>::infinity()),
-			pos(0), axis(0), numLeft(0), numRight(0), planarLeft(false) {
+			pos(0), axis(0), numLeft(0), numRight(0), planarLeft(false), leftBin(-1) {
 		}
 
 		std::string toString() const {
@@ -1360,6 +1360,7 @@ protected:
 				<< "  axis=" << axis << "," << endl
 				<< "  numLeft=" << numLeft << "," << endl
 				<< "  numRight=" << numRight << "," << endl
+				<< "  leftBin=" << leftBin << "," << endl
 				<< "  planarLeft=" << (planarLeft ? "yes" : "no") << endl
 				<< "]";
 			return oss.str();
@@ -1561,7 +1562,8 @@ protected:
 			}
 
 			for (int axis=0; axis<PointType::dim; ++axis) {
-				float min = (float) aabb.min[axis], max = (float) aabb.max[axis];
+				float min = math::castflt_down(aabb.min[axis]),
+				      max = math::castflt_up(aabb.max[axis]);
 
 				if (min == max) {
 					*eventEnd++ = EdgeEvent(EdgeEvent::EEdgePlanar, axis,
@@ -2198,21 +2200,6 @@ protected:
 					*newEventsLeftEnd = newEventsLeftStart,
 					*newEventsRightEnd = newEventsRightStart;
 
-			AABBType leftNodeAABB_enlarged(leftNodeAABB),
-					 rightNodeAABB_enlarged(rightNodeAABB);
-
-			#if defined(DOUBLE_PRECISION)
-				int axis0 = (bestSplit.axis + 1)%3, axis1 = (bestSplit.axis + 2)%3;
-				leftNodeAABB_enlarged.min[axis0] = rightNodeAABB_enlarged.min[axis0]  =
-					nextafterf((float) nodeAABB.min[axis0], -std::numeric_limits<float>::max());
-				leftNodeAABB_enlarged.max[axis0] = rightNodeAABB_enlarged.max[axis0]  =
-					nextafterf((float) nodeAABB.max[axis0],  std::numeric_limits<float>::max());
-				leftNodeAABB_enlarged.min[axis1] = rightNodeAABB_enlarged.min[axis1]  =
-					nextafterf((float) nodeAABB.min[axis1], -std::numeric_limits<float>::max());
-				leftNodeAABB_enlarged.max[axis1] = rightNodeAABB_enlarged.max[axis1]  =
-					nextafterf((float) nodeAABB.max[axis1],  std::numeric_limits<float>::max());
-			#endif
-
 			for (EdgeEvent *event = eventStart; event<eventEnd; ++event) {
 				int classification = storage.get(event->index);
 
@@ -2227,16 +2214,16 @@ protected:
 					   generate new events for each side */
 					const IndexType index = event->index;
 
-					AABBType clippedLeft = cast()->getClippedAABB(index, leftNodeAABB_enlarged);
-					AABBType clippedRight = cast()->getClippedAABB(index, rightNodeAABB_enlarged);
+					AABBType clippedLeft = cast()->getClippedAABB(index, leftNodeAABB);
+					AABBType clippedRight = cast()->getClippedAABB(index, rightNodeAABB);
 
-					KDAssert(leftNodeAABB_enlarged.contains(clippedLeft));
-					KDAssert(rightNodeAABB_enlarged.contains(clippedRight));
+					KDAssert(leftNodeAABB.contains(clippedLeft));
+					KDAssert(rightNodeAABB.contains(clippedRight));
 
 					if (clippedLeft.isValid() && clippedLeft.getSurfaceArea() > 0) {
 						for (int axis=0; axis<PointType::dim; ++axis) {
-							float min = (float) clippedLeft.min[axis],
-								  max = (float) clippedLeft.max[axis];
+							float min = clippedLeft.min[axis],
+								  max = clippedLeft.max[axis];
 
 							if (min == max) {
 								*newEventsLeftEnd++ = EdgeEvent(
@@ -2257,8 +2244,8 @@ protected:
 
 					if (clippedRight.isValid() && clippedRight.getSurfaceArea() > 0) {
 						for (int axis=0; axis<PointType::dim; ++axis) {
-							float min = (float) clippedRight.min[axis],
-								  max = (float) clippedRight.max[axis];
+							float min = clippedRight.min[axis],
+								  max = clippedRight.max[axis];
 
 							if (min == max) {
 								*newEventsRightEnd++ = EdgeEvent(
@@ -2425,10 +2412,20 @@ protected:
 		 * \brief Prepare to bin for the specified bounds
 		 */
 		void setAABB(const AABBType &aabb) {
-			m_aabb = aabb;
-			m_binSize = m_aabb.getExtents() / (Float) m_binCount;
-			for (int axis=0; axis<PointType::dim; ++axis)
-				m_invBinSize[axis] = 1/m_binSize[axis];
+			for (int axis=0; axis<PointType::dim; ++axis) {
+				float min = math::castflt_down(aabb.min[axis]);
+				float max = math::castflt_up(aabb.max[axis]);
+				m_min[axis] = min;
+				m_aabb.min[axis] = min;
+				m_aabb.max[axis] = max;
+				m_binSize[axis] = (max-min) / m_binCount;
+				m_invBinSize[axis] = 1 / m_binSize[axis];
+			}
+		}
+
+		/// Compute the bin location for a given position and axis
+		inline IndexType computeIndex(float pos, int axis) {
+			return (IndexType) std::min((float) (m_binCount-1), std::max(0.0f, (pos - m_min[axis]) * m_invBinSize[axis]));
 		}
 
 		/**
@@ -2444,19 +2441,12 @@ protected:
 			m_primCount = primCount;
 			memset(m_minBins, 0, sizeof(SizeType) * PointType::dim * m_binCount);
 			memset(m_maxBins, 0, sizeof(SizeType) * PointType::dim * m_binCount);
-			const int64_t maxBin = m_binCount-1;
 
 			for (SizeType i=0; i<m_primCount; ++i) {
 				const AABBType aabb = derived->getAABB(indices[i]);
 				for (int axis=0; axis<PointType::dim; ++axis) {
-					int64_t minIdx = (int64_t) (((float) aabb.min[axis] - (float) m_aabb.min[axis])
-							* m_invBinSize[axis]);
-					int64_t maxIdx = (int64_t) (((float) aabb.max[axis] - (float) m_aabb.min[axis])
-							* m_invBinSize[axis]);
-					m_maxBins[axis * m_binCount
-						+ std::max((int64_t) 0, std::min(maxIdx, maxBin))]++;
-					m_minBins[axis * m_binCount
-						+ std::max((int64_t) 0, std::min(minIdx, maxBin))]++;
+					m_minBins[axis * m_binCount + computeIndex(math::castflt_down(aabb.min[axis]), axis)]++;
+					m_maxBins[axis * m_binCount + computeIndex(math::castflt_up  (aabb.max[axis]), axis)]++;
 				}
 			}
 		}
@@ -2468,15 +2458,14 @@ protected:
 		 * splits.
 		 */
 		SplitCandidate minimizeCost(Float traversalCost, Float queryCost) {
-			SplitCandidate candidate;
-			int binIdx = 0, leftBin = 0;
 			TreeConstructionHeuristic tch(m_aabb);
+			SplitCandidate candidate;
+			int binIdx = 0;
 
 			for (int axis=0; axis<PointType::dim; ++axis) {
-				VectorType extents = m_aabb.getExtents();
 				SizeType numLeft = 0, numRight = m_primCount;
-				Float leftWidth = 0, rightWidth = extents[axis];
-				const Float binSize = m_binSize[axis];
+				Float leftWidth = 0, rightWidth = m_aabb.max[axis] - m_aabb.min[axis];
+				const float binSize = m_binSize[axis];
 
 				for (int i=0; i<m_binCount-1; ++i) {
 					numLeft  += m_minBins[binIdx];
@@ -2494,7 +2483,7 @@ protected:
 						candidate.axis = axis;
 						candidate.numLeft = numLeft;
 						candidate.numRight = numRight;
-						leftBin = i;
+						candidate.leftBin = i;
 					}
 
 					binIdx++;
@@ -2502,73 +2491,8 @@ protected:
 				binIdx++;
 			}
 
-			KDAssert(candidate.cost != std::numeric_limits<Float>::infinity());
-
-			const int axis = candidate.axis;
-			const Float min = m_aabb.min[axis];
-
-			/* The following part may seem a bit paranoid. It is ensures that the
-			 * returned split plane is consistent with the floating point calculations
-			 * done by the binning code in \ref bin(). Since reciprocals and
-			 * various floating point roundoff errors are involved, simply setting
-			 *
-			 * candidate.pos = m_aabb.min[axis] + (leftBin+1) * m_binSize[axis];
-			 *
-			 * can potentially lead to a slightly different number primitives being
-			 * classified to the left and right if we were to do check each
-			 * primitive against this split position. We can't have that, however,
-			 * since the partitioning code assumes that these numbers are correct.
-			 * This lets it avoid doing another costly sweep, hence all the
-			 * floating point madness below.
-			 */
-			Float invBinSize = m_invBinSize[axis];
-			float split = (float) (min + (leftBin + 1) * m_binSize[axis]);
-			float splitNext = nextafterf(split,
-				  std::numeric_limits<float>::max());
-			int idx     = (int) ((split - min) * invBinSize);
-			int idxNext = (int) ((splitNext - min) * invBinSize);
-
-			/**
-			 * The split plane should pass through the last discrete floating
-			 * floating value, which would still be classified into
-			 * the left bin. If this is not computed correctly, do binary
-			 * search.
-			 */
-			if (!(idx == leftBin && idxNext == leftBin+1)) {
-				float left = (float) m_aabb.min[axis];
-				float right = (float) m_aabb.max[axis];
-				int it = 0;
-				while (true) {
-					split = left + (right-left)/2;
-					splitNext = nextafterf(split,
-						std::numeric_limits<float>::max());
-					idx     = (int) ((split - min) * invBinSize);
-					idxNext = (int) ((splitNext - min) * invBinSize);
-
-					if (idx == leftBin && idxNext == leftBin+1) {
-						/* Got it! */
-						break;
-					} else if (std::abs(idx-idxNext) > 1 || ++it > 50) {
-						/* Insufficient floating point resolution
-						   -> a leaf will be created. */
-						candidate.cost = std::numeric_limits<Float>::infinity();
-						break;
-					}
-
-					if (idx <= leftBin)
-						left = split;
-					else
-						right = split;
-				}
-			}
-
-			if (split <= m_aabb.min[axis] || split >= m_aabb.max[axis]) {
-				/* Insufficient floating point resolution
-				   -> a leaf will be created. */
-				candidate.cost = std::numeric_limits<Float>::infinity();
-			}
-
-			candidate.pos = split;
+			KDAssert(candidate.cost != std::numeric_limits<Float>::infinity() &&
+			         candidate.leftBin >= 0);
 
 			return candidate;
 		}
@@ -2594,10 +2518,9 @@ protected:
 				BuildContext &ctx, const Derived *derived, IndexType *primIndices,
 				SplitCandidate &split, bool isLeftChild, Float traversalCost,
 				Float queryCost) {
-			const float splitPos = split.pos;
-			const int axis = split.axis;
 			SizeType numLeft = 0, numRight = 0;
 			AABBType leftBounds, rightBounds;
+			const int axis = split.axis;
 
 			IndexType *leftIndices, *rightIndices;
 			if (isLeftChild) {
@@ -2613,12 +2536,14 @@ protected:
 			for (SizeType i=0; i<m_primCount; ++i) {
 				const IndexType primIndex = primIndices[i];
 				const AABBType aabb = derived->getAABB(primIndex);
+				int startIdx = computeIndex(math::castflt_down(aabb.min[axis]), axis);
+				int endIdx   = computeIndex(math::castflt_up  (aabb.max[axis]), axis);
 
-				if (aabb.max[axis] <= splitPos) {
+				if (endIdx <= split.leftBin) {
 					KDAssert(numLeft < split.numLeft);
 					leftBounds.expandBy(aabb);
 					leftIndices[numLeft++] = primIndex;
-				} else if (aabb.min[axis] > splitPos) {
+				} else if (startIdx > split.leftBin) {
 					KDAssert(numRight < split.numRight);
 					rightBounds.expandBy(aabb);
 					rightIndices[numRight++] = primIndex;
@@ -2631,9 +2556,11 @@ protected:
 					rightIndices[numRight++] = primIndex;
 				}
 			}
-
 			leftBounds.clip(m_aabb);
 			rightBounds.clip(m_aabb);
+			split.pos = m_min[axis] + m_binSize[axis] * (split.leftBin + 1);
+			leftBounds.max[axis] = std::min(leftBounds.max[axis], (Float) split.pos);
+			rightBounds.min[axis] = std::max(rightBounds.min[axis], (Float) split.pos);
 
 			KDAssert(numLeft == split.numLeft);
 			KDAssert(numRight == split.numRight);
@@ -2644,40 +2571,6 @@ protected:
 			else
 				ctx.rightAlloc.shrinkAllocation(rightIndices, split.numRight);
 
-			leftBounds.max[axis] = std::min(leftBounds.max[axis], (Float) splitPos);
-			rightBounds.min[axis] = std::max(rightBounds.min[axis], (Float) splitPos);
-
-			if (leftBounds.max[axis] != rightBounds.min[axis]) {
-				/* There is some space between the child nodes -- move
-				   the split plane onto one of the AABBs so that the
-				   heuristic cost is minimized */
-				TreeConstructionHeuristic tch(m_aabb);
-
-				std::pair<Float, Float> prob1 = tch(axis,
-					leftBounds.max[axis] - m_aabb.min[axis],
-					m_aabb.max[axis] - leftBounds.max[axis]);
-				std::pair<Float, Float> prob2 = tch(axis,
-					rightBounds.min[axis] - m_aabb.min[axis],
-					m_aabb.max[axis] - rightBounds.min[axis]);
-				Float cost1 = traversalCost + queryCost
-					* (prob1.first * numLeft + prob1.second * numRight);
-				Float cost2 = traversalCost + queryCost
-					* (prob2.first * numLeft + prob2.second * numRight);
-
-				if (cost1 <= cost2) {
-					split.cost = cost1;
-					split.pos = (float) leftBounds.max[axis];
-				} else {
-					split.cost = cost2;
-					split.pos = (float) rightBounds.min[axis];
-				}
-
-				leftBounds.max[axis] = std::min(leftBounds.max[axis],
-						(Float) split.pos);
-				rightBounds.min[axis] = std::max(rightBounds.min[axis],
-						(Float) split.pos);
-			}
-
 			return Partition(leftBounds, leftIndices,
 				rightBounds, rightIndices);
 		}
@@ -2686,9 +2579,10 @@ protected:
 		SizeType *m_maxBins;
 		SizeType m_primCount;
 		int m_binCount;
+		float m_min[PointType::dim];
+		float m_binSize[PointType::dim];
+		float m_invBinSize[PointType::dim];
 		AABBType m_aabb;
-		VectorType m_binSize;
-		VectorType m_invBinSize;
 	};
 
 protected:
