@@ -268,7 +268,7 @@ public:
 	}
 
 	Spectrum eval(const BSDFSamplingRecord &bRec, EMeasure measure) const {
-		if (measure != ESolidAngle)
+		if (measure != ESolidAngle || Frame::cosTheta(bRec.wi) == 0)
 			return Spectrum(0.0f);
 
 		/* Determine the type of interaction */

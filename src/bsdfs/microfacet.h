@@ -460,6 +460,8 @@ public:
 
 	/// Implements the probability density of the function \ref sampleVisible()
 	Float pdfVisible(const Vector &wi, const Vector &m) const {
+		if(Frame::cosTheta(wi) == 0)
+			return 0.0f;
 		return smithG1(wi, m) * absDot(wi, m) * eval(m) / std::abs(Frame::cosTheta(wi));
 	}
 
@@ -501,7 +503,7 @@ public:
 
 			case EGGX: {
 					Float root = alpha * tanTheta;
-					return 2.0f / (1.0f + std::sqrt(1.0f + root*root));
+					return 2.0f / (1.0f + math::hypot2((Float) 1.0f, root));
 				}
 				break;
 
