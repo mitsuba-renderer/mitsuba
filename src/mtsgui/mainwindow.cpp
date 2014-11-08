@@ -1469,6 +1469,8 @@ void MainWindow::on_actionStop_triggered() {
 	} else if (context->mode == ERender) {
 		context->mode = EPreview;
 		m_contextMutex.unlock();
+	} else {
+		m_contextMutex.unlock();
 	}
 	ui->glView->resumePreview();
 
