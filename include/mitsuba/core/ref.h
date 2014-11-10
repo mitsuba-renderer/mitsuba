@@ -21,6 +21,7 @@
 #define __MITSUBA_CORE_REF_H_
 
 #include "util.h"
+#include <set>
 
 MTS_NAMESPACE_BEGIN
 
@@ -148,10 +149,21 @@ public:
 	ref_vector(size_t size) : parent_type(size) {}
 	ref_vector(const ref_vector &vec) : parent_type(vec) {}
 
-	/// Remove all duplicates (may change the order)
+	/// Remove all duplicates without changing the order
 	inline void ensureUnique() {
-		std::sort(this->begin(), this->end(), ref_comparator<T>());
-		this->erase(std::unique(this->begin(), this->end()), this->end());
+		std::set<T *> seen;
+
+		typename parent_type::iterator it1 = this->begin(), it2 = this->begin();
+		for (; it1 < this->end(); ++it1) {
+			if (seen.find(it1->get()) != seen.end())
+				continue;
+			seen.insert(it1->get());
+			if (it1 != it2)
+				*it2++ = *it1;
+			else
+				it2++;
+		}
+		this->erase(it2, this->end());
 	}
 
 	/// Check if a certain pointer is contained in the vector
