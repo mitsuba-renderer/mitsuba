@@ -1875,31 +1875,33 @@ void Bitmap::tonemapReinhard(Float &logAvgLuminance, Float &maxLuminance, Float 
 	}
 }
 
-
-std::map<std::string, Bitmap *> Bitmap::split() const {
+std::vector<Bitmap::Layer> Bitmap::getLayers() const {
 	typedef std::map<std::string, int> ChannelMap;
-	std::map<std::string, Bitmap *> result;
 	if (m_channelNames.empty())
-		Log(EError, "Bitmap::split(): color channel names not available!");
+		Log(EError, "Bitmap::getLayers(): required color channel names were not available!");
 
 	ChannelMap channels;
 	for (size_t i=0; i<m_channelNames.size(); ++i)
 		channels[boost::to_lower_copy(m_channelNames[i])] = (int) i;
 
+	std::vector<Layer> layers;
 	for (size_t i=0; i<m_channelNames.size(); ++i) {
 		std::string name = boost::to_lower_copy(m_channelNames[i]);
 		if (channels.find(name) == channels.end())
 			continue;
-		std::string prefix = "";
+		std::string prefix = name;
 		char postfix = '\0';
+		Layer layer;
 
-		if (!name.empty()) {
-			prefix = name.substr(0, name.length()-1);
-			postfix = name[name.length()-1];
+		layer.name = m_channelNames[i];
+		if (name.length() == 1) {
+			prefix = layer.name = "";
+			postfix = name[name.length() - 1];
+		} if (name.length() >= 3 && name[name.length()-2] == '.') {
+			prefix = name.substr(0, name.length() - 1);
+			layer.name = layer.name.substr(0, layer.name.length() - 2);
+			postfix = name[name.length() - 1];
 		}
-
-		std::vector<int> extractChannels;
-		EPixelFormat extractFormat;
 
 		ChannelMap::iterator
 			itR = channels.find(prefix + "r"),
@@ -1915,68 +1917,75 @@ std::map<std::string, Bitmap *> Bitmap::split() const {
 		bool maybeY = postfix == 'y' || postfix == 'a';
 
 		if (maybeRGB && itR != channels.end() && itG != channels.end() && itB != channels.end()) {
-			extractFormat = ERGB;
-			extractChannels.push_back(itR->second);
-			extractChannels.push_back(itG->second);
-			extractChannels.push_back(itB->second);
+			layer.format = ERGB;
+			layer.channels.push_back(itR->second);
+			layer.channels.push_back(itG->second);
+			layer.channels.push_back(itB->second);
 			if (itA != channels.end()) {
-				extractFormat = ERGBA;
-				extractChannels.push_back(itA->second);
+				layer.format = ERGBA;
+				layer.channels.push_back(itA->second);
 				channels.erase(prefix + "a");
 			}
 			channels.erase(prefix + "r");
 			channels.erase(prefix + "g");
 			channels.erase(prefix + "b");
 		} else if (maybeXYZ && itX != channels.end() && itY != channels.end() && itZ != channels.end()) {
-			extractFormat = EXYZ;
-			extractChannels.push_back(itX->second);
-			extractChannels.push_back(itY->second);
-			extractChannels.push_back(itZ->second);
+			layer.format = EXYZ;
+			layer.channels.push_back(itX->second);
+			layer.channels.push_back(itY->second);
+			layer.channels.push_back(itZ->second);
 			if (itA != channels.end()) {
-				extractFormat = EXYZA;
-				extractChannels.push_back(itA->second);
+				layer.format = EXYZA;
+				layer.channels.push_back(itA->second);
 				channels.erase(prefix + "a");
 			}
 			channels.erase(prefix + "x");
 			channels.erase(prefix + "y");
 			channels.erase(prefix + "z");
 		} else if (maybeY && itY != channels.end()) {
-			extractFormat = ELuminance;
-			extractChannels.push_back(itY->second);
+			layer.format = ELuminance;
+			layer.channels.push_back(itY->second);
 			if (itA != channels.end()) {
-				extractFormat = ELuminanceAlpha;
-				extractChannels.push_back(itA->second);
+				layer.format = ELuminanceAlpha;
+				layer.channels.push_back(itA->second);
 				channels.erase(prefix + "a");
 			}
 			channels.erase(prefix + "y");
 		} else {
-			extractFormat = ELuminance;
-			extractChannels.push_back((int) i);
+			if (layer.name.empty())
+				layer.name = m_channelNames[i];
+			layer.format = ELuminance;
+			layer.channels.push_back((int) i);
 			channels.erase(name);
 		}
 
+		layers.push_back(layer);
+	}
+	return layers;
+}
+
+std::map<std::string, Bitmap *> Bitmap::split() const {
+	std::map<std::string, Bitmap *> result;
+
+	std::vector<Layer> layers = getLayers();
+	for (size_t i=0; i<layers.size(); ++i) {
+		const Layer &layer = layers[i];
 		std::vector<std::string> channelNames;
-		for (size_t j=0; j<extractChannels.size(); ++j)
-			channelNames.push_back(m_channelNames[extractChannels[j]]);
+		for (size_t j=0; j<layer.channels.size(); ++j)
+			channelNames.push_back(m_channelNames[layer.channels[j]]);
 
 		Bitmap *bitmap = NULL;
 		{
-			ref<Bitmap> _bitmap = this->extractChannels(extractFormat, extractChannels);
+			ref<Bitmap> _bitmap = this->extractChannels(layer.format, layer.channels);
 			bitmap = _bitmap.get();
 			bitmap->incRef();
 		}
 		bitmap->decRef(false);
 		bitmap->setChannelNames(channelNames);
 
-		prefix = m_channelNames[i];
-		if (!prefix.empty())
-			prefix = prefix.substr(0, prefix.length()-1);
-		if (!prefix.empty() && prefix[prefix.length()-1] == '.')
-			prefix = prefix.substr(0, prefix.length()-1);
-
-		if (result.find(prefix) != result.end())
-			Log(EError, "Internal error -- encountered two sub-images with the same prefix");
-		result[prefix] = bitmap;
+		if (result.find(layer.name) != result.end())
+			Log(EError, "Internal error -- encountered two layers with the same name \"%s\"", layer.name.c_str());
+		result[layer.name] = bitmap;
 	}
 	return result;
 }

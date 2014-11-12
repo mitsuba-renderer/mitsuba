@@ -298,6 +298,22 @@ public:
 	};
 
 	/**
+	 * \brief Describes a sub-layer of a multilayer bitmap (e.g. OpenEXR)
+	 *
+	 * A layer is defined as a named collection of bitmap channels and a pixel format
+	 *
+	 * This data structure is used by \ref Bitmap::getLayers()
+	 */
+	struct Layer {
+		/// Descriptive name of the bitmap layer
+		std::string name;
+		/// Pixel format that should be associated with underlying combination of bitmap channels
+		EPixelFormat format;
+		/// References to bitmap channels
+		std::vector<int> channels;
+	};
+
+	/**
 	 * \brief Create a bitmap of the specified type and allocate
 	 * the necessary amount of memory
 	 *
@@ -814,8 +830,25 @@ public:
 	ref<Bitmap> extractChannels(Bitmap::EPixelFormat fmt, const std::vector<int> &channels) const;
 
 	/**
+	 * \brief Extracts layer information from the bitmap
+	 *
+	 * This is a convenience function which analyzes the bitmap's
+	 * channel names and extracts groups matching a name
+	 * convention specified by the OpenEXR standard.
+	 *
+	 * A series of channel names referred to as
+	 *  'diffuse.R', 'diffuse.B', and 'diffuse.G'
+	 * will be identified as a single \ref Bitmap::ERGB "layer".
+	 * This works for RGB[A]/XYZ[A], and Luminance[A] images
+	 */
+	std::vector<Layer> getLayers() const;
+
+	/**
 	 * \brief Split an multi-channel image buffer (e.g. from an OpenEXR image
-	 * with lots of AOVs) into group of RGB[A]/XYZ[A]/Luminance images
+	 * with lots of AOVs) into its constituent layers
+	 *
+	 * This operation internally calls \ref getLayers() to extract bitmap
+	 * layers followed by one or more calls to \ref extractChannels()
 	 */
 	std::map<std::string, Bitmap *> split() const;
 

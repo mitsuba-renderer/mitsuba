@@ -184,7 +184,9 @@ struct SceneContext {
 	float progress;
 	QString eta, progressName;
 	ref<Bitmap> framebuffer;
+	std::vector<std::pair<std::string, Bitmap*> > layers;
 	std::set<VisualWorkUnit, block_comparator> workUnits;
+	int currentLayer;
 	EMode mode, cancelMode;
 	Float gamma, exposure, clamping;
 	bool srgb;
@@ -209,6 +211,7 @@ struct SceneContext {
 
 	SceneContext() : scene(NULL), sceneResID(-1),
 		renderJob(NULL), wasRendering(false),
+		currentLayer(0),
 		selectionMode(ENothing),
 		selectedShape(NULL) { }
 

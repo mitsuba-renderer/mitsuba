@@ -398,7 +398,7 @@ bool MainWindow::initWorkersProcessArgv() {
 		scheduler->registerWorker(new LocalWorker(-1, formatString("wrk%i", 0), m_workerPriority));
 	}
 
-	for (int i=0; i<toBeLoaded.size(); ++i)
+	for (size_t i=0; i<toBeLoaded.size(); ++i)
 		loadFile(toBeLoaded[i].first, toBeLoaded[i].second);
 
 	scheduler->start();
@@ -2157,6 +2157,10 @@ SceneContext::SceneContext(SceneContext *ctx) {
 	selectionMode = ctx->selectionMode;
 	originalSize = ctx->originalSize;
 	doc = ctx->doc.cloneNode(true).toDocument();
+	layers = ctx->layers;
+	for (size_t i=0; i<layers.size(); ++i)
+		layers[i].second->incRef();
+	currentLayer = ctx->currentLayer;
 }
 
 SceneContext::~SceneContext() {
@@ -2166,6 +2170,8 @@ SceneContext::~SceneContext() {
 		previewBuffer.buffer->decRef();
 	if (previewBuffer.sync)
 		previewBuffer.sync->decRef();
+	for (size_t i=0; i<layers.size(); ++i)
+		layers[i].second->decRef();
 }
 
 int SceneContext::detectPathLength() const {

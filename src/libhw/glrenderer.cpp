@@ -771,7 +771,8 @@ void GLRenderer::drawText(const Point2i &_pos,
 	glLoadIdentity();
 	font->getTexture()->bind();
 	glEnable(GL_BLEND);
-	glBlendFunc(GL_ONE_MINUS_DST_COLOR, GL_ONE_MINUS_SRC_COLOR);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+//	glBlendFunc(GL_ONE_MINUS_DST_COLOR, GL_ONE_MINUS_SRC_COLOR);
 	Point2i pos(_pos);
 	int initial = pos.x;
 

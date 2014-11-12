@@ -220,6 +220,14 @@ void GLWidget::setScene(SceneContext *context) {
 		m_movementTimer->stop();
 	m_context = context;
 
+	if (context && context->layers.size() > 0) {
+		m_statusMessage =
+			formatString("Showing layer \"%s\" (%i/%i); use '[' and ']' to switch.",
+				m_context->layers[m_context->currentLayer].first.c_str(),
+				m_context->currentLayer+1, m_context->layers.size());
+		m_statusTimer->reset();
+	}
+
 	if (context && context->scene == NULL)
 		context = NULL;
 
@@ -503,7 +511,9 @@ void GLWidget::keyPressEvent(QKeyEvent *event) {
 		emit stopRendering();
 	}
 
-	if (event->isAutoRepeat() || !m_context)
+	if (!m_context ||
+		(event->isAutoRepeat() && event->key() != Qt::Key_BracketLeft &&
+		 event->key() != Qt::Key_BracketRight))
 		return;
 
 	switch (event->key()) {
@@ -526,7 +536,15 @@ void GLWidget::keyPressEvent(QKeyEvent *event) {
 		case Qt::Key_Down:
 			m_downKeyDown = true; break;
 		case Qt::Key_BracketLeft:
-			if (m_context->showKDTree) {
+			if (m_context->layers.size() > 0) {
+				m_context->currentLayer = std::max(0, m_context->currentLayer-1);
+				m_context->framebuffer = m_context->layers[m_context->currentLayer].second->convert(Bitmap::ERGBA, Bitmap::EFloat32);
+				m_statusMessage =
+					formatString("Showing layer \"%s\" (%i/%i); use '[' and ']' to switch.",
+						m_context->layers[m_context->currentLayer].first.c_str(),
+						m_context->currentLayer+1, m_context->layers.size());
+				m_statusTimer->reset();
+			} else if (m_context->showKDTree) {
 				m_context->shownKDTreeLevel
 					= std::max(0, m_context->shownKDTreeLevel - 1);
 				updateGL();
@@ -534,7 +552,15 @@ void GLWidget::keyPressEvent(QKeyEvent *event) {
 			}
 			break;
 		case Qt::Key_BracketRight:
-			if (m_context->showKDTree) {
+			if (m_context->layers.size() > 0) {
+				m_context->currentLayer = std::min((int) m_context->layers.size() - 1, m_context->currentLayer+1);
+				m_context->framebuffer = m_context->layers[m_context->currentLayer].second->convert(Bitmap::ERGBA, Bitmap::EFloat32);
+				m_statusMessage =
+					formatString("Showing layer \"%s\" (%i/%i); use '[' and ']' to switch.",
+						m_context->layers[m_context->currentLayer].first.c_str(),
+						m_context->currentLayer+1, m_context->layers.size());
+				m_statusTimer->reset();
+			} else if (m_context->showKDTree) {
 				m_context->shownKDTreeLevel++;
 				updateGL();
 				return;
@@ -1215,11 +1241,17 @@ void GLWidget::paintGL() {
 		if (m_context->mode == EPreview) {
 			m_preview->releaseBuffer(entry);
 			if (m_context->showKDTree) {
+				std::string message = "kd-tree visualization mode\nPress '[' "
+					"and ']' to change the shown level";
+				Vector2i size = m_font->getSize(message);
 				int pos = m_statusMessage.empty() ? 10 : 30;
+				m_renderer->setBlendMode(Renderer::EBlendAlpha);
+				m_renderer->setColor(Spectrum(0.0f), 0.5f);
+				m_renderer->drawFilledRectangle(Point2i(5, pos-2), Point2i(15, pos+5)+size);
+				m_renderer->setBlendMode(Renderer::EBlendNone);
 				m_renderer->setColor(Spectrum(1.0f));
-				m_renderer->drawText(Point2i(10, pos), m_font,
-					formatString("kd-tree visualization mode\nPress '[' "
-					"and ']' to change the shown level"));
+				m_renderer->setColor(Spectrum(1.0f));
+				m_renderer->drawText(Point2i(10, pos), m_font, message);
 			}
 		}
 
@@ -1244,7 +1276,15 @@ void GLWidget::paintGL() {
 				m_statusMessage = "Camera type is incompatible with the OpenGL preview!";
 		}
 
-		if (!m_statusMessage.empty() && m_context->mode == EPreview) {
+		if (!m_statusMessage.empty() && (m_context->mode == EPreview
+			|| (m_context->mode == ERender && m_context->scene == NULL))) {
+			m_renderer->setDepthTest(false);
+			Vector2i size = m_font->getSize(m_statusMessage);
+			m_renderer->setBlendMode(Renderer::EBlendAlpha);
+			m_renderer->setColor(Spectrum(0.0f), 0.5f);
+			m_renderer->drawFilledRectangle(Point2i(5, 7), Point2i(15, 15)+size);
+			m_renderer->setBlendMode(Renderer::EBlendNone);
+			m_renderer->setColor(Spectrum(1.0f));
 			m_renderer->drawText(Point2i(10, 10), m_font, m_statusMessage);
 			if (m_statusTimer->getMilliseconds() > 2000)
 				m_statusMessage = "";

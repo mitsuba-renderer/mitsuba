@@ -1110,7 +1110,7 @@ void TriMesh::writePLY(const fs::path &path) const {
 			*ptr += (uint8_t) std::max(0.0f, std::min(255.0f, (float) m_colors[i][2] * 255.0f + 0.5f));
 		}
 	}
-	Assert(ptr-vertexStorage == vertexStorageSize);
+	Assert((size_t) (ptr-vertexStorage) == vertexStorageSize);
 	os.write((const char *) vertexStorage, vertexStorageSize);
 	delete[] vertexStorage;
 
@@ -1122,7 +1122,7 @@ void TriMesh::writePLY(const fs::path &path) const {
 		memcpy(ptr, &m_triangles[i], sizeof(Triangle));
 		ptr += sizeof(Triangle);
 	}
-	Assert(ptr-faceStorage == faceStorageSize);
+	Assert((size_t) (ptr-faceStorage) == faceStorageSize);
 	os.write((const char *) faceStorage, faceStorageSize);
 	delete[] faceStorage;
 

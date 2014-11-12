@@ -65,12 +65,25 @@ void SceneLoader::run() {
 		m_result->toneMappingMethod = (EToneMappingMethod) settings.value("preview_toneMappingMethod", EGamma).toInt();
 		m_result->diffuseSources = settings.value("preview_diffuseSources", true).toBool();
 		m_result->diffuseReceivers = settings.value("preview_diffuseReceivers", false).toBool();
+		m_result->currentLayer = 0;
 
 		if (suffix == "exr" || suffix == "png"  || suffix == "jpg" || suffix == "jpeg" ||
 		    suffix == "hdr" || suffix == "rgbe" || suffix == "pfm" || suffix == "ppm") {
 			/* This is an image, not a scene */
 			ref<FileStream> fs = new FileStream(toFsPath(m_filename), FileStream::EReadOnly);
-			ref<Bitmap> bitmap = new Bitmap(Bitmap::EAuto, fs);
+			ref<Bitmap> bitmap = new Bitmap(Bitmap::EAuto, fs, (suffix == "exr") ? "*" : "");
+
+			if (suffix == "exr" && bitmap->getLayers().size() > 1) {
+				std::map<std::string, Bitmap*> bitmaps = bitmap->split();
+				for (std::map<std::string, Bitmap *>::iterator it = bitmaps.begin(); it != bitmaps.end(); ++it) {
+					std::string name = it->first;
+					Bitmap *layer = it->second;
+					layer->incRef();
+					m_result->layers.push_back(std::make_pair(name, layer));
+				}
+				bitmap = m_result->layers[m_result->currentLayer].second;
+			}
+
 			bitmap = bitmap->convert(Bitmap::ERGBA, Bitmap::EFloat32);
 
 			m_result->mode = ERender;
