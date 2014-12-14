@@ -55,6 +55,10 @@ static Shape *shape_getShapeGroup(Shape *shape) {
 	return static_cast<Instance *>(shape)->getShapeGroup();
 }
 
+static bp::object shape_getElement(Shape *shape, int idx) {
+	return cast(shape->getElement(idx));
+}
+
 static AABB shapekdtree_getAABB(const ShapeKDTree *kdtree) {
 	return kdtree->getAABB();
 }
@@ -519,7 +523,7 @@ void export_render() {
 	BP_CLASS(Shape, ConfigurableObject, bp::no_init)
 		.def("getName", &Shape::getName, BP_RETURN_VALUE)
 		.def("isCompound", &Shape::isCompound)
-		.def("getElement", &Shape::getElement, BP_RETURN_VALUE)
+		.def("getElement", shape_getElement)
 		.def("getSurfaceArea", &Shape::getSurfaceArea)
 		.def("getAABB", &Shape::getAABB, BP_RETURN_VALUE)
 		.def("getClippedAABB", &Shape::getClippedAABB, BP_RETURN_VALUE)

@@ -127,6 +127,10 @@ static Float meanCosineFunctor(Float kappa, Float g) {
 	return VonMisesFisherDistr(kappa).getMeanCosine()-g;
 }
 
+Float VonMisesFisherDistr::forMeanLength(Float l) {
+	return (3*l - l*l*l) / (1-l*l);
+}
+
 Float VonMisesFisherDistr::forMeanCosine(Float g) {
 	if (g == 0)
 		return 0;

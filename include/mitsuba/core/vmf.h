@@ -77,6 +77,15 @@ public:
 	static Float forPeakValue(Float x);
 
 	/**
+	 * \brief Estimate the vMF concentration parameter
+	 * based on the length of the mean vector that is produced
+	 * by simply averaging a set of sampled directions
+	 *
+	 * This is an unbiased estimator [Banerjee et al. 05]
+	 */
+	static Float forMeanLength(Float length);
+
+	/**
 	 * \brief Compute an appropriate concentration parameter so that
 	 * the associated vMF distribution has the mean cosine \c g.
 	 */

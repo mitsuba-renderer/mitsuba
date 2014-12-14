@@ -224,12 +224,12 @@ public:
 
 	Float pdfDirection(const DirectionSamplingRecord &dRec,
 			const PositionSamplingRecord &pRec) const {
-		return (pRec.measure == EDiscrete) ? 1.0f : 0.0f;
+		return (dRec.measure == EDiscrete) ? 1.0f : 0.0f;
 	}
 
 	Spectrum evalDirection(const DirectionSamplingRecord &dRec,
 			const PositionSamplingRecord &pRec) const {
-		return Spectrum((pRec.measure == EDiscrete) ? 1.0f : 0.0f);
+		return Spectrum((dRec.measure == EDiscrete) ? 1.0f : 0.0f);
 	}
 
 	Spectrum sampleDirect(DirectSamplingRecord &dRec, const Point2 &) const {

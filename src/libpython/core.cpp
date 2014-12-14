@@ -512,6 +512,8 @@ static Ray transform_mul_ray(Transform *transform, const Ray &ray) { return tran
 static Transform transform_mul_transform(Transform *transform, const Transform &other) { return *transform * other; }
 
 bp::object cast(ConfigurableObject *obj) {
+	if (obj == NULL)
+		return bp::object();
 	const Class *cls = obj->getClass();
 	#define TryCast(ClassName) if (cls->derivesFrom(MTS_CLASS(ClassName))) \
 		return bp::object(ref<ClassName>(static_cast<ClassName *>(obj)))
@@ -2537,6 +2539,7 @@ void export_core() {
 		.def("getMeanCosine", &VonMisesFisherDistr::getMeanCosine)
 		.def("sample", &VonMisesFisherDistr::sample, BP_RETURN_VALUE)
 		.def("forMeanCosine", &VonMisesFisherDistr::forMeanCosine)
+		.def("forMeanLength", &VonMisesFisherDistr::forMeanLength)
 		.def("forPeakValue", &VonMisesFisherDistr::forPeakValue)
 		.def("convolve", &VonMisesFisherDistr::convolve)
 		.def("__repr__", &VonMisesFisherDistr::toString)
