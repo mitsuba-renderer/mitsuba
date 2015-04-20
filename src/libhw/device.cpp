@@ -142,7 +142,10 @@ void Device::init(Device *other) {
 
 void Device::shutdown() {
 	Assert(m_initialized);
-	std::remove(m_session->m_devices.begin(), m_session->m_devices.end(), this);
+	m_session->m_devices.erase(
+		std::remove(m_session->m_devices.begin(), m_session->m_devices.end(), this),
+		m_session->m_devices.end()
+	);
 }
 
 void Device::addCallback(DeviceEventListener *callback) {
