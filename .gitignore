@@ -37,8 +37,8 @@ Mitsuba.app
 .DS_Store
 
 # Imported geometry and some default output types
-meshes
-textures
+/meshes
+/textures
 mitsuba.*.log
 *.exr
 
