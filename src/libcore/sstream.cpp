@@ -160,9 +160,9 @@ void SocketStream::read(void *ptr, size_t size) {
 	char *data = (char *) ptr;
 	while (size > 0) {
 #if defined(__WINDOWS__)
-		int n = recv(m_socket, data, (int) size, 0);
+		ssize_t n = recv(m_socket, data, (int) size, 0);
 #else
-		int n = recv(m_socket, data, size, 0);
+		ssize_t n = recv(m_socket, data, size, 0);
 #endif
 		if (n == 0) {
 			throw EOFException("Connection closed while reading!",
@@ -188,11 +188,11 @@ void SocketStream::write(const void *ptr, size_t size) {
 	while (size > 0) {
 #if defined(__LINUX__)
 		/* Linux: Don't send the EPIPE signal when the connection breaks */
-		int n = send(m_socket, data, size, MSG_NOSIGNAL);
+		ssize_t n = send(m_socket, data, size, MSG_NOSIGNAL);
 #elif defined(__WINDOWS__)
-		int n = send(m_socket, data, (int) size, 0);
+		ssize_t n = send(m_socket, data, (int) size, 0);
 #else
-		int n = send(m_socket, data, size, 0);
+		ssize_t n = send(m_socket, data, size, 0);
 #endif
 		if (n == SOCKET_ERROR) {
 			if (!handleError("send", EWarn))
