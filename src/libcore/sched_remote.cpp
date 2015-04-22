@@ -168,7 +168,7 @@ void RemoteWorker::run() {
 					resStream->getPos() / 1024);
 				m_memStream->writeShort(StreamBackend::ENewResource);
 				m_memStream->writeInt(resID);
-				m_memStream->writeUInt((unsigned int) resStream->getPos());
+				m_memStream->writeSize(resStream->getPos());
 				m_memStream->write(resStream->getData(), resStream->getPos());
 			}
 
@@ -183,7 +183,7 @@ void RemoteWorker::run() {
 					resStream->getPos() / 1024);
 				m_memStream->writeShort(StreamBackend::ENewMultiResource);
 				m_memStream->writeInt(resID);
-				m_memStream->writeUInt((unsigned int) resStream->getPos());
+				m_memStream->writeSize(resStream->getPos());
 				m_memStream->write(resStream->getData(), resStream->getPos());
 			}
 
@@ -390,7 +390,7 @@ void StreamBackend::run() {
 					break;
 				case ENewResource: {
 						int id = m_stream->readInt();
-						size_t size = m_stream->readUInt();
+						size_t size = m_stream->readSize();
 						ref<InstanceManager> manager = new InstanceManager();
 						ref<MemoryStream> mstream = new MemoryStream(size);
 						mstream->setByteOrder(Stream::ENetworkByteOrder);
@@ -402,7 +402,7 @@ void StreamBackend::run() {
 					break;
 				case ENewMultiResource: {
 						int id = m_stream->readInt();
-						size_t size = m_stream->readUInt();
+						size_t size = m_stream->readSize();
 						ref<InstanceManager> manager = new InstanceManager();
 						ref<MemoryStream> mstream = new MemoryStream(size);
 						mstream->setByteOrder(Stream::ENetworkByteOrder);
