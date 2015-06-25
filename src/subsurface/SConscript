@@ -3,4 +3,5 @@ Import('env', 'plugins')
 plugins += env.SharedLibrary('dipole', 
 	['dipole.cpp', 'irrproc.cpp', 'irrtree.cpp', 'bluenoise.cpp'])
 
+plugins += env.SharedLibrary('singlescatter', ['singlescatter.cpp'])
 Export('plugins')

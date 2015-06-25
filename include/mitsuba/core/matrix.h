@@ -607,6 +607,13 @@ public:
 			m[2][0] * v.x + m[2][1] * v.y + m[2][2] * v.z);
 	}
 
+	/// multiply the matrix by transpose of v, returns the transpose of the line vector.
+	inline Vector preMult(const Vector &v) const {
+		return Vector(v.x * m[0][0] + v.y * m[1][0] + v.z * m[2][0],
+					  v.x * m[0][1] + v.y * m[1][1] + v.z * m[2][1],
+					  v.x * m[0][2] + v.y * m[1][2] + v.z * m[2][2]);
+	}
+
 	/// Scalar multiplication (creates a temporary)
 	inline Matrix3x3 operator*(Float value) const {
 		Matrix3x3 result;
@@ -615,6 +622,7 @@ public:
 				result.m[i][j] = m[i][j]*value;
 		return result;
 	}
+
 
 	/// Assignment operator
 	inline Matrix3x3 &operator=(const Matrix<3, 3, Float> &mat) {

@@ -133,7 +133,7 @@
 				<xsd:choice minOccurs="0" maxOccurs="unbounded">
 					<xsd:group ref="objectGroup"/>
 					<xsd:element name="bsdf" type="bsdf"/>
-					<xsd:element name="subsurface" type="object"/>
+                    <xsd:element name="subsurface" type="subsurface"/>
 					<xsd:element name="ref" type="reference"/>
 					<xsd:element name="sensor" type="sensor"/>
 					<xsd:element name="emitter" type="emitter"/>
@@ -145,6 +145,19 @@
 			</xsd:extension>
 		</xsd:complexContent>
 	</xsd:complexType>
+
+    <!-- SINGLESCATTER Element -->
+    <xsd:complexType name="subsurface">
+        <xsd:complexContent>
+            <xsd:extension base="objectBase">
+                <xsd:choice minOccurs="0" maxOccurs="unbounded">
+                    <xsd:group ref="objectGroup"/>
+                    <xsd:element name="phase" type="phase"/>
+                    <xsd:element name="bsdf" type="bsdf"/>
+                </xsd:choice>
+            </xsd:extension>
+        </xsd:complexContent>
+    </xsd:complexType>
 
 	<!-- MEDIUM Element -->
 	<xsd:complexType name="medium">

@@ -763,6 +763,11 @@ public:
 	}
 
 	/**
+	 * \brief Returns the underlying kd-tree index buffer
+	 */
+	inline IndexType *getIndices() const { return m_indices; }
+
+	/**
 	 * \brief Return the traversal cost used by the tree construction heuristic
 	 */
 	inline Float getTraversalCost() const {

@@ -71,6 +71,8 @@ class MTS_EXPORT_RENDER ShapeKDTree : public SAHKDTree3D<ShapeKDTree> {
 	friend class SAHKDTree3D<ShapeKDTree>;
 	friend class Instance;
 	friend class AnimatedInstance;
+	friend class SingleScatter;
+
 public:
 	// =============================================================
 	//! @{ \name Initialization and tree construction

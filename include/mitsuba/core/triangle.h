@@ -58,6 +58,21 @@ struct MTS_EXPORT_CORE Triangle {
 	 */
 	AABB getClippedAABB(const Point *positions, const AABB &aabb) const;
 
+	// Returns the bounding sphere of the triangle
+	inline BSphere getBSphere(const Point *positions) const {
+		Vector a = (positions[idx[1]] - positions[idx[0]]);
+		Vector b = (positions[idx[2]] - positions[idx[0]]);
+		Float a2 = dot(a, a);
+		Float b2 = dot(b, b);
+		Float da = std::sqrt(a2);
+		Float db = std::sqrt(b2);
+		Vector axb = cross(a, b);
+		Float axb2 = dot(axb, axb);
+		Float daxb = std::sqrt(axb2);
+		return BSphere(positions[idx[0]] + cross(a2 * b - b2 * a, axb) / (2 * axb2),
+					   da * db * (a - b).length() / (2 * daxb));
+	}
+
 	/// Uniformly sample a point on the triangle and return its normal and UV coordinates
 	Point sample(const Point *positions, const Normal *normals,
 			const Point2 *texCoords, Normal &n, Point2 &uv,
