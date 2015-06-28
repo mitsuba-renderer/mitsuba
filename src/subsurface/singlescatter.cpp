@@ -744,8 +744,8 @@ public:
 		const Float D = cross(L_p, L_s).length();
 
 		// For debug/explanation only: result without the ray-differentials
-		// D = (domegaV + m_eta * domegaL) * (fabsf(cosThetaL/cosThetaV)*domegaV
-		// + fabsf(cosThetaV/cosThetaL)*m_eta*domegaL);
+		// D = (domegaV + m_eta * domegaL) * (std::abs(cosThetaL/cosThetaV)*domegaV
+		// + std::abs(cosThetaV/cosThetaL)*m_eta*domegaL);
 		return result / D;
 	}
 
@@ -1480,8 +1480,8 @@ public:
 						attenuation(m_sigmaT, -(dist + dV));
 
 				const Float D = (dV + m_eta * dL) *
-								(fabsf(cosThetaL / cosThetaV) * dV +
-								 fabsf(cosThetaV / cosThetaL) * m_eta * dL);
+								(std::abs(cosThetaL / cosThetaV) * dV +
+								 std::abs(cosThetaV / cosThetaL) * m_eta * dL);
 				result += ((1 - F) / D) * phase * value * weight;
 			}
 		} else {
