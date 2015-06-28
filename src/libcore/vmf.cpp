@@ -45,13 +45,8 @@ Vector VonMisesFisherDistr::sample(const Point2 &sample) const {
 						sample.x * std::sinh(m_kappa)) / m_kappa;
 #else
 	/* Numerically stable version */
-	Float cosTheta;
-	if (sample.x > 0) {
-		cosTheta = 1 + (math::fastlog(sample.x) + math::fastlog(
-			1 - math::fastexp(-2*m_kappa) * ((sample.x-1) / sample.x))) / m_kappa;
-	} else {
-		cosTheta = 1 + math::fastexp(-2*m_kappa) / m_kappa;
-	}
+	Float cosTheta = 1 + (math::fastlog(sample.x +
+		math::fastexp(-2 * m_kappa) * (1 - sample.x))) / m_kappa;
 #endif
 
 	Float sinTheta = math::safe_sqrt(1-cosTheta*cosTheta),
