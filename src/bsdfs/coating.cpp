@@ -246,12 +246,10 @@ public:
 					(1/std::abs(Frame::cosTheta(bRecInt.wi)) +
 					 1/std::abs(Frame::cosTheta(bRecInt.wo)))).exp();
 
-			if (measure == ESolidAngle) {
-				/* Solid angle compression & irradiance conversion factors */
+			/* Solid angle compression & irradiance conversion factors */
+			if (measure == ESolidAngle)
 				result *= m_invEta * m_invEta *
-					  Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo)
-				   / (Frame::cosTheta(bRecInt.wi) * Frame::cosTheta(bRecInt.wo));
-			}
+					Frame::cosTheta(bRec.wo) / Frame::cosTheta(bRecInt.wo);
 
 			return result;
 		}
@@ -364,11 +362,9 @@ public:
 
 			result *= (1 - R12) * (1 - R21);
 
-			if (BSDF::getMeasure(bRec.sampledType) == ESolidAngle) {
-				/* Solid angle compression & irradiance conversion factors */
-				result *= Frame::cosTheta(bRec.wi) / Frame::cosTheta(wiPrime);
+			/* Solid angle compression & irradiance conversion factors */
+			if (BSDF::getMeasure(bRec.sampledType) == ESolidAngle)
 				pdf *= m_invEta * m_invEta * Frame::cosTheta(bRec.wo) / Frame::cosTheta(woPrime);
-			}
 
 			return result;
 		}

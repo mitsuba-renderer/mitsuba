@@ -306,12 +306,10 @@ public:
 					(1/std::abs(Frame::cosTheta(bRecInt.wi)) +
 					 1/std::abs(Frame::cosTheta(bRecInt.wo)))).exp();
 
-			if (measure == ESolidAngle) {
-				/* Solid angle compression & irradiance conversion factors */
+			/* Solid angle compression & irradiance conversion factors */
+			if (measure == ESolidAngle)
 				nestedResult *= m_invEta * m_invEta *
-					  Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo)
-				   / (Frame::cosTheta(bRecInt.wi) * Frame::cosTheta(bRecInt.wo));
-			}
+					Frame::cosTheta(bRec.wo) / Frame::cosTheta(bRecInt.wo);
 
 			result += nestedResult;
 		}
