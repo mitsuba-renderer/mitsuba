@@ -111,9 +111,6 @@ public:
 	}
 
 	MTS_DECLARE_CLASS()
-private:
-	Spectrum m_brightReflectance;
-	Spectrum m_darkReflectance;
 };
 
 Shader *VertexColors::createShader(Renderer *renderer) const {

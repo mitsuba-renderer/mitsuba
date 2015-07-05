@@ -136,9 +136,12 @@ public:
 			if (!its.isValid()) {
 				/* If no intersection could be found, potentially return
 				   radiance from a environment luminaire if it exists */
-				if ((rRec.type & RadianceQueryRecord::EEmittedRadiance)
-					&& (!m_hideEmitters || scattered))
-					Li += throughput * scene->evalEnvironment(ray);
+				if (rRec.type & RadianceQueryRecord::EEmittedRadiance) {
+					Spectrum Le = scene->evalEnvironment(ray);
+					if (m_hideEmitters && !scattered)
+						Le = Spectrum(1.f);
+					Li += throughput * Le;
+				}
 				break;
 			}
 
@@ -170,10 +173,12 @@ public:
 
 			/* Estimate the direct illumination if this is requested */
 			DirectSamplingRecord dRec(its);
+			bool backgroundPlate = rRec.depth == 1 && its.shape->getName().find("background") != std::string::npos;
 
 			if (rRec.type & RadianceQueryRecord::EDirectSurfaceRadiance &&
 				(bsdf->getType() & BSDF::ESmooth)) {
 				Spectrum value = scene->sampleEmitterDirect(dRec, rRec.nextSample2D());
+
 				if (!value.isZero()) {
 					const Emitter *emitter = static_cast<const Emitter *>(dRec.object);
 
@@ -194,9 +199,21 @@ public:
 
 						/* Weight using the power heuristic */
 						Float weight = miWeight(dRec.pdf, bsdfPdf);
-						Li += throughput * value * bsdfVal * weight;
+						if (backgroundPlate) {
+							Li += Spectrum(1.0f);
+							rRec.alpha = 0.0f;
+						} else {
+							Li += throughput * value * bsdfVal * weight;
+						}
 					}
 				}
+			}
+			if (backgroundPlate) {
+				if (dot(dRec.refN, dRec.d) < 0) {
+					Li += Spectrum(1.0f);
+					rRec.alpha = 0.0f;
+				}
+				break;
 			}
 
 			/* ==================================================================== */

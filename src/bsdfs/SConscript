@@ -12,6 +12,7 @@ plugins += env.SharedLibrary('roughplastic', ['roughplastic.cpp'])
 
 # Materials that act as modifiers
 plugins += env.SharedLibrary('twosided', ['twosided.cpp'])
+plugins += env.SharedLibrary('force_twosided', ['force_twosided.cpp'])
 plugins += env.SharedLibrary('mask', ['mask.cpp'])
 plugins += env.SharedLibrary('mixturebsdf', ['mixturebsdf.cpp'])
 plugins += env.SharedLibrary('blendbsdf', ['blendbsdf.cpp'])

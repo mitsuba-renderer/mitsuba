@@ -304,7 +304,7 @@ public:
 		m_triangles[m_triangleCount++] = t;
 
 		if (m_indexCtr == 4) {
-			t.idx[0] = m_face[3]; t.idx[1] = m_face[0]; t.idx[2] = m_face[2];
+			t.idx[0] = m_face[2]; t.idx[1] = m_face[3]; t.idx[2] = m_face[0]; 
 			m_triangles[m_triangleCount++] = t;
 		}
 

@@ -105,8 +105,8 @@ public:
 		m_frame = Frame(normalize(m_dpdu), normalize(m_dpdv), normal);
 
 		m_invSurfaceArea = 1.0f / getSurfaceArea();
-		if (std::abs(dot(normalize(m_dpdu), normalize(m_dpdv))) > Epsilon)
-			Log(EError, "Error: 'toWorld' transformation contains shear!");
+		if (std::abs(dot(normalize(m_dpdu), normalize(m_dpdv))) > 1e-3f)
+			Log(EWarn, "Error: 'toWorld' transformation contains shear!");
 	}
 
 	AABB getAABB() const {
