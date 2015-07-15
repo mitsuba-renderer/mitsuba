@@ -398,11 +398,16 @@ public:
 		   near plane (in local camera space) */
 		Point nearP = m_sampleToCamera(samplePos);
 
+		if (m_distortion) {
+			Float correction = invertDistortion(Vector2(nearP.x / nearP.z, nearP.y / nearP.z).length());
+			nearP.x *= correction; nearP.y *= correction;
+		}
+
 		/* Turn that into a normalized ray direction */
 		Vector d = normalize(Vector(nearP));
 		dRec.d = trafo(d);
 		dRec.measure = ESolidAngle;
-		dRec.pdf = m_normalization / (d.z * d.z * d.z);
+		dRec.pdf = pdfDirection(dRec, pRec);
 
 		return Spectrum(1.0f);
 	}
