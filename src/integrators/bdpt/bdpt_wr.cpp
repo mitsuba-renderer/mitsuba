@@ -95,12 +95,12 @@ void BDPTWorkResult::dump(const BDPTConfiguration &conf,
 		for (int t=0; t<=k+1; ++t) {
 			size_t s = k+1-t;
 			Bitmap *bitmap = const_cast<Bitmap *>(m_debugBlocks[strategyIndex(s, t)]->getBitmap());
-			ref<Bitmap> ldrBitmap = bitmap->convert(Bitmap::ERGB, Bitmap::EFloat32, -1, weight);
+			ref<Bitmap> ldrBitmap = bitmap->convert(Bitmap::ERGB, Bitmap::EUInt8, -1, weight);
 			fs::path filename =
-				prefix / fs::path(formatString("%s_k%02i_s%02i_t%02i.exr", stem.filename().string().c_str(), k, s, t));
+				prefix / fs::path(formatString("%s_k%02i_s%02i_t%02i.png", stem.filename().string().c_str(), k, s, t));
 			ref<FileStream> targetFile = new FileStream(filename,
 				FileStream::ETruncReadWrite);
-			ldrBitmap->write(Bitmap::EOpenEXR, targetFile, 1);
+			ldrBitmap->write(Bitmap::EPNG, targetFile, 1);
 		}
 	}
 }

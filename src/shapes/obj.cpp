@@ -319,13 +319,7 @@ public:
 					t.uv[1] = t.uv[2];
 					t.n[1] = t.n[2];
 					parse(t, 2, tmp);
-					OBJTriangle tp = tp;
-					for (int i=0; i<3; ++i) {
-						tp.p[i] = t.p[(i+1)%3];
-						tp.uv[i] = t.uv[(i+1)%3];
-						tp.n[i] = t.n[(i+1)%3];
-					}
-					triangles.push_back(tp);
+					triangles.push_back(t);
 				}
 			} else {
 				/* Ignore */

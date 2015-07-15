@@ -36,10 +36,6 @@ MTS_NAMESPACE_BEGIN
  *       increase both storage and computational costs.
  *       \default{4}
  *     }
- *     \parameter{pixelCenters}{\Integer}{
- *       Place samples at pixel centers. This is useful for use with the
- *       \pluginref{field} integrator.
- *     }
  * }
  * \vspace{-2mm}
  * \renderings{
@@ -83,11 +79,6 @@ public:
 
 		/* Dimension, up to which which low discrepancy samples are guaranteed to be available. */
 		m_maxDimension = props.getInteger("dimension", 4);
-		if (m_maxDimension < 1)
-			Log(EError, "Dimension parameter must be > 0!");
-
-		/* Place samples at pixel centers? */
-		m_pixelCenters = props.getBoolean("pixelCenters", false);
 
 		if (!math::isPowerOfTwo(m_sampleCount)) {
 			m_sampleCount = math::roundToPowerOfTwo(m_sampleCount);
@@ -110,7 +101,6 @@ public:
 	 : Sampler(stream, manager) {
 		m_random = static_cast<Random *>(manager->getInstance(stream));
 		m_maxDimension = stream->readSize();
-		m_pixelCenters = stream->readBool();
 
 		m_samples1D = new Float*[m_maxDimension];
 		m_samples2D = new Point2*[m_maxDimension];
@@ -133,7 +123,6 @@ public:
 		Sampler::serialize(stream, manager);
 		manager->serialize(stream, m_random.get());
 		stream->writeSize(m_maxDimension);
-		stream->writeBool(m_pixelCenters);
 	}
 
 	ref<Sampler> clone() {
@@ -208,9 +197,6 @@ public:
 		m_sampleIndex = 0;
 		m_dimension1D = m_dimension2D = 0;
 		m_dimension1DArray = m_dimension2DArray = 0;
-
-		if (m_pixelCenters)
-			m_samples2D[0][0] = Point2(0.5f);
 	}
 
 	void advance() {
@@ -245,8 +231,7 @@ public:
 		std::ostringstream oss;
 		oss << "LowDiscrepancySampler[" << endl
 			<< "  sampleCount = " << m_sampleCount << "," << endl
-			<< "  dimension = " << m_maxDimension << "," << endl
-			<< "  pixelCenters = " << m_pixelCenters << endl
+			<< "  dimension = " << m_maxDimension << endl
 			<< "]";
 		return oss.str();
 	}
@@ -259,7 +244,6 @@ private:
 	size_t m_dimension2D;
 	Float **m_samples1D;
 	Point2 **m_samples2D;
-	bool m_pixelCenters;
 };
 
 MTS_IMPLEMENT_CLASS_S(LowDiscrepancySampler, false, Sampler)

@@ -60,7 +60,6 @@ public:
 		m_edgeColor = props.getSpectrum("edgeColor", Spectrum(0.1f));
 		m_interiorColor = props.getSpectrum("interiorColor", Spectrum(.5f));
 		m_stepWidth = std::max((Float) 0.0f, std::min(m_stepWidth, (Float) 1.0f));
-		m_quads = props.getBoolean("quads", false);
 		m_mutex = new Mutex();
 	}
 
@@ -70,7 +69,6 @@ public:
 		m_edgeColor = Spectrum(stream);
 		m_interiorColor = Spectrum(stream);
 		m_lineWidth = stream->readFloat();
-		m_quads = stream->readBool();
 	}
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
@@ -78,7 +76,6 @@ public:
 		m_edgeColor.serialize(stream);
 		m_interiorColor.serialize(stream);
 		stream->writeFloat(m_lineWidth);
-		stream->writeBool(m_quads);
 	}
 
 	Spectrum eval(const Intersection &its, bool /* unused */) const {
@@ -108,20 +105,10 @@ public:
 			}
 		}
 
-		bool irregular = false;
-		if (m_quads) {
-			uint32_t base = its.primIndex & ~1u;
-			const Triangle &tri1 = triMesh->getTriangles()[base+1];
-			const Point *verts = triMesh->getVertexPositions();
-			if (verts[tri1.idx[0]] == verts[tri1.idx[1]])
-				irregular = true;
-		}
-
 		const Triangle &tri = triMesh->getTriangles()[its.primIndex];
+
 		Float minDist = std::numeric_limits<Float>::infinity();
 		for (int i=0; i<3; ++i) {
-			if ((m_quads && i == 2) || (irregular && (i == 1 || (its.primIndex & 1))))
-				continue;
 			const Point& cur  = positions[tri.idx[i]];
 			const Point& next = positions[tri.idx[(i+1)%3]];
 
@@ -175,9 +162,8 @@ public:
 		oss << "WireFrame[" << endl
 			<< "  edgeColor = " << m_edgeColor.toString() << "," << endl
 	 		<< "  interiorColor = " << m_interiorColor.toString() << "," << endl
-			<< "  lineWidth = " << m_lineWidth << "," << endl
-			<< "  stepWidth = " << m_stepWidth << "," << endl
-			<< "  quads = " << m_quads << endl
+			<< "  lineWidth = " << m_lineWidth << endl
+			<< "  stepWidth = " << m_stepWidth << endl
 			<< "]";
 		return oss.str();
 	}
@@ -191,7 +177,6 @@ protected:
 	Float m_stepWidth;
 	Spectrum m_edgeColor;
 	Spectrum m_interiorColor;
-	bool m_quads;
 };
 
 // ================ Hardware shader implementation ================

@@ -358,8 +358,6 @@ public:
 		m_config.luminance = pathSampler->generateSeeds(luminanceSamples,
 			m_config.workUnits, false, m_config.importanceMap, pathSeeds);
 
-		cout << "Luminance = " << m_config.luminance << endl;
-
 		if (!nested)
 			m_config.dump();
 

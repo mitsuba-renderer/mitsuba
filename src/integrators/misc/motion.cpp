@@ -32,9 +32,9 @@ static StatsCounter statsConverged(
 /*!\plugin{motion}{Motion and specular motion vector integrator}
  * \parameters{
  *     \parameter{time}{\Float}{
- *       Denotes the time stamp of the target frame of the motion vectors.
+ *       Denotes the time stamp of the target frame of the motion vectors. 
  *       The current frame is specified via the sensor's \code{shutterOpen}
- *       and \code{shutterClose} parameters, which should both be set to
+ *       and \code{shutterClose} parameters, which should both be set to 
  *       the same value. \default{0}
  *     }
  *     \parameter{time}{\String}{
@@ -96,7 +96,7 @@ static StatsCounter statsConverged(
  *         <string name="config" value="ttd"/>
  *         <float name="time" value="1"/>
  *     </integrator>
- *
+ *     
  *     <shape type="serialized">
  *         <string name="filename" value="..."/>
  *         <animation name="toWorld">
@@ -109,16 +109,16 @@ static StatsCounter statsConverged(
  *         </animation>
  *          <bsdf type="dielectric"/>
  *     </shape>
- *
+ *  
  *     <sensor type="perspective">
  *         <float name="shutterOpen" value="0"/>
  *         <float name="shutterClose" value="0"/>
- *
+ *  
  *         <sampler type="ldsampler">
  *             <integer name="sampleCount" value="1"/>
  *             <boolean name="pixelCenters" value="true"/>
  *         </sampler>
- *
+ *          
  *         <film type="hdrfilm" id="film">
  *             <string name="pixelFormat" value="rgb"/>
  *             <boolean name="banner" value="false"/>
