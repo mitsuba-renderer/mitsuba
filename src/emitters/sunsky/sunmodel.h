@@ -218,7 +218,7 @@ SphericalCoordinates computeSunCoordinates(const Properties &props) {
 
 		return computeSunCoordinates(
 			props.getVector("sunDirection"),
-			props.getTransform("toWorld", Transform()).inverse());
+			props.getAnimatedTransform("toWorld", Transform())->eval(0).inverse());
 	} else {
 		LocationRecord location;
 		DateTimeRecord dateTime;
