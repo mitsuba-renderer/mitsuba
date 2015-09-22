@@ -363,7 +363,7 @@ public:
 
 	Point2 next2D() {
 		/* Skip over dimensions that were reserved to arrays */
-		if (m_dimension >= m_arrayStartDim && m_dimension < m_arrayEndDim)
+		if (m_dimension + 1 >= m_arrayStartDim && m_dimension < m_arrayEndDim)
 			m_dimension = m_arrayEndDim;
 		if (m_dimension + 1 >= primeTableSize)
 			Log(EError, "Lookup dimension exceeds the prime number table size! "

@@ -231,7 +231,7 @@ public:
 		Float value1, value2;
 
 		/* Skip over dimensions that were reserved to arrays */
-		if (m_dimension >= m_arrayStartDim && m_dimension < m_arrayEndDim)
+		if (m_dimension + 1 >= m_arrayStartDim && m_dimension < m_arrayEndDim)
 			m_dimension = m_arrayEndDim;
 
 		if (m_dimension + 1 >= sobol::Matrices::num_dimensions)
