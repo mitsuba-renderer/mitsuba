@@ -1,6 +1,7 @@
 #include <mitsuba/core/track.h>
 #include <mitsuba/core/aabb.h>
 #include <Eigen/SVD>
+#include <Eigen/Geometry>
 
 MTS_NAMESPACE_BEGIN
 
@@ -354,12 +355,12 @@ void AnimatedTransform::appendTransform(Float time, const Transform &trafo) {
 	Eigen::JacobiSVD<EMatrix> svd(A, Eigen::ComputeFullU | Eigen::ComputeFullV);
 	EMatrix U = svd.matrixU(), V = svd.matrixV(), S = svd.singularValues().asDiagonal();
 
-	if (svd.singularValues().prod() < 0) {
-		S = -S; U = -U;
-	}
-
 	EMatrix Q = U*V.transpose();
 	EMatrix P = V*S*V.transpose();
+
+	if (Q.determinant() < 0) {
+		Q = -Q; P = -P;
+	}
 
 	VectorTrack *translation = (VectorTrack *) m_tracks[0];
 	QuatTrack *rotation = (QuatTrack *) m_tracks[1];
