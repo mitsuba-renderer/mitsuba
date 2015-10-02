@@ -79,6 +79,8 @@ public:
 		m_weight = static_cast<Texture *>(manager->getInstance(stream));
 		m_bsdfs.push_back(static_cast<BSDF *>(manager->getInstance(stream)));
 		m_bsdfs.push_back(static_cast<BSDF *>(manager->getInstance(stream)));
+		m_bsdfs[0]->incRef();
+		m_bsdfs[1]->incRef();
 		configure();
 	}
 
