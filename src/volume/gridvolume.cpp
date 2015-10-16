@@ -195,7 +195,7 @@ public:
 			) * Transform::translate(-Vector(m_dataAABB.min)) * m_worldToVolume;
 		m_stepSize = std::numeric_limits<Float>::infinity();
 		for (int i=0; i<3; ++i)
-			m_stepSize = 0.5f * std::min(m_stepSize, extents[i] / (Float) (m_res[i]-1));
+			m_stepSize = std::min(m_stepSize, 0.5f * extents[i] / (Float) (m_res[i]-1));
 		m_aabb.reset();
 		for (int i=0; i<8; ++i)
 			m_aabb.expandBy(m_volumeToWorld(m_dataAABB.getCorner(i)));
