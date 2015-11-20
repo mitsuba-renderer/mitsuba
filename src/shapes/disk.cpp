@@ -249,7 +249,7 @@ public:
 		Point2 p = warp::squareToUniformDiskConcentric(sample);
 
 		pRec.p = trafo(Point3(p.x, p.y, 0));
-		pRec.n = trafo(normalize(Normal(0,0,1)));
+		pRec.n = normalize(trafo(Normal(0, 0, 1)));
 		pRec.pdf = m_invSurfaceArea;
 		pRec.measure = EArea;
 	}
