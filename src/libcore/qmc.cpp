@@ -106,6 +106,8 @@ Float scrambledRadicalInverse(int base, uint64_t i, uint16_t *perm) {
 		i /= base;
 	}
 
+	inverse += digit * perm[0] / (1 - radical);
+
 	return std::min(inverse, ONE_MINUS_EPS);
 }
 
@@ -129,12 +131,11 @@ Float radicalInverseIncremental(int base, Float x) {
 }
 
 /* Radical inverse: explicitly instantiated versions that permit important
-   additional compiler optimizations. */
+   additional compiler optimizations.
 
-#if 1
-
-/* Tuned version that keeps FP and integer separate in the loop (to avoid introducing
-   unnecessary store-to-load dependencies on current processor architectures) */
+   The code is designed to keep FP and integer math separate in the loop (to
+   avoid introducing unnecessary store-to-load dependencies on current
+   processor architectures) */
 
 #define RINV(base) { \
 		const Float radical = (Float) 1 / (Float) base; \
@@ -162,38 +163,8 @@ Float radicalInverseIncremental(int base, Float x) {
  			factor *= radical; \
 			index = next; \
 		} \
-		inverse = (Float) value * factor; \
+		inverse = factor * ((Float) value + radical * perm[0] / (1 - radical)); \
 	}
-
-
-#else
-
-/* Original versions */
-
-#define RINV(base) { \
-		const Float radical = (Float) 1 / (Float) base; \
-		Float q = radical; \
-		while (index) { \
-			const uint64_t next = index / base; \
-			const uint32_t digit = (uint32_t) (index-next*base); /* Terrible code will be generated without this cast */ \
-			inverse += q * (Float) digit; \
-			q *= radical; \
-			index = next; \
-		} \
-	}
-
-#define SCRAMBLED_RINV(base) { \
-		const Float radical = (Float) 1 / (Float) base; \
-		Float q = radical; \
-		while (index) { \
-			const uint64_t next = index / base; \
-			inverse += q * (Float) perm[index - next * base]; \
-			q *= radical; \
-			index = next; \
-		} \
-	}
-
-#endif
 
 Float radicalInverseFast(uint16_t baseIndex, uint64_t index) {
 	Float inverse = 0.0f;
