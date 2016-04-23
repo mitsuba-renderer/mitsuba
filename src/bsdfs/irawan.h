@@ -30,7 +30,7 @@
 #include <boost/spirit/home/qi/numeric/real.hpp>
 #include <boost/version.hpp>
 
-#if BOOST_VERSION >= 106000
+#if BOOST_VERSION >= 105800
 #include <boost/phoenix/bind/bind_member_variable.hpp>
 #include <boost/phoenix/bind/bind_member_function.hpp>
 #include <boost/phoenix/statement/if.hpp>
