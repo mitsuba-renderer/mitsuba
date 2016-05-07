@@ -330,12 +330,22 @@ void Bitmap::readStream(EFileFormat format, Stream *stream, const std::string &p
 			format = EOpenEXR;
 		#endif
 		} else {
-			/* Check for a TGAv2 file */
+            /* Check for a TGAv1 or TGAv2 file */
 			char footer[18];
 			stream->seek(stream->getSize() - 18);
 			stream->read(footer, 18);
+            bool hasFooter = false;
 			if (footer[17] == 0 && strncmp(footer, "TRUEVISION-XFILE.", 17) == 0)
-				format = ETGA;
+                hasFooter = true;
+
+            bool hasValidColorType = false;
+            if (!hasFooter) {
+                int colorType = start[2];
+                if ((colorType >= 0 && colorType <= 3) || (colorType >= 9 && colorType <= 11))
+                    hasValidColorType = true;
+            }
+            if (hasFooter || hasValidColorType)
+                format = ETGA;
 		}
 		stream->seek(pos);
 	}
