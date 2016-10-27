@@ -157,7 +157,7 @@ Float sampleCubicInterp1D(size_t idx, const Float *values, size_t size, Float mi
 
 	/* Invert CDF using Newton-Bisection */
 	while (true) {
-		if (!(b >= a && b <= c))
+		if (!(b > a && b < c))
 			b = 0.5f * (a + c);
 
 		/* CDF and PDF in Horner form */
@@ -210,7 +210,7 @@ Float sampleCubicInterp1DN(size_t idx, const Float *nodes, const Float *values,
 
 	/* Invert CDF using Newton-Bisection */
 	while (true) {
-		if (!(b >= a && b <= c))
+		if (!(b > a && b < c))
 			b = 0.5f * (a + c);
 
 		/* CDF and PDF in Horner form */
