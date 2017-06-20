@@ -215,7 +215,7 @@ for ver in python_versions:
 	env['CPPPATH'][:] = [ x for x in env['CPPPATH'] if x not in includePath ]
 
 if not conf.CheckCXXHeader('boost/version.hpp'):
-	print 'Boost is missing (install libboost-all-dev)!'
+	print 'Boost is missing (install libboost-thread-dev, libboost-math-dev, libboost-system-dev, libboost-filesystem-dev)!'
 	Exit(1)
 if not conf.TryCompile("#include <boost/version.hpp>\n#if BOOST_VERSION < 104400\n#error Boost is outdated!\n#endif", ".cpp"):
 	print 'Boost is outdated (you will need version 1.44 or newer)!'
