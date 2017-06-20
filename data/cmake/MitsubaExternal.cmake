@@ -75,7 +75,7 @@ if (NOT Boost_FOUND)
   set(BOOST_ROOT "" CACHE PATH
     "Preferred installation prefix for searching for Boost.")
   message(FATAL_ERROR
-    "Boost is missing. The required modules are math, filesystem and system.")
+    "Boost is missing. The required modules are thread, math, filesystem and system.")
 endif()
 mark_as_advanced(Boost_LIB_DIAGNOSTIC_DEFINITIONS)
 
