@@ -27,9 +27,7 @@
 #include <boost/thread/thread.hpp>
 
 // Required for native thread functions
-#if defined(__LINUX__)
-# include <sys/prctl.h>
-#elif defined(__OSX__)
+#if defined(__OSX__)
 # include <pthread.h>
 #elif defined(__WINDOWS__)
 # include <windows.h>
@@ -441,9 +439,7 @@ void Thread::dispatch(Thread *thread) {
 		const std::string threadName = "Mitsuba: " + thread->getName();
 #if defined(__LINUX__)
 		// Disabled for now, since it is not yet widely available in glibc
-		// pthread_setname_np(pthread_self(), threadName.c_str());
-
-		prctl(PR_SET_NAME, threadName.c_str());
+		pthread_setname_np(pthread_self(), threadName.c_str());
 #elif defined(__OSX__)
 		pthread_setname_np(threadName.c_str());
 #elif defined(__WINDOWS__)

@@ -87,14 +87,6 @@ if sys.platform == 'win32':
 	for boostlib in ['python27', 'python32', 'python33', 'python34', 'system', 'filesystem', 'chrono', 'thread']:
 		install(distDir, ['boost_%s-%s-mt-1_53.dll' % (boostlib, compilerType)], dllprefix)
 
-	if 'WIN64' in env['CXXFLAGS']:
-		if compilerType == 'vc120':
-			installTargets += env.Install(distDir, '#dependencies/bin/vcredist_2013_x64.exe')
-		else:
-			installTargets += env.Install(distDir, '#dependencies/bin/vcredist_2010_sp1_x64.exe')
-	else:
-		installTargets += env.Install(distDir, '#dependencies/bin/vcredist_2010_sp1_x86.exe')
-
 	installTargets += env.Install(distDir, '#data/windows/README.txt')
 
 	if 'REDIST_PATH' in env:
@@ -102,8 +94,8 @@ if sys.platform == 'win32':
 
 	if hasQt:
 		install(distDir, ['mtsgui/mtsgui.exe'])
-		install(distDir, ['QtCore4.dll', 'QtGui4.dll', 'QtXml4.dll',
-			'QtNetwork4.dll', 'QtOpenGL4.dll', 'QtXmlPatterns4.dll'], prefix = env['QT4_LIBPATH'])
+		install(distDir, ['QtCore5.dll', 'QtGui5.dll', 'QtWidgets5.dll', 'QtXml5.dll',
+			'QtNetwork5.dll', 'QtOpenGL5.dll', 'QtXmlPatterns5.dll'], prefix = env['QT5_LIBPATH'])
 elif sys.platform == 'darwin':
 	for i in plugins:
 		plugin = env.Install(os.path.join(distDir, 'plugins'), i)
@@ -121,6 +113,7 @@ elif sys.platform == 'darwin':
 	installTargets += env.Install(os.path.join(distDir, 'Contents'), '#data/darwin/PkgInfo')
 	installTargets += env.Install(os.path.join(distDir, 'Contents/Resources'), '#data/darwin/Resources/mitsuba.icns')
 	frameworkDir = os.path.join(distDir, 'Contents/Frameworks')
+	platformDir = os.path.join(distDir, 'Contents/MacOS/platforms')
 
 	install(frameworkDir, ['libcore/libmitsuba-core.dylib', 'libhw/libmitsuba-hw.dylib',
 		'librender/libmitsuba-render.dylib', 'libbidir/libmitsuba-bidir.dylib'])
@@ -131,22 +124,34 @@ elif sys.platform == 'darwin':
 	if hasQt:
 		install(os.path.join(distDir, 'Contents/MacOS'), ['mtsgui/mtsgui'])
 		install(os.path.join(distDir, 'Contents/MacOS'), ['mtsgui/symlinks_install'])
-		installTargets += env.OSXLibInst(frameworkDir, '$QTDIR/frameworks/QtCore.framework/Versions/4/QtCore')
-		opengl = env.OSXLibInst(frameworkDir, '$QTDIR/frameworks/QtOpenGL.framework/Versions/4/QtOpenGL')
-		xml = env.OSXLibInst(frameworkDir, '$QTDIR/frameworks/QtXml.framework/Versions/4/QtXml')
-		xmlpatterns = env.OSXLibInst(frameworkDir, '$QTDIR/frameworks/QtXmlPatterns.framework/Versions/4/QtXmlPatterns')
-		network = env.OSXLibInst(frameworkDir, '$QTDIR/frameworks/QtNetwork.framework/Versions/4/QtNetwork')
-		gui = env.OSXLibInst(frameworkDir, '$QTDIR/frameworks/QtGui.framework/Versions/4/QtGui')
-		installTargets += env.AddPostAction(xml, 'install_name_tool -change QtCore.framework/Versions/4/QtCore @rpath/QtCore $TARGET')
-		installTargets += env.AddPostAction(xmlpatterns, 'install_name_tool -change QtCore.framework/Versions/4/QtCore @rpath/QtCore $TARGET')
-		installTargets += env.AddPostAction(xmlpatterns, 'install_name_tool -change QtNetwork.framework/Versions/4/QtNetwork @rpath/QtNetwork $TARGET')
-		installTargets += env.AddPostAction(network, 'install_name_tool -change QtCore.framework/Versions/4/QtCore @rpath/QtCore $TARGET')
-		installTargets += env.AddPostAction(gui, 'install_name_tool -change QtCore.framework/Versions/4/QtCore @rpath/QtCore $TARGET')
-		installTargets += env.AddPostAction(opengl, 'install_name_tool -change QtCore.framework/Versions/4/QtCore @rpath/QtCore $TARGET')
-		installTargets += env.AddPostAction(opengl, 'install_name_tool -change QtGui.framework/Versions/4/QtGui @rpath/QtGui $TARGET')
-		installTargets += env.Install(os.path.join(distDir, 'Contents/Resources'), '$QTDIR/frameworks//QtGui.framework/Versions/4/Resources/qt_menu.nib')
-		installTargets += env.Install(os.path.join(distDir, 'Contents/Resources'), '#data/darwin/PreviewSettings.nib')
+		installTargets += env.OSXLibInst(frameworkDir, '$QTDIR/frameworks/QtCore.framework/Versions/5/QtCore')
+		opengl = env.OSXLibInst(frameworkDir, '$QTDIR/frameworks/QtOpenGL.framework/Versions/5/QtOpenGL')
+		xml = env.OSXLibInst(frameworkDir, '$QTDIR/frameworks/QtXml.framework/Versions/5/QtXml')
+		xmlpatterns = env.OSXLibInst(frameworkDir, '$QTDIR/frameworks/QtXmlPatterns.framework/Versions/5/QtXmlPatterns')
+		network = env.OSXLibInst(frameworkDir, '$QTDIR/frameworks/QtNetwork.framework/Versions/5/QtNetwork')
+		gui = env.OSXLibInst(frameworkDir, '$QTDIR/frameworks/QtGui.framework/Versions/5/QtGui')
+		widgets = env.OSXLibInst(frameworkDir, '$QTDIR/frameworks/QtWidgets.framework/Versions/5/QtWidgets')
+		print_supp = env.OSXLibInst(frameworkDir, '$QTDIR/frameworks/QtPrintSupport.framework/Versions/5/QtPrintSupport')
+		cocoa = env.OSXLibInst(platformDir, '$QTDIR/frameworks/libqcocoa.dylib')
+		installTargets += env.AddPostAction(xml, 'install_name_tool -change @rpath/QtCore.framework/Versions/5/QtCore @rpath/QtCore $TARGET')
+		installTargets += env.AddPostAction(xmlpatterns, 'install_name_tool -change @rpath/QtCore.framework/Versions/5/QtCore @rpath/QtCore $TARGET')
+		installTargets += env.AddPostAction(xmlpatterns, 'install_name_tool -change @rpath/QtNetwork.framework/Versions/5/QtNetwork @rpath/QtNetwork $TARGET')
+		installTargets += env.AddPostAction(network, 'install_name_tool -change @rpath/QtCore.framework/Versions/5/QtCore @rpath/QtCore $TARGET')
+		installTargets += env.AddPostAction(gui, 'install_name_tool -change @rpath/QtCore.framework/Versions/5/QtCore @rpath/QtCore $TARGET')
+		installTargets += env.AddPostAction(widgets, 'install_name_tool -change @rpath/QtCore.framework/Versions/5/QtCore @rpath/QtCore $TARGET')
+		installTargets += env.AddPostAction(widgets, 'install_name_tool -change @rpath/QtGui.framework/Versions/5/QtGui @rpath/QtGui $TARGET')
+		installTargets += env.AddPostAction(cocoa, 'install_name_tool -change @rpath/QtCore.framework/Versions/5/QtCore @rpath/../Frameworks/QtCore $TARGET')
+		installTargets += env.AddPostAction(cocoa, 'install_name_tool -change @rpath/QtGui.framework/Versions/5/QtGui @rpath/../Frameworks/QtGui $TARGET')
+		installTargets += env.AddPostAction(cocoa, 'install_name_tool -change @rpath/QtWidgets.framework/Versions/5/QtWidgets @rpath/../Frameworks/QtWidgets $TARGET')
+		installTargets += env.AddPostAction(cocoa, 'install_name_tool -change @rpath/QtPrintSupport.framework/Versions/5/QtPrintSupport @rpath/../Frameworks/QtPrintSupport $TARGET')
+		installTargets += env.AddPostAction(opengl, 'install_name_tool -change @rpath/QtCore.framework/Versions/5/QtCore @rpath/QtCore $TARGET')
+		installTargets += env.AddPostAction(opengl, 'install_name_tool -change @rpath/QtGui.framework/Versions/5/QtGui @rpath/QtGui $TARGET')
+		installTargets += env.AddPostAction(opengl, 'install_name_tool -change @rpath/QtWidgets.framework/Versions/5/QtWidgets @rpath/QtWidgets $TARGET')
+		installTargets += env.AddPostAction(print_supp, 'install_name_tool -change @rpath/QtCore.framework/Versions/5/QtCore @rpath/QtCore $TARGET')
+		installTargets += env.AddPostAction(print_supp, 'install_name_tool -change @rpath/QtGui.framework/Versions/5/QtGui @rpath/QtGui $TARGET')
+		installTargets += env.AddPostAction(print_supp, 'install_name_tool -change @rpath/QtWidgets.framework/Versions/5/QtWidgets @rpath/QtWidgets $TARGET')
 		installTargets += env.Install(os.path.join(distDir, 'Contents/Resources'), '#data/darwin/qt.conf')
+		installTargets += env.Install(os.path.join(distDir, 'Contents/Resources'), '#data/darwin/PreviewSettings.nib')
 		installTargets += env.Install(os.path.join(distDir, 'Contents/Frameworks/BWToolkitFramework.framework/Versions/A'),
 			'#dependencies/frameworks/BWToolkitFramework.framework/Versions/A/BWToolkitFramework')
 		for file in os.listdir(env.GetBuildPath('#dependencies/frameworks/BWToolkitFramework.framework/Versions/A/Resources')):

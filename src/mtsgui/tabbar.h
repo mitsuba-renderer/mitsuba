@@ -19,7 +19,7 @@
 #if !defined(__TABBAR_H)
 #define __TABBAR_H
 
-#include <QtGui/QtGui>
+#include <QtWidgets/QtWidgets>
 
 class CustomTabBar : public QTabBar {
     Q_OBJECT

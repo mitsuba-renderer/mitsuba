@@ -25,7 +25,7 @@ if hasQt:
 	qtEnv.Append(CPPPATH=['#src/mtsgui'])
 	if qtEnv.has_key('QTINCLUDE'):
 		qtEnv.Prepend(CPPPATH=qtEnv['QTINCLUDE'])
-	qtEnv.EnableQt4Modules(['QtGui', 'QtCore', 'QtOpenGL', 'QtXml', 'QtXmlPatterns', 'QtNetwork'])
+	qtEnv.EnableQt5Modules(['QtGui', 'QtWidgets', 'QtCore', 'QtOpenGL', 'QtXml', 'QtXmlPatterns', 'QtNetwork'])
 
 	if sys.platform == 'win32':
 		index = qtEnv['CXXFLAGS'].index('_CONSOLE')
@@ -50,7 +50,7 @@ if hasQt:
 		qtEnv.Append(LINKFLAGS=['-Xlinker', '-rpath', '-Xlinker', '@executable_path/../Frameworks'])
 
 	bpath = env.GetBuildPath('#src/mtsgui')
-	qtInterfaces = [qtEnv.Uic4(uic) for uic in scanFiles(bpath, ['*.ui'])]
+	qtInterfaces = [qtEnv.Uic5(uic) for uic in scanFiles(bpath, ['*.ui'])]
 	qtResources = [qtEnv.Qrc(qrc) for qrc in scanFiles(bpath, ['*.qrc'])]
 	qtSources = scanFiles(bpath, ['*.cpp']) + qtResources + resources
 
@@ -67,19 +67,18 @@ if hasQt:
 		mainEnv_osx.ConfigureForObjectiveCPP()
 		qtEnv_osx.ConfigureForObjectiveCPP()
 		mainEnv_osx.Program('symlinks_install', ['symlinks_install.c'])
-		qtEnv_osx['CXXFLAGS'].append(['-Fdependencies/frameworks', '-framework', 'BWToolkitFramework', '-framework', 'Breakpad'])
+		qtEnv_osx['CXXFLAGS'].append(['-Fdependencies/frameworks', '-framework', 'BWToolkitFramework'])
 		qtSources += qtEnv_osx.StaticObject('previewsettingsdlg_cocoa_impl.mm')
-		if hasBreakpad:
-			qtSources += qtEnv_osx.StaticObject('breakpad.mm')
 	else:
 		qtSources = [x for x in qtSources if (not isinstance(x, str) or 'cocoa' not in x)]
 
 	mtsgui = qtEnv.Program('mtsgui', qtSources)
 	if sys.platform == 'darwin':
-		qtEnv.AddPostAction(mtsgui, 'install_name_tool -change QtGui.framework/Versions/4/QtGui @rpath/QtGui $TARGET')
-		qtEnv.AddPostAction(mtsgui, 'install_name_tool -change QtCore.framework/Versions/4/QtCore @rpath/QtCore $TARGET')
-		qtEnv.AddPostAction(mtsgui, 'install_name_tool -change QtOpenGL.framework/Versions/4/QtOpenGL @rpath/QtOpenGL $TARGET')
-		qtEnv.AddPostAction(mtsgui, 'install_name_tool -change QtXml.framework/Versions/4/QtXml @rpath/QtXml $TARGET')
-		qtEnv.AddPostAction(mtsgui, 'install_name_tool -change QtNetwork.framework/Versions/4/QtNetwork @rpath/QtNetwork $TARGET')
-		qtEnv.AddPostAction(mtsgui, 'install_name_tool -change QtXmlPatterns.framework/Versions/4/QtXmlPatterns @rpath/QtXmlPatterns $TARGET')
+		qtEnv.AddPostAction(mtsgui, 'install_name_tool -change @rpath/QtGui.framework/Versions/5/QtGui @rpath/QtGui $TARGET')
+		qtEnv.AddPostAction(mtsgui, 'install_name_tool -change @rpath/QtWidgets.framework/Versions/5/QtWidgets @rpath/QtWidgets $TARGET')
+		qtEnv.AddPostAction(mtsgui, 'install_name_tool -change @rpath/QtCore.framework/Versions/5/QtCore @rpath/QtCore $TARGET')
+		qtEnv.AddPostAction(mtsgui, 'install_name_tool -change @rpath/QtOpenGL.framework/Versions/5/QtOpenGL @rpath/QtOpenGL $TARGET')
+		qtEnv.AddPostAction(mtsgui, 'install_name_tool -change @rpath/QtXml.framework/Versions/5/QtXml @rpath/QtXml $TARGET')
+		qtEnv.AddPostAction(mtsgui, 'install_name_tool -change @rpath/QtNetwork.framework/Versions/5/QtNetwork @rpath/QtNetwork $TARGET')
+		qtEnv.AddPostAction(mtsgui, 'install_name_tool -change @rpath/QtXmlPatterns.framework/Versions/5/QtXmlPatterns @rpath/QtXmlPatterns $TARGET')
 

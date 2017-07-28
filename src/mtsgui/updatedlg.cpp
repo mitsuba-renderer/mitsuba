@@ -26,7 +26,7 @@ UpdateDialog::UpdateDialog(QWidget *parent, const Version &local,
 	m_remoteVersion = remote.toString().c_str();
     ui->versionLabel->setText(QApplication::translate("UpdateDialog",
 			"Version %1 has been released (you are using %2). Would you like to visit the download page?",
-			0, QApplication::UnicodeUTF8).arg(m_remoteVersion).arg(local.toString().c_str()));
+			0).arg(m_remoteVersion).arg(local.toString().c_str()));
 	ui->changeView->setHtml("Loading change log ..");
 	m_networkManager = new QNetworkAccessManager(this);
 	connect(m_networkManager, SIGNAL(finished(QNetworkReply *)),

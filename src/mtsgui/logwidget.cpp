@@ -22,8 +22,8 @@
 LogWidget::LogWidget(QWidget *parent)
  : QMainWindow(parent) {
 	m_contents = new QTextEdit(this);
-	QFont font("Monospace");
-	font.setStyleHint(QFont::TypeWriter);
+	QFont font = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+	font.setPointSize(14);
 	m_contents->setFont(font);
 	m_contents->setReadOnly(true);
 	QPalette palette;

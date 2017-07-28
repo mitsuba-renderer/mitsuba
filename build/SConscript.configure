@@ -30,7 +30,7 @@ if needsBuildDependencies and not os.path.exists(GetBuildPath('#dependencies')):
 	print 'at http://www.mitsuba-renderer.org/docs.html for details on how to get them.\n'
 	Exit(1)
 
-python_versions = ["2.6", "2.7", "3.0", "3.1", "3.2", "3.3", "3.4"]
+python_versions = ["2.6", "2.7", "3.0", "3.1", "3.2", "3.3", "3.4", "3.5", "3.6", "3.7"]
 
 # Parse configuration options
 vars = Variables(configFile)
@@ -93,11 +93,11 @@ vars.Add('QTINCLUDE',       'Additional Qt include directory')
 vars.Add('INTEL_COMPILER',  'Should the Intel C++ compiler be used?')
 
 try:
-	env = Environment(options=vars, ENV = os.environ, tools=['default', 'qt4', 'icl12'], toolpath=['#data/scons'])
-	print 'Checking for Qt 4.x... yes'
+	env = Environment(options=vars, ENV = os.environ, tools=['default', 'qt5'], toolpath=['#data/scons'])
+	print 'Checking for Qt 5.x... yes'
 	hasQt = True
 except Exception:
-	env = Environment(options=vars, ENV = os.environ, tools=['default', 'icl12'], toolpath=['#data/scons'])
+	env = Environment(options=vars, ENV = os.environ, tools=['default'], toolpath=['#data/scons'])
 	print 'Unable to detect a Qt installation -- not building the GUI!'
 	hasQt = False
 

@@ -64,7 +64,7 @@ public:
 		char tmp[32];
 		snprintf(tmp, sizeof(tmp), "%f", value);
 		morphNumericString(tmp);
-		return QString::fromAscii(tmp);
+		return QString::fromLatin1(tmp);
 	}
 
 	bool event(QEvent *event) {

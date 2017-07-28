@@ -35,7 +35,7 @@ MTS_NAMESPACE_BEGIN
 #define Log(level, fmt, ...) do { \
 		mitsuba::Thread *thread = mitsuba::Thread::getThread(); \
 		if (EXPECT_NOT_TAKEN(thread == NULL)) \
-			throw std::runtime_error("Null thread pointer"); \
+			{ fprintf(stderr, "Fatal: NULL thread pointer\n"); abort(); } \
 		mitsuba::Logger *logger = thread->getLogger(); \
 		if (logger != NULL && level >= logger->getLogLevel()) \
 			logger->log(level, m_theClass, \
@@ -49,7 +49,7 @@ MTS_NAMESPACE_BEGIN
 #define SLog(level, fmt, ...) do { \
 		mitsuba::Thread *thread = mitsuba::Thread::getThread(); \
 		if (EXPECT_NOT_TAKEN(thread == NULL)) \
-			throw std::runtime_error("Null thread pointer"); \
+			{ fprintf(stderr, "Fatal: NULL thread pointer\n"); abort(); } \
 		mitsuba::Logger *logger = thread->getLogger(); \
 		if (logger != NULL && level >= logger->getLogLevel()) \
 			logger->log(level, NULL, \

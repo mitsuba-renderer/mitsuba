@@ -221,7 +221,7 @@ int main(int argc, char *argv[]) {
 			QMessageBox::critical(NULL, "Internal error", "Could not open stylesheet!");
 			exit(-1);
 		}
-		app.setStyleSheet(QTextStream(&stylesheet).readAll().toAscii());
+		app.setStyleSheet(QTextStream(&stylesheet).readAll().toLatin1());
 
 #if defined(__OSX__)
 		app.setAttribute(Qt::AA_DontShowIconsInMenus);

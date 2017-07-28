@@ -16,13 +16,8 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <QtGui/QtGui>
 #include <mitsuba/mitsuba.h>
-#if defined(__OSX__)
-#include <OpenGL/glew.h>
-#else
-#include <GL/glew.h>
-#endif
+#include <QtGui/QtGui>
 #include "glwidget.h"
 #include "preview.h"
 #include <mitsuba/render/renderjob.h>

@@ -41,7 +41,6 @@
 #include <mitsuba/core/fstream.h>
 
 #if !defined(WIN32)
-#include <QtGui/QX11Info>
 #include <pwd.h>
 #endif
 
@@ -419,12 +418,7 @@ void MainWindow::adjustSize() {
 	/* Like QWidget::adjustSize, but clamps the size to 4/5ths of the screen */
 	ensurePolished();
     QSize s = sizeHint();
-
-#if defined(Q_WS_X11)
-        QRect screen = QApplication::desktop()->screenGeometry(x11Info().screen());
-#else // all others
-        QRect screen = QApplication::desktop()->screenGeometry(pos());
-#endif
+    QRect screen = QApplication::desktop()->screenGeometry(pos());
 
 	s.setWidth(qMin(s.width(), screen.width()*4/5));
 	s.setHeight(qMin(s.height(), screen.height()*4/5));
