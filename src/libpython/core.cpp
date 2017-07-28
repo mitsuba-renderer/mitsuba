@@ -1,3 +1,4 @@
+#define BOOST_PYTHON_USE_GCC_SYMBOL_VISIBILITY 1
 #include "base.h"
 #include <mitsuba/core/plugin.h>
 #include <mitsuba/core/shvector.h>
