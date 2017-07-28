@@ -27,7 +27,7 @@ fi
 if [ "$MITSUBA_PYVER" ]; then
 	pyver=$MITSUBA_PYVER
 else
-	pyver=`python --version 2>&1 | grep -oE '([[:digit:]].[[:digit:]])'`
+	pyver=`python --version 2>&1 | grep -oE '([[:digit:]].[[:digit:]])' | head -n1`
 fi
 
 if [[ "$(uname)" == 'Darwin' ]]; then
