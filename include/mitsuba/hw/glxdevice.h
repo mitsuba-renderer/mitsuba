@@ -28,19 +28,19 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_HW GLXDevice : public X11Device {
 public:
-	/// Create a new device
-	GLXDevice(X11Session *session);
+    /// Create a new device
+    GLXDevice(X11Session *session);
 
-	/// Flip the buffers (when using double-buffering)
-	void flip();
+    /// Flip the buffers (when using double-buffering)
+    void flip();
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	/// Virtual destructor
-	virtual ~GLXDevice();
+    /// Virtual destructor
+    virtual ~GLXDevice();
 
-	/// Create a visual
-	virtual XVisualInfo* createVisual();
+    /// Create a visual
+    virtual XVisualInfo* createVisual();
 };
 
 MTS_NAMESPACE_END

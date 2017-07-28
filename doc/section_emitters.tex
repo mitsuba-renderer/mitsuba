@@ -18,22 +18,22 @@ Generally, light sources are specified as children of the \code{<scene>} element
 the following snippet instantiates a point light emitter that illuminates a sphere.
 \begin{xml}
 <scene version=$\MtsVer$>
-	<emitter type="point">
-		<spectrum name="intensity" value="1"/>
-		<point name="position" x="0" y="0" z="-2"/>
-	</emitter>
-	<shape type="sphere"/>
+    <emitter type="point">
+        <spectrum name="intensity" value="1"/>
+        <point name="position" x="0" y="0" z="-2"/>
+    </emitter>
+    <shape type="sphere"/>
 </scene>
 \end{xml}
 An exception to this are \emph{area lights}, which turn a geometric object into a light source.
 These are specified as children of the corresponding \code{<shape>} element.
 \begin{xml}
 <scene version=$\MtsVer$>
-	<shape type="sphere">
-		<emitter type="area">
-			<spectrum name="radiance" value="1"/>
-		</emitter>
-	</shape>
+    <shape type="sphere">
+        <emitter type="area">
+            <spectrum name="radiance" value="1"/>
+        </emitter>
+    </shape>
 </scene>
 \end{xml}
 Note the parameter names used to specify the light source power, which reflect

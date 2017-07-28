@@ -47,116 +47,116 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_RENDER TestCase : public Utility {
 public:
-	/**
-	 * Perform any required initializations. The default
-	 * implementation simply returns
-	 */
-	virtual void init();
+    /**
+     * Perform any required initializations. The default
+     * implementation simply returns
+     */
+    virtual void init();
 
-	/**
-	 * Execute any required shutdown code. The default
-	 * implementation simply returns
-	 */
-	virtual void shutdown();
+    /**
+     * Execute any required shutdown code. The default
+     * implementation simply returns
+     */
+    virtual void shutdown();
 
-	/// Return the number of executed testcases
-	inline int getExecuted() const { return m_executed; }
+    /// Return the number of executed testcases
+    inline int getExecuted() const { return m_executed; }
 
-	/// Return the number of successfully executed testcases
-	inline int getSucceeded() const { return m_succeeded; }
+    /// Return the number of successfully executed testcases
+    inline int getSucceeded() const { return m_succeeded; }
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	/// Virtual destructor
-	virtual ~TestCase() { }
+    /// Virtual destructor
+    virtual ~TestCase() { }
 
-	/// Asserts that the two integer values are equal
-	void assertEqualsImpl(int actual, int expected, Float epsilon, const char *file, int line);
+    /// Asserts that the two integer values are equal
+    void assertEqualsImpl(int actual, int expected, Float epsilon, const char *file, int line);
 
-	/// Asserts that the two floating point values are equal
-	void assertEqualsImpl(Float actual, Float expected, Float epsilon, const char *file, int line);
+    /// Asserts that the two floating point values are equal
+    void assertEqualsImpl(Float actual, Float expected, Float epsilon, const char *file, int line);
 
-	/// Asserts that the two spectral power distributions are equal
-	void assertEqualsImpl(const Spectrum &actual, const Spectrum &expected, Float epsilon, const char *file, int line);
+    /// Asserts that the two spectral power distributions are equal
+    void assertEqualsImpl(const Spectrum &actual, const Spectrum &expected, Float epsilon, const char *file, int line);
 
-	/// Asserts that the two 2D vectors are equal
-	void assertEqualsImpl(const Vector2 &actual, const Vector2 &expected, Float epsilon, const char *file, int line);
+    /// Asserts that the two 2D vectors are equal
+    void assertEqualsImpl(const Vector2 &actual, const Vector2 &expected, Float epsilon, const char *file, int line);
 
-	/// Asserts that the two 3D vectors are equal
-	void assertEqualsImpl(const Vector &actual, const Vector &expected, Float epsilon, const char *file, int line);
+    /// Asserts that the two 3D vectors are equal
+    void assertEqualsImpl(const Vector &actual, const Vector &expected, Float epsilon, const char *file, int line);
 
-	/// Asserts that the two 4D vectors are equal
-	void assertEqualsImpl(const Vector4 &actual, const Vector4 &expected, Float epsilon, const char *file, int line);
+    /// Asserts that the two 4D vectors are equal
+    void assertEqualsImpl(const Vector4 &actual, const Vector4 &expected, Float epsilon, const char *file, int line);
 
-	/// Asserts that the two 2D points are equal
-	void assertEqualsImpl(const Point2 &actual, const Point2 &expected, Float epsilon, const char *file, int line);
+    /// Asserts that the two 2D points are equal
+    void assertEqualsImpl(const Point2 &actual, const Point2 &expected, Float epsilon, const char *file, int line);
 
-	/// Asserts that the two 3D points are equal
-	void assertEqualsImpl(const Point &actual, const Point &expected, Float epsilon, const char *file, int line);
+    /// Asserts that the two 3D points are equal
+    void assertEqualsImpl(const Point &actual, const Point &expected, Float epsilon, const char *file, int line);
 
-	/// Asserts that the two 4x4 matrices are equal
-	template<int M, int N> void assertEqualsImpl(const Matrix<M, N, Float> &actual, const Matrix<M, N, Float> &expected, Float epsilon, const char *file, int line) {
-		bool match = true;
-		for (int i=0; i<M; ++i)
-			for (int j=0; j<N; ++j)
-				if (std::abs(expected.m[i][j]-actual.m[i][j]) > epsilon)
-					match = false;
-		if (!match)
-			Thread::getThread()->getLogger()->log(EError, NULL, file, line, "Assertion failure: "
-				"expected matrix %s, got %s.", expected.toString().c_str(), actual.toString().c_str());
-	}
+    /// Asserts that the two 4x4 matrices are equal
+    template<int M, int N> void assertEqualsImpl(const Matrix<M, N, Float> &actual, const Matrix<M, N, Float> &expected, Float epsilon, const char *file, int line) {
+        bool match = true;
+        for (int i=0; i<M; ++i)
+            for (int j=0; j<N; ++j)
+                if (std::abs(expected.m[i][j]-actual.m[i][j]) > epsilon)
+                    match = false;
+        if (!match)
+            Thread::getThread()->getLogger()->log(EError, NULL, file, line, "Assertion failure: "
+                "expected matrix %s, got %s.", expected.toString().c_str(), actual.toString().c_str());
+    }
 
-	/// Asserts that a condition is true
-	void assertTrueImpl(bool condition, const char *expr, const char *file, int line);
+    /// Asserts that a condition is true
+    void assertTrueImpl(bool condition, const char *expr, const char *file, int line);
 
-	/// Asserts that a condition is false
-	void assertFalseImpl(bool condition, const char *expr, const char *file, int line);
+    /// Asserts that a condition is false
+    void assertFalseImpl(bool condition, const char *expr, const char *file, int line);
 
-	/// Note a failure and continue
-	void failAndContinueImpl(const std::string &msg, const char *file, int line);
+    /// Note a failure and continue
+    void failAndContinueImpl(const std::string &msg, const char *file, int line);
 
-	/// Increase the number of succeeded tests
-	void succeed();
+    /// Increase the number of succeeded tests
+    void succeed();
 protected:
-	int m_executed, m_succeeded;
+    int m_executed, m_succeeded;
 };
 
 MTS_NAMESPACE_END
 
 #define EXECUTE_GUARDED(name) \
-	try { \
-		Log(EInfo, "Executing test \"%s\" ..", #name); \
-		m_executed++;\
-		name();\
-		m_succeeded++;\
-	} catch (std::exception &e) {\
-		Log(EInfo, "Testcase failed with error: %s", e.what());\
-	}
+    try { \
+        Log(EInfo, "Executing test \"%s\" ..", #name); \
+        m_executed++;\
+        name();\
+        m_succeeded++;\
+    } catch (std::exception &e) {\
+        Log(EInfo, "Testcase failed with error: %s", e.what());\
+    }
 
 #define MTS_BEGIN_TESTCASE() \
-	MTS_DECLARE_CLASS() \
-	int run(int argc, char **argv) {\
-		init(); \
-		Log(EInfo, "Executing testcase \"%s\" ..", getClass()->getName().c_str()); \
-		m_executed = m_succeeded = 0;
+    MTS_DECLARE_CLASS() \
+    int run(int argc, char **argv) {\
+        init(); \
+        Log(EInfo, "Executing testcase \"%s\" ..", getClass()->getName().c_str()); \
+        m_executed = m_succeeded = 0;
 
 #define MTS_DECLARE_TEST(name) \
-		EXECUTE_GUARDED(name)
+        EXECUTE_GUARDED(name)
 
 #define MTS_END_TESTCASE()\
-		shutdown();\
-		return m_executed - m_succeeded;\
-	}
+        shutdown();\
+        return m_executed - m_succeeded;\
+    }
 
 #define MTS_EXPORT_TESTCASE(name, descr) \
-	MTS_IMPLEMENT_CLASS(name, false, TestCase) \
-	extern "C" { \
-		void MTS_EXPORT *CreateUtility() { \
-			return new name(); \
-		} \
-		const char MTS_EXPORT *GetDescription() { \
-			return descr; \
-		} \
-	}
+    MTS_IMPLEMENT_CLASS(name, false, TestCase) \
+    extern "C" { \
+        void MTS_EXPORT *CreateUtility() { \
+            return new name(); \
+        } \
+        const char MTS_EXPORT *GetDescription() { \
+            return descr; \
+        } \
+    }
 
 #endif /* __MITSUBA_RENDER_TESTCASE_H_ */

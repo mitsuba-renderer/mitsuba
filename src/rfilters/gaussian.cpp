@@ -29,40 +29,40 @@ MTS_NAMESPACE_BEGIN
  */
 class GaussianFilter : public ReconstructionFilter {
 public:
-	GaussianFilter(const Properties &props)
-		: ReconstructionFilter(props) {
-		/* Standard deviation */
-		m_stddev = props.getFloat("stddev", 0.5f);
+    GaussianFilter(const Properties &props)
+        : ReconstructionFilter(props) {
+        /* Standard deviation */
+        m_stddev = props.getFloat("stddev", 0.5f);
 
-		/* Cut off after 4 standard deviations */
-		m_radius = 4 * m_stddev;
-	}
+        /* Cut off after 4 standard deviations */
+        m_radius = 4 * m_stddev;
+    }
 
-	GaussianFilter(Stream *stream, InstanceManager *manager)
-		: ReconstructionFilter(stream, manager) {
-		m_stddev = stream->readFloat();
-		configure();
-	}
+    GaussianFilter(Stream *stream, InstanceManager *manager)
+        : ReconstructionFilter(stream, manager) {
+        m_stddev = stream->readFloat();
+        configure();
+    }
 
-	void serialize(Stream *stream, InstanceManager *manager) const {
-		ReconstructionFilter::serialize(stream, manager);
-		stream->writeFloat(m_stddev);
-	}
+    void serialize(Stream *stream, InstanceManager *manager) const {
+        ReconstructionFilter::serialize(stream, manager);
+        stream->writeFloat(m_stddev);
+    }
 
-	Float eval(Float x) const {
-		Float alpha = -1.0f / (2.0f * m_stddev*m_stddev);
-		return std::max((Float) 0.0f,
-			math::fastexp(alpha * x * x) -
-			math::fastexp(alpha * m_radius * m_radius));
-	}
+    Float eval(Float x) const {
+        Float alpha = -1.0f / (2.0f * m_stddev*m_stddev);
+        return std::max((Float) 0.0f,
+            math::fastexp(alpha * x * x) -
+            math::fastexp(alpha * m_radius * m_radius));
+    }
 
-	std::string toString() const {
-		return formatString("GaussianFilter[stddev=%f, radius=%f]", m_stddev, m_radius);
-	}
+    std::string toString() const {
+        return formatString("GaussianFilter[stddev=%f, radius=%f]", m_stddev, m_radius);
+    }
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	Float m_stddev;
+    Float m_stddev;
 };
 
 MTS_IMPLEMENT_CLASS_S(GaussianFilter, false, ReconstructionFilter);

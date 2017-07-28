@@ -20,6 +20,6 @@
 varying float depth;
 
 void main() {
-	float dx = dFdx(depth), dy = dFdy(depth);
-	gl_FragDepth = depth + sqrt(dx*dx+dy*dy);
+    float dx = dFdx(depth), dy = dFdy(depth);
+    gl_FragDepth = depth + sqrt(dx*dx+dy*dy);
 }

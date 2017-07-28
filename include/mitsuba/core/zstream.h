@@ -38,66 +38,66 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_CORE ZStream : public Stream {
 public:
-	// =============================================================
-	//! @{ \name Constructors
-	// =============================================================
-	enum EStreamType {
-		/// A raw deflate stream
-		EDeflateStream,
-		/// A gzip-compatible stream
-		EGZipStream
-	};
+    // =============================================================
+    //! @{ \name Constructors
+    // =============================================================
+    enum EStreamType {
+        /// A raw deflate stream
+        EDeflateStream,
+        /// A gzip-compatible stream
+        EGZipStream
+    };
 
-	/// Create a new compression stream
-	ZStream(Stream *childStream, EStreamType streamType = EDeflateStream,
-		int level = Z_DEFAULT_COMPRESSION);
+    /// Create a new compression stream
+    ZStream(Stream *childStream, EStreamType streamType = EDeflateStream,
+        int level = Z_DEFAULT_COMPRESSION);
 
-	//! @}
-	// =============================================================
+    //! @}
+    // =============================================================
 
-	// =============================================================
-	//! @{ \name Compression stream-specific features
-	// =============================================================
+    // =============================================================
+    //! @{ \name Compression stream-specific features
+    // =============================================================
 
-	/// Return the child stream of this compression stream
-	inline const Stream *getChildStream() const { return m_childStream.get(); }
+    /// Return the child stream of this compression stream
+    inline const Stream *getChildStream() const { return m_childStream.get(); }
 
-	/// Return the child stream of this compression stream
-	inline Stream *getChildStream() { return m_childStream; }
+    /// Return the child stream of this compression stream
+    inline Stream *getChildStream() { return m_childStream; }
 
-	//! @}
-	// =============================================================
+    //! @}
+    // =============================================================
 
-	// =============================================================
-	//! @{ \name Implementation of the Stream interface
-	// =============================================================
+    // =============================================================
+    //! @{ \name Implementation of the Stream interface
+    // =============================================================
 
-	void read(void *ptr, size_t size);
-	void write(const void *ptr, size_t size);
-	void seek(size_t pos);
-	size_t getPos() const;
-	size_t getSize() const;
-	void truncate(size_t size);
-	void flush();
-	bool canWrite() const;
-	bool canRead() const;
+    void read(void *ptr, size_t size);
+    void write(const void *ptr, size_t size);
+    void seek(size_t pos);
+    size_t getPos() const;
+    size_t getSize() const;
+    void truncate(size_t size);
+    void flush();
+    bool canWrite() const;
+    bool canRead() const;
 
-	//! @}
-	// =============================================================
+    //! @}
+    // =============================================================
 
-	/// Return a string representation
-	std::string toString() const;
+    /// Return a string representation
+    std::string toString() const;
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	// \brief Virtual destructor
-	virtual ~ZStream();
+    // \brief Virtual destructor
+    virtual ~ZStream();
 private:
-	ref<Stream> m_childStream;
-	z_stream m_deflateStream, m_inflateStream;
-	uint8_t m_deflateBuffer[ZSTREAM_BUFSIZE];
-	uint8_t m_inflateBuffer[ZSTREAM_BUFSIZE];
-	bool m_didWrite;
+    ref<Stream> m_childStream;
+    z_stream m_deflateStream, m_inflateStream;
+    uint8_t m_deflateBuffer[ZSTREAM_BUFSIZE];
+    uint8_t m_inflateBuffer[ZSTREAM_BUFSIZE];
+    bool m_didWrite;
 };
 
 MTS_NAMESPACE_END

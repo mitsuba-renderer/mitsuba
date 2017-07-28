@@ -34,119 +34,119 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_BIDIR SpecularManifold : public Object {
 public:
-	/// Construct an unitialized specular manifold data structure
-	SpecularManifold(const Scene *scene, int maxIterations = -1);
+    /// Construct an unitialized specular manifold data structure
+    SpecularManifold(const Scene *scene, int maxIterations = -1);
 
-	/**
-	 * \brief Initialize the specular manifold with the specified
-	 * path segment
-	 */
-	bool init(const Path &path, int start, int end);
+    /**
+     * \brief Initialize the specular manifold with the specified
+     * path segment
+     */
+    bool init(const Path &path, int start, int end);
 
-	/**
-	 * \brief Update the provided path segment based on the stored
-	 * specular manifold configuration
-	 */
-	bool update(Path &path, int start, int end);
+    /**
+     * \brief Update the provided path segment based on the stored
+     * specular manifold configuration
+     */
+    bool update(Path &path, int start, int end);
 
-	/// Attempt to move the movable endpoint vertex to position \c target
-	bool move(const Point &target, const Normal &normal);
+    /// Attempt to move the movable endpoint vertex to position \c target
+    bool move(const Point &target, const Normal &normal);
 
-	/**
-	 * \brief Compute the generalized geometric term between 'a' and 'b'
-	 */
-	Float G(const Path &path, int a, int b);
+    /**
+     * \brief Compute the generalized geometric term between 'a' and 'b'
+     */
+    Float G(const Path &path, int a, int b);
 
-	/**
-	 * \brief Compute a product of standard and generalized geometric
-	 * terms between 'a' and 'b' depending on whether vertices are
-	 * specular or non-specular.
-	 */
-	Float multiG(const Path &path, int a, int b);
+    /**
+     * \brief Compute a product of standard and generalized geometric
+     * terms between 'a' and 'b' depending on whether vertices are
+     * specular or non-specular.
+     */
+    Float multiG(const Path &path, int a, int b);
 
-	Float det(const Path &path, int a, int b, int c);
+    Float det(const Path &path, int a, int b, int c);
 
-	/// Return the number of iterations used by \ref move()
-	inline int getIterationCount() const { return m_iterations; }
+    /// Return the number of iterations used by \ref move()
+    inline int getIterationCount() const { return m_iterations; }
 
-	/// Return the position of a vertex
-	inline const Point &getPosition(int i) { return m_vertices[i].p; }
+    /// Return the position of a vertex
+    inline const Point &getPosition(int i) { return m_vertices[i].p; }
 
-	/// Return a string representation
-	std::string toString() const;
+    /// Return a string representation
+    std::string toString() const;
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	/// Virtual destructor
-	virtual ~SpecularManifold() { }
+    /// Virtual destructor
+    virtual ~SpecularManifold() { }
 
 private:
-	enum EType {
-		EPinnedPosition = 0,
-		EPinnedDirection,
-		EReflection,
-		ERefraction,
-		EMedium,
-		EMovable
-	};
+    enum EType {
+        EPinnedPosition = 0,
+        EPinnedDirection,
+        EReflection,
+        ERefraction,
+        EMedium,
+        EMovable
+    };
 
-	/// Describes a single interaction on the path
-	struct SimpleVertex {
-		bool degenerate : 1;
-		EType type : 31;
+    /// Describes a single interaction on the path
+    struct SimpleVertex {
+        bool degenerate : 1;
+        EType type : 31;
 
-		/* Position and partials */
-		Point p;
-		Vector dpdu, dpdv;
+        /* Position and partials */
+        Point p;
+        Vector dpdu, dpdv;
 
-		/* Normal and partials */
-		Normal n, gn;
-		Vector dndu, dndv;
+        /* Normal and partials */
+        Normal n, gn;
+        Vector dndu, dndv;
 
-		/* "Microfacet" normal */
-		Normal m;
+        /* "Microfacet" normal */
+        Normal m;
 
-		/* Further information about the vertex */
-		Float eta;
-		const Object *object;
+        /* Further information about the vertex */
+        Float eta;
+        const Object *object;
 
-		/* Scratch space for matrix assembly */
-		Matrix2x2 a, b, c, u;
+        /* Scratch space for matrix assembly */
+        Matrix2x2 a, b, c, u;
 
-		/* Manifold tangent space projected onto this vertex */
-		Matrix2x2 Tp;
+        /* Manifold tangent space projected onto this vertex */
+        Matrix2x2 Tp;
 
-		/// Initialize certain fields to zero by default
-		inline SimpleVertex(EType type, const Point &p) :
-			degenerate(false), type(type), p(p), dpdu(0.0f),
-			dpdv(0.0f), n(0.0f), dndu(0.0f), dndv(0.0f),
-			m(0.0f), eta(1.0f), object(NULL) { }
+        /// Initialize certain fields to zero by default
+        inline SimpleVertex(EType type, const Point &p) :
+            degenerate(false), type(type), p(p), dpdu(0.0f),
+            dpdv(0.0f), n(0.0f), dndu(0.0f), dndv(0.0f),
+            m(0.0f), eta(1.0f), object(NULL) { }
 
-		/// Map a tangent space displacement into world space
-		inline Vector map(Float u, Float v) const {
-			Vector2 T = Tp * Vector2(u, v);
-			return T.x * dpdu + T.y * dpdv;
-		}
+        /// Map a tangent space displacement into world space
+        inline Vector map(Float u, Float v) const {
+            Vector2 T = Tp * Vector2(u, v);
+            return T.x * dpdu + T.y * dpdv;
+        }
 
-		std::string toString() const;
-	};
+        std::string toString() const;
+    };
 
-	/// Take the specified step and project back onto the manifold
-	bool project(const Vector &d);
+    /// Take the specified step and project back onto the manifold
+    bool project(const Vector &d);
 
-	/**
-	 * \brief Compute the tangent vectors with the specified
-	 * components when projected onto the movable endpoint vertex
-	 */
-	bool computeTangents();
+    /**
+     * \brief Compute the tangent vectors with the specified
+     * components when projected onto the movable endpoint vertex
+     */
+    bool computeTangents();
 
-	void check(SimpleVertex *v);
+    void check(SimpleVertex *v);
 protected:
-	const Scene *m_scene;
-	Float m_time;
-	int m_iterations, m_maxIterations;
+    const Scene *m_scene;
+    Float m_time;
+    int m_iterations, m_maxIterations;
 
-	std::vector<SimpleVertex> m_vertices, m_proposal;
+    std::vector<SimpleVertex> m_vertices, m_proposal;
 };
 
 MTS_NAMESPACE_END

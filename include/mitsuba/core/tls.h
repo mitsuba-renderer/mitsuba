@@ -27,36 +27,36 @@ MTS_NAMESPACE_BEGIN
 
 ///! \cond
 namespace detail {
-	/* Some forward declarations pertaining to TLS management */
+    /* Some forward declarations pertaining to TLS management */
 
-	extern MTS_EXPORT_CORE void initializeGlobalTLS();
-	extern MTS_EXPORT_CORE void destroyGlobalTLS();
-	extern MTS_EXPORT_CORE void initializeLocalTLS();
-	extern MTS_EXPORT_CORE void destroyLocalTLS();
+    extern MTS_EXPORT_CORE void initializeGlobalTLS();
+    extern MTS_EXPORT_CORE void destroyGlobalTLS();
+    extern MTS_EXPORT_CORE void initializeLocalTLS();
+    extern MTS_EXPORT_CORE void destroyLocalTLS();
 
-	class MTS_EXPORT_CORE ThreadLocalBase {
-	public:
-		/// Functor to allocate memory for a TLS object
-		typedef void *(*ConstructFunctor)();
-		/// Functor to release memory of a TLS object
-		typedef void (*DestructFunctor)(void *);
-		/// Construct a new thread local storage object
-		ThreadLocalBase(const ConstructFunctor &constructFunctor,
-			const DestructFunctor &destructFfunctor);
-		/// Destroy the thread local storage object
-		~ThreadLocalBase();
-		/// Return the data value associated with the current thread
-		void *get();
-		/// Return the data value associated with the current thread (const version)
-		const void *get() const;
-		/// Like the other \c get(), but also returns whether the TLS object existed before
-		void *get(bool &existed);
-		/// Like the other \c get(), but also returns whether the TLS object existed before (const version)
-		const void *get(bool &existed) const;
-	protected:
-		struct ThreadLocalPrivate;
-		mutable boost::scoped_ptr<ThreadLocalPrivate> d;
-	};
+    class MTS_EXPORT_CORE ThreadLocalBase {
+    public:
+        /// Functor to allocate memory for a TLS object
+        typedef void *(*ConstructFunctor)();
+        /// Functor to release memory of a TLS object
+        typedef void (*DestructFunctor)(void *);
+        /// Construct a new thread local storage object
+        ThreadLocalBase(const ConstructFunctor &constructFunctor,
+            const DestructFunctor &destructFfunctor);
+        /// Destroy the thread local storage object
+        ~ThreadLocalBase();
+        /// Return the data value associated with the current thread
+        void *get();
+        /// Return the data value associated with the current thread (const version)
+        const void *get() const;
+        /// Like the other \c get(), but also returns whether the TLS object existed before
+        void *get(bool &existed);
+        /// Like the other \c get(), but also returns whether the TLS object existed before (const version)
+        const void *get(bool &existed) const;
+    protected:
+        struct ThreadLocalPrivate;
+        mutable boost::scoped_ptr<ThreadLocalPrivate> d;
+    };
 }; // namespace tls
 ///! \endcond
 
@@ -74,30 +74,30 @@ namespace detail {
  */
 template <typename ValueType> class ThreadLocal {
 public:
-	/// Construct a new thread local storage object
-	ThreadLocal() : m_base(&ThreadLocal::construct, &ThreadLocal::destruct) { }
+    /// Construct a new thread local storage object
+    ThreadLocal() : m_base(&ThreadLocal::construct, &ThreadLocal::destruct) { }
 
-	/// Update the data associated with the current thread
-	inline void set(ValueType *ptr) { ((ref<ValueType> *) m_base.get())->operator=(ptr); }
+    /// Update the data associated with the current thread
+    inline void set(ValueType *ptr) { ((ref<ValueType> *) m_base.get())->operator=(ptr); }
 
-	/// Return a reference to the data associated with the current thread
-	inline ValueType *get() { return ((ref<ValueType> *) m_base.get())->get(); }
+    /// Return a reference to the data associated with the current thread
+    inline ValueType *get() { return ((ref<ValueType> *) m_base.get())->get(); }
 
-	/**
-	 * \brief Return a reference to the data associated with the
-	 * current thread (const version)
-	 */
-	inline const ValueType *get() const { return ((const ref<ValueType> *) m_base.get())->get(); }
+    /**
+     * \brief Return a reference to the data associated with the
+     * current thread (const version)
+     */
+    inline const ValueType *get() const { return ((const ref<ValueType> *) m_base.get())->get(); }
 protected:
-	inline static void *construct() {
-		return new ref<ValueType>();
-	}
+    inline static void *construct() {
+        return new ref<ValueType>();
+    }
 
-	inline static void destruct(void *data) {
-		delete static_cast<ref<ValueType> *>(data);
-	}
+    inline static void destruct(void *data) {
+        delete static_cast<ref<ValueType> *>(data);
+    }
 protected:
-	detail::ThreadLocalBase m_base;
+    detail::ThreadLocalBase m_base;
 };
 
 /**
@@ -114,38 +114,38 @@ protected:
  */
 template <typename ValueType> class PrimitiveThreadLocal {
 public:
-	/// Construct a new thread local storage object
-	PrimitiveThreadLocal() : m_base(&PrimitiveThreadLocal::construct,
-		&PrimitiveThreadLocal::destruct) { }
+    /// Construct a new thread local storage object
+    PrimitiveThreadLocal() : m_base(&PrimitiveThreadLocal::construct,
+        &PrimitiveThreadLocal::destruct) { }
 
-	/// Update the data associated with the current thread
-	inline void set(ValueType &value) {
-		get() = value;
-	}
+    /// Update the data associated with the current thread
+    inline void set(ValueType &value) {
+        get() = value;
+    }
 
-	/// Return a reference to the data associated with the current thread
-	inline ValueType &get() {
-		return *((ValueType *) m_base.get());
-	}
+    /// Return a reference to the data associated with the current thread
+    inline ValueType &get() {
+        return *((ValueType *) m_base.get());
+    }
 
-	/**
-	 * \brief Return a reference to the data associated with the
-	 * current thread (const version)
-	 */
-	inline const ValueType &get() const {
-		return *((const ValueType *) m_base.get());
-	}
+    /**
+     * \brief Return a reference to the data associated with the
+     * current thread (const version)
+     */
+    inline const ValueType &get() const {
+        return *((const ValueType *) m_base.get());
+    }
 protected:
-	inline static void *construct() {
-		return new ValueType();
-	}
+    inline static void *construct() {
+        return new ValueType();
+    }
 
-	inline static void destruct(void *data) {
-		if (data)
-			delete static_cast<ValueType *>(data);
-	}
+    inline static void destruct(void *data) {
+        if (data)
+            delete static_cast<ValueType *>(data);
+    }
 protected:
-	detail::ThreadLocalBase m_base;
+    detail::ThreadLocalBase m_base;
 };
 
 MTS_NAMESPACE_END

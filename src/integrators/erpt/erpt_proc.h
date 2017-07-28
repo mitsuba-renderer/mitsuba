@@ -33,25 +33,25 @@ MTS_NAMESPACE_BEGIN
 
 class ERPTProcess : public BlockedRenderProcess {
 public:
-	ERPTProcess(const RenderJob *parent, RenderQueue *queue,
-		const ERPTConfiguration &config, const Bitmap *directImage);
+    ERPTProcess(const RenderJob *parent, RenderQueue *queue,
+        const ERPTConfiguration &config, const Bitmap *directImage);
 
-	void develop();
+    void develop();
 
-	/* ParallelProcess impl. */
-	void processResult(const WorkResult *wr, bool cancelled);
-	ref<WorkProcessor> createWorkProcessor() const;
-	void bindResource(const std::string &name, int id);
+    /* ParallelProcess impl. */
+    void processResult(const WorkResult *wr, bool cancelled);
+    ref<WorkProcessor> createWorkProcessor() const;
+    void bindResource(const std::string &name, int id);
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	/// Virtual destructor
-	virtual ~ERPTProcess() { }
+    /// Virtual destructor
+    virtual ~ERPTProcess() { }
 private:
-	ref<const RenderJob> m_job;
-	ERPTConfiguration m_config;
-	ref<const Bitmap> m_directImage;
-	ref<ImageBlock> m_accum;
+    ref<const RenderJob> m_job;
+    ERPTConfiguration m_config;
+    ref<const Bitmap> m_directImage;
+    ref<ImageBlock> m_accum;
 };
 
 MTS_NAMESPACE_END

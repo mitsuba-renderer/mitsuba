@@ -32,15 +32,15 @@ static StatsCounter statsEmpty("Volume cache", "Empty blocks", EPercentage);
 
 /* Lexicographic ordering for Vector3i */
 struct Vector3iKeyOrder : public std::binary_function<Vector3i, Vector3i, bool> {
-	inline bool operator()(const Vector3i &v1, const Vector3i &v2) const {
-		if (v1.x < v2.x) return true;
-		else if (v1.x > v2.x) return false;
-		if (v1.y < v2.y) return true;
-		else if (v1.y > v2.y) return false;
-		if (v1.z < v2.z) return true;
-		else if (v1.z > v2.z) return false;
-		return false;
-	}
+    inline bool operator()(const Vector3i &v1, const Vector3i &v2) const {
+        if (v1.x < v2.x) return true;
+        else if (v1.x > v2.x) return false;
+        if (v1.y < v2.y) return true;
+        else if (v1.y > v2.y) return false;
+        if (v1.z < v2.z) return true;
+        else if (v1.z > v2.z) return false;
+        return false;
+    }
 };
 
 /*!\plugin{volcache}{Caching volume data source}
@@ -79,263 +79,263 @@ struct Vector3iKeyOrder : public std::binary_function<Vector3i, Vector3i, bool> 
  */
 class CachingDataSource : public VolumeDataSource {
 public:
-	typedef LRUCache<Vector3i, Vector3iKeyOrder, float *> BlockCache;
+    typedef LRUCache<Vector3i, Vector3iKeyOrder, float *> BlockCache;
 
-	CachingDataSource(const Properties &props)
-		: VolumeDataSource(props) {
-		/// Size of an individual block (must be a power of 2)
-		m_blockSize = props.getInteger("blockSize", 8);
+    CachingDataSource(const Properties &props)
+        : VolumeDataSource(props) {
+        /// Size of an individual block (must be a power of 2)
+        m_blockSize = props.getInteger("blockSize", 8);
 
-		if (!math::isPowerOfTwo(m_blockSize))
-			Log(EError, "Block size must be a power of two!");
+        if (!math::isPowerOfTwo(m_blockSize))
+            Log(EError, "Block size must be a power of two!");
 
-		/* Width of an individual voxel. Will use the step size of the
-		   nested medium by default */
-		m_voxelWidth = props.getFloat("voxelWidth", -1);
+        /* Width of an individual voxel. Will use the step size of the
+           nested medium by default */
+        m_voxelWidth = props.getFloat("voxelWidth", -1);
 
-		/* Permissible memory usage in MiB. Default: 1GiB */
-		m_memoryLimit = (size_t) props.getLong("memoryLimit", 1024) * 1024 * 1024;
+        /* Permissible memory usage in MiB. Default: 1GiB */
+        m_memoryLimit = (size_t) props.getLong("memoryLimit", 1024) * 1024 * 1024;
 
-		m_stepSizeMultiplier = (Float) props.getFloat("stepSizeMultiplier", 1.0f);
+        m_stepSizeMultiplier = (Float) props.getFloat("stepSizeMultiplier", 1.0f);
 
-		m_volumeToWorld = props.getTransform("toWorld", Transform());
-	}
+        m_volumeToWorld = props.getTransform("toWorld", Transform());
+    }
 
-	CachingDataSource(Stream *stream, InstanceManager *manager)
-	: VolumeDataSource(stream, manager) {
-		m_nested = static_cast<VolumeDataSource *>(manager->getInstance(stream));
-		configure();
-	}
+    CachingDataSource(Stream *stream, InstanceManager *manager)
+    : VolumeDataSource(stream, manager) {
+        m_nested = static_cast<VolumeDataSource *>(manager->getInstance(stream));
+        configure();
+    }
 
-	virtual ~CachingDataSource() {
-	}
+    virtual ~CachingDataSource() {
+    }
 
-	void serialize(Stream *stream, InstanceManager *manager) const {
-		VolumeDataSource::serialize(stream, manager);
-		manager->serialize(stream, m_nested.get());
-	}
+    void serialize(Stream *stream, InstanceManager *manager) const {
+        VolumeDataSource::serialize(stream, manager);
+        manager->serialize(stream, m_nested.get());
+    }
 
-	void configure() {
-		if (m_nested == NULL)
-			Log(EError, "A nested volume data source is needed!");
-		m_aabb = m_nested->getAABB();
-		if (!m_aabb.isValid())
-			Log(EError, "Nested axis-aligned bounding box was invalid!");
+    void configure() {
+        if (m_nested == NULL)
+            Log(EError, "A nested volume data source is needed!");
+        m_aabb = m_nested->getAABB();
+        if (!m_aabb.isValid())
+            Log(EError, "Nested axis-aligned bounding box was invalid!");
 
-		if (m_voxelWidth == -1)
-			m_voxelWidth = m_nested->getStepSize();
+        if (m_voxelWidth == -1)
+            m_voxelWidth = m_nested->getStepSize();
 
-		size_t memoryLimitPerCore = m_memoryLimit
-			/ std::max((size_t) 1, Scheduler::getInstance()->getLocalWorkerCount());
+        size_t memoryLimitPerCore = m_memoryLimit
+            / std::max((size_t) 1, Scheduler::getInstance()->getLocalWorkerCount());
 
-		Vector totalCells  = m_aabb.getExtents() / m_voxelWidth;
-		for (int i=0; i<3; ++i)
-			m_cellCount[i] = (int) std::ceil(totalCells[i]);
+        Vector totalCells  = m_aabb.getExtents() / m_voxelWidth;
+        for (int i=0; i<3; ++i)
+            m_cellCount[i] = (int) std::ceil(totalCells[i]);
 
-		if (m_nested->supportsFloatLookups())
-			m_channels = 1;
-		else if (m_nested->supportsVectorLookups())
-			m_channels = 1;
-		else if (m_nested->supportsSpectrumLookups())
-			m_channels = SPECTRUM_SAMPLES;
-		else
-			Log(EError, "Nested volume offers no access methods!");
+        if (m_nested->supportsFloatLookups())
+            m_channels = 1;
+        else if (m_nested->supportsVectorLookups())
+            m_channels = 1;
+        else if (m_nested->supportsSpectrumLookups())
+            m_channels = SPECTRUM_SAMPLES;
+        else
+            Log(EError, "Nested volume offers no access methods!");
 
-		m_blockRes = m_blockSize+1;
-		int blockMemoryUsage = (int) std::pow((Float) m_blockRes, 3) * m_channels * sizeof(float);
-		m_blocksPerCore = memoryLimitPerCore / blockMemoryUsage;
+        m_blockRes = m_blockSize+1;
+        int blockMemoryUsage = (int) std::pow((Float) m_blockRes, 3) * m_channels * sizeof(float);
+        m_blocksPerCore = memoryLimitPerCore / blockMemoryUsage;
 
-		m_worldToVolume = m_volumeToWorld.inverse();
-		m_worldToGrid = Transform::scale(Vector(1/m_voxelWidth))
-			 * Transform::translate(-Vector(m_aabb.min)) * m_worldToVolume;
-		m_voxelMask = m_blockSize-1;
-		m_blockMask = ~(m_blockSize-1);
-		m_blockShift = math::log2i((uint32_t) m_blockSize);
+        m_worldToVolume = m_volumeToWorld.inverse();
+        m_worldToGrid = Transform::scale(Vector(1/m_voxelWidth))
+             * Transform::translate(-Vector(m_aabb.min)) * m_worldToVolume;
+        m_voxelMask = m_blockSize-1;
+        m_blockMask = ~(m_blockSize-1);
+        m_blockShift = math::log2i((uint32_t) m_blockSize);
 
-		Log(EInfo, "Volume cache configuration");
-		Log(EInfo, "   Block size in voxels      = %i", m_blockSize);
-		Log(EInfo, "   Voxel width               = %f", m_voxelWidth);
-		Log(EInfo, "   Memory usage of one block = %s", memString(blockMemoryUsage).c_str());
-		Log(EInfo, "   Memory limit              = %s", memString(m_memoryLimit).c_str());
-		Log(EInfo, "   Memory limit per core     = %s", memString(memoryLimitPerCore).c_str());
-		Log(EInfo, "   Max. blocks per core      = %i", m_blocksPerCore);
-		Log(EInfo, "   Effective resolution      = %s", totalCells.toString().c_str());
-		Log(EInfo, "   Effective storage         = %s", memString((size_t)
-			(totalCells[0]*totalCells[1]*totalCells[2]*sizeof(float)*m_channels)).c_str());
-	}
+        Log(EInfo, "Volume cache configuration");
+        Log(EInfo, "   Block size in voxels      = %i", m_blockSize);
+        Log(EInfo, "   Voxel width               = %f", m_voxelWidth);
+        Log(EInfo, "   Memory usage of one block = %s", memString(blockMemoryUsage).c_str());
+        Log(EInfo, "   Memory limit              = %s", memString(m_memoryLimit).c_str());
+        Log(EInfo, "   Memory limit per core     = %s", memString(memoryLimitPerCore).c_str());
+        Log(EInfo, "   Max. blocks per core      = %i", m_blocksPerCore);
+        Log(EInfo, "   Effective resolution      = %s", totalCells.toString().c_str());
+        Log(EInfo, "   Effective storage         = %s", memString((size_t)
+            (totalCells[0]*totalCells[1]*totalCells[2]*sizeof(float)*m_channels)).c_str());
+    }
 
-	Float lookupFloat(const Point &_p) const {
-		const Point p = m_worldToGrid.transformAffine(_p);
-		int x = (int) p.x, y = (int) p.y, z = (int) p.z;
+    Float lookupFloat(const Point &_p) const {
+        const Point p = m_worldToGrid.transformAffine(_p);
+        int x = (int) p.x, y = (int) p.y, z = (int) p.z;
 
-		if (EXPECT_NOT_TAKEN(
-			x < 0 || x >= m_cellCount.x ||
-			y < 0 || y >= m_cellCount.y ||
-			z < 0 || z >= m_cellCount.z))
-			return 0.0f;
+        if (EXPECT_NOT_TAKEN(
+            x < 0 || x >= m_cellCount.x ||
+            y < 0 || y >= m_cellCount.y ||
+            z < 0 || z >= m_cellCount.z))
+            return 0.0f;
 
-		BlockCache *cache = m_cache.get();
-		if (EXPECT_NOT_TAKEN(cache == NULL)) {
-			cache = new BlockCache(m_blocksPerCore,
-				boost::bind(&CachingDataSource::renderBlock, this, _1),
-				boost::bind(&CachingDataSource::destroyBlock, this, _1));
-			m_cache.set(cache);
-		}
+        BlockCache *cache = m_cache.get();
+        if (EXPECT_NOT_TAKEN(cache == NULL)) {
+            cache = new BlockCache(m_blocksPerCore,
+                boost::bind(&CachingDataSource::renderBlock, this, _1),
+                boost::bind(&CachingDataSource::destroyBlock, this, _1));
+            m_cache.set(cache);
+        }
 
 #if defined(VOLCACHE_DEBUG)
-		if (cache->isFull()) {
-			/* For debugging: when the cache is full, dump locations
-			   of all cache records into an OBJ file and exit */
-			std::vector<Vector3i> keys;
-			cache->get_keys(std::back_inserter(keys));
+        if (cache->isFull()) {
+            /* For debugging: when the cache is full, dump locations
+               of all cache records into an OBJ file and exit */
+            std::vector<Vector3i> keys;
+            cache->get_keys(std::back_inserter(keys));
 
-			std::ofstream os("keys.obj");
-			os << "o Keys" << endl;
-			for (size_t i=0; i<keys.size(); i++) {
-				Vector3i key = keys[i];
-				key = key * m_blockSize + Vector3i(m_blockSize/2);
+            std::ofstream os("keys.obj");
+            os << "o Keys" << endl;
+            for (size_t i=0; i<keys.size(); i++) {
+                Vector3i key = keys[i];
+                key = key * m_blockSize + Vector3i(m_blockSize/2);
 
-				Point p(key.x * m_voxelWidth + m_aabb.min.x,
-					key.y * m_voxelWidth + m_aabb.min.y,
-					key.z * m_voxelWidth + m_aabb.min.z);
+                Point p(key.x * m_voxelWidth + m_aabb.min.x,
+                    key.y * m_voxelWidth + m_aabb.min.y,
+                    key.z * m_voxelWidth + m_aabb.min.z);
 
-				os << "v " << p.x << " " << p.y << " " << p.z << endl;
-			}
+                os << "v " << p.x << " " << p.y << " " << p.z << endl;
+            }
 
-			/// Need to generate some fake geometry so that blender will import the points
-			for (size_t i=3; i<=keys.size(); i++)
-				os << "f " << i << " " << i-1 << " " << i-2 << endl;
-			os.close();
-			_exit(-1);
-		}
+            /// Need to generate some fake geometry so that blender will import the points
+            for (size_t i=3; i<=keys.size(); i++)
+                os << "f " << i << " " << i-1 << " " << i-2 << endl;
+            os.close();
+            _exit(-1);
+        }
 #endif
 
-		bool hit = false;
-		float *blockData = cache->get(Vector3i(
-			(x & m_blockMask) >> m_blockShift,
-			(y & m_blockMask) >> m_blockShift,
-			(z & m_blockMask) >> m_blockShift), hit);
+        bool hit = false;
+        float *blockData = cache->get(Vector3i(
+            (x & m_blockMask) >> m_blockShift,
+            (y & m_blockMask) >> m_blockShift,
+            (z & m_blockMask) >> m_blockShift), hit);
 
-		statsHitRate.incrementBase();
-		if (hit)
-			++statsHitRate;
+        statsHitRate.incrementBase();
+        if (hit)
+            ++statsHitRate;
 
-		if (blockData == NULL)
-			return 0.0f;
+        if (blockData == NULL)
+            return 0.0f;
 
-		const int x1 = x & m_voxelMask, y1 = y & m_voxelMask, z1 = z & m_voxelMask,
-				x2 = x1 + 1, y2 = y1 + 1, z2 = z1 + 1;
+        const int x1 = x & m_voxelMask, y1 = y & m_voxelMask, z1 = z & m_voxelMask,
+                x2 = x1 + 1, y2 = y1 + 1, z2 = z1 + 1;
 
-		const float fx = (float) p.x - x, fy = (float) p.y - y, fz = (float) p.z - z,
-				_fx = 1.0f - fx, _fy = 1.0f - fy, _fz = 1.0f - fz;
+        const float fx = (float) p.x - x, fy = (float) p.y - y, fz = (float) p.z - z,
+                _fx = 1.0f - fx, _fy = 1.0f - fy, _fz = 1.0f - fz;
 
-		const float
-			&d000 = blockData[(z1*m_blockRes + y1)*m_blockRes + x1],
-			&d001 = blockData[(z1*m_blockRes + y1)*m_blockRes + x2],
-			&d010 = blockData[(z1*m_blockRes + y2)*m_blockRes + x1],
-			&d011 = blockData[(z1*m_blockRes + y2)*m_blockRes + x2],
-			&d100 = blockData[(z2*m_blockRes + y1)*m_blockRes + x1],
-			&d101 = blockData[(z2*m_blockRes + y1)*m_blockRes + x2],
-			&d110 = blockData[(z2*m_blockRes + y2)*m_blockRes + x1],
-			&d111 = blockData[(z2*m_blockRes + y2)*m_blockRes + x2];
+        const float
+            &d000 = blockData[(z1*m_blockRes + y1)*m_blockRes + x1],
+            &d001 = blockData[(z1*m_blockRes + y1)*m_blockRes + x2],
+            &d010 = blockData[(z1*m_blockRes + y2)*m_blockRes + x1],
+            &d011 = blockData[(z1*m_blockRes + y2)*m_blockRes + x2],
+            &d100 = blockData[(z2*m_blockRes + y1)*m_blockRes + x1],
+            &d101 = blockData[(z2*m_blockRes + y1)*m_blockRes + x2],
+            &d110 = blockData[(z2*m_blockRes + y2)*m_blockRes + x1],
+            &d111 = blockData[(z2*m_blockRes + y2)*m_blockRes + x2];
 
-		float result = ((d000*_fx + d001*fx)*_fy +
-				 (d010*_fx + d011*fx)*fy)*_fz +
-				((d100*_fx + d101*fx)*_fy +
-				 (d110*_fx + d111*fx)*fy)*fz;
+        float result = ((d000*_fx + d001*fx)*_fy +
+                 (d010*_fx + d011*fx)*fy)*_fz +
+                ((d100*_fx + d101*fx)*_fy +
+                 (d110*_fx + d111*fx)*fy)*fz;
 
-		return result;
-	}
+        return result;
+    }
 
-	Spectrum lookupSpectrum(const Point &_p) const {
-		return Spectrum(0.0f);
-	}
+    Spectrum lookupSpectrum(const Point &_p) const {
+        return Spectrum(0.0f);
+    }
 
-	Vector lookupVector(const Point &_p) const {
-		return Vector(0.0f);
-	}
+    Vector lookupVector(const Point &_p) const {
+        return Vector(0.0f);
+    }
 
-	bool supportsFloatLookups() const {
-		return m_nested->supportsFloatLookups();
-	}
+    bool supportsFloatLookups() const {
+        return m_nested->supportsFloatLookups();
+    }
 
-	bool supportsSpectrumLookups() const {
-		return m_nested->supportsSpectrumLookups();
-	}
+    bool supportsSpectrumLookups() const {
+        return m_nested->supportsSpectrumLookups();
+    }
 
-	bool supportsVectorLookups() const {
-		return m_nested->supportsVectorLookups();
-	}
+    bool supportsVectorLookups() const {
+        return m_nested->supportsVectorLookups();
+    }
 
-	Float getStepSize() const {
-		return m_voxelWidth * m_stepSizeMultiplier;
-	}
+    Float getStepSize() const {
+        return m_voxelWidth * m_stepSizeMultiplier;
+    }
 
-	void addChild(const std::string &name, ConfigurableObject *child) {
-		if (child->getClass()->derivesFrom(VolumeDataSource::m_theClass)) {
-			Assert(m_nested == NULL);
-			m_nested = static_cast<VolumeDataSource *>(child);
-		} else {
-			VolumeDataSource::addChild(name, child);
-		}
-	}
+    void addChild(const std::string &name, ConfigurableObject *child) {
+        if (child->getClass()->derivesFrom(VolumeDataSource::m_theClass)) {
+            Assert(m_nested == NULL);
+            m_nested = static_cast<VolumeDataSource *>(child);
+        } else {
+            VolumeDataSource::addChild(name, child);
+        }
+    }
 
-	float *renderBlock(const Vector3i &blockIdx) const {
-		float *result = new float[m_blockRes*m_blockRes*m_blockRes];
-		Point offset = m_aabb.min + Vector(
-			blockIdx.x * m_blockSize * m_voxelWidth,
-			blockIdx.y * m_blockSize * m_voxelWidth,
-			blockIdx.z * m_blockSize * m_voxelWidth);
+    float *renderBlock(const Vector3i &blockIdx) const {
+        float *result = new float[m_blockRes*m_blockRes*m_blockRes];
+        Point offset = m_aabb.min + Vector(
+            blockIdx.x * m_blockSize * m_voxelWidth,
+            blockIdx.y * m_blockSize * m_voxelWidth,
+            blockIdx.z * m_blockSize * m_voxelWidth);
 
-		int idx = 0;
-		bool nonempty = false;
-		for (int z = 0; z<m_blockRes; ++z) {
-			for (int y = 0; y<m_blockRes; ++y) {
-				for (int x = 0; x<m_blockRes; ++x) {
-					Point p = offset + Vector((Float) x, (Float) y, (Float) z) * m_voxelWidth;
-					float value = (float) m_nested->lookupFloat(p);
-					result[idx++] = value;
-					nonempty |= (value != 0);
-				}
-			}
-		}
+        int idx = 0;
+        bool nonempty = false;
+        for (int z = 0; z<m_blockRes; ++z) {
+            for (int y = 0; y<m_blockRes; ++y) {
+                for (int x = 0; x<m_blockRes; ++x) {
+                    Point p = offset + Vector((Float) x, (Float) y, (Float) z) * m_voxelWidth;
+                    float value = (float) m_nested->lookupFloat(p);
+                    result[idx++] = value;
+                    nonempty |= (value != 0);
+                }
+            }
+        }
 
-		++statsCreate;
-		statsEmpty.incrementBase();
+        ++statsCreate;
+        statsEmpty.incrementBase();
 
-		if (nonempty) {
-			return result;
-		} else {
-			++statsEmpty;
-			delete[] result;
-			return NULL;
-		}
-	}
+        if (nonempty) {
+            return result;
+        } else {
+            ++statsEmpty;
+            delete[] result;
+            return NULL;
+        }
+    }
 
-	void destroyBlock(float *ptr) const {
-		++statsDestruct;
-		delete[] ptr;
-	}
+    void destroyBlock(float *ptr) const {
+        ++statsDestruct;
+        delete[] ptr;
+    }
 
-	Float getMaximumFloatValue() const {
-		return m_nested->getMaximumFloatValue();
-	}
+    Float getMaximumFloatValue() const {
+        return m_nested->getMaximumFloatValue();
+    }
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	ref<VolumeDataSource> m_nested;
-	Transform m_volumeToWorld;
-	Transform m_worldToVolume;
-	Transform m_worldToGrid;
-	Float m_voxelWidth;
-	Float m_stepSizeMultiplier;
-	size_t m_memoryLimit;
-	size_t m_blocksPerCore;
-	int m_channels;
-	int m_blockSize, m_blockRes;
-	int m_blockMask, m_voxelMask, m_blockShift;
-	Vector3i m_cellCount;
-	mutable ThreadLocal<BlockCache> m_cache;
+    ref<VolumeDataSource> m_nested;
+    Transform m_volumeToWorld;
+    Transform m_worldToVolume;
+    Transform m_worldToGrid;
+    Float m_voxelWidth;
+    Float m_stepSizeMultiplier;
+    size_t m_memoryLimit;
+    size_t m_blocksPerCore;
+    int m_channels;
+    int m_blockSize, m_blockRes;
+    int m_blockMask, m_voxelMask, m_blockShift;
+    Vector3i m_cellCount;
+    mutable ThreadLocal<BlockCache> m_cache;
 };
 
 MTS_IMPLEMENT_CLASS_S(CachingDataSource, false, VolumeDataSource);

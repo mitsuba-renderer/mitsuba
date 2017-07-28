@@ -99,8 +99,8 @@
        <item row="1" column="1">
         <widget class="QLabel" name="label">
          <property name="toolTip">
-          <string>Specify the block resolution used to split images into 
-parallel workloads (default: 32x32). If chosen too small, 
+          <string>Specify the block resolution used to split images into
+parallel workloads (default: 32x32). If chosen too small,
 excessive block management may slow down the rendering.
 Only applies to some integrators. </string>
          </property>
@@ -115,8 +115,8 @@ Only applies to some integrators. </string>
        <item row="1" column="2" colspan="2">
         <widget class="QComboBox" name="blockSizeBox">
          <property name="toolTip">
-          <string>Specify the block resolution used to split images into 
-parallel workloads (default: 32x32). If chosen too small, 
+          <string>Specify the block resolution used to split images into
+parallel workloads (default: 32x32). If chosen too small,
 excessive block management may slow down the rendering.
 Only applies to some integrators. </string>
          </property>
@@ -161,8 +161,8 @@ Only applies to some integrators. </string>
         <widget class="QLabel" name="label_2">
          <property name="toolTip">
           <string>Specifies the number of local worker threads. The default is to use
-all local cores (including virtual cores on Hyper-threading-enabled 
-machines). Setting this value lower can be useful to reduce the 
+all local cores (including virtual cores on Hyper-threading-enabled
+machines). Setting this value lower can be useful to reduce the
 system load, especially when much of the work is done over the network.</string>
          </property>
          <property name="text">
@@ -177,8 +177,8 @@ system load, especially when much of the work is done over the network.</string>
         <widget class="QSpinBox" name="localWorkerBox">
          <property name="toolTip">
           <string>Specifies the number of local worker threads. The default is to use
-all local cores (including virtual cores on Hyper-threading-enabled 
-machines). Setting this value lower can be useful to reduce the 
+all local cores (including virtual cores on Hyper-threading-enabled
+machines). Setting this value lower can be useful to reduce the
 system load, especially when much of the work is done over the network.</string>
          </property>
          <property name="value">
@@ -374,7 +374,7 @@ release via Internet every time it is started.</string>
        <item row="11" column="2" colspan="2">
         <widget class="QSlider" name="sensitivitySlider">
          <property name="toolTip">
-          <string>Specifies how sensitive the mouse should react to 
+          <string>Specifies how sensitive the mouse should react to
 movements while navigating in the realt-time preview.</string>
          </property>
          <property name="minimum">
@@ -409,7 +409,7 @@ movements while navigating in the realt-time preview.</string>
        <item row="11" column="1">
         <widget class="QLabel" name="label_8">
          <property name="toolTip">
-          <string>Specifies how sensitive the mouse should react to 
+          <string>Specifies how sensitive the mouse should react to
 movements while navigating in the realt-time preview.</string>
          </property>
          <property name="text">
@@ -499,7 +499,7 @@ p, li { white-space: pre-wrap; }
         <widget class="QComboBox" name="logVerbosityBox">
          <property name="toolTip">
           <string>Specifies the threshold for displaying log messages.
-For instance, setting this to &quot;Info&quot; means that everything 
+For instance, setting this to &quot;Info&quot; means that everything
 above and including &quot;Info&quot; is written to the console.</string>
          </property>
          <item>
@@ -533,7 +533,7 @@ above and including &quot;Info&quot; is written to the console.</string>
         <widget class="QLabel" name="label_5">
          <property name="toolTip">
           <string>Specifies the threshold for displaying log messages.
-For instance, setting this to &quot;Info&quot; means that everything 
+For instance, setting this to &quot;Info&quot; means that everything
 above and including &quot;Info&quot; is written to the console.</string>
          </property>
          <property name="text">
@@ -547,8 +547,8 @@ above and including &quot;Info&quot; is written to the console.</string>
        <item row="3" column="1">
         <widget class="QLabel" name="label_16">
          <property name="toolTip">
-          <string>Thread priority to assign to Mitsuba's rendering threads. 
-Setting this to a value below Normal is usually a good idea, 
+          <string>Thread priority to assign to Mitsuba's rendering threads.
+Setting this to a value below Normal is usually a good idea,
 since it will make the operating system more responsive.</string>
          </property>
          <property name="text">
@@ -559,8 +559,8 @@ since it will make the operating system more responsive.</string>
        <item row="3" column="2" colspan="2">
         <widget class="QComboBox" name="workerPriorityBox">
          <property name="toolTip">
-          <string>Thread priority to assign to Mitsuba's rendering threads. 
-Setting this to a value below Normal is usually a good idea, 
+          <string>Thread priority to assign to Mitsuba's rendering threads.
+Setting this to a value below Normal is usually a good idea,
 since it will make the operating system more responsive.</string>
          </property>
          <item>

@@ -53,74 +53,74 @@ MTS_NAMESPACE_BEGIN
  */
 struct TwoTailedGeoDistr {
 public:
-	/// Create a new two-tailed distribution for the given base constant
-	TwoTailedGeoDistr(Float base) : m_base(base) {
-		m_baseNormalization = 1.0f / (Float) (base+1);
-		m_invLogBase = 1.0f / std::log(base);
-	}
+    /// Create a new two-tailed distribution for the given base constant
+    TwoTailedGeoDistr(Float base) : m_base(base) {
+        m_baseNormalization = 1.0f / (Float) (base+1);
+        m_invLogBase = 1.0f / std::log(base);
+    }
 
-	/// Configure the domain and center of the distribution
-	void configure(int center, int start, int end) {
-		m_center = center;
-		m_start = start - center;
-		m_end = end - center;
-		m_offset = R(m_start - 1);
-		m_normalization = R(m_end) - m_offset;
-	}
+    /// Configure the domain and center of the distribution
+    void configure(int center, int start, int end) {
+        m_center = center;
+        m_start = start - center;
+        m_end = end - center;
+        m_offset = R(m_start - 1);
+        m_normalization = R(m_end) - m_offset;
+    }
 
-	/// Evaluate the probability mass function at position \c i
-	inline Float pmf(int i) const {
-		i -= m_center;
+    /// Evaluate the probability mass function at position \c i
+    inline Float pmf(int i) const {
+        i -= m_center;
 
-		if (i < m_start || i > m_end)
-			return 0.0f;
+        if (i < m_start || i > m_end)
+            return 0.0f;
 
-		return r(i) / m_normalization;
-	}
+        return r(i) / m_normalization;
+    }
 
-	/// Evaluate the cumulative distribution function at position \c i
-	inline Float cdf(int i) const {
-		i -= m_center;
+    /// Evaluate the cumulative distribution function at position \c i
+    inline Float cdf(int i) const {
+        i -= m_center;
 
-		if (i < m_start)
-			return 0.0f;
-		else if (i > m_end)
-			i = m_end;
+        if (i < m_start)
+            return 0.0f;
+        else if (i > m_end)
+            i = m_end;
 
-		return (R(i) - m_offset) / m_normalization;
-	}
+        return (R(i) - m_offset) / m_normalization;
+    }
 
-	/// Draw a position according to the probability mass function
-	inline int sample(Float xi) const {
-		return std::max(m_start,
-			Rinv(xi * m_normalization + m_offset)) + m_center;
-	}
+    /// Draw a position according to the probability mass function
+    inline int sample(Float xi) const {
+        return std::max(m_start,
+            Rinv(xi * m_normalization + m_offset)) + m_center;
+    }
 
 protected:
-	inline Float r(int i) const {
-		return (m_base-1) * m_baseNormalization
-			* std::pow(m_base, - (Float) std::abs(i));
-	}
+    inline Float r(int i) const {
+        return (m_base-1) * m_baseNormalization
+            * std::pow(m_base, - (Float) std::abs(i));
+    }
 
-	inline Float R(int i) const {
-		if (i <= 0)
-			return std::pow(m_base, (Float) (i+1)) * m_baseNormalization;
-		else
-			return 1-std::pow(m_base, - (Float) i) * m_baseNormalization;
-	}
+    inline Float R(int i) const {
+        if (i <= 0)
+            return std::pow(m_base, (Float) (i+1)) * m_baseNormalization;
+        else
+            return 1-std::pow(m_base, - (Float) i) * m_baseNormalization;
+    }
 
-	inline int Rinv(Float x) const {
-		Float result;
-		if (x < m_base * m_baseNormalization)
-			result = std::log((1+m_base) * x) * m_invLogBase - 1;
-		else
-			result = -std::log((1+m_base) * (1-x)) * m_invLogBase;
-		return (int) std::ceil(result);
-	}
+    inline int Rinv(Float x) const {
+        Float result;
+        if (x < m_base * m_baseNormalization)
+            result = std::log((1+m_base) * x) * m_invLogBase - 1;
+        else
+            result = -std::log((1+m_base) * (1-x)) * m_invLogBase;
+        return (int) std::ceil(result);
+    }
 private:
-	Float m_base, m_invLogBase, m_baseNormalization;
-	Float m_normalization, m_offset;
-	int m_center, m_start, m_end;
+    Float m_base, m_invLogBase, m_baseNormalization;
+    Float m_normalization, m_offset;
+    int m_center, m_start, m_end;
 };
 
 MTS_NAMESPACE_END

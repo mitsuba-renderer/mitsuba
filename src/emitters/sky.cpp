@@ -1,19 +1,19 @@
 /*
-	This file is part of Mitsuba, a physically based rendering system.
+    This file is part of Mitsuba, a physically based rendering system.
 
-	Copyright (c) 2007-2014 by Wenzel Jakob and others.
+    Copyright (c) 2007-2014 by Wenzel Jakob and others.
 
-	Mitsuba is free software; you can redistribute it and/or modify
-	it under the terms of the GNU General Public License Version 3
-	as published by the Free Software Foundation.
+    Mitsuba is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License Version 3
+    as published by the Free Software Foundation.
 
-	Mitsuba is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-	GNU General Public License for more details.
+    Mitsuba is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+    GNU General Public License for more details.
 
-	You should have received a copy of the GNU General Public License
-	along with this program. If not, see <http://www.gnu.org/licenses/>.
+    You should have received a copy of the GNU General Public License
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <mitsuba/render/scene.h>
@@ -72,7 +72,7 @@ MTS_NAMESPACE_BEGIN
  *         allocated to this emitter. \default{1}
  *     }
  *     \parameter{toWorld}{\Transform\Or\Animation}{
- *	      Specifies an optional sensor-to-world transformation.
+ *        Specifies an optional sensor-to-world transformation.
  *        \default{none (i.e. sensor space $=$ world space)}
  *     }
  * }
@@ -217,259 +217,259 @@ MTS_NAMESPACE_BEGIN
  */
 class SkyEmitter : public Emitter {
 public:
-	SkyEmitter(const Properties &props)
-			: Emitter(props) {
-		m_scale = props.getFloat("scale", 1.0f);
-		m_turbidity = props.getFloat("turbidity", 3.0f);
-		m_stretch = props.getFloat("stretch", 1.0f);
-		m_resolution = props.getInteger("resolution", 512);
-		m_albedo = props.getSpectrum("albedo", Spectrum(0.2f));
-		m_sun = computeSunCoordinates(props);
-		m_extend = props.getBoolean("extend", false);
+    SkyEmitter(const Properties &props)
+            : Emitter(props) {
+        m_scale = props.getFloat("scale", 1.0f);
+        m_turbidity = props.getFloat("turbidity", 3.0f);
+        m_stretch = props.getFloat("stretch", 1.0f);
+        m_resolution = props.getInteger("resolution", 512);
+        m_albedo = props.getSpectrum("albedo", Spectrum(0.2f));
+        m_sun = computeSunCoordinates(props);
+        m_extend = props.getBoolean("extend", false);
 
-		if (m_turbidity < 1 || m_turbidity > 10)
-			Log(EError, "The turbidity parameter must be in the range [1,10]!");
-		if (m_stretch < 1 || m_stretch > 2)
-			Log(EError, "The stretch parameter must be in the range [1,2]!");
-		for (int i=0; i<SPECTRUM_SAMPLES; ++i) {
-			if (m_albedo[i] < 0 || m_albedo[i] > 1)
-				Log(EError, "The albedo parameter must be in the range [0,1]!");
-		}
+        if (m_turbidity < 1 || m_turbidity > 10)
+            Log(EError, "The turbidity parameter must be in the range [1,10]!");
+        if (m_stretch < 1 || m_stretch > 2)
+            Log(EError, "The stretch parameter must be in the range [1,2]!");
+        for (int i=0; i<SPECTRUM_SAMPLES; ++i) {
+            if (m_albedo[i] < 0 || m_albedo[i] > 1)
+                Log(EError, "The albedo parameter must be in the range [0,1]!");
+        }
 
-		Float sunElevation = 0.5f * M_PI - m_sun.elevation;
+        Float sunElevation = 0.5f * M_PI - m_sun.elevation;
 
-		if (sunElevation < 0)
-			Log(EError, "The sun is below the horizon -- this is not supported by the sky model.");
+        if (sunElevation < 0)
+            Log(EError, "The sun is below the horizon -- this is not supported by the sky model.");
 
-		#if SPECTRUM_SAMPLES == 3
-			for (int i=0; i<SPECTRUM_SAMPLES; ++i)
-				m_state[i] = arhosek_rgb_skymodelstate_alloc_init(
-					m_turbidity, m_albedo[i], sunElevation);
-		#else
-			for (int i=0; i<SPECTRUM_SAMPLES; ++i)
-				m_state[i] = arhosekskymodelstate_alloc_init(
-					m_turbidity, m_albedo[i], sunElevation);
-		#endif
+        #if SPECTRUM_SAMPLES == 3
+            for (int i=0; i<SPECTRUM_SAMPLES; ++i)
+                m_state[i] = arhosek_rgb_skymodelstate_alloc_init(
+                    m_turbidity, m_albedo[i], sunElevation);
+        #else
+            for (int i=0; i<SPECTRUM_SAMPLES; ++i)
+                m_state[i] = arhosekskymodelstate_alloc_init(
+                    m_turbidity, m_albedo[i], sunElevation);
+        #endif
 
-		configure();
-	}
+        configure();
+    }
 
-	SkyEmitter(Stream *stream, InstanceManager *manager)
-		    : Emitter(stream, manager) {
-		m_scale = stream->readFloat();
-		m_turbidity = stream->readFloat();
-		m_stretch = stream->readFloat();
-		m_resolution = stream->readInt();
-		m_extend = stream->readBool();
-		m_albedo = Spectrum(stream);
-		m_sun = SphericalCoordinates(stream);
+    SkyEmitter(Stream *stream, InstanceManager *manager)
+            : Emitter(stream, manager) {
+        m_scale = stream->readFloat();
+        m_turbidity = stream->readFloat();
+        m_stretch = stream->readFloat();
+        m_resolution = stream->readInt();
+        m_extend = stream->readBool();
+        m_albedo = Spectrum(stream);
+        m_sun = SphericalCoordinates(stream);
 
-		Float sunElevation = 0.5f * M_PI - m_sun.elevation;
-		#if SPECTRUM_SAMPLES == 3
-			for (int i=0; i<SPECTRUM_SAMPLES; ++i)
-				m_state[i] = arhosek_rgb_skymodelstate_alloc_init(
-					m_turbidity, m_albedo[i], sunElevation);
-		#else
-			for (int i=0; i<SPECTRUM_SAMPLES; ++i)
-				m_state[i] = arhosekskymodelstate_alloc_init(
-					m_turbidity, m_albedo[i], sunElevation);
-		#endif
+        Float sunElevation = 0.5f * M_PI - m_sun.elevation;
+        #if SPECTRUM_SAMPLES == 3
+            for (int i=0; i<SPECTRUM_SAMPLES; ++i)
+                m_state[i] = arhosek_rgb_skymodelstate_alloc_init(
+                    m_turbidity, m_albedo[i], sunElevation);
+        #else
+            for (int i=0; i<SPECTRUM_SAMPLES; ++i)
+                m_state[i] = arhosekskymodelstate_alloc_init(
+                    m_turbidity, m_albedo[i], sunElevation);
+        #endif
 
-		configure();
-	}
+        configure();
+    }
 
-	~SkyEmitter() {
-		#if SPECTRUM_SAMPLES == 3
-			for (int i=0; i<SPECTRUM_SAMPLES; ++i)
-				arhosek_tristim_skymodelstate_free(m_state[i]);
-		#else
-			for (int i=0; i<SPECTRUM_SAMPLES; ++i)
-				arhosekskymodelstate_free(m_state[i]);
-		#endif
-	}
+    ~SkyEmitter() {
+        #if SPECTRUM_SAMPLES == 3
+            for (int i=0; i<SPECTRUM_SAMPLES; ++i)
+                arhosek_tristim_skymodelstate_free(m_state[i]);
+        #else
+            for (int i=0; i<SPECTRUM_SAMPLES; ++i)
+                arhosekskymodelstate_free(m_state[i]);
+        #endif
+    }
 
-	void serialize(Stream *stream, InstanceManager *manager) const {
-		Emitter::serialize(stream, manager);
-		stream->writeFloat(m_scale);
-		stream->writeFloat(m_turbidity);
-		stream->writeFloat(m_stretch);
-		stream->writeInt(m_resolution);
-		stream->writeBool(m_extend);
-		m_albedo.serialize(stream);
-		m_sun.serialize(stream);
-	}
+    void serialize(Stream *stream, InstanceManager *manager) const {
+        Emitter::serialize(stream, manager);
+        stream->writeFloat(m_scale);
+        stream->writeFloat(m_turbidity);
+        stream->writeFloat(m_stretch);
+        stream->writeInt(m_resolution);
+        stream->writeBool(m_extend);
+        m_albedo.serialize(stream);
+        m_sun.serialize(stream);
+    }
 
-	bool isCompound() const {
-		return true;
-	}
+    bool isCompound() const {
+        return true;
+    }
 
-	Emitter *getElement(size_t i) {
-		if (i != 0)
-			return NULL;
+    Emitter *getElement(size_t i) {
+        if (i != 0)
+            return NULL;
 
-		ref<Timer> timer = new Timer();
-		Log(EDebug, "Rasterizing skylight emitter to an %ix%i environment map ..",
-				m_resolution, m_resolution/2);
-		ref<Bitmap> bitmap = new Bitmap(SKY_PIXELFORMAT, Bitmap::EFloat,
-			Vector2i(m_resolution, m_resolution/2));
+        ref<Timer> timer = new Timer();
+        Log(EDebug, "Rasterizing skylight emitter to an %ix%i environment map ..",
+                m_resolution, m_resolution/2);
+        ref<Bitmap> bitmap = new Bitmap(SKY_PIXELFORMAT, Bitmap::EFloat,
+            Vector2i(m_resolution, m_resolution/2));
 
-		Point2 factor((2*M_PI) / bitmap->getWidth(),
-			M_PI / bitmap->getHeight());
+        Point2 factor((2*M_PI) / bitmap->getWidth(),
+            M_PI / bitmap->getHeight());
 
-		#if defined(MTS_OPENMP)
-			#pragma omp parallel for
-		#endif
-		for (int y=0; y<bitmap->getHeight(); ++y) {
-			Float theta = (y+.5f) * factor.y;
-			Spectrum *target = (Spectrum *) bitmap->getFloatData()
-				+ y * bitmap->getWidth();
+        #if defined(MTS_OPENMP)
+            #pragma omp parallel for
+        #endif
+        for (int y=0; y<bitmap->getHeight(); ++y) {
+            Float theta = (y+.5f) * factor.y;
+            Spectrum *target = (Spectrum *) bitmap->getFloatData()
+                + y * bitmap->getWidth();
 
-			for (int x=0; x<bitmap->getWidth(); ++x) {
-				Float phi = (x+.5f) * factor.x;
+            for (int x=0; x<bitmap->getWidth(); ++x) {
+                Float phi = (x+.5f) * factor.x;
 
-				*target++ = getSkyRadiance(SphericalCoordinates(theta, phi));
-			}
-		}
+                *target++ = getSkyRadiance(SphericalCoordinates(theta, phi));
+            }
+        }
 
-		Log(EDebug, "Done (took %i ms)", timer->getMilliseconds());
+        Log(EDebug, "Done (took %i ms)", timer->getMilliseconds());
 
-		#if defined(MTS_DEBUG_SUNSKY)
-		/* Write a debug image for inspection */
-		{
-			int size = 513 /* odd-sized */, border = 2;
-			int fsize = size+2*border, hsize = size/2;
-			ref<Bitmap> debugBitmap = new Bitmap(Bitmap::ERGB, Bitmap::EFloat32, Vector2i(fsize));
-			debugBitmap->clear();
+        #if defined(MTS_DEBUG_SUNSKY)
+        /* Write a debug image for inspection */
+        {
+            int size = 513 /* odd-sized */, border = 2;
+            int fsize = size+2*border, hsize = size/2;
+            ref<Bitmap> debugBitmap = new Bitmap(Bitmap::ERGB, Bitmap::EFloat32, Vector2i(fsize));
+            debugBitmap->clear();
 
-			#if defined(MTS_OPENMP)
-				#pragma omp parallel for
-			#endif
-			for (int y=0; y<size; ++y) {
-				float *target = debugBitmap->getFloat32Data() + ((y + border) * fsize + border) * 3;
+            #if defined(MTS_OPENMP)
+                #pragma omp parallel for
+            #endif
+            for (int y=0; y<size; ++y) {
+                float *target = debugBitmap->getFloat32Data() + ((y + border) * fsize + border) * 3;
 
-				for (int x=0; x<size; ++x) {
-					Float xp = -(x - hsize) / (Float) hsize;
-					Float yp = -(y - hsize) / (Float) hsize;
+                for (int x=0; x<size; ++x) {
+                    Float xp = -(x - hsize) / (Float) hsize;
+                    Float yp = -(y - hsize) / (Float) hsize;
 
-					Float radius = std::sqrt(xp*xp + yp*yp);
+                    Float radius = std::sqrt(xp*xp + yp*yp);
 
-					Spectrum result(0.0f);
-					if (radius < 1) {
-						Float theta = radius * 0.5f * M_PI;
-						Float phi = std::atan2(xp, yp);
-						result = getSkyRadiance(SphericalCoordinates(theta, phi));
-					}
+                    Spectrum result(0.0f);
+                    if (radius < 1) {
+                        Float theta = radius * 0.5f * M_PI;
+                        Float phi = std::atan2(xp, yp);
+                        result = getSkyRadiance(SphericalCoordinates(theta, phi));
+                    }
 
-					Float r, g, b;
-					result.toLinearRGB(r, g, b);
+                    Float r, g, b;
+                    result.toLinearRGB(r, g, b);
 
-					*target++ = (float) r;
-					*target++ = (float) g;
-					*target++ = (float) b;
-				}
-			}
+                    *target++ = (float) r;
+                    *target++ = (float) g;
+                    *target++ = (float) b;
+                }
+            }
 
-			ref<FileStream> fs = new FileStream("sky.exr", FileStream::ETruncReadWrite);
-			debugBitmap->write(Bitmap::EOpenEXR, fs);
-		}
-		#endif
+            ref<FileStream> fs = new FileStream("sky.exr", FileStream::ETruncReadWrite);
+            debugBitmap->write(Bitmap::EOpenEXR, fs);
+        }
+        #endif
 
-		/* Instantiate a nested environment map plugin */
-		Properties props("envmap");
-		Properties::Data bitmapData;
-		bitmapData.ptr = (uint8_t *) bitmap.get();
-		bitmapData.size = sizeof(Bitmap);
-		props.setData("bitmap", bitmapData);
-		props.setAnimatedTransform("toWorld", m_worldTransform);
-		props.setFloat("samplingWeight", m_samplingWeight);
-		Emitter *emitter = static_cast<Emitter *>(
-			PluginManager::getInstance()->createObject(
-			MTS_CLASS(Emitter), props));
-		emitter->configure();
-		return emitter;
-	}
+        /* Instantiate a nested environment map plugin */
+        Properties props("envmap");
+        Properties::Data bitmapData;
+        bitmapData.ptr = (uint8_t *) bitmap.get();
+        bitmapData.size = sizeof(Bitmap);
+        props.setData("bitmap", bitmapData);
+        props.setAnimatedTransform("toWorld", m_worldTransform);
+        props.setFloat("samplingWeight", m_samplingWeight);
+        Emitter *emitter = static_cast<Emitter *>(
+            PluginManager::getInstance()->createObject(
+            MTS_CLASS(Emitter), props));
+        emitter->configure();
+        return emitter;
+    }
 
-	Spectrum evalEnvironment(const RayDifferential &ray) const {
-		return getSkyRadiance(fromSphere(ray.d));
-	}
+    Spectrum evalEnvironment(const RayDifferential &ray) const {
+        return getSkyRadiance(fromSphere(ray.d));
+    }
 
-	std::string toString() const {
-		std::ostringstream oss;
-		oss << "SkyEmitter[" << endl
-			<< "  turbidity = " << m_turbidity << "," << endl
-			<< "  sunPos = " << m_sun.toString() << endl
-			<< "  resolution = " << m_resolution << endl
-			<< "  stretch = " << m_stretch << endl
-			<< "  scale = " << m_scale << endl
-			<< "]";
-		return oss.str();
-	}
+    std::string toString() const {
+        std::ostringstream oss;
+        oss << "SkyEmitter[" << endl
+            << "  turbidity = " << m_turbidity << "," << endl
+            << "  sunPos = " << m_sun.toString() << endl
+            << "  resolution = " << m_resolution << endl
+            << "  stretch = " << m_stretch << endl
+            << "  scale = " << m_scale << endl
+            << "]";
+        return oss.str();
+    }
 protected:
-	AABB getAABB() const {
-		NotImplementedError("getAABB");
-	}
+    AABB getAABB() const {
+        NotImplementedError("getAABB");
+    }
 
-	/// Calculates the spectral radiance of the sky in the specified direction.
-	Spectrum getSkyRadiance(const SphericalCoordinates &coords) const {
-		Float theta = coords.elevation / m_stretch;
+    /// Calculates the spectral radiance of the sky in the specified direction.
+    Spectrum getSkyRadiance(const SphericalCoordinates &coords) const {
+        Float theta = coords.elevation / m_stretch;
 
-		if (std::cos(theta) <= 0) {
-			if (!m_extend)
-				return Spectrum(0.0f);
-			else
-				theta = 0.5f * M_PI - Epsilon; /* super-unrealistic mode */
-		}
+        if (std::cos(theta) <= 0) {
+            if (!m_extend)
+                return Spectrum(0.0f);
+            else
+                theta = 0.5f * M_PI - Epsilon; /* super-unrealistic mode */
+        }
 
-		/* Compute the angle between the sun and (theta, phi) in radians */
-		Float cosGamma = std::cos(theta) * std::cos(m_sun.elevation)
-			+ std::sin(theta) * std::sin(m_sun.elevation)
-			* std::cos(coords.azimuth - m_sun.azimuth);
+        /* Compute the angle between the sun and (theta, phi) in radians */
+        Float cosGamma = std::cos(theta) * std::cos(m_sun.elevation)
+            + std::sin(theta) * std::sin(m_sun.elevation)
+            * std::cos(coords.azimuth - m_sun.azimuth);
 
-		Float gamma = math::safe_acos(cosGamma);
+        Float gamma = math::safe_acos(cosGamma);
 
-		Spectrum result;
-	    for (int i=0; i<SPECTRUM_SAMPLES; i++) {
-			#if SPECTRUM_SAMPLES == 3
-				result[i] = (Float) (arhosek_tristim_skymodel_radiance(m_state[i],
-					theta, gamma, i) / 106.856980); // (sum of Spectrum::CIE_Y)
-			#else
-				std::pair<Float, Float> bin = Spectrum::getBinCoverage(i);
-				result[i] = (Float) arhosekskymodel_radiance(m_state[i],
-					theta, gamma, 0.5f * (bin.first + bin.second));
-			#endif
-		}
+        Spectrum result;
+        for (int i=0; i<SPECTRUM_SAMPLES; i++) {
+            #if SPECTRUM_SAMPLES == 3
+                result[i] = (Float) (arhosek_tristim_skymodel_radiance(m_state[i],
+                    theta, gamma, i) / 106.856980); // (sum of Spectrum::CIE_Y)
+            #else
+                std::pair<Float, Float> bin = Spectrum::getBinCoverage(i);
+                result[i] = (Float) arhosekskymodel_radiance(m_state[i],
+                    theta, gamma, 0.5f * (bin.first + bin.second));
+            #endif
+        }
 
-		result.clampNegative();
+        result.clampNegative();
 
-		if (m_extend)
-			result *= math::smoothStep((Float) 0, (Float) 1, 2 - 2*coords.elevation*INV_PI);
+        if (m_extend)
+            result *= math::smoothStep((Float) 0, (Float) 1, 2 - 2*coords.elevation*INV_PI);
 
-		return result * m_scale;
-	}
+        return result * m_scale;
+    }
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	/// Environment map resolution in pixels
-	int m_resolution;
-	/// Constant scale factor applied to the model
-	Float m_scale;
-	/// Sky turbidity
-	Float m_turbidity;
-	/// Position of the sun in spherical coordinates
-	SphericalCoordinates m_sun;
-	/// Stretch factor to extend to the bottom hemisphere
-	Float m_stretch;
-	/// Extend to the bottom hemisphere (super-unrealistic mode)
-	bool m_extend;
-	/// Ground albedo
-	Spectrum m_albedo;
+    /// Environment map resolution in pixels
+    int m_resolution;
+    /// Constant scale factor applied to the model
+    Float m_scale;
+    /// Sky turbidity
+    Float m_turbidity;
+    /// Position of the sun in spherical coordinates
+    SphericalCoordinates m_sun;
+    /// Stretch factor to extend to the bottom hemisphere
+    Float m_stretch;
+    /// Extend to the bottom hemisphere (super-unrealistic mode)
+    bool m_extend;
+    /// Ground albedo
+    Spectrum m_albedo;
 
-	/// State vector for the sky model
-	#if SPECTRUM_SAMPLES == 3
-		ArHosekTristimSkyModelState *m_state[SPECTRUM_SAMPLES];
-	#else
-		ArHosekSkyModelState *m_state[SPECTRUM_SAMPLES];
-	#endif
+    /// State vector for the sky model
+    #if SPECTRUM_SAMPLES == 3
+        ArHosekTristimSkyModelState *m_state[SPECTRUM_SAMPLES];
+    #else
+        ArHosekSkyModelState *m_state[SPECTRUM_SAMPLES];
+    #endif
 };
 
 MTS_IMPLEMENT_CLASS_S(SkyEmitter, false, Emitter)

@@ -1,84 +1,84 @@
 Import('env', 'os', 'glob', 'sys', 'hasQt', 'hasCollada', 'hasBreakpad', 'mainEnv',
-	'resources', 'converter_objects')
+        'resources', 'converter_objects')
 
 # For running Uic & Moc (below)
 def recursiveDirs(root) :
-	return filter((lambda a : a.rfind(".svn") == -1), [a[0] for a in os.walk(root)])
+        return filter((lambda a : a.rfind(".svn") == -1), [a[0] for a in os.walk(root)])
 
 def unique(list) :
-	return dict.fromkeys(list).keys()
+        return dict.fromkeys(list).keys()
 
 def scanFiles(dir, accept=["*.cpp"], reject=[]) :
-	sources = []
-	paths = recursiveDirs(dir)
-	for path in paths:
-		for pattern in accept :
-			sources+=glob.glob(path + "/" + pattern)
-	for pattern in reject:
-		sources = filter((lambda a : a.rfind(pattern) == -1), sources)
-	sources = map((lambda a : os.path.basename(a)), sources)
-	return unique(sources)
+        sources = []
+        paths = recursiveDirs(dir)
+        for path in paths:
+                for pattern in accept :
+                        sources+=glob.glob(path + "/" + pattern)
+        for pattern in reject:
+                sources = filter((lambda a : a.rfind(pattern) == -1), sources)
+        sources = map((lambda a : os.path.basename(a)), sources)
+        return unique(sources)
 
 
 if hasQt:
-	qtEnv = mainEnv.Clone()
-	qtEnv.Append(CPPPATH=['#src/mtsgui'])
-	if qtEnv.has_key('QTINCLUDE'):
-		qtEnv.Prepend(CPPPATH=qtEnv['QTINCLUDE'])
-	qtEnv.EnableQt5Modules(['QtGui', 'QtWidgets', 'QtCore', 'QtOpenGL', 'QtXml', 'QtXmlPatterns', 'QtNetwork'])
+        qtEnv = mainEnv.Clone()
+        qtEnv.Append(CPPPATH=['#src/mtsgui'])
+        if qtEnv.has_key('QTINCLUDE'):
+                qtEnv.Prepend(CPPPATH=qtEnv['QTINCLUDE'])
+        qtEnv.EnableQt5Modules(['QtGui', 'QtWidgets', 'QtCore', 'QtOpenGL', 'QtXml', 'QtXmlPatterns', 'QtNetwork'])
 
-	if sys.platform == 'win32':
-		index = qtEnv['CXXFLAGS'].index('_CONSOLE')
-		del qtEnv['CXXFLAGS'][index-1]
-		del qtEnv['CXXFLAGS'][index-1]
-		index = qtEnv['LINKFLAGS'].index('/SUBSYSTEM:CONSOLE')
-		del qtEnv['LINKFLAGS'][index]
-		qtEnv.Append(CXXFLAGS=['/D', '_WINDOWS', '/D', 'MTS_CUSTOM_QTMAIN', '/D', 'MTSGUI_STATIC_QFILEDIALOG=1'])
-		qtEnv.Append(LINKFLAGS=['/SUBSYSTEM:WINDOWS'])
-		if hasBreakpad:
-			qtEnv.Append(CPPPATH=['#dependencies/include/breakpad'])
-			qtEnv.Append(LIBS=['breakpad_common', 'breakpad_exception_handler', 'breakpad_crash_generation_client',
-				'breakpad_crash_report_sender', 'wininet'])
-	elif sys.platform == 'darwin':
-		qtEnv.Append(LINKFLAGS=['-Fdependencies/frameworks', '-framework',
-			'BWToolkitFramework', '-framework', 'Security', '-framework', 'CoreFoundation'])
-		if hasBreakpad:
-			qtEnv.Append(LINKFLAGS=['-framework', 'Breakpad'])
-		# Qt 4 headers cause a lot of warnings on clang/OSX -- turn them off
-		if qtEnv['CXX'] == 'clang++':
-			qtEnv.Append(CPPFLAGS=['-Wno-unused-private-field', '-Wno-uninitialized'])
-		qtEnv.Append(LINKFLAGS=['-Xlinker', '-rpath', '-Xlinker', '@executable_path/../Frameworks'])
+        if sys.platform == 'win32':
+                index = qtEnv['CXXFLAGS'].index('_CONSOLE')
+                del qtEnv['CXXFLAGS'][index-1]
+                del qtEnv['CXXFLAGS'][index-1]
+                index = qtEnv['LINKFLAGS'].index('/SUBSYSTEM:CONSOLE')
+                del qtEnv['LINKFLAGS'][index]
+                qtEnv.Append(CXXFLAGS=['/D', '_WINDOWS', '/D', 'MTS_CUSTOM_QTMAIN', '/D', 'MTSGUI_STATIC_QFILEDIALOG=1'])
+                qtEnv.Append(LINKFLAGS=['/SUBSYSTEM:WINDOWS'])
+                if hasBreakpad:
+                        qtEnv.Append(CPPPATH=['#dependencies/include/breakpad'])
+                        qtEnv.Append(LIBS=['breakpad_common', 'breakpad_exception_handler', 'breakpad_crash_generation_client',
+                                'breakpad_crash_report_sender', 'wininet'])
+        elif sys.platform == 'darwin':
+                qtEnv.Append(LINKFLAGS=['-Fdependencies/frameworks', '-framework',
+                        'BWToolkitFramework', '-framework', 'Security', '-framework', 'CoreFoundation'])
+                if hasBreakpad:
+                        qtEnv.Append(LINKFLAGS=['-framework', 'Breakpad'])
+                # Qt 4 headers cause a lot of warnings on clang/OSX -- turn them off
+                if qtEnv['CXX'] == 'clang++':
+                        qtEnv.Append(CPPFLAGS=['-Wno-unused-private-field', '-Wno-uninitialized'])
+                qtEnv.Append(LINKFLAGS=['-Xlinker', '-rpath', '-Xlinker', '@executable_path/../Frameworks'])
 
-	bpath = env.GetBuildPath('#src/mtsgui')
-	qtInterfaces = [qtEnv.Uic5(uic) for uic in scanFiles(bpath, ['*.ui'])]
-	qtResources = [qtEnv.Qrc(qrc) for qrc in scanFiles(bpath, ['*.qrc'])]
-	qtSources = scanFiles(bpath, ['*.cpp']) + qtResources + resources
+        bpath = env.GetBuildPath('#src/mtsgui')
+        qtInterfaces = [qtEnv.Uic5(uic) for uic in scanFiles(bpath, ['*.ui'])]
+        qtResources = [qtEnv.Qrc(qrc) for qrc in scanFiles(bpath, ['*.qrc'])]
+        qtSources = scanFiles(bpath, ['*.cpp']) + qtResources + resources
 
-	if hasCollada:
-		qtSources += converter_objects
-		if env.has_key('COLLADALIBDIR'):
-			qtEnv.Prepend(LIBPATH=env['COLLADALIBDIR'])
-		if env.has_key('COLLADALIB'):
-			qtEnv.Prepend(LIBS=env['COLLADALIB'])
+        if hasCollada:
+                qtSources += converter_objects
+                if env.has_key('COLLADALIBDIR'):
+                        qtEnv.Prepend(LIBPATH=env['COLLADALIBDIR'])
+                if env.has_key('COLLADALIB'):
+                        qtEnv.Prepend(LIBS=env['COLLADALIB'])
 
-	if sys.platform == 'darwin':
-		mainEnv_osx = mainEnv.Clone()
-		qtEnv_osx = qtEnv.Clone()
-		mainEnv_osx.ConfigureForObjectiveCPP()
-		qtEnv_osx.ConfigureForObjectiveCPP()
-		mainEnv_osx.Program('symlinks_install', ['symlinks_install.c'])
-		qtEnv_osx['CXXFLAGS'].append(['-Fdependencies/frameworks', '-framework', 'BWToolkitFramework'])
-		qtSources += qtEnv_osx.StaticObject('previewsettingsdlg_cocoa_impl.mm')
-	else:
-		qtSources = [x for x in qtSources if (not isinstance(x, str) or 'cocoa' not in x)]
+        if sys.platform == 'darwin':
+                mainEnv_osx = mainEnv.Clone()
+                qtEnv_osx = qtEnv.Clone()
+                mainEnv_osx.ConfigureForObjectiveCPP()
+                qtEnv_osx.ConfigureForObjectiveCPP()
+                mainEnv_osx.Program('symlinks_install', ['symlinks_install.c'])
+                qtEnv_osx['CXXFLAGS'].append(['-Fdependencies/frameworks', '-framework', 'BWToolkitFramework'])
+                qtSources += qtEnv_osx.StaticObject('previewsettingsdlg_cocoa_impl.mm')
+        else:
+                qtSources = [x for x in qtSources if (not isinstance(x, str) or 'cocoa' not in x)]
 
-	mtsgui = qtEnv.Program('mtsgui', qtSources)
-	if sys.platform == 'darwin':
-		qtEnv.AddPostAction(mtsgui, 'install_name_tool -change @rpath/QtGui.framework/Versions/5/QtGui @rpath/QtGui $TARGET')
-		qtEnv.AddPostAction(mtsgui, 'install_name_tool -change @rpath/QtWidgets.framework/Versions/5/QtWidgets @rpath/QtWidgets $TARGET')
-		qtEnv.AddPostAction(mtsgui, 'install_name_tool -change @rpath/QtCore.framework/Versions/5/QtCore @rpath/QtCore $TARGET')
-		qtEnv.AddPostAction(mtsgui, 'install_name_tool -change @rpath/QtOpenGL.framework/Versions/5/QtOpenGL @rpath/QtOpenGL $TARGET')
-		qtEnv.AddPostAction(mtsgui, 'install_name_tool -change @rpath/QtXml.framework/Versions/5/QtXml @rpath/QtXml $TARGET')
-		qtEnv.AddPostAction(mtsgui, 'install_name_tool -change @rpath/QtNetwork.framework/Versions/5/QtNetwork @rpath/QtNetwork $TARGET')
-		qtEnv.AddPostAction(mtsgui, 'install_name_tool -change @rpath/QtXmlPatterns.framework/Versions/5/QtXmlPatterns @rpath/QtXmlPatterns $TARGET')
+        mtsgui = qtEnv.Program('mtsgui', qtSources)
+        if sys.platform == 'darwin':
+                qtEnv.AddPostAction(mtsgui, 'install_name_tool -change @rpath/QtGui.framework/Versions/5/QtGui @rpath/QtGui $TARGET')
+                qtEnv.AddPostAction(mtsgui, 'install_name_tool -change @rpath/QtWidgets.framework/Versions/5/QtWidgets @rpath/QtWidgets $TARGET')
+                qtEnv.AddPostAction(mtsgui, 'install_name_tool -change @rpath/QtCore.framework/Versions/5/QtCore @rpath/QtCore $TARGET')
+                qtEnv.AddPostAction(mtsgui, 'install_name_tool -change @rpath/QtOpenGL.framework/Versions/5/QtOpenGL @rpath/QtOpenGL $TARGET')
+                qtEnv.AddPostAction(mtsgui, 'install_name_tool -change @rpath/QtXml.framework/Versions/5/QtXml @rpath/QtXml $TARGET')
+                qtEnv.AddPostAction(mtsgui, 'install_name_tool -change @rpath/QtNetwork.framework/Versions/5/QtNetwork @rpath/QtNetwork $TARGET')
+                qtEnv.AddPostAction(mtsgui, 'install_name_tool -change @rpath/QtXmlPatterns.framework/Versions/5/QtXmlPatterns @rpath/QtXmlPatterns $TARGET')
 

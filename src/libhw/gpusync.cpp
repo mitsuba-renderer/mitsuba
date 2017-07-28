@@ -23,7 +23,7 @@ MTS_NAMESPACE_BEGIN
 GPUSync::GPUSync() { }
 GPUSync::~GPUSync() { }
 std::string GPUSync::toString() const {
-	return "GPUSync[]";
+    return "GPUSync[]";
 }
 
 MTS_IMPLEMENT_CLASS(GPUSync, true, Object)

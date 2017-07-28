@@ -25,7 +25,7 @@
 MTS_NAMESPACE_BEGIN
 
 struct Mutex::MutexPrivate {
-	boost::recursive_timed_mutex mutex;
+    boost::recursive_timed_mutex mutex;
 };
 
 Mutex::Mutex() : d(new MutexPrivate) {
@@ -35,29 +35,29 @@ Mutex::~Mutex() {
 }
 
 void Mutex::lock() {
-	d->mutex.lock();
+    d->mutex.lock();
 }
 
 void Mutex::unlock() {
-	d->mutex.unlock();
+    d->mutex.unlock();
 }
 
 struct ConditionVariable::ConditionVariablePrivate {
-	ref<Mutex> mutex;
-	boost::condition_variable_any cond;
+    ref<Mutex> mutex;
+    boost::condition_variable_any cond;
 
-	ConditionVariablePrivate(Mutex * m) : mutex(m) { }
+    ConditionVariablePrivate(Mutex * m) : mutex(m) { }
 
-	// Helper to get the actual mutex implementation. This works only if
-	// the mutex is not null
+    // Helper to get the actual mutex implementation. This works only if
+    // the mutex is not null
 
-	inline boost::recursive_timed_mutex& mutexImpl() {
-		return mutex->d->mutex;
-	}
+    inline boost::recursive_timed_mutex& mutexImpl() {
+        return mutex->d->mutex;
+    }
 };
 
 ConditionVariable::ConditionVariable(Mutex *mutex)
-	: d(new ConditionVariablePrivate(mutex != NULL ? mutex : new Mutex())) {
+    : d(new ConditionVariablePrivate(mutex != NULL ? mutex : new Mutex())) {
 
 }
 
@@ -65,69 +65,69 @@ ConditionVariable::~ConditionVariable() {
 }
 
 void ConditionVariable::signal() {
-	d->cond.notify_one();
+    d->cond.notify_one();
 }
 
 void ConditionVariable::broadcast() {
-	d->cond.notify_all();
+    d->cond.notify_all();
 }
 
 void ConditionVariable::wait() {
-	d->cond.wait(d->mutexImpl());
+    d->cond.wait(d->mutexImpl());
 }
 
 bool ConditionVariable::wait(int ms) {
-	if (ms == -1) {
-		wait();
-		return true;
-	} else {
-		const boost::posix_time::ptime timeout =
-			boost::get_system_time() + boost::posix_time::milliseconds(ms);
-		return d->cond.timed_wait(d->mutexImpl(), timeout);
-	}
+    if (ms == -1) {
+        wait();
+        return true;
+    } else {
+        const boost::posix_time::ptime timeout =
+            boost::get_system_time() + boost::posix_time::milliseconds(ms);
+        return d->cond.timed_wait(d->mutexImpl(), timeout);
+    }
 }
 
 struct WaitFlag::WaitFlagPrivate {
-	bool flag;
-	boost::timed_mutex mutex;
-	boost::condition_variable_any cond;
+    bool flag;
+    boost::timed_mutex mutex;
+    boost::condition_variable_any cond;
 
-	WaitFlagPrivate(bool f) : flag(f) {}
+    WaitFlagPrivate(bool f) : flag(f) {}
 };
 
 WaitFlag::WaitFlag(bool flag)
-	: d(new WaitFlagPrivate(flag)) {
+    : d(new WaitFlagPrivate(flag)) {
 }
 
 WaitFlag::~WaitFlag() {
 }
 
 const bool & WaitFlag::get() const {
-	return d->flag;
+    return d->flag;
 }
 
 void WaitFlag::set(bool value) {
-	boost::timed_mutex::scoped_lock lock(d->mutex);
-	d->flag = value;
-	if (d->flag)
-		d->cond.notify_all();
+    boost::timed_mutex::scoped_lock lock(d->mutex);
+    d->flag = value;
+    if (d->flag)
+        d->cond.notify_all();
 }
 
 void WaitFlag::wait() {
-	boost::timed_mutex::scoped_lock lock(d->mutex);
-	// Wait for a signal from the CV and release the mutex while waiting
-	while (!d->flag)
-		d->cond.wait(d->mutex);
+    boost::timed_mutex::scoped_lock lock(d->mutex);
+    // Wait for a signal from the CV and release the mutex while waiting
+    while (!d->flag)
+        d->cond.wait(d->mutex);
 }
 
 bool WaitFlag::wait(int ms) {
-	boost::timed_mutex::scoped_lock lock(d->mutex);
-	if (!d->flag) {
-		const boost::posix_time::ptime timeout =
-			boost::get_system_time() + boost::posix_time::milliseconds(ms);
-		return d->cond.timed_wait(lock, timeout);
-	}
-	return true;
+    boost::timed_mutex::scoped_lock lock(d->mutex);
+    if (!d->flag) {
+        const boost::posix_time::ptime timeout =
+            boost::get_system_time() + boost::posix_time::milliseconds(ms);
+        return d->cond.timed_wait(lock, timeout);
+    }
+    return true;
 }
 
 MTS_IMPLEMENT_CLASS(ConditionVariable, false, Object)

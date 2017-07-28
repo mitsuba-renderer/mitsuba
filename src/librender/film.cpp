@@ -24,75 +24,75 @@ MTS_NAMESPACE_BEGIN
 
 Film::Film(const Properties &props)
  : ConfigurableObject(props) {
-	bool isMFilm = boost::to_lower_copy(props.getPluginName()) == "mfilm";
+    bool isMFilm = boost::to_lower_copy(props.getPluginName()) == "mfilm";
 
-	/* Horizontal and vertical film resolution in pixels */
-	m_size = Vector2i(
-		props.getInteger("width", isMFilm ? 1 : 768),
-		props.getInteger("height", isMFilm ? 1 : 576)
-	);
-	/* Crop window specified in pixels - by default, this
-	   matches the full sensor area */
-	m_cropOffset = Point2i(
-		props.getInteger("cropOffsetX", 0),
-		props.getInteger("cropOffsetY", 0)
-	);
-	m_cropSize = Vector2i(
-		props.getInteger("cropWidth", m_size.x),
-		props.getInteger("cropHeight", m_size.y)
-	);
-	if (m_cropOffset.x < 0 || m_cropOffset.y < 0 ||
-		m_cropSize.x <= 0 || m_cropSize.y <= 0 ||
-		m_cropOffset.x + m_cropSize.x > m_size.x ||
-		m_cropOffset.y + m_cropSize.y > m_size.y )
-		Log(EError, "Invalid crop window specification!");
+    /* Horizontal and vertical film resolution in pixels */
+    m_size = Vector2i(
+        props.getInteger("width", isMFilm ? 1 : 768),
+        props.getInteger("height", isMFilm ? 1 : 576)
+    );
+    /* Crop window specified in pixels - by default, this
+       matches the full sensor area */
+    m_cropOffset = Point2i(
+        props.getInteger("cropOffsetX", 0),
+        props.getInteger("cropOffsetY", 0)
+    );
+    m_cropSize = Vector2i(
+        props.getInteger("cropWidth", m_size.x),
+        props.getInteger("cropHeight", m_size.y)
+    );
+    if (m_cropOffset.x < 0 || m_cropOffset.y < 0 ||
+        m_cropSize.x <= 0 || m_cropSize.y <= 0 ||
+        m_cropOffset.x + m_cropSize.x > m_size.x ||
+        m_cropOffset.y + m_cropSize.y > m_size.y )
+        Log(EError, "Invalid crop window specification!");
 
-	/* If set to true, regions slightly outside of the film
-	   plane will also be sampled, which improves the image
-	   quality at the edges especially with large reconstruction
-	   filters. */
-	m_highQualityEdges = props.getBoolean("highQualityEdges", false);
+    /* If set to true, regions slightly outside of the film
+       plane will also be sampled, which improves the image
+       quality at the edges especially with large reconstruction
+       filters. */
+    m_highQualityEdges = props.getBoolean("highQualityEdges", false);
 }
 
 Film::Film(Stream *stream, InstanceManager *manager)
  : ConfigurableObject(stream, manager) {
-	m_size = Vector2i(stream);
-	m_cropOffset = Point2i(stream);
-	m_cropSize = Vector2i(stream);
-	m_highQualityEdges = stream->readBool();
-	m_filter = static_cast<ReconstructionFilter *>(manager->getInstance(stream));
+    m_size = Vector2i(stream);
+    m_cropOffset = Point2i(stream);
+    m_cropSize = Vector2i(stream);
+    m_highQualityEdges = stream->readBool();
+    m_filter = static_cast<ReconstructionFilter *>(manager->getInstance(stream));
 }
 
 Film::~Film() { }
 
 void Film::serialize(Stream *stream, InstanceManager *manager) const {
-	ConfigurableObject::serialize(stream, manager);
-	m_size.serialize(stream);
-	m_cropOffset.serialize(stream);
-	m_cropSize.serialize(stream);
-	stream->writeBool(m_highQualityEdges);
-	manager->serialize(stream, m_filter.get());
+    ConfigurableObject::serialize(stream, manager);
+    m_size.serialize(stream);
+    m_cropOffset.serialize(stream);
+    m_cropSize.serialize(stream);
+    stream->writeBool(m_highQualityEdges);
+    manager->serialize(stream, m_filter.get());
 }
 
 void Film::addChild(const std::string &name, ConfigurableObject *child) {
-	const Class *cClass = child->getClass();
+    const Class *cClass = child->getClass();
 
-	if (cClass->derivesFrom(MTS_CLASS(ReconstructionFilter))) {
-		Assert(m_filter == NULL);
-		m_filter = static_cast<ReconstructionFilter *>(child);
-	} else {
-		Log(EError, "Film: Invalid child node! (\"%s\")",
-			cClass->getName().c_str());
-	}
+    if (cClass->derivesFrom(MTS_CLASS(ReconstructionFilter))) {
+        Assert(m_filter == NULL);
+        m_filter = static_cast<ReconstructionFilter *>(child);
+    } else {
+        Log(EError, "Film: Invalid child node! (\"%s\")",
+            cClass->getName().c_str());
+    }
 }
 
 void Film::configure() {
-	if (m_filter == NULL) {
-		/* No reconstruction filter has been selected. Load a Gaussian filter by default */
-		m_filter = static_cast<ReconstructionFilter *> (PluginManager::getInstance()->
-				createObject(MTS_CLASS(ReconstructionFilter), Properties("gaussian")));
-		m_filter->configure();
-	}
+    if (m_filter == NULL) {
+        /* No reconstruction filter has been selected. Load a Gaussian filter by default */
+        m_filter = static_cast<ReconstructionFilter *> (PluginManager::getInstance()->
+                createObject(MTS_CLASS(ReconstructionFilter), Properties("gaussian")));
+        m_filter->configure();
+    }
 }
 
 MTS_IMPLEMENT_CLASS(Film, true, ConfigurableObject)

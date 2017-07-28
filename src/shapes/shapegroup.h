@@ -33,47 +33,47 @@ MTS_NAMESPACE_BEGIN
  */
 class ShapeGroup : public Shape {
 public:
-	/// Create a new shape group
-	ShapeGroup(const Properties &props);
+    /// Create a new shape group
+    ShapeGroup(const Properties &props);
 
-	/// Unserialize from a binary data stream
-	ShapeGroup(Stream *stream, InstanceManager *manager);
+    /// Unserialize from a binary data stream
+    ShapeGroup(Stream *stream, InstanceManager *manager);
 
-	/// Serialize to a binary data stream
-	void serialize(Stream *stream, InstanceManager *manager) const;
+    /// Serialize to a binary data stream
+    void serialize(Stream *stream, InstanceManager *manager) const;
 
-	/// Build the internal KD-tree
-	void configure();
+    /// Build the internal KD-tree
+    void configure();
 
-	/// Add a child object
-	void addChild(const std::string &name, ConfigurableObject *child);
-	/// Add an unnamed child
-	inline void addChild(ConfigurableObject *child) { addChild("", child); }
+    /// Add a child object
+    void addChild(const std::string &name, ConfigurableObject *child);
+    /// Add an unnamed child
+    inline void addChild(ConfigurableObject *child) { addChild("", child); }
 
-	/// Return whether or not the shape is a compound object
-	bool isCompound() const;
+    /// Return whether or not the shape is a compound object
+    bool isCompound() const;
 
-	/// Returns an invalid AABB
-	AABB getAABB() const;
+    /// Returns an invalid AABB
+    AABB getAABB() const;
 
-	/// Returns the surface area
-	Float getSurfaceArea() const;
+    /// Returns the surface area
+    Float getSurfaceArea() const;
 
-	/// Return a pointer to the internal KD-tree
-	inline const ShapeKDTree *getKDTree() const { return m_kdtree.get(); }
+    /// Return a pointer to the internal KD-tree
+    inline const ShapeKDTree *getKDTree() const { return m_kdtree.get(); }
 
-	/// Return the primitive count of the nested shapes
-	size_t getPrimitiveCount() const;
+    /// Return the primitive count of the nested shapes
+    size_t getPrimitiveCount() const;
 
-	/// Return the effective primitive count of this shape (always zero)
-	size_t getEffectivePrimitiveCount() const;
+    /// Return the effective primitive count of this shape (always zero)
+    size_t getEffectivePrimitiveCount() const;
 
-	/// Return a string representation
-	std::string toString() const;
+    /// Return a string representation
+    std::string toString() const;
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 private:
-	ref<ShapeKDTree> m_kdtree;
+    ref<ShapeKDTree> m_kdtree;
 };
 
 MTS_NAMESPACE_END

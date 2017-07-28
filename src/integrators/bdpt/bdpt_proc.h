@@ -36,27 +36,27 @@ MTS_NAMESPACE_BEGIN
  */
 class BDPTProcess : public BlockedRenderProcess {
 public:
-	BDPTProcess(const RenderJob *parent, RenderQueue *queue,
-		const BDPTConfiguration &config);
+    BDPTProcess(const RenderJob *parent, RenderQueue *queue,
+        const BDPTConfiguration &config);
 
-	inline const BDPTWorkResult *getResult() const { return m_result.get(); }
+    inline const BDPTWorkResult *getResult() const { return m_result.get(); }
 
-	/// Develop the image
-	void develop();
+    /// Develop the image
+    void develop();
 
-	/* ParallelProcess impl. */
-	void processResult(const WorkResult *wr, bool cancelled);
-	ref<WorkProcessor> createWorkProcessor() const;
-	void bindResource(const std::string &name, int id);
+    /* ParallelProcess impl. */
+    void processResult(const WorkResult *wr, bool cancelled);
+    ref<WorkProcessor> createWorkProcessor() const;
+    void bindResource(const std::string &name, int id);
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	/// Virtual destructor
-	virtual ~BDPTProcess() { }
+    /// Virtual destructor
+    virtual ~BDPTProcess() { }
 private:
-	ref<BDPTWorkResult> m_result;
-	ref<Timer> m_refreshTimer;
-	BDPTConfiguration m_config;
+    ref<BDPTWorkResult> m_result;
+    ref<Timer> m_refreshTimer;
+    BDPTConfiguration m_config;
 };
 
 MTS_NAMESPACE_END

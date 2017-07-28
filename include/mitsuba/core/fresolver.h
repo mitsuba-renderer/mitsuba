@@ -40,63 +40,63 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_CORE FileResolver : public Object {
 public:
-	/**
-	 * \brief Create a new file resolver with the default settings
-	 *
-	 * Create a new file resolver containing the current working
-	 * directory as the initial search path.
-	 */
-	FileResolver();
+    /**
+     * \brief Create a new file resolver with the default settings
+     *
+     * Create a new file resolver containing the current working
+     * directory as the initial search path.
+     */
+    FileResolver();
 
-	/**
-	 * \brief Resolve a file using the stored list of search paths
-	 *
-	 * Go through the list of search paths and try to resolve the
-	 * supplied path with respect to each one. If everything fails,
-	 * the path is returned as-is.
-	 */
-	fs::path resolve(const fs::path &path) const;
+    /**
+     * \brief Resolve a file using the stored list of search paths
+     *
+     * Go through the list of search paths and try to resolve the
+     * supplied path with respect to each one. If everything fails,
+     * the path is returned as-is.
+     */
+    fs::path resolve(const fs::path &path) const;
 
-	/**
-	 * \brief Resolve a file using the stored list of search paths
-	 *
-	 * In comparison to \ref resolve(), this funtion returns all
-	 * matches instead of only the first one.
-	 */
-	std::vector<fs::path> resolveAll(const fs::path &path) const;
+    /**
+     * \brief Resolve a file using the stored list of search paths
+     *
+     * In comparison to \ref resolve(), this funtion returns all
+     * matches instead of only the first one.
+     */
+    std::vector<fs::path> resolveAll(const fs::path &path) const;
 
-	/**
-	 * \brief Does the same as \ref resolve(), but returns an
-	 * absolute path.
-	 */
-	fs::path resolveAbsolute(const fs::path &path) const;
+    /**
+     * \brief Does the same as \ref resolve(), but returns an
+     * absolute path.
+     */
+    fs::path resolveAbsolute(const fs::path &path) const;
 
-	/// Create a clone of the file resolver
-	FileResolver *clone() const;
+    /// Create a clone of the file resolver
+    FileResolver *clone() const;
 
-	/// Append a search path to the resolver
-	void appendPath(const fs::path &path);
+    /// Append a search path to the resolver
+    void appendPath(const fs::path &path);
 
-	/// Prepend a search path to the resolver
-	void prependPath(const fs::path &path);
+    /// Prepend a search path to the resolver
+    void prependPath(const fs::path &path);
 
-	/// Clear all stored search paths
-	void clear();
+    /// Clear all stored search paths
+    void clear();
 
-	/// Return the number of stored paths
-	inline size_t getPathCount() const { return m_paths.size(); }
+    /// Return the number of stored paths
+    inline size_t getPathCount() const { return m_paths.size(); }
 
-	/// Return one of the stored paths
-	inline const fs::path &getPath(size_t index) const { return m_paths[index]; }
+    /// Return one of the stored paths
+    inline const fs::path &getPath(size_t index) const { return m_paths[index]; }
 
-	/// Return a human-readable string representation
-	std::string toString() const;
+    /// Return a human-readable string representation
+    std::string toString() const;
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	virtual ~FileResolver() { }
+    virtual ~FileResolver() { }
 private:
-	std::deque<fs::path> m_paths;
+    std::deque<fs::path> m_paths;
 };
 
 MTS_NAMESPACE_END

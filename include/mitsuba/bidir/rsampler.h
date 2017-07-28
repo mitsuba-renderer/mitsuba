@@ -37,60 +37,60 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_BIDIR ReplayableSampler : public Sampler {
 public:
-	/// Construct a new sampler
-	ReplayableSampler();
+    /// Construct a new sampler
+    ReplayableSampler();
 
-	/// Unserialize a sampler
-	ReplayableSampler(Stream *stream, InstanceManager *manager);
+    /// Unserialize a sampler
+    ReplayableSampler(Stream *stream, InstanceManager *manager);
 
-	/**
-	 * Create a clone of this sampler. The clone is allowed to be different
-	 * to some extent, e.g. a pseudorandom generator should be based on a
-	 * different random seed compared to the original. All other parameters,
-	 * are copied exactly.
-	 */
-	virtual ref<Sampler> clone();
+    /**
+     * Create a clone of this sampler. The clone is allowed to be different
+     * to some extent, e.g. a pseudorandom generator should be based on a
+     * different random seed compared to the original. All other parameters,
+     * are copied exactly.
+     */
+    virtual ref<Sampler> clone();
 
-	/* Does nothing in this implementation */
-	virtual void advance();
-	virtual void generate(const Point2i &pos);
+    /* Does nothing in this implementation */
+    virtual void advance();
+    virtual void generate(const Point2i &pos);
 
-	/// Manually set the current sample index
-	virtual void setSampleIndex(size_t sampleIndex);
+    /// Manually set the current sample index
+    virtual void setSampleIndex(size_t sampleIndex);
 
-	/// Retrieve the next component value from the current sample
-	virtual Float next1D();
+    /// Retrieve the next component value from the current sample
+    virtual Float next1D();
 
-	/// Retrieve the next two component values from the current sample
-	virtual Point2 next2D();
+    /// Retrieve the next two component values from the current sample
+    virtual Point2 next2D();
 
-	/* Unsupported by this implementation */
-	virtual void request2DArray(size_t size);
-	virtual void request1DArray(size_t size);
+    /* Unsupported by this implementation */
+    virtual void request2DArray(size_t size);
+    virtual void request1DArray(size_t size);
 
-	/// Serialize this sampler to disk
-	virtual void serialize(Stream *stream, InstanceManager *manager) const;
+    /// Serialize this sampler to disk
+    virtual void serialize(Stream *stream, InstanceManager *manager) const;
 
-	/// Return a string description
-	virtual std::string toString() const;
+    /// Return a string description
+    virtual std::string toString() const;
 
-	/// Return the underlying random number generator
-	inline Random *getRandom() { return m_random; }
+    /// Return the underlying random number generator
+    inline Random *getRandom() { return m_random; }
 
-	/**
-	 * Update the current sample index, but without
-	 * changing the RNG state. This is useful if the
-	 * underlying random number generator has been used
-	 * outside of this class
-	 */
-	inline void updateSampleIndex(size_t index) { m_sampleIndex = index; }
+    /**
+     * Update the current sample index, but without
+     * changing the RNG state. This is useful if the
+     * underlying random number generator has been used
+     * outside of this class
+     */
+    inline void updateSampleIndex(size_t index) { m_sampleIndex = index; }
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	/// Virtual destructor
-	virtual ~ReplayableSampler();
+    /// Virtual destructor
+    virtual ~ReplayableSampler();
 protected:
-	ref<Random> m_initial, m_random;
+    ref<Random> m_initial, m_random;
 };
 
 MTS_NAMESPACE_END

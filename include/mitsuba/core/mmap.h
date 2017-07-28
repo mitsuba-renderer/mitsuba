@@ -31,56 +31,56 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_CORE MemoryMappedFile : public Object {
 public:
-	/// Create a new memory-mapped file of the specified size
-	MemoryMappedFile(const fs::path &filename, size_t size);
+    /// Create a new memory-mapped file of the specified size
+    MemoryMappedFile(const fs::path &filename, size_t size);
 
-	/// Map the specified file into memory
-	MemoryMappedFile(const fs::path &filename, bool readOnly = true);
+    /// Map the specified file into memory
+    MemoryMappedFile(const fs::path &filename, bool readOnly = true);
 
-	/// Return a pointer to the file contents in memory
-	void *getData();
+    /// Return a pointer to the file contents in memory
+    void *getData();
 
-	/// Return a pointer to the file contents in memory (const version)
-	const void *getData() const;
+    /// Return a pointer to the file contents in memory (const version)
+    const void *getData() const;
 
-	/// Return the size of the mapped region
-	size_t getSize() const;
+    /// Return the size of the mapped region
+    size_t getSize() const;
 
-	/**
-	 * \brief Resize the memory-mapped file
-	 *
-	 * This involves remapping the file, which will
-	 * generally change the pointer obtained via getData()
-	 */
-	void resize(size_t size);
+    /**
+     * \brief Resize the memory-mapped file
+     *
+     * This involves remapping the file, which will
+     * generally change the pointer obtained via getData()
+     */
+    void resize(size_t size);
 
-	/// Return the associated filename
-	const fs::path &getFilename() const;
+    /// Return the associated filename
+    const fs::path &getFilename() const;
 
-	/// Return whether the mapped memory region is read-only
-	bool isReadOnly() const;
+    /// Return whether the mapped memory region is read-only
+    bool isReadOnly() const;
 
-	/// Return a string representation
-	std::string toString() const;
+    /// Return a string representation
+    std::string toString() const;
 
-	/**
-	 * \brief Create a temporary memory-mapped file
-	 *
-	 * \remark When closing the mapping, the file is
-	 * automatically deleted.
-	 */
-	static ref<MemoryMappedFile> createTemporary(size_t size);
+    /**
+     * \brief Create a temporary memory-mapped file
+     *
+     * \remark When closing the mapping, the file is
+     * automatically deleted.
+     */
+    static ref<MemoryMappedFile> createTemporary(size_t size);
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	/// Internal constructor
-	MemoryMappedFile();
+    /// Internal constructor
+    MemoryMappedFile();
 
-	/// Release all resources
-	virtual ~MemoryMappedFile();
+    /// Release all resources
+    virtual ~MemoryMappedFile();
 private:
-	struct MemoryMappedFilePrivate;
-	boost::scoped_ptr<MemoryMappedFilePrivate> d;
+    struct MemoryMappedFilePrivate;
+    boost::scoped_ptr<MemoryMappedFilePrivate> d;
 };
 
 MTS_NAMESPACE_END

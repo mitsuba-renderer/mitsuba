@@ -43,9 +43,9 @@ PLY_TYPE_TRAITS(float64, "float64", "double")
 
 typedef int format_type;
 enum format {
-	binary_little_endian_format = 0, 
-	binary_big_endian_format = 1,
-	ascii_format = 2
+    binary_little_endian_format = 0,
+    binary_big_endian_format = 1,
+    ascii_format = 2
 };
 
 } // namespace ply

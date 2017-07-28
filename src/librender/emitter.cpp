@@ -25,127 +25,127 @@ MTS_NAMESPACE_BEGIN
 
 AbstractEmitter::AbstractEmitter(const Properties &props)
  : ConfigurableObject(props), m_shape(NULL), m_type(0) {
-	m_worldTransform = props.getAnimatedTransform("toWorld", Transform());
+    m_worldTransform = props.getAnimatedTransform("toWorld", Transform());
 }
 
 AbstractEmitter::AbstractEmitter(Stream *stream, InstanceManager *manager)
  : ConfigurableObject(stream, manager) {
-	m_worldTransform = new AnimatedTransform(stream);
-	m_medium = static_cast<Medium *>(manager->getInstance(stream));
-	m_shape = static_cast<Shape *>(manager->getInstance(stream));
-	m_type = stream->readUInt();
+    m_worldTransform = new AnimatedTransform(stream);
+    m_medium = static_cast<Medium *>(manager->getInstance(stream));
+    m_shape = static_cast<Shape *>(manager->getInstance(stream));
+    m_type = stream->readUInt();
  }
 
 AbstractEmitter::~AbstractEmitter() {
 }
 
 void AbstractEmitter::serialize(Stream *stream, InstanceManager *manager) const {
-	ConfigurableObject::serialize(stream, manager);
-	m_worldTransform->serialize(stream);
-	manager->serialize(stream, m_medium.get());
-	manager->serialize(stream, m_shape);
-	stream->writeUInt(m_type);
+    ConfigurableObject::serialize(stream, manager);
+    m_worldTransform->serialize(stream);
+    manager->serialize(stream, m_medium.get());
+    manager->serialize(stream, m_shape);
+    stream->writeUInt(m_type);
 }
 
 void AbstractEmitter::addChild(const std::string &name, ConfigurableObject *child) {
-	if (child->getClass()->derivesFrom(MTS_CLASS(Medium))) {
-		Assert(m_medium == NULL);
-		m_medium = static_cast<Medium *>(child);
-	} else {
-		ConfigurableObject::addChild(name, child);
-	}
+    if (child->getClass()->derivesFrom(MTS_CLASS(Medium))) {
+        Assert(m_medium == NULL);
+        m_medium = static_cast<Medium *>(child);
+    } else {
+        ConfigurableObject::addChild(name, child);
+    }
 }
 
 ref<Shape> AbstractEmitter::createShape(const Scene *scene) {
-	return NULL;
+    return NULL;
 }
 
 Spectrum AbstractEmitter::samplePosition(PositionSamplingRecord &pRec,
-		const Point2 &sample, const Point2 *extra) const {
-	NotImplementedError("samplePosition");
+        const Point2 &sample, const Point2 *extra) const {
+    NotImplementedError("samplePosition");
 }
 
 Spectrum AbstractEmitter::sampleDirection(DirectionSamplingRecord &dRec,
-		PositionSamplingRecord &pRec, const Point2 &sample,
-		const Point2 *extra) const {
-	NotImplementedError("sampleDirection");
+        PositionSamplingRecord &pRec, const Point2 &sample,
+        const Point2 *extra) const {
+    NotImplementedError("sampleDirection");
 }
 
 Spectrum AbstractEmitter::sampleDirect(DirectSamplingRecord &dRec, const Point2 &sample) const {
-	NotImplementedError("sampleDirect");
+    NotImplementedError("sampleDirect");
 }
 
 Spectrum AbstractEmitter::evalPosition(const PositionSamplingRecord &pRec) const {
-	NotImplementedError("evalPosition");
+    NotImplementedError("evalPosition");
 }
 
 Spectrum AbstractEmitter::evalDirection(const DirectionSamplingRecord &dRec,
-		const PositionSamplingRecord &pRec) const {
-	NotImplementedError("evalDirection");
+        const PositionSamplingRecord &pRec) const {
+    NotImplementedError("evalDirection");
 }
 
 Float AbstractEmitter::pdfPosition(const PositionSamplingRecord &pRec) const {
-	NotImplementedError("pdfPosition");
+    NotImplementedError("pdfPosition");
 }
 
 Float AbstractEmitter::pdfDirection(const DirectionSamplingRecord &dRec,
-		const PositionSamplingRecord &pRec) const {
-	NotImplementedError("pdfDirection");
+        const PositionSamplingRecord &pRec) const {
+    NotImplementedError("pdfDirection");
 }
 
 Float AbstractEmitter::pdfDirect(const DirectSamplingRecord &dRec) const {
-	NotImplementedError("pdfDirect");
+    NotImplementedError("pdfDirect");
 }
 
 Emitter::Emitter(const Properties &props)
  : AbstractEmitter(props) {
-	// Importance sampling weight (used by the luminaire sampling code in \ref Scene)
-	m_samplingWeight = props.getFloat("samplingWeight", 1.0f);
+    // Importance sampling weight (used by the luminaire sampling code in \ref Scene)
+    m_samplingWeight = props.getFloat("samplingWeight", 1.0f);
 }
 
 Emitter::Emitter(Stream *stream, InstanceManager *manager)
  : AbstractEmitter(stream, manager) {
-	m_samplingWeight = stream->readFloat();
+    m_samplingWeight = stream->readFloat();
 }
 
 void Emitter::serialize(Stream *stream, InstanceManager *manager) const {
-	AbstractEmitter::serialize(stream, manager);
+    AbstractEmitter::serialize(stream, manager);
 
-	stream->writeFloat(m_samplingWeight);
+    stream->writeFloat(m_samplingWeight);
 }
 
 Spectrum Emitter::sampleRay(Ray &ray,
-		const Point2 &spatialSample,
-		const Point2 &directionalSample,
-		Float time) const {
-	NotImplementedError("sampleRay");
+        const Point2 &spatialSample,
+        const Point2 &directionalSample,
+        Float time) const {
+    NotImplementedError("sampleRay");
 }
 
 Spectrum Emitter::eval(const Intersection &its, const Vector &d) const {
-	NotImplementedError("eval");
+    NotImplementedError("eval");
 }
 
 Spectrum Emitter::evalEnvironment(const RayDifferential &ray) const {
-	NotImplementedError("evalEnvironment");
+    NotImplementedError("evalEnvironment");
 }
 
 bool Emitter::fillDirectSamplingRecord(DirectSamplingRecord &dRec,
-		const Ray &ray) const {
-	NotImplementedError("fillDirectSamplingRecord");
+        const Ray &ray) const {
+    NotImplementedError("fillDirectSamplingRecord");
 }
 
 Emitter::~Emitter() { }
 
 Emitter *Emitter::getElement(size_t index) {
-	return NULL;
+    return NULL;
 }
 
 bool Emitter::isCompound() const {
-	return false;
+    return false;
 }
 
 ref<Bitmap> Emitter::getBitmap(const Vector2i &sizeHint) const {
-	NotImplementedError("getBitmap");
+    NotImplementedError("getBitmap");
 }
 
 MTS_IMPLEMENT_CLASS(Emitter, false, AbstractEmitter)

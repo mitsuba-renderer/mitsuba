@@ -28,16 +28,16 @@ uniform vec4 projDir[6];
 varying float depth;
 
 void main() {
-	depth = 0.0; // avoid an (incorrect?) compiler warning
+    depth = 0.0; // avoid an (incorrect?) compiler warning
 
-	/* Replicate the geometry six times and rasterize to each cube map layer */
-	for (int side = 0; side < 6; side++) {
-		gl_Layer = side;
-		for (int i = 0; i < gl_VerticesIn; i++) {
-			gl_Position = transform[side] * gl_PositionIn[i];
-			depth = dot(projDir[side], gl_PositionIn[i]);
-			EmitVertex();
-		}
-		EndPrimitive();
-	}
+    /* Replicate the geometry six times and rasterize to each cube map layer */
+    for (int side = 0; side < 6; side++) {
+        gl_Layer = side;
+        for (int i = 0; i < gl_VerticesIn; i++) {
+            gl_Position = transform[side] * gl_PositionIn[i];
+            depth = dot(projDir[side], gl_PositionIn[i]);
+            EmitVertex();
+        }
+        EndPrimitive();
+    }
 }

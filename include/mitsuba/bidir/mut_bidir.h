@@ -37,58 +37,58 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_BIDIR BidirectionalMutator : public Mutator {
 public:
-	/**
-	 * \brief Construct a new bidirectional mutator
-	 *
-	 * \param scene
-	 *     A pointer to the underlying scene
-	 *
-	 * \param sampler
-	 *     A sample generator
-	 *
-	 * \param pool
-	 *     A memory pool used to allocate new path vertices and edges
-	 *
-	 * \param kmin
-	 *     Minimum number of edges in newly proposed paths. This can
-	 *     be used to exclude direct illumination.
-	 *
-	 * \param kmax
-	 *     Minimum number of edges in newly proposed paths.
-	 */
-	BidirectionalMutator(const Scene *scene, Sampler *sampler,
-		MemoryPool &pool, int kmin, int kmax);
+    /**
+     * \brief Construct a new bidirectional mutator
+     *
+     * \param scene
+     *     A pointer to the underlying scene
+     *
+     * \param sampler
+     *     A sample generator
+     *
+     * \param pool
+     *     A memory pool used to allocate new path vertices and edges
+     *
+     * \param kmin
+     *     Minimum number of edges in newly proposed paths. This can
+     *     be used to exclude direct illumination.
+     *
+     * \param kmax
+     *     Minimum number of edges in newly proposed paths.
+     */
+    BidirectionalMutator(const Scene *scene, Sampler *sampler,
+        MemoryPool &pool, int kmin, int kmax);
 
-	// =============================================================
-	//! @{ \name Implementation of the Mutator interface
+    // =============================================================
+    //! @{ \name Implementation of the Mutator interface
 
-	EMutationType getType() const;
-	Float suitability(const Path &path) const;
-	bool sampleMutation(Path &source, Path &proposal, MutationRecord &muRec, const MutationRecord& sourceMuRec);
-	Float Q(const Path &source, const Path &proposal,
-			const MutationRecord &muRec) const;
-	void accept(const MutationRecord &muRec);
+    EMutationType getType() const;
+    Float suitability(const Path &path) const;
+    bool sampleMutation(Path &source, Path &proposal, MutationRecord &muRec, const MutationRecord& sourceMuRec);
+    Float Q(const Path &source, const Path &proposal,
+            const MutationRecord &muRec) const;
+    void accept(const MutationRecord &muRec);
 
-	//! @}
-	// =============================================================
+    //! @}
+    // =============================================================
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	/**
-	 * \brief Compute the probability mass associated with one
-	 * of the internally implemented mutation strategies
-	 */
-	Float pmfMutation(const Path &source, const MutationRecord &muRec) const;
+    /**
+     * \brief Compute the probability mass associated with one
+     * of the internally implemented mutation strategies
+     */
+    Float pmfMutation(const Path &source, const MutationRecord &muRec) const;
 
-	/// Virtual destructor
-	virtual ~BidirectionalMutator();
+    /// Virtual destructor
+    virtual ~BidirectionalMutator();
 protected:
-	ref<const Scene> m_scene;
-	ref<Sampler> m_sampler;
-	std::vector<int> m_temp;
-	MemoryPool &m_pool;
-	int m_kmin, m_kmax;
-	Path m_tempPath;
+    ref<const Scene> m_scene;
+    ref<Sampler> m_sampler;
+    std::vector<int> m_temp;
+    MemoryPool &m_pool;
+    int m_kmin, m_kmax;
+    Path m_tempPath;
 };
 
 MTS_NAMESPACE_END

@@ -48,121 +48,121 @@ MTS_NAMESPACE_BEGIN
  */
 class Curvature : public Texture {
 public:
-	Curvature(const Properties &props) : Texture(props) {
-		m_scale = props.getFloat("scale");
-		std::string curvature = props.getString("curvature", "gaussian");
-		if (curvature == "gaussian")
-			m_showK = true;
-		else if (curvature == "mean")
-			m_showK = false;
-		else
-			Log(EError, "Invalid 'curvature' parameter: must be set to 'gaussian' or ' mean'!");
-	}
+    Curvature(const Properties &props) : Texture(props) {
+        m_scale = props.getFloat("scale");
+        std::string curvature = props.getString("curvature", "gaussian");
+        if (curvature == "gaussian")
+            m_showK = true;
+        else if (curvature == "mean")
+            m_showK = false;
+        else
+            Log(EError, "Invalid 'curvature' parameter: must be set to 'gaussian' or ' mean'!");
+    }
 
-	Curvature(Stream *stream, InstanceManager *manager)
-	 : Texture(stream, manager) {
-		 m_scale = stream->readFloat();
-		 m_showK = stream->readBool();
-	}
+    Curvature(Stream *stream, InstanceManager *manager)
+     : Texture(stream, manager) {
+         m_scale = stream->readFloat();
+         m_showK = stream->readBool();
+    }
 
-	void serialize(Stream *stream, InstanceManager *manager) const {
-		Texture::serialize(stream, manager);
-		stream->writeFloat(m_scale);
-		stream->writeBool(m_showK);
-	}
+    void serialize(Stream *stream, InstanceManager *manager) const {
+        Texture::serialize(stream, manager);
+        stream->writeFloat(m_scale);
+        stream->writeBool(m_showK);
+    }
 
-	Spectrum lookupGradient(Float value) const {
-		Spectrum result(0.0f);
-		if (value < 0)
-			result.fromLinearRGB(0, 0, std::min(-value*m_scale, (Float) 1.0f));
-		if (value > 0)
-			result.fromLinearRGB(std::min(value*m_scale, (Float) 1.0f), 0.0f, 0.0f);
-		return result;
-	}
+    Spectrum lookupGradient(Float value) const {
+        Spectrum result(0.0f);
+        if (value < 0)
+            result.fromLinearRGB(0, 0, std::min(-value*m_scale, (Float) 1.0f));
+        if (value > 0)
+            result.fromLinearRGB(std::min(value*m_scale, (Float) 1.0f), 0.0f, 0.0f);
+        return result;
+    }
 
-	Spectrum eval(const Intersection &its, bool /* unused */) const {
-		Float H, K;
-		its.shape->getCurvature(its, H, K);
-		return lookupGradient(m_showK ? K : H);
-	}
+    Spectrum eval(const Intersection &its, bool /* unused */) const {
+        Float H, K;
+        its.shape->getCurvature(its, H, K);
+        return lookupGradient(m_showK ? K : H);
+    }
 
-	bool usesRayDifferentials() const {
-		/// Intentionally return \c true here so that required tangent
-		/// space information is provided for triangle meshes
-		return true;
-	}
+    bool usesRayDifferentials() const {
+        /// Intentionally return \c true here so that required tangent
+        /// space information is provided for triangle meshes
+        return true;
+    }
 
-	Spectrum getAverage() const {
-		/// No idea, really
-		return Spectrum(0.5f);
-	}
+    Spectrum getAverage() const {
+        /// No idea, really
+        return Spectrum(0.5f);
+    }
 
-	Spectrum getMinimum() const {
-		return Spectrum(0.0f);
-	}
+    Spectrum getMinimum() const {
+        return Spectrum(0.0f);
+    }
 
-	Spectrum getMaximum() const {
-		return Spectrum(1.0f);
-	}
+    Spectrum getMaximum() const {
+        return Spectrum(1.0f);
+    }
 
-	bool isMonochromatic() const {
-		return false;
-	}
+    bool isMonochromatic() const {
+        return false;
+    }
 
-	bool isConstant() const {
-		return false;
-	}
+    bool isConstant() const {
+        return false;
+    }
 
-	std::string toString() const {
-		std::ostringstream oss;
-		oss << "Curvature[" << endl
-			<< "   scale = " << m_scale << "," << endl
-			<< "   showK = " << m_showK << endl
-			<< "]";
-		return oss.str();
-	}
+    std::string toString() const {
+        std::ostringstream oss;
+        oss << "Curvature[" << endl
+            << "   scale = " << m_scale << "," << endl
+            << "   showK = " << m_showK << endl
+            << "]";
+        return oss.str();
+    }
 
-	Shader *createShader(Renderer *renderer) const;
+    Shader *createShader(Renderer *renderer) const;
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 private:
-	Float m_scale;
-	bool m_showK;
+    Float m_scale;
+    bool m_showK;
 };
 
 // ================ Hardware shader implementation ================
 
 class CurvatureShader : public Shader {
 public:
-	CurvatureShader(Renderer *renderer, const Spectrum &value)
-		: Shader(renderer, ETextureShader), m_value(value) {
-	}
+    CurvatureShader(Renderer *renderer, const Spectrum &value)
+        : Shader(renderer, ETextureShader), m_value(value) {
+    }
 
-	void generateCode(std::ostringstream &oss,
-			const std::string &evalName,
-			const std::vector<std::string> &depNames) const {
-		oss << "uniform vec3 " << evalName << "_value;" << endl
-			<< endl
-			<< "vec3 " << evalName << "(vec2 uv) {" << endl
-			<< "    return " << evalName << "_value;" << endl
-			<< "}" << endl;
-	}
+    void generateCode(std::ostringstream &oss,
+            const std::string &evalName,
+            const std::vector<std::string> &depNames) const {
+        oss << "uniform vec3 " << evalName << "_value;" << endl
+            << endl
+            << "vec3 " << evalName << "(vec2 uv) {" << endl
+            << "    return " << evalName << "_value;" << endl
+            << "}" << endl;
+    }
 
-	void resolve(const GPUProgram *program, const std::string &evalName, std::vector<int> &parameterIDs) const {
-		parameterIDs.push_back(program->getParameterID(evalName + "_value", false));
-	}
+    void resolve(const GPUProgram *program, const std::string &evalName, std::vector<int> &parameterIDs) const {
+        parameterIDs.push_back(program->getParameterID(evalName + "_value", false));
+    }
 
-	void bind(GPUProgram *program, const std::vector<int> &parameterIDs, int &textureUnitOffset) const {
-		program->setParameter(parameterIDs[0], m_value);
-	}
+    void bind(GPUProgram *program, const std::vector<int> &parameterIDs, int &textureUnitOffset) const {
+        program->setParameter(parameterIDs[0], m_value);
+    }
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 private:
-	Spectrum m_value;
+    Spectrum m_value;
 };
 
 Shader *Curvature::createShader(Renderer *renderer) const {
-	return new CurvatureShader(renderer, Spectrum(0.5f));
+    return new CurvatureShader(renderer, Spectrum(0.5f));
 }
 
 MTS_IMPLEMENT_CLASS(CurvatureShader, false, Shader)

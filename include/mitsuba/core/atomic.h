@@ -52,25 +52,25 @@ template <typename T> inline bool atomicCompareAndExchangePtr(T **v, T *newValue
 #if defined(_MSC_VER)
   #if defined(WIN64)
     return _InterlockedCompareExchangePointer(
-		reinterpret_cast<void * volatile *>(v), newValue, oldValue) == oldValue;
+        reinterpret_cast<void * volatile *>(v), newValue, oldValue) == oldValue;
   #else
     return _InterlockedCompareExchange(
-		reinterpret_cast<long volatile *>(v),
-		reinterpret_cast<long>(newValue), reinterpret_cast<long>(oldValue)) == reinterpret_cast<long>(oldValue);
+        reinterpret_cast<long volatile *>(v),
+        reinterpret_cast<long>(newValue), reinterpret_cast<long>(oldValue)) == reinterpret_cast<long>(oldValue);
   #endif
 #else
   #if !defined(__clang__) && !defined(__INTEL_COMPILER)
-	return __sync_bool_compare_and_swap(v, oldValue, newValue);
+    return __sync_bool_compare_and_swap(v, oldValue, newValue);
   #else
   /* Use the following workaround for clang and icl (Linux/Mac OS) */
   #if __SIZEOF_POINTER__ == 8 || defined(__LP64__)
-	return __sync_bool_compare_and_swap(
-		reinterpret_cast<long long volatile *>(v), reinterpret_cast<long long>(oldValue),
-		reinterpret_cast<long long>(newValue));
+    return __sync_bool_compare_and_swap(
+        reinterpret_cast<long long volatile *>(v), reinterpret_cast<long long>(oldValue),
+        reinterpret_cast<long long>(newValue));
   #else
-	return __sync_bool_compare_and_swap(
-		reinterpret_cast<long volatile *>(v), reinterpret_cast<long>(oldValue),
-		reinterpret_cast<long>(newValue));
+    return __sync_bool_compare_and_swap(
+        reinterpret_cast<long volatile *>(v), reinterpret_cast<long>(oldValue),
+        reinterpret_cast<long>(newValue));
   #endif
   #endif
 #endif
@@ -89,9 +89,9 @@ template <typename T> inline bool atomicCompareAndExchangePtr(T **v, T *newValue
 inline bool atomicCompareAndExchange(volatile int32_t *v, int32_t newValue, int32_t oldValue) {
 #if defined(_MSC_VER)
     return _InterlockedCompareExchange(
-		reinterpret_cast<volatile long *>(v), newValue, oldValue) == oldValue;
+        reinterpret_cast<volatile long *>(v), newValue, oldValue) == oldValue;
 #else
-	return __sync_bool_compare_and_swap(v, oldValue, newValue);
+    return __sync_bool_compare_and_swap(v, oldValue, newValue);
 #endif
 }
 
@@ -108,9 +108,9 @@ inline bool atomicCompareAndExchange(volatile int32_t *v, int32_t newValue, int3
 inline bool atomicCompareAndExchange(volatile int64_t *v, int64_t newValue, int64_t oldValue) {
 #if defined(_MSC_VER)
     return _InterlockedCompareExchange64(
-		reinterpret_cast<volatile __int64 *>(v), newValue, oldValue) == oldValue;
+        reinterpret_cast<volatile __int64 *>(v), newValue, oldValue) == oldValue;
 #else
-	return __sync_bool_compare_and_swap(v, oldValue, newValue);
+    return __sync_bool_compare_and_swap(v, oldValue, newValue);
 #endif
 }
 
@@ -120,19 +120,19 @@ inline bool atomicCompareAndExchange(volatile int64_t *v, int64_t newValue, int6
  * \return The final value written to \a dst
  */
 inline float atomicAdd(volatile float *dst, float delta) {
-	/* Atomic FP addition from PBRT */
-	union bits { float f; int32_t i; };
-	bits oldVal, newVal;
-	do {
+    /* Atomic FP addition from PBRT */
+    union bits { float f; int32_t i; };
+    bits oldVal, newVal;
+    do {
         // On IA32/x64, adding a PAUSE instruction in compare/exchange loops
         // is recommended to improve performance.  (And it does!)
 #if (defined(__i386__) || defined(__amd64__))
         __asm__ __volatile__ ("pause\n");
 #endif
-		oldVal.f = *dst;
-		newVal.f = oldVal.f + delta;
-	} while (!atomicCompareAndExchange((volatile int32_t *) dst, newVal.i, oldVal.i));
-	return newVal.f;
+        oldVal.f = *dst;
+        newVal.f = oldVal.f + delta;
+    } while (!atomicCompareAndExchange((volatile int32_t *) dst, newVal.i, oldVal.i));
+    return newVal.f;
 }
 
 /**
@@ -141,19 +141,19 @@ inline float atomicAdd(volatile float *dst, float delta) {
  * \return The final value written to \a dst
  */
 inline double atomicAdd(volatile double *dst, double delta) {
-	/* Atomic FP addition from PBRT */
-	union bits { double f; int64_t i; };
-	bits oldVal, newVal;
-	do {
+    /* Atomic FP addition from PBRT */
+    union bits { double f; int64_t i; };
+    bits oldVal, newVal;
+    do {
         // On IA64/x64, adding a PAUSE instruction in compare/exchange loops
         // is recommended to improve performance.  (And it does!)
 #if (defined(__i386__) || defined(__amd64__))
         __asm__ __volatile__ ("pause\n");
 #endif
-		oldVal.f = *dst;
-		newVal.f = oldVal.f + delta;
-	} while (!atomicCompareAndExchange((volatile int64_t *) dst, newVal.i, oldVal.i));
-	return newVal.f;
+        oldVal.f = *dst;
+        newVal.f = oldVal.f + delta;
+    } while (!atomicCompareAndExchange((volatile int64_t *) dst, newVal.i, oldVal.i));
+    return newVal.f;
 }
 
 /**
@@ -164,9 +164,9 @@ inline double atomicAdd(volatile double *dst, double delta) {
 
 inline int32_t atomicAdd(volatile int32_t *dst, int32_t delta) {
 #if defined(_MSC_VER)
-	return _InterlockedExchangeAdd(reinterpret_cast<volatile long *>(dst), delta) + delta;
+    return _InterlockedExchangeAdd(reinterpret_cast<volatile long *>(dst), delta) + delta;
 #else
-	return __sync_add_and_fetch(dst, delta);
+    return __sync_add_and_fetch(dst, delta);
 #endif
 }
 
@@ -179,13 +179,13 @@ inline int32_t atomicAdd(volatile int32_t *dst, int32_t delta) {
 inline int64_t atomicAdd(volatile int64_t *dst, int64_t delta) {
 #if defined(_MSC_VER)
   #if defined(_WIN64)
-	return _InterlockedExchangeAdd64(reinterpret_cast<volatile __int64 *>(dst), delta) + delta;
+    return _InterlockedExchangeAdd64(reinterpret_cast<volatile __int64 *>(dst), delta) + delta;
   #else
-	SLog(EError, "atomicAdd() cannot handle 64-bit integers on WIN32");
-	return 0;
+    SLog(EError, "atomicAdd() cannot handle 64-bit integers on WIN32");
+    return 0;
   #endif
 #else
-	return __sync_add_and_fetch(dst, delta);
+    return __sync_add_and_fetch(dst, delta);
 #endif
 }
 
@@ -195,17 +195,17 @@ inline int64_t atomicAdd(volatile int64_t *dst, int64_t delta) {
  */
 
 inline int64_t atomicMaximum(volatile int64_t *dst, int64_t value) {
-	int64_t current;
-	do {
-		current = *dst;
-		if (value <= current)
-			return current;
-		#if (defined(__i386__) || defined(__amd64__))
-			__asm__ __volatile__ ("pause\n");
-		#endif
-	} while (!atomicCompareAndExchange(dst, value, current));
+    int64_t current;
+    do {
+        current = *dst;
+        if (value <= current)
+            return current;
+        #if (defined(__i386__) || defined(__amd64__))
+            __asm__ __volatile__ ("pause\n");
+        #endif
+    } while (!atomicCompareAndExchange(dst, value, current));
 
-	return value;
+    return value;
 }
 
 /*
@@ -214,17 +214,17 @@ inline int64_t atomicMaximum(volatile int64_t *dst, int64_t value) {
  */
 
 inline int32_t atomicMaximum(volatile int32_t *dst, int32_t value) {
-	int32_t current;
-	do {
-		current = *dst;
-		if (value <= current)
-			return current;
-		#if (defined(__i386__) || defined(__amd32__))
-			__asm__ __volatile__ ("pause\n");
-		#endif
-	} while (!atomicCompareAndExchange(dst, value, current));
+    int32_t current;
+    do {
+        current = *dst;
+        if (value <= current)
+            return current;
+        #if (defined(__i386__) || defined(__amd32__))
+            __asm__ __volatile__ ("pause\n");
+        #endif
+    } while (!atomicCompareAndExchange(dst, value, current));
 
-	return value;
+    return value;
 }
 
 

@@ -27,72 +27,72 @@ MTS_NAMESPACE_BEGIN
  */
 class PermutationStorage : public Object {
 public:
-	/**
-	 * \brief Create new permutations
-	 * \param scramble
-	 *    Selects the desired permutation type, where <tt>-1</tt> denotes the
-	 *    Faure permutations; any other number causes a pseudorandom permutation
-	 *    to be built seeded by the value of \c scramble.
-	 */
-	PermutationStorage(int scramble);
+    /**
+     * \brief Create new permutations
+     * \param scramble
+     *    Selects the desired permutation type, where <tt>-1</tt> denotes the
+     *    Faure permutations; any other number causes a pseudorandom permutation
+     *    to be built seeded by the value of \c scramble.
+     */
+    PermutationStorage(int scramble);
 
-	/// Return the permutation corresponding to the given prime number basis
-	inline uint16_t *getPermutation(uint32_t basis) const {
-		return m_permutations[basis];
-	}
+    /// Return the permutation corresponding to the given prime number basis
+    inline uint16_t *getPermutation(uint32_t basis) const {
+        return m_permutations[basis];
+    }
 
-	/// Return the inverse permutation corresponding to the given prime number basis
-	inline uint16_t *getInversePermutation(uint32_t basis) const {
-		return m_invPermutations[basis];
-	}
+    /// Return the inverse permutation corresponding to the given prime number basis
+    inline uint16_t *getInversePermutation(uint32_t basis) const {
+        return m_invPermutations[basis];
+    }
 
-	/// Return the original scramble value
-	inline int getScramble() const { return m_scramble; }
+    /// Return the original scramble value
+    inline int getScramble() const { return m_scramble; }
 
 private:
-	/**
-	 * \ref Compute the Faure permutations using dynamic programming
-	 *
-	 * For reference, see "Good permutations for extreme discrepancy"
-	 * by Henri Faure, Journal of Number Theory, Vol. 42, 1, 1992.
-	 */
-	void computeFaurePermutations(uint32_t maxBase, uint16_t **perm);
+    /**
+     * \ref Compute the Faure permutations using dynamic programming
+     *
+     * For reference, see "Good permutations for extreme discrepancy"
+     * by Henri Faure, Journal of Number Theory, Vol. 42, 1, 1992.
+     */
+    void computeFaurePermutations(uint32_t maxBase, uint16_t **perm);
 
-	/// Randomly permute an array using the TEA pseudorandom generator
-	inline void shuffle(uint16_t *it1, uint16_t *it2) {
-		for (uint16_t * it = it2 - 1; it > it1; --it)
-			std::iter_swap(it, it1 + sampleUInt((uint32_t) (it-it1)));
-	}
+    /// Randomly permute an array using the TEA pseudorandom generator
+    inline void shuffle(uint16_t *it1, uint16_t *it2) {
+        for (uint16_t * it = it2 - 1; it > it1; --it)
+            std::iter_swap(it, it1 + sampleUInt((uint32_t) (it-it1)));
+    }
 
-	/// Draw a 32-bit integer in [0, n-1] from a TEA pseudorandom generator
-	inline uint64_t sampleUInt(uint32_t n) {
-		/* First, construct a bitmask */
-		uint64_t bitmask = n;
-		bitmask |= bitmask >> 1; bitmask |= bitmask >> 2;
-		bitmask |= bitmask >> 4; bitmask |= bitmask >> 8;
-		bitmask |= bitmask >> 16;
-		uint32_t result;
+    /// Draw a 32-bit integer in [0, n-1] from a TEA pseudorandom generator
+    inline uint64_t sampleUInt(uint32_t n) {
+        /* First, construct a bitmask */
+        uint64_t bitmask = n;
+        bitmask |= bitmask >> 1; bitmask |= bitmask >> 2;
+        bitmask |= bitmask >> 4; bitmask |= bitmask >> 8;
+        bitmask |= bitmask >> 16;
+        uint32_t result;
 
-		/* Next, generate numbers until one in [0, n) is found */
-		while ((result = (uint32_t) (sampleTEA(m_scramble, m_rngIndex++) & bitmask)) >= n)
-			;
+        /* Next, generate numbers until one in [0, n) is found */
+        while ((result = (uint32_t) (sampleTEA(m_scramble, m_rngIndex++) & bitmask)) >= n)
+            ;
 
-		return result;
-	}
+        return result;
+    }
 
-	/// Invert one of the permutations
-	void invertPermutation(uint32_t i);
+    /// Invert one of the permutations
+    void invertPermutation(uint32_t i);
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	virtual ~PermutationStorage();
+    virtual ~PermutationStorage();
 
 private:
-	uint16_t *m_storage, *m_invStorage;
-	uint16_t **m_permutations;
-	uint16_t **m_invPermutations;
-	uint32_t m_rngIndex;
-	int m_scramble;
+    uint16_t *m_storage, *m_invStorage;
+    uint16_t **m_permutations;
+    uint16_t **m_invPermutations;
+    uint32_t m_rngIndex;
+    int m_scramble;
 };
 
 MTS_NAMESPACE_END

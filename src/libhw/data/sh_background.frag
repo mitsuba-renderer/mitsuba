@@ -21,9 +21,9 @@
 varying vec3 position;
 
 #if defined(DIRECTIONAL_CAMERA)
-	uniform vec3 camDirection;
+    uniform vec3 camDirection;
 #else
-	uniform vec3 camPosition;
+    uniform vec3 camPosition;
 #endif
 
 uniform float emitterScale;
@@ -31,13 +31,13 @@ uniform float emitterScale;
 {{ SUPPLEMENTAL CODE }}
 
 void main() {
-	vec3 result;
+    vec3 result;
 
-	#if !defined(DIRECTIONAL_CAMERA)
-		result = BACKGROUND_EVAL_NAME(normalize(position - camPosition));
-	#else
-		result = BACKGROUND_EVAL_NAME(camDirection);
-	#endif
+    #if !defined(DIRECTIONAL_CAMERA)
+        result = BACKGROUND_EVAL_NAME(normalize(position - camPosition));
+    #else
+        result = BACKGROUND_EVAL_NAME(camDirection);
+    #endif
 
-	gl_FragColor = vec4(result * emitterScale, 1.0);
+    gl_FragColor = vec4(result * emitterScale, 1.0);
 }

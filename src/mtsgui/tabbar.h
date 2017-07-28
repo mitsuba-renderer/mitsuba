@@ -24,8 +24,8 @@
 class CustomTabBar : public QTabBar {
     Q_OBJECT
 public:
-	CustomTabBar(QWidget *parent);
-	virtual ~CustomTabBar();
+    CustomTabBar(QWidget *parent);
+    virtual ~CustomTabBar();
 };
 
 #endif // __TABBAR_H

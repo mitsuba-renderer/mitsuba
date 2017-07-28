@@ -26,7 +26,7 @@ uniform vec4 projDir;
 varying float depth;
 
 void main() {
-	vec4 pos = gl_ModelViewMatrix * gl_Vertex;
-	gl_Position = transform * pos;
-	depth = dot(projDir, pos);
+    vec4 pos = gl_ModelViewMatrix * gl_Vertex;
+    gl_Position = transform * pos;
+    depth = dot(projDir, pos);
 }

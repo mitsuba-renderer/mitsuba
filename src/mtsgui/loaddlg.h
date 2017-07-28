@@ -23,29 +23,29 @@
 #include "logwidget.h"
 
 namespace Ui {
-	class LoadDialog;
+    class LoadDialog;
 }
 
 class LoadDialog : public QDialog {
     Q_OBJECT
 public:
-	LoadDialog(QWidget *parent);
-	~LoadDialog();
+    LoadDialog(QWidget *parent);
+    ~LoadDialog();
 
-	void close();
-	void closeEvent(QCloseEvent *e) {
-		e->ignore();
-	}
-	void expand();
+    void close();
+    void closeEvent(QCloseEvent *e) {
+        e->ignore();
+    }
+    void expand();
 protected slots:
-	void onTextMessage(ELogLevel level, const QString &message);
-	void on_toggleButton_clicked();
+    void onTextMessage(ELogLevel level, const QString &message);
+    void on_toggleButton_clicked();
 protected:
     void changeEvent(QEvent *e);
 private:
-	Ui::LoadDialog *ui;
-	ref<QConsoleAppender> m_consoleAppender;
-	ELogLevel m_oldLogLevel;
+    Ui::LoadDialog *ui;
+    ref<QConsoleAppender> m_consoleAppender;
+    ELogLevel m_oldLogLevel;
 };
 
 #endif // __LOADDLG_H

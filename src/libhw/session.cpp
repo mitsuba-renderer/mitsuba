@@ -28,25 +28,25 @@
 MTS_NAMESPACE_BEGIN
 
 Session::Session() {
-	m_initialized = false;
+    m_initialized = false;
 }
 
 Session *Session::create() {
 #if defined(WIN32)
-	return new WGLSession();
+    return new WGLSession();
 #elif defined(__OSX__)
-	return new NSGLSession();
+    return new NSGLSession();
 #else
-	return new X11Session();
+    return new X11Session();
 #endif
 }
 
 void Session::init() {
-	Assert(!m_initialized);
+    Assert(!m_initialized);
 }
 
 void Session::shutdown() {
-	Assert(m_initialized);
+    Assert(m_initialized);
 }
 
 MTS_IMPLEMENT_CLASS(Session, true, Object)

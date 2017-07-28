@@ -21,29 +21,29 @@
 MTS_NAMESPACE_BEGIN
 
 Point AABB::getCorner(uint8_t corner) const {
-	return Point(corner & 1 ? max.x : min.x,
-			corner & 2 ? max.y : min.y,
-			corner & 4 ? max.z : min.z);
+    return Point(corner & 1 ? max.x : min.x,
+            corner & 2 ? max.y : min.y,
+            corner & 4 ? max.z : min.z);
 }
 
 
 bool AABB::overlaps(const BSphere &sphere) const {
-	Float distance = 0;
-	for (int i=0; i<3; ++i) {
-		if (sphere.center[i] < min[i]) {
-			Float d = sphere.center[i]-min[i];
-			distance += d*d;
-		} else if (sphere.center[i] > max[i]) {
-			Float d = sphere.center[i]-max[i];
-			distance += d*d;
-		}
-	}
-	return distance < sphere.radius*sphere.radius;
+    Float distance = 0;
+    for (int i=0; i<3; ++i) {
+        if (sphere.center[i] < min[i]) {
+            Float d = sphere.center[i]-min[i];
+            distance += d*d;
+        } else if (sphere.center[i] > max[i]) {
+            Float d = sphere.center[i]-max[i];
+            distance += d*d;
+        }
+    }
+    return distance < sphere.radius*sphere.radius;
 }
 
 BSphere AABB::getBSphere() const {
-	Point3 center = getCenter();
-	return BSphere(center, (center - max).length());
+    Point3 center = getCenter();
+    return BSphere(center, (center - max).length());
 }
 
 MTS_NAMESPACE_END

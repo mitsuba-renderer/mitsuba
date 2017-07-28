@@ -36,77 +36,77 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_CORE Timer : public Object {
 public:
-	/**
-	 * \brief Create a new timer and start it unless the optional
-	 * \c start argument is set to \c false.
-	 */
-	Timer(bool start = true);
+    /**
+     * \brief Create a new timer and start it unless the optional
+     * \c start argument is set to \c false.
+     */
+    Timer(bool start = true);
 
-	/// Start the timer
-	void start();
+    /// Start the timer
+    void start();
 
-	/**
-	 * \brief Reset the timer, including the total elapsed time across
-	 * all intervals (and restart it by default)
-	 */
-	void reset(bool restart = true);
+    /**
+     * \brief Reset the timer, including the total elapsed time across
+     * all intervals (and restart it by default)
+     */
+    void reset(bool restart = true);
 
-	/// Stop the timer and return the total elapsed time across all intervals in seconds
-	Float stop();
+    /// Stop the timer and return the total elapsed time across all intervals in seconds
+    Float stop();
 
-	/// Return the number of nanoseconds that the timer has ticked so far (in total)
-	uint64_t getNanoseconds() const;
+    /// Return the number of nanoseconds that the timer has ticked so far (in total)
+    uint64_t getNanoseconds() const;
 
-	/// Return the number of microseconds that the timer has ticked so far (in total)
-	unsigned int getMicroseconds() const;
+    /// Return the number of microseconds that the timer has ticked so far (in total)
+    unsigned int getMicroseconds() const;
 
-	/// Return the number of milliseconds that the timer has ticked so far (in total)
-	unsigned int getMilliseconds() const;
+    /// Return the number of milliseconds that the timer has ticked so far (in total)
+    unsigned int getMilliseconds() const;
 
-	/// Return the number of seconds that the timer has ticked so far (in total)
-	Float getSeconds() const;
+    /// Return the number of seconds that the timer has ticked so far (in total)
+    Float getSeconds() const;
 
-	/// Return the number of nanoseconds that have elapsed since the \ref start() invocation
-	uint64_t getNanosecondsSinceStart() const;
+    /// Return the number of nanoseconds that have elapsed since the \ref start() invocation
+    uint64_t getNanosecondsSinceStart() const;
 
-	/// Return the number of microseconds that have elapsed since the last \ref start() invocation
-	unsigned int getMicrosecondsSinceStart() const;
+    /// Return the number of microseconds that have elapsed since the last \ref start() invocation
+    unsigned int getMicrosecondsSinceStart() const;
 
-	/// Return the number of milliseconds that have elapsed since the last \ref start() invocation
-	unsigned int getMillisecondsSinceStart() const;
+    /// Return the number of milliseconds that have elapsed since the last \ref start() invocation
+    unsigned int getMillisecondsSinceStart() const;
 
-	/// Return the number of seconds that have elapsed since the last \ref start() invocation
-	Float getSecondsSinceStart() const;
+    /// Return the number of seconds that have elapsed since the last \ref start() invocation
+    Float getSecondsSinceStart() const;
 
-	/**
-	 * \brief "Lap"-style interface
-	 *
-	 * This function is the atomic equivalent to stopping the
-	 * timer, recording the time passed since it was started,
-	 * and restarting it. The resulting time value in seconds
-	 * is returned.
-	 */
-	Float lap();
+    /**
+     * \brief "Lap"-style interface
+     *
+     * This function is the atomic equivalent to stopping the
+     * timer, recording the time passed since it was started,
+     * and restarting it. The resulting time value in seconds
+     * is returned.
+     */
+    Float lap();
 
-	/// Return a string representation
-	std::string toString() const;
+    /// Return a string representation
+    std::string toString() const;
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	/// Virtual destructor
-	virtual ~Timer();
+    /// Virtual destructor
+    virtual ~Timer();
 
-	/// Return the time in nanoseconds since the last \ref start() invocation
-	double timeSinceStart() const;
+    /// Return the time in nanoseconds since the last \ref start() invocation
+    double timeSinceStart() const;
 private:
-	/// Time since the last call to start() in nanoseconds
-	double m_startTime;
+    /// Time since the last call to start() in nanoseconds
+    double m_startTime;
 
-	/// Total time the timer has been active in nanoseconds
-	double m_elapsed;
+    /// Total time the timer has been active in nanoseconds
+    double m_elapsed;
 
-	/// Is the timer currently active?
-	bool m_active;
+    /// Is the timer currently active?
+    bool m_active;
 };
 
 MTS_NAMESPACE_END

@@ -33,36 +33,36 @@ MTS_NAMESPACE_BEGIN
 
 class PSSMLTProcess : public ParallelProcess {
 public:
-	PSSMLTProcess(const RenderJob *parent, RenderQueue *queue,
-		const PSSMLTConfiguration &config, const Bitmap *directImage,
-		const std::vector<PathSeed> &seeds);
+    PSSMLTProcess(const RenderJob *parent, RenderQueue *queue,
+        const PSSMLTConfiguration &config, const Bitmap *directImage,
+        const std::vector<PathSeed> &seeds);
 
-	void develop();
+    void develop();
 
-	/* ParallelProcess impl. */
-	void processResult(const WorkResult *wr, bool cancelled);
-	ref<WorkProcessor> createWorkProcessor() const;
-	void bindResource(const std::string &name, int id);
-	EStatus generateWork(WorkUnit *unit, int worker);
+    /* ParallelProcess impl. */
+    void processResult(const WorkResult *wr, bool cancelled);
+    ref<WorkProcessor> createWorkProcessor() const;
+    void bindResource(const std::string &name, int id);
+    EStatus generateWork(WorkUnit *unit, int worker);
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	/// Virtual destructor
-	virtual ~PSSMLTProcess() { }
+    /// Virtual destructor
+    virtual ~PSSMLTProcess() { }
 private:
-	ref<const RenderJob> m_job;
-	RenderQueue *m_queue;
-	const PSSMLTConfiguration &m_config;
-	const Bitmap *m_directImage;
-	ref<Bitmap> m_developBuffer;
-	ImageBlock *m_accum;
-	ProgressReporter *m_progress;
-	const std::vector<PathSeed> &m_seeds;
-	ref<Mutex> m_resultMutex;
-	ref<Film> m_film;
-	int m_resultCounter, m_workCounter;
-	unsigned int m_refreshTimeout;
-	ref<Timer> m_timeoutTimer, m_refreshTimer;
+    ref<const RenderJob> m_job;
+    RenderQueue *m_queue;
+    const PSSMLTConfiguration &m_config;
+    const Bitmap *m_directImage;
+    ref<Bitmap> m_developBuffer;
+    ImageBlock *m_accum;
+    ProgressReporter *m_progress;
+    const std::vector<PathSeed> &m_seeds;
+    ref<Mutex> m_resultMutex;
+    ref<Film> m_film;
+    int m_resultCounter, m_workCounter;
+    unsigned int m_refreshTimeout;
+    ref<Timer> m_timeoutTimer, m_refreshTimer;
 };
 
 MTS_NAMESPACE_END

@@ -35,95 +35,95 @@ MTS_NAMESPACE_BEGIN
  */
 class KajiyaKayPhaseFunction : public PhaseFunction {
 public:
-	KajiyaKayPhaseFunction(const Properties &props)
-		: PhaseFunction(props) {
-		m_ks = props.getFloat("ks", .4f);
-		m_kd = props.getFloat("kd", .2f);
-		m_exponent = props.getFloat("exponent", 4.0f);
-		if (m_kd + m_ks > 1.0f)
-			Log(EWarn, "Energy conservation is violated!");
-	}
+    KajiyaKayPhaseFunction(const Properties &props)
+        : PhaseFunction(props) {
+        m_ks = props.getFloat("ks", .4f);
+        m_kd = props.getFloat("kd", .2f);
+        m_exponent = props.getFloat("exponent", 4.0f);
+        if (m_kd + m_ks > 1.0f)
+            Log(EWarn, "Energy conservation is violated!");
+    }
 
-	KajiyaKayPhaseFunction(Stream *stream, InstanceManager *manager)
-		: PhaseFunction(stream, manager) {
-		m_ks = stream->readFloat();
-		m_kd = stream->readFloat();
-		m_exponent = stream->readFloat();
-		configure();
-	}
+    KajiyaKayPhaseFunction(Stream *stream, InstanceManager *manager)
+        : PhaseFunction(stream, manager) {
+        m_ks = stream->readFloat();
+        m_kd = stream->readFloat();
+        m_exponent = stream->readFloat();
+        configure();
+    }
 
-	virtual ~KajiyaKayPhaseFunction() { }
+    virtual ~KajiyaKayPhaseFunction() { }
 
-	void configure() {
-		/* Compute the normalization for perpendicular illumination
-		   using Simpson quadrature */
-		int nParts = 1000;
-		Float stepSize = M_PI / nParts, m=4, theta = stepSize;
+    void configure() {
+        /* Compute the normalization for perpendicular illumination
+           using Simpson quadrature */
+        int nParts = 1000;
+        Float stepSize = M_PI / nParts, m=4, theta = stepSize;
 
-		m_normalization = 0; /* 0 at the endpoints */
-		for (int i=1; i<nParts; ++i) {
-			Float value = std::pow(std::cos(theta - M_PI/2), m_exponent)
-				* std::sin(theta);
-			m_normalization += value * m;
-			theta += stepSize;
-			m = 6-m;
-		}
+        m_normalization = 0; /* 0 at the endpoints */
+        for (int i=1; i<nParts; ++i) {
+            Float value = std::pow(std::cos(theta - M_PI/2), m_exponent)
+                * std::sin(theta);
+            m_normalization += value * m;
+            theta += stepSize;
+            m = 6-m;
+        }
 
-		m_normalization = 1/(m_normalization * stepSize/3 * 2 * M_PI);
-		m_type = EAnisotropic;
-		Log(EDebug, "Kajiya-kay normalization factor = %f", m_normalization);
-	}
+        m_normalization = 1/(m_normalization * stepSize/3 * 2 * M_PI);
+        m_type = EAnisotropic;
+        Log(EDebug, "Kajiya-kay normalization factor = %f", m_normalization);
+    }
 
 
-	void serialize(Stream *stream, InstanceManager *manager) const {
-		PhaseFunction::serialize(stream, manager);
-		stream->writeFloat(m_ks);
-		stream->writeFloat(m_kd);
-		stream->writeFloat(m_exponent);
-	}
+    void serialize(Stream *stream, InstanceManager *manager) const {
+        PhaseFunction::serialize(stream, manager);
+        stream->writeFloat(m_ks);
+        stream->writeFloat(m_kd);
+        stream->writeFloat(m_exponent);
+    }
 
-	Float sample(PhaseFunctionSamplingRecord &pRec,
-			Sampler *sampler) const {
-		pRec.wo = warp::squareToUniformSphere(sampler->next2D());
-		return eval(pRec) * (4 * M_PI);
-	}
+    Float sample(PhaseFunctionSamplingRecord &pRec,
+            Sampler *sampler) const {
+        pRec.wo = warp::squareToUniformSphere(sampler->next2D());
+        return eval(pRec) * (4 * M_PI);
+    }
 
-	Float sample(PhaseFunctionSamplingRecord &pRec,
-			Float &pdf, Sampler *sampler) const {
-		pRec.wo = warp::squareToUniformSphere(sampler->next2D());
-		pdf = warp::squareToUniformSpherePdf();
-		return eval(pRec) * (4 * M_PI);
-	}
+    Float sample(PhaseFunctionSamplingRecord &pRec,
+            Float &pdf, Sampler *sampler) const {
+        pRec.wo = warp::squareToUniformSphere(sampler->next2D());
+        pdf = warp::squareToUniformSpherePdf();
+        return eval(pRec) * (4 * M_PI);
+    }
 
-	Float pdf(const PhaseFunctionSamplingRecord &pRec) const {
-		return warp::squareToUniformSpherePdf();
-	}
+    Float pdf(const PhaseFunctionSamplingRecord &pRec) const {
+        return warp::squareToUniformSpherePdf();
+    }
 
-	Float eval(const PhaseFunctionSamplingRecord &pRec) const {
-		if (pRec.mRec.orientation.length() == 0)
-			return m_kd / (4*M_PI);
+    Float eval(const PhaseFunctionSamplingRecord &pRec) const {
+        if (pRec.mRec.orientation.length() == 0)
+            return m_kd / (4*M_PI);
 
-		Frame frame(normalize(pRec.mRec.orientation));
-		Vector reflectedLocal = frame.toLocal(pRec.wo);
+        Frame frame(normalize(pRec.mRec.orientation));
+        Vector reflectedLocal = frame.toLocal(pRec.wo);
 
-		reflectedLocal.z = -dot(pRec.wi, frame.n);
-		Float a = std::sqrt((1-reflectedLocal.z*reflectedLocal.z) /
-			(reflectedLocal.x*reflectedLocal.x + reflectedLocal.y*reflectedLocal.y));
-		reflectedLocal.y *= a;
-		reflectedLocal.x *= a;
-		Vector R = frame.toWorld(reflectedLocal);
+        reflectedLocal.z = -dot(pRec.wi, frame.n);
+        Float a = std::sqrt((1-reflectedLocal.z*reflectedLocal.z) /
+            (reflectedLocal.x*reflectedLocal.x + reflectedLocal.y*reflectedLocal.y));
+        reflectedLocal.y *= a;
+        reflectedLocal.x *= a;
+        Vector R = frame.toWorld(reflectedLocal);
 
-		return std::pow(std::max((Float) 0, dot(R, pRec.wo)), m_exponent)
-			* m_normalization * m_ks + m_kd / (4*M_PI);
-	}
+        return std::pow(std::max((Float) 0, dot(R, pRec.wo)), m_exponent)
+            * m_normalization * m_ks + m_kd / (4*M_PI);
+    }
 
-	std::string toString() const {
-		return "KajiyaKayPhaseFunction[]";
-	}
+    std::string toString() const {
+        return "KajiyaKayPhaseFunction[]";
+    }
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 private:
-	Float m_ks, m_kd, m_exponent, m_normalization;
+    Float m_ks, m_kd, m_exponent, m_normalization;
 };
 
 

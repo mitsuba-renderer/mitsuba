@@ -98,7 +98,7 @@ void ArHosekSkyModel_CookConfiguration(
     elev_matrix = dataset + ( 9 * 6 * (int_turbidity-1) );
 
 
-    for( unsigned int i = 0; i < 9; ++i )
+    for (unsigned int i = 0; i < 9; ++i )
     {
         //(1-t).^3* A1 + 3*(1-t).^2.*t * A2 + 3*(1-t) .* t .^ 2 * A3 + t.^3 * A4;
         config[i] =
@@ -113,7 +113,7 @@ void ArHosekSkyModel_CookConfiguration(
 
     // alb 1 low turb
     elev_matrix = dataset + (9*6*10 + 9*6*(int_turbidity-1));
-    for(unsigned int i = 0; i < 9; ++i)
+    for (unsigned int i = 0; i < 9; ++i)
     {
         //(1-t).^3* A1 + 3*(1-t).^2.*t * A2 + 3*(1-t) .* t .^ 2 * A3 + t.^3 * A4;
         config[i] +=
@@ -126,12 +126,12 @@ void ArHosekSkyModel_CookConfiguration(
            pow(solar_elevation, 5.0)  * elev_matrix[i+45]);
     }
 
-    if(int_turbidity == 10)
+    if (int_turbidity == 10)
         return;
 
     // alb 0 high turb
     elev_matrix = dataset + (9*6*(int_turbidity));
-    for(unsigned int i = 0; i < 9; ++i)
+    for (unsigned int i = 0; i < 9; ++i)
     {
         //(1-t).^3* A1 + 3*(1-t).^2.*t * A2 + 3*(1-t) .* t .^ 2 * A3 + t.^3 * A4;
         config[i] +=
@@ -146,7 +146,7 @@ void ArHosekSkyModel_CookConfiguration(
 
     // alb 1 high turb
     elev_matrix = dataset + (9*6*10 + 9*6*(int_turbidity));
-    for(unsigned int i = 0; i < 9; ++i)
+    for (unsigned int i = 0; i < 9; ++i)
     {
         //(1-t).^3* A1 + 3*(1-t).^2.*t * A2 + 3*(1-t) .* t .^ 2 * A3 + t.^3 * A4;
         config[i] +=
@@ -196,7 +196,7 @@ double ArHosekSkyModel_CookRadianceConfiguration(
          10.0*pow(1.0-solar_elevation, 2.0)*pow(solar_elevation, 3.0) * elev_matrix[3] +
          5.0*(1.0-solar_elevation)*pow(solar_elevation, 4.0) * elev_matrix[4] +
          pow(solar_elevation, 5.0) * elev_matrix[5]);
-    if(int_turbidity == 10)
+    if (int_turbidity == 10)
         return res;
 
     // alb 0 high turb
@@ -248,7 +248,7 @@ ArHosekSkyModelState  * arhosekskymodelstate_alloc_init(
 {
     ArHosekSkyModelState  * state = new ArHosekSkyModelState();
 
-    for( unsigned int wl = 0; wl < 11; ++wl )
+    for (unsigned int wl = 0; wl < 11; ++wl )
     {
         ArHosekSkyModel_CookConfiguration(
             datasets[wl],
@@ -298,7 +298,7 @@ double arhosekskymodel_radiance(
               )
         * state->radiances[low_wl];
 
-    if(interp < 1e-6)
+    if (interp < 1e-6)
         return val_low;
 
     double result = (1.0 - interp) * val_low;
@@ -321,7 +321,7 @@ ArHosekTristimSkyModelState  * arhosek_xyz_skymodelstate_alloc_init(
 {
     ArHosekTristimSkyModelState  * state = new ArHosekTristimSkyModelState();
 
-    for( unsigned int channel = 0; channel < 3; ++channel )
+    for (unsigned int channel = 0; channel < 3; ++channel )
     {
         ArHosekSkyModel_CookConfiguration(
             datasetsXYZ[channel],
@@ -351,7 +351,7 @@ ArHosekTristimSkyModelState  * arhosek_rgb_skymodelstate_alloc_init(
 {
     ArHosekTristimSkyModelState  * state = new ArHosekTristimSkyModelState();
 
-    for( unsigned int channel = 0; channel < 3; ++channel )
+    for (unsigned int channel = 0; channel < 3; ++channel )
     {
         ArHosekSkyModel_CookConfiguration(
             datasetsRGB[channel],

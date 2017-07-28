@@ -46,144 +46,144 @@ MTS_NAMESPACE_BEGIN
  */
 class Checkerboard : public Texture2D {
 public:
-	Checkerboard(const Properties &props) : Texture2D(props) {
-		m_color0 = props.getSpectrum("color0", Spectrum(.4f));
-		m_color1 = props.getSpectrum("color1", Spectrum(.2f));
-	}
+    Checkerboard(const Properties &props) : Texture2D(props) {
+        m_color0 = props.getSpectrum("color0", Spectrum(.4f));
+        m_color1 = props.getSpectrum("color1", Spectrum(.2f));
+    }
 
-	Checkerboard(Stream *stream, InstanceManager *manager)
-	 : Texture2D(stream, manager) {
-		m_color0 = Spectrum(stream);
-		m_color1 = Spectrum(stream);
-	}
+    Checkerboard(Stream *stream, InstanceManager *manager)
+     : Texture2D(stream, manager) {
+        m_color0 = Spectrum(stream);
+        m_color1 = Spectrum(stream);
+    }
 
-	void serialize(Stream *stream, InstanceManager *manager) const {
-		Texture2D::serialize(stream, manager);
-		m_color0.serialize(stream);
-		m_color1.serialize(stream);
-	}
+    void serialize(Stream *stream, InstanceManager *manager) const {
+        Texture2D::serialize(stream, manager);
+        m_color0.serialize(stream);
+        m_color1.serialize(stream);
+    }
 
-	inline Spectrum eval(const Point2 &uv) const {
-		int x = 2*math::modulo((int) (uv.x * 2), 2) - 1,
-			y = 2*math::modulo((int) (uv.y * 2), 2) - 1;
+    inline Spectrum eval(const Point2 &uv) const {
+        int x = 2*math::modulo((int) (uv.x * 2), 2) - 1,
+            y = 2*math::modulo((int) (uv.y * 2), 2) - 1;
 
-		if (x*y == 1)
-			return m_color0;
-		else
-			return m_color1;
-	}
+        if (x*y == 1)
+            return m_color0;
+        else
+            return m_color1;
+    }
 
-	Spectrum eval(const Point2 &uv,
-			const Vector2 &d0, const Vector2 &d1) const {
-		/* Filtering is currently not supported */
-		return Checkerboard::eval(uv);
-	}
+    Spectrum eval(const Point2 &uv,
+            const Vector2 &d0, const Vector2 &d1) const {
+        /* Filtering is currently not supported */
+        return Checkerboard::eval(uv);
+    }
 
-	bool usesRayDifferentials() const {
-		return false;
-	}
+    bool usesRayDifferentials() const {
+        return false;
+    }
 
-	Spectrum getMaximum() const {
-		Spectrum max;
-		for (int i=0; i<SPECTRUM_SAMPLES; ++i)
-			max[i] = std::max(m_color0[i], m_color1[i]);
-		return max;
-	}
+    Spectrum getMaximum() const {
+        Spectrum max;
+        for (int i=0; i<SPECTRUM_SAMPLES; ++i)
+            max[i] = std::max(m_color0[i], m_color1[i]);
+        return max;
+    }
 
-	Spectrum getMinimum() const {
-		Spectrum min;
-		for (int i=0; i<SPECTRUM_SAMPLES; ++i)
-			min[i] = std::min(m_color0[i], m_color1[i]);
-		return min;
-	}
+    Spectrum getMinimum() const {
+        Spectrum min;
+        for (int i=0; i<SPECTRUM_SAMPLES; ++i)
+            min[i] = std::min(m_color0[i], m_color1[i]);
+        return min;
+    }
 
-	Spectrum getAverage() const {
-		return (m_color0 + m_color1) * 0.5f;
-	}
+    Spectrum getAverage() const {
+        return (m_color0 + m_color1) * 0.5f;
+    }
 
-	bool isConstant() const {
-		return false;
-	}
+    bool isConstant() const {
+        return false;
+    }
 
-	bool isMonochromatic() const {
-		return Spectrum(m_color0[0]) == m_color0
-			&& Spectrum(m_color1[0]) == m_color1;
-	}
+    bool isMonochromatic() const {
+        return Spectrum(m_color0[0]) == m_color0
+            && Spectrum(m_color1[0]) == m_color1;
+    }
 
-	std::string toString() const {
-		std::ostringstream oss;
-		oss << "Checkerboard[" << endl
-			<< "    color1 = " << m_color1.toString() << "," << endl
-			<< "    color0 = " << m_color0.toString() << endl
-			<< "]";
-		return oss.str();
-	}
+    std::string toString() const {
+        std::ostringstream oss;
+        oss << "Checkerboard[" << endl
+            << "    color1 = " << m_color1.toString() << "," << endl
+            << "    color0 = " << m_color0.toString() << endl
+            << "]";
+        return oss.str();
+    }
 
-	Shader *createShader(Renderer *renderer) const;
+    Shader *createShader(Renderer *renderer) const;
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	Spectrum m_color1;
-	Spectrum m_color0;
+    Spectrum m_color1;
+    Spectrum m_color0;
 };
 
 // ================ Hardware shader implementation ================
 
 class CheckerboardShader : public Shader {
 public:
-	CheckerboardShader(Renderer *renderer, const Spectrum &color0,
-		const Spectrum &color1, const Point2 &uvOffset,
-		const Vector2 &uvScale) : Shader(renderer, ETextureShader),
-		m_color0(color0), m_color1(color1),
-		m_uvOffset(uvOffset), m_uvScale(uvScale) {
-	}
+    CheckerboardShader(Renderer *renderer, const Spectrum &color0,
+        const Spectrum &color1, const Point2 &uvOffset,
+        const Vector2 &uvScale) : Shader(renderer, ETextureShader),
+        m_color0(color0), m_color1(color1),
+        m_uvOffset(uvOffset), m_uvScale(uvScale) {
+    }
 
-	void generateCode(std::ostringstream &oss,
-			const std::string &evalName,
-			const std::vector<std::string> &depNames) const {
-		oss << "uniform vec3 " << evalName << "_color0;" << endl
-			<< "uniform vec3 " << evalName << "_color1;" << endl
-			<< "uniform vec2 " << evalName << "_uvOffset;" << endl
-			<< "uniform vec2 " << evalName << "_uvScale;" << endl
-			<< endl
-			<< "vec3 " << evalName << "(vec2 uv) {" << endl
-			<< "    uv = vec2(" << endl
-			<< "        uv.x * " << evalName << "_uvScale.x + " << evalName << "_uvOffset.x," << endl
-			<< "        uv.y * " << evalName << "_uvScale.y + " << evalName << "_uvOffset.y);" << endl
-			<< "    float x = 2*(mod(int(uv.x*2), 2)) - 1, y = 2*(mod(int(uv.y*2), 2)) - 1;" << endl
-			<< "    if (x*y == 1)" << endl
-			<< "        return " << evalName << "_color0;" << endl
-			<< "    else" << endl
-			<< "        return " << evalName << "_color1;" << endl
-			<< "}" << endl;
-	}
+    void generateCode(std::ostringstream &oss,
+            const std::string &evalName,
+            const std::vector<std::string> &depNames) const {
+        oss << "uniform vec3 " << evalName << "_color0;" << endl
+            << "uniform vec3 " << evalName << "_color1;" << endl
+            << "uniform vec2 " << evalName << "_uvOffset;" << endl
+            << "uniform vec2 " << evalName << "_uvScale;" << endl
+            << endl
+            << "vec3 " << evalName << "(vec2 uv) {" << endl
+            << "    uv = vec2(" << endl
+            << "        uv.x * " << evalName << "_uvScale.x + " << evalName << "_uvOffset.x," << endl
+            << "        uv.y * " << evalName << "_uvScale.y + " << evalName << "_uvOffset.y);" << endl
+            << "    float x = 2*(mod(int(uv.x*2), 2)) - 1, y = 2*(mod(int(uv.y*2), 2)) - 1;" << endl
+            << "    if (x*y == 1)" << endl
+            << "        return " << evalName << "_color0;" << endl
+            << "    else" << endl
+            << "        return " << evalName << "_color1;" << endl
+            << "}" << endl;
+    }
 
-	void resolve(const GPUProgram *program, const std::string &evalName, std::vector<int> &parameterIDs) const {
-		parameterIDs.push_back(program->getParameterID(evalName + "_color0", false));
-		parameterIDs.push_back(program->getParameterID(evalName + "_color1", false));
-		parameterIDs.push_back(program->getParameterID(evalName + "_uvOffset", false));
-		parameterIDs.push_back(program->getParameterID(evalName + "_uvScale", false));
-	}
+    void resolve(const GPUProgram *program, const std::string &evalName, std::vector<int> &parameterIDs) const {
+        parameterIDs.push_back(program->getParameterID(evalName + "_color0", false));
+        parameterIDs.push_back(program->getParameterID(evalName + "_color1", false));
+        parameterIDs.push_back(program->getParameterID(evalName + "_uvOffset", false));
+        parameterIDs.push_back(program->getParameterID(evalName + "_uvScale", false));
+    }
 
-	void bind(GPUProgram *program, const std::vector<int> &parameterIDs,
-		int &textureUnitOffset) const {
-		program->setParameter(parameterIDs[0], m_color0);
-		program->setParameter(parameterIDs[1], m_color1);
-		program->setParameter(parameterIDs[2], m_uvOffset);
-		program->setParameter(parameterIDs[3], m_uvScale);
-	}
+    void bind(GPUProgram *program, const std::vector<int> &parameterIDs,
+        int &textureUnitOffset) const {
+        program->setParameter(parameterIDs[0], m_color0);
+        program->setParameter(parameterIDs[1], m_color1);
+        program->setParameter(parameterIDs[2], m_uvOffset);
+        program->setParameter(parameterIDs[3], m_uvScale);
+    }
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 private:
-	Spectrum m_color0;
-	Spectrum m_color1;
-	Point2 m_uvOffset;
-	Vector2 m_uvScale;
+    Spectrum m_color0;
+    Spectrum m_color1;
+    Point2 m_uvOffset;
+    Vector2 m_uvScale;
 };
 
 Shader *Checkerboard::createShader(Renderer *renderer) const {
-	return new CheckerboardShader(renderer, m_color0, m_color1,
-		m_uvOffset, m_uvScale);
+    return new CheckerboardShader(renderer, m_color0, m_color1,
+        m_uvOffset, m_uvScale);
 }
 
 MTS_IMPLEMENT_CLASS(CheckerboardShader, false, Shader)

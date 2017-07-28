@@ -5,7 +5,7 @@ Import('sys', 'os', 'SCons', 'resources')
 AddOption("--cfg", dest="cfg", type="string", nargs=1, action='store', help='Manually specify a configuration file')
 configFile = GetOption('cfg')
 if configFile == None:
-	configFile = "config.py"
+        configFile = "config.py"
 
 configFile = os.path.normpath(os.path.join(os.path.dirname(os.getcwd()), configFile))
 
@@ -17,18 +17,18 @@ parallelize = GetOption('parallelize')
 EnsureSConsVersion(2, 0, 0)
 
 if parallelize == True:
-	SetOption('num_jobs', multiprocessing.cpu_count())
+        SetOption('num_jobs', multiprocessing.cpu_count())
 
 if not os.path.exists(configFile):
-	print '\nA configuration file must be selected! Have a look at http://www.mitsuba-renderer.org/docs.html'
-	Exit(1)
+        print '\nA configuration file must be selected! Have a look at http://www.mitsuba-renderer.org/docs.html'
+        Exit(1)
 
 needsBuildDependencies = (sys.platform == 'win32' or sys.platform == 'darwin')
 
 if needsBuildDependencies and not os.path.exists(GetBuildPath('#dependencies')):
-	print '\nThe required build dependency files are missing. Please see the documentation'
-	print 'at http://www.mitsuba-renderer.org/docs.html for details on how to get them.\n'
-	Exit(1)
+        print '\nThe required build dependency files are missing. Please see the documentation'
+        print 'at http://www.mitsuba-renderer.org/docs.html for details on how to get them.\n'
+        Exit(1)
 
 python_versions = ["2.6", "2.7", "3.0", "3.1", "3.2", "3.3", "3.4", "3.5", "3.6", "3.7"]
 
@@ -49,10 +49,10 @@ vars.Add('BASELIB',         'Base libraries')
 vars.Add('BASELIBDIR',      'Base library search path')
 
 for ver in python_versions:
-	key = ver.replace('.', '')
-	vars.Add('PYTHON' + key + 'INCLUDE', 'Python '+ ver +' include path')
-	vars.Add('PYTHON' + key + 'LIB',     'Python '+ ver +' libraries')
-	vars.Add('PYTHON' + key + 'LIBDIR',  'Python '+ ver +' library path')
+        key = ver.replace('.', '')
+        vars.Add('PYTHON' + key + 'INCLUDE', 'Python '+ ver +' include path')
+        vars.Add('PYTHON' + key + 'LIB',     'Python '+ ver +' libraries')
+        vars.Add('PYTHON' + key + 'LIBDIR',  'Python '+ ver +' library path')
 
 vars.Add('EIGENINCLUDE',    'Eigen 3.x include path')
 vars.Add('XERCESINCLUDE',   'Xerces-C include path')
@@ -93,13 +93,13 @@ vars.Add('QTINCLUDE',       'Additional Qt include directory')
 vars.Add('INTEL_COMPILER',  'Should the Intel C++ compiler be used?')
 
 try:
-	env = Environment(options=vars, ENV = os.environ, tools=['default', 'qt5'], toolpath=['#data/scons'])
-	print 'Checking for Qt 5.x... yes'
-	hasQt = True
+        env = Environment(options=vars, ENV = os.environ, tools=['default', 'qt5'], toolpath=['#data/scons'])
+        print 'Checking for Qt 5.x... yes'
+        hasQt = True
 except Exception:
-	env = Environment(options=vars, ENV = os.environ, tools=['default'], toolpath=['#data/scons'])
-	print 'Unable to detect a Qt installation -- not building the GUI!'
-	hasQt = False
+        env = Environment(options=vars, ENV = os.environ, tools=['default'], toolpath=['#data/scons'])
+        print 'Unable to detect a Qt installation -- not building the GUI!'
+        hasQt = False
 
 hasCollada=True
 hasPython = []
@@ -109,19 +109,19 @@ env.Append(CPPFLAGS=[])
 env.Append(LIBPATH=[])
 env.Append(LIBS=env['BASELIB'])
 if env.has_key('BOOSTINCLUDE'):
-	env.Prepend(CPPPATH=env['BOOSTINCLUDE'])
+        env.Prepend(CPPPATH=env['BOOSTINCLUDE'])
 if env.has_key('BOOSTLIBDIR'):
-	env.Prepend(LIBPATH=env['BOOSTLIBDIR'])
+        env.Prepend(LIBPATH=env['BOOSTLIBDIR'])
 if env.has_key('BOOSTLIB'):
-	env.Prepend(LIBS=env['BOOSTLIB'])
+        env.Prepend(LIBS=env['BOOSTLIB'])
 if env.has_key('BASELIBDIR'):
-	env.Append(LIBPATH=env['BASELIBDIR'])
+        env.Append(LIBPATH=env['BASELIBDIR'])
 if env.has_key('OEXRINCLUDE'):
-	env.Prepend(CPPPATH=env['OEXRINCLUDE'])
+        env.Prepend(CPPPATH=env['OEXRINCLUDE'])
 if env.has_key('OEXRLIBDIR'):
-	env.Prepend(LIBPATH=env['OEXRLIBDIR'])
+        env.Prepend(LIBPATH=env['OEXRLIBDIR'])
 if env.has_key('EIGENINCLUDE'):
-	env.Prepend(CPPPATH=env['EIGENINCLUDE'])
+        env.Prepend(CPPPATH=env['EIGENINCLUDE'])
 
 env.Decider('MD5-timestamp')
 
@@ -129,10 +129,10 @@ AddOption("--dist", dest="dist", action="store_true", help='Make an official rel
 
 # Check whether everything important is available
 def CheckCXX(context):
-	context.Message('Checking for ' + env['CXX'] + ' ...')
-	ret = context.TryLink("#include <sstream>\n int main(int argc, char **argv) {\n std::ostringstream oss;\n return 0;\n }", '.cpp')
-	context.Result(ret)
-	return ret
+        context.Message('Checking for ' + env['CXX'] + ' ...')
+        ret = context.TryLink("#include <sstream>\n int main(int argc, char **argv) {\n std::ostringstream oss;\n return 0;\n }", '.cpp')
+        context.Result(ret)
+        return ret
 
 conf = Configure(env, custom_tests = { 'CheckCXX' : CheckCXX })
 cppPathPrevious = SCons.Util.semi_deepcopy(env['CPPPATH'])
@@ -141,125 +141,125 @@ cppFlagsPrevious = SCons.Util.semi_deepcopy(env['CPPFLAGS'])
 cxxFlagsPrevious = SCons.Util.semi_deepcopy(env['CXXFLAGS'])
 
 if env.has_key('PNGINCLUDE'):
-	env.Prepend(CPPPATH=env['PNGINCLUDE'])
+        env.Prepend(CPPPATH=env['PNGINCLUDE'])
 if env.has_key('PNGLIBDIR'):
-	env.Prepend(LIBPATH=env['PNGLIBDIR'])
+        env.Prepend(LIBPATH=env['PNGLIBDIR'])
 if env.has_key('JPEGINCLUDE'):
-	env.Prepend(CPPPATH=env['JPEGINCLUDE'])
+        env.Prepend(CPPPATH=env['JPEGINCLUDE'])
 if env.has_key('JPEGLIBDIR'):
-	env.Prepend(LIBPATH=env['JPEGLIBDIR'])
+        env.Prepend(LIBPATH=env['JPEGLIBDIR'])
 if env.has_key('OEXRFLAGS'):
-	env.Prepend(CPPFLAGS=env['OEXRFLAGS'])
+        env.Prepend(CPPFLAGS=env['OEXRFLAGS'])
 if env.has_key('OEXRINCLUDE'):
-	env.Prepend(CPPPATH=env['OEXRINCLUDE'])
+        env.Prepend(CPPPATH=env['OEXRINCLUDE'])
 if env.has_key('OEXRLIBDIR'):
-	env.Prepend(LIBPATH=env['OEXRLIBDIR'])
+        env.Prepend(LIBPATH=env['OEXRLIBDIR'])
 if env.has_key('XERCESINCLUDE'):
-	env.Prepend(CPPPATH=env['XERCESINCLUDE'])
+        env.Prepend(CPPPATH=env['XERCESINCLUDE'])
 if env.has_key('XERCESLIBDIR'):
-	env.Prepend(LIBPATH=env['XERCESLIBDIR'])
+        env.Prepend(LIBPATH=env['XERCESLIBDIR'])
 if env.has_key('GLINCLUDE'):
-	env.Prepend(CPPPATH=env['GLINCLUDE'])
+        env.Prepend(CPPPATH=env['GLINCLUDE'])
 if env.has_key('GLFLAGS'):
-	env.Prepend(CPPFLAGS=env['GLFLAGS'])
+        env.Prepend(CPPFLAGS=env['GLFLAGS'])
 if env.has_key('COLLADAINCLUDE'):
-	env.Prepend(CPPPATH=env['COLLADAINCLUDE'])
+        env.Prepend(CPPPATH=env['COLLADAINCLUDE'])
 if env.has_key('COLLADALIBDIR'):
-	env.Prepend(LIBPATH=env['COLLADALIBDIR'])
+        env.Prepend(LIBPATH=env['COLLADALIBDIR'])
 if env.has_key('FFTWINCLUDE'):
-	env.Prepend(CPPPATH=env['FFTWINCLUDE'])
+        env.Prepend(CPPPATH=env['FFTWINCLUDE'])
 if env.has_key('FFTWLIBDIR'):
-	env.Prepend(LIBPATH=env['FFTWLIBDIR'])
+        env.Prepend(LIBPATH=env['FFTWLIBDIR'])
 
 if not conf.CheckCXX():
-	print 'Could not compile a simple C++ fragment, verify that ' + \
-		env['CXX'] + ' is installed! This could also mean that the ' + \
-		'Boost libraries are missing. The file "config.log" should ' + \
-		'contain more information.'
-	Exit(1)
+        print 'Could not compile a simple C++ fragment, verify that ' + \
+                env['CXX'] + ' is installed! This could also mean that the ' + \
+                'Boost libraries are missing. The file "config.log" should ' + \
+                'contain more information.'
+        Exit(1)
 if not conf.CheckCHeader(['png.h']):
-	print 'libpng is missing (install libpng12-dev for PNG I/O support)'
+        print 'libpng is missing (install libpng12-dev for PNG I/O support)'
 else:
-	env.Append(CPPDEFINES = [['MTS_HAS_LIBPNG', 1]] )
+        env.Append(CPPDEFINES = [['MTS_HAS_LIBPNG', 1]] )
 
 if not conf.CheckCHeader(['stdio.h', 'jpeglib.h']):
-	print 'libjpeg is missing (install libjpeg62-dev for JPEG I/O support)'
+        print 'libjpeg is missing (install libjpeg62-dev for JPEG I/O support)'
 else:
-	env.Append(CPPDEFINES = [['MTS_HAS_LIBJPEG', 1]] )
+        env.Append(CPPDEFINES = [['MTS_HAS_LIBJPEG', 1]] )
 
 if not conf.CheckCXXHeader('ImfRgba.h'):
-	print 'OpenEXR is missing (install libopenexr-dev for OpenEXR I/O support)'
+        print 'OpenEXR is missing (install libopenexr-dev for OpenEXR I/O support)'
 else:
-	env.Append(CPPDEFINES = [['MTS_HAS_OPENEXR', 1]] )
+        env.Append(CPPDEFINES = [['MTS_HAS_OPENEXR', 1]] )
 
 if not conf.CheckCXXHeader('xercesc/dom/DOMLSParser.hpp'):
-	print 'Xerces-C++ 3.x must be installed (install libxerces-c-dev)!'
-	Exit(1)
+        print 'Xerces-C++ 3.x must be installed (install libxerces-c-dev)!'
+        Exit(1)
 if not conf.CheckCXXHeader('dae.h'):
-	hasCollada = False
-	print 'COLLADA DOM is missing: not building the COLLADA importer'
+        hasCollada = False
+        print 'COLLADA DOM is missing: not building the COLLADA importer'
 
 hasBreakpad = '-DMTS_HAS_BREAKPAD' in env['CCFLAGS'] or 'MTS_HAS_BREAKPAD' in env['CXXFLAGS']
 
 hasPython = []
 for ver in python_versions:
-	key = 'PYTHON' + ver.replace('.', '') + 'INCLUDE'
-	if key not in env:
-		continue
-	includePath = env[key]
-	env.Append(CPPPATH=includePath)
-	if conf.CheckCXXHeader('pyconfig.h'):
-		hasPython += [ ver ]
-	else:
-		print 'Python ' + ver + ' is missing: not building wrappers'
-	env['CPPPATH'][:] = [ x for x in env['CPPPATH'] if x not in includePath ]
+        key = 'PYTHON' + ver.replace('.', '') + 'INCLUDE'
+        if key not in env:
+                continue
+        includePath = env[key]
+        env.Append(CPPPATH=includePath)
+        if conf.CheckCXXHeader('pyconfig.h'):
+                hasPython += [ ver ]
+        else:
+                print 'Python ' + ver + ' is missing: not building wrappers'
+        env['CPPPATH'][:] = [ x for x in env['CPPPATH'] if x not in includePath ]
 
 if not conf.CheckCXXHeader('boost/version.hpp'):
-	print 'Boost is missing (install libboost-all-dev)!'
-	Exit(1)
+        print 'Boost is missing (install libboost-all-dev)!'
+        Exit(1)
 if not conf.TryCompile("#include <boost/version.hpp>\n#if BOOST_VERSION < 104400\n#error Boost is outdated!\n#endif", ".cpp"):
-	print 'Boost is outdated (you will need version 1.44 or newer)!'
-	Exit(1)
+        print 'Boost is outdated (you will need version 1.44 or newer)!'
+        Exit(1)
 if not conf.CheckCXXHeader('Eigen/Core'):
-	print 'Eigen 3.x is missing (install libeigen3-dev)!'
-	Exit(1)
+        print 'Eigen 3.x is missing (install libeigen3-dev)!'
+        Exit(1)
 if not conf.CheckCXXHeader('fftw3.h'):
     print 'FFTW3 not found (install for fast image convolution support)'
 else:
-	env.Append(CPPDEFINES = [['MTS_HAS_FFTW', 1]] )
+        env.Append(CPPDEFINES = [['MTS_HAS_FFTW', 1]] )
 if sys.platform == 'win32':
-	if not (conf.CheckCHeader(['windows.h', 'GL/gl.h']) \
-			and conf.CheckCHeader(['windows.h', 'GL/glu.h']) \
-			and conf.CheckCHeader(['windows.h', 'GL/gl.h', 'GL/glext.h'])):
-		print 'OpenGL headers are missing!'
-		Exit(1)
-	if not conf.CheckCHeader('GL/glew.h'):
-		print 'GLEW headers are missing!'
-		Exit(1)
+        if not (conf.CheckCHeader(['windows.h', 'GL/gl.h']) \
+                        and conf.CheckCHeader(['windows.h', 'GL/glu.h']) \
+                        and conf.CheckCHeader(['windows.h', 'GL/gl.h', 'GL/glext.h'])):
+                print 'OpenGL headers are missing!'
+                Exit(1)
+        if not conf.CheckCHeader('GL/glew.h'):
+                print 'GLEW headers are missing!'
+                Exit(1)
 elif sys.platform == 'linux2':
-	if not (conf.CheckCHeader('GL/gl.h') and conf.CheckCHeader('GL/glu.h') and conf.CheckCHeader(['GL/gl.h', 'GL/glext.h'])):
-		print 'OpenGL headers are missing!'
-		Exit(1)
-	if not conf.CheckCHeader('GL/glew.h'):
-		print 'GLEW headers are missing (install libglewmx1.5-dev)!'
-		Exit(1)
-	if not conf.CheckType('GLEWContext', '#include <GL/glew.h>'):
-		print 'GLEW-MX must be present!'
-		Exit(1)
-	if not conf.TryCompile("#include <GL/glew.h>\n int i = GL_VERTEX_ATTRIB_ARRAY_UNIFIED_NV;", '.cpp'):
-		print 'Your version of GLEW-MX seems to be outdated!'
-		Exit(1)
+        if not (conf.CheckCHeader('GL/gl.h') and conf.CheckCHeader('GL/glu.h') and conf.CheckCHeader(['GL/gl.h', 'GL/glext.h'])):
+                print 'OpenGL headers are missing!'
+                Exit(1)
+        if not conf.CheckCHeader('GL/glew.h'):
+                print 'GLEW headers are missing (install libglewmx1.5-dev)!'
+                Exit(1)
+        if not conf.CheckType('GLEWContext', '#include <GL/glew.h>'):
+                print 'GLEW-MX must be present!'
+                Exit(1)
+        if not conf.TryCompile("#include <GL/glew.h>\n int i = GL_VERTEX_ATTRIB_ARRAY_UNIFIED_NV;", '.cpp'):
+                print 'Your version of GLEW-MX seems to be outdated!'
+                Exit(1)
 elif sys.platform == 'darwin':
-	if not (conf.CheckCHeader('OpenGL/gl.h') and conf.CheckCHeader('OpenGL/glu.h') and conf.CheckCHeader(['OpenGL/gl.h', 'OpenGL/glext.h'])):
-		print 'OpenGL headers are missing!'
-		Exit(1)
-	if not conf.CheckCHeader('OpenGL/glew.h'):
-		print 'GLEW headers are missing!'
-		Exit(1)
+        if not (conf.CheckCHeader('OpenGL/gl.h') and conf.CheckCHeader('OpenGL/glu.h') and conf.CheckCHeader(['OpenGL/gl.h', 'OpenGL/glext.h'])):
+                print 'OpenGL headers are missing!'
+                Exit(1)
+        if not conf.CheckCHeader('OpenGL/glew.h'):
+                print 'GLEW headers are missing!'
+                Exit(1)
 if sys.platform == 'linux2':
-	if not (conf.CheckCHeader(['X11/Xlib.h', 'X11/extensions/xf86vmode.h'])):
-		print 'X Video Mode selection library headers are missing! (Install libxxf86vm-dev)'
-		Exit(1)
+        if not (conf.CheckCHeader(['X11/Xlib.h', 'X11/extensions/xf86vmode.h'])):
+                print 'X Video Mode selection library headers are missing! (Install libxxf86vm-dev)'
+                Exit(1)
 
 env.Replace(CPPPATH=cppPathPrevious)
 env.Replace(LIBPATH=libPathPrevious)
@@ -270,38 +270,38 @@ sys.stdout.write("Checking for Mitsuba version .. ")
 file = open(env.GetBuildPath('#include/mitsuba/core/version.h'), 'r')
 MTS_VERSION=""
 for line in file:
-	if line.startswith("#define MTS_VERSION "):
-		MTS_VERSION = line[21:len(line)-2]
+        if line.startswith("#define MTS_VERSION "):
+                MTS_VERSION = line[21:len(line)-2]
 if MTS_VERSION == "":
-	print 'could not be determined!'
-	Exit(1)
+        print 'could not be determined!'
+        Exit(1)
 else:
-	print MTS_VERSION
+        print MTS_VERSION
 Export('MTS_VERSION')
 
 if needsBuildDependencies:
-	versionFilename = GetBuildPath('#dependencies/version')
-	versionMismatch = False
+        versionFilename = GetBuildPath('#dependencies/version')
+        versionMismatch = False
 
-	if not os.path.exists(versionFilename):
-		versionMismatch = True
-		depVersion = "<unknown>"
-	else:
-		with open(versionFilename) as f:
-			depVersion = f.readline().strip()
-			if MTS_VERSION != depVersion:
-				versionMismatch = True
+        if not os.path.exists(versionFilename):
+                versionMismatch = True
+                depVersion = "<unknown>"
+        else:
+                with open(versionFilename) as f:
+                        depVersion = f.readline().strip()
+                        if MTS_VERSION != depVersion:
+                                versionMismatch = True
 
-	if versionMismatch:
-			print '\nThe dependency directory and your Mitsuba codebase have different version'
-			print 'numbers! Your copy of Mitsuba has version %s, whereas the dependencies ' % MTS_VERSION
-			print 'have version %s. Please bring them into sync, either by running\n' % depVersion
-			print '$ hg update -r v%s\n' % depVersion
-			print 'in the Mitsuba directory, or by running\n'
-			print '$ cd dependencies'
-			print '$ hg pull'
-			print '$ hg update -r v%s\n' % MTS_VERSION
-			Exit(1)
+        if versionMismatch:
+                        print '\nThe dependency directory and your Mitsuba codebase have different version'
+                        print 'numbers! Your copy of Mitsuba has version %s, whereas the dependencies ' % MTS_VERSION
+                        print 'have version %s. Please bring them into sync, either by running\n' % depVersion
+                        print '$ hg update -r v%s\n' % depVersion
+                        print 'in the Mitsuba directory, or by running\n'
+                        print '$ cd dependencies'
+                        print '$ hg pull'
+                        print '$ hg update -r v%s\n' % MTS_VERSION
+                        Exit(1)
 
 env = conf.Finish()
 
@@ -309,49 +309,49 @@ dist = GetOption('dist') != None
 Export('dist')
 
 def osxlibinst_build_function(self, target, source, pkgname = None, use_own = None):
-	inst = self.Install(target, source)
-	prefix, name = os.path.split(source)
-	self.AddPostAction(inst, 'install_name_tool -id @rpath/' + name + ' $TARGET')
-	return inst
+        inst = self.Install(target, source)
+        prefix, name = os.path.split(source)
+        self.AddPostAction(inst, 'install_name_tool -id @rpath/' + name + ' $TARGET')
+        return inst
 
 def osxlibinst_as_build_function(self, target, source, pkgname = None, use_own = None):
-	inst = self.InstallAs(target, source)
-	prefix, name = os.path.split(source)
-	self.AddPostAction(inst, 'install_name_tool -id @rpath/' + name + ' $TARGET')
-	return inst
+        inst = self.InstallAs(target, source)
+        prefix, name = os.path.split(source)
+        self.AddPostAction(inst, 'install_name_tool -id @rpath/' + name + ' $TARGET')
+        return inst
 
 def remove_flag(env, flag):
-	success = False
-	if flag in env['CXXFLAGS']:
-		env['CXXFLAGS'].remove(flag)
-		success = True
-	if flag in env['SHCXXFLAGS']:
-		env['SHCXXFLAGS'].remove(flag)
-		success = True
-	if flag in env['CFLAGS']:
-		env['CFLAGS'].remove(flag)
-		success = True
-	if flag in env['LINKFLAGS']:
-		env['LINKFLAGS'].remove(flag)
-		success = True
-	return success
+        success = False
+        if flag in env['CXXFLAGS']:
+                env['CXXFLAGS'].remove(flag)
+                success = True
+        if flag in env['SHCXXFLAGS']:
+                env['SHCXXFLAGS'].remove(flag)
+                success = True
+        if flag in env['CFLAGS']:
+                env['CFLAGS'].remove(flag)
+                success = True
+        if flag in env['LINKFLAGS']:
+                env['LINKFLAGS'].remove(flag)
+                success = True
+        return success
 
 def match_pattern(x, patterns):
-	match = False
-	for pattern in patterns:
-		if re.search(pattern, x):
-			match = True
-			break
-	return match
+        match = False
+        for pattern in patterns:
+                if re.search(pattern, x):
+                        match = True
+                        break
+        return match
 
 def remove_flags(env, patterns):
-	env['CCFLAGS'][:] = [ x for x in env['CCFLAGS'] if not match_pattern(x, patterns) ]
-	env['CXXFLAGS'][:] = [ x for x in env['CXXFLAGS'] if not match_pattern(x, patterns) ]
-	env['SHCXXFLAGS'][:] = [ x for x in env['SHCXXFLAGS'] if not match_pattern(x, patterns) ]
-	env['LINKFLAGS'][:] = [ x for x in env['LINKFLAGS'] if not match_pattern(x, patterns) ]
+        env['CCFLAGS'][:] = [ x for x in env['CCFLAGS'] if not match_pattern(x, patterns) ]
+        env['CXXFLAGS'][:] = [ x for x in env['CXXFLAGS'] if not match_pattern(x, patterns) ]
+        env['SHCXXFLAGS'][:] = [ x for x in env['SHCXXFLAGS'] if not match_pattern(x, patterns) ]
+        env['LINKFLAGS'][:] = [ x for x in env['LINKFLAGS'] if not match_pattern(x, patterns) ]
 
 def append_flag(env, value):
-	env['CXXFLAGS'].append(value)
+        env['CXXFLAGS'].append(value)
 
 env.__class__.RemoveFlag = remove_flag
 env.__class__.RemoveFlags = remove_flags
@@ -360,40 +360,40 @@ env.__class__.OSXLibInst = osxlibinst_build_function
 env.__class__.OSXLibInstAs = osxlibinst_as_build_function
 
 def configure_for_objective_cpp(env):
-	# The OSX Objective C++ compiler does not permit the following flags
-	env.RemoveFlags(['-fstrict-aliasing', '-ftree-vectorize',
-		'-std=c\+\+0x'])
-	# Remove Intel compiler-specific optimization flags
-	env.RemoveFlags(['-x.*', '-ax.*', '-ipo', '-no-prec-div',
-		'-fp-model', 'fast=.*', '-wd.*', '-openmp'])
-	env['CCFLAGS'] += ['-fno-strict-aliasing']
-	# Enforce GCC usage (Intel compiler doesn't handle Objective C/C++)
-	if 'icpc' in env['CXX']:
-		env['CXX'] = 'g++'
-		env['CC'] = 'gcc'
+        # The OSX Objective C++ compiler does not permit the following flags
+        env.RemoveFlags(['-fstrict-aliasing', '-ftree-vectorize',
+                '-std=c\+\+0x'])
+        # Remove Intel compiler-specific optimization flags
+        env.RemoveFlags(['-x.*', '-ax.*', '-ipo', '-no-prec-div',
+                '-fp-model', 'fast=.*', '-wd.*', '-openmp'])
+        env['CCFLAGS'] += ['-fno-strict-aliasing']
+        # Enforce GCC usage (Intel compiler doesn't handle Objective C/C++)
+        if 'icpc' in env['CXX']:
+                env['CXX'] = 'g++'
+                env['CC'] = 'gcc'
 
 def relax_compiler_settings(env):
-	# Relax the compiler settings when compiling heavy templated code
-	# (e.g. Boost::Spirit parsers, etc., which don't necessarily have
-	# to be that fast)
-	env.RemoveFlags(['-g', '/Z7', '/Zi', '-ipo', '/GL', '/DEBUG'])
-	if env.RemoveFlag('-O3'):
-		env.AppendFlag('-Os')
-	if env.RemoveFlag('/O2'):
-		env.AppendFlag('/O1')
+        # Relax the compiler settings when compiling heavy templated code
+        # (e.g. Boost::Spirit parsers, etc., which don't necessarily have
+        # to be that fast)
+        env.RemoveFlags(['-g', '/Z7', '/Zi', '-ipo', '/GL', '/DEBUG'])
+        if env.RemoveFlag('-O3'):
+                env.AppendFlag('-Os')
+        if env.RemoveFlag('/O2'):
+                env.AppendFlag('/O1')
 
 env.__class__.ConfigureForObjectiveCPP = configure_for_objective_cpp
 env.__class__.RelaxCompilerSettings = relax_compiler_settings
 
 if hasCollada:
-	env.Append(CPPDEFINES = [['MTS_HAS_COLLADA', 1]])
+        env.Append(CPPDEFINES = [['MTS_HAS_COLLADA', 1]])
 
 env.SConsignFile()
 
 # MSVC: Embed the manifest into libraries and executables
 if sys.platform == 'win32':
-	env['LINKCOM'] = [env['LINKCOM'], 'mt.exe -nologo -manifest ${TARGET}.manifest -outputresource:$TARGET;1']
-	env['SHLINKCOM'] = [env['SHLINKCOM'], 'mt.exe -nologo -manifest ${TARGET}.manifest -outputresource:$TARGET;2']
+        env['LINKCOM'] = [env['LINKCOM'], 'mt.exe -nologo -manifest ${TARGET}.manifest -outputresource:$TARGET;1']
+        env['SHLINKCOM'] = [env['SHLINKCOM'], 'mt.exe -nologo -manifest ${TARGET}.manifest -outputresource:$TARGET;2']
 
 env.Export('hasQt', 'hasCollada', 'hasPython', 'resources', 'hasBreakpad')
 

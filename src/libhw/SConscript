@@ -1,41 +1,41 @@
 Import('env', 'sys', 'os')
 
 libhw_objects = [
-	'session.cpp', 'device.cpp', 'gputexture.cpp', 'gpugeometry.cpp',
-	'gpuprogram.cpp', 'renderer.cpp', 'glrenderer.cpp', 'glprogram.cpp',
-	'glgeometry.cpp', 'gltexture.cpp', 'gpusync.cpp', 'glsync.cpp',
-	'vpl.cpp', 'font.cpp', 'viewer.cpp', 'basicshader.cpp', 'shadow.cpp']
+        'session.cpp', 'device.cpp', 'gputexture.cpp', 'gpugeometry.cpp',
+        'gpuprogram.cpp', 'renderer.cpp', 'glrenderer.cpp', 'glprogram.cpp',
+        'glgeometry.cpp', 'gltexture.cpp', 'gpusync.cpp', 'glsync.cpp',
+        'vpl.cpp', 'font.cpp', 'viewer.cpp', 'basicshader.cpp', 'shadow.cpp']
 
 if sys.platform == 'win32':
-	libhw_objects += ['wglsession.cpp',
-		'wgldevice.cpp',
-		'wglrenderer.cpp']
+        libhw_objects += ['wglsession.cpp',
+                'wgldevice.cpp',
+                'wglrenderer.cpp']
 elif 'linux' in sys.platform:
-	libhw_objects += ['x11session.cpp',
-		'x11device.cpp',
-		'glxdevice.cpp',
-		'glxrenderer.cpp']
+        libhw_objects += ['x11session.cpp',
+                'x11device.cpp',
+                'glxdevice.cpp',
+                'glxrenderer.cpp']
 
 glEnv = env.Clone()
 glEnv.Append(CPPDEFINES = [['MTS_BUILD_MODULE', 'MTS_MODULE_HW']] )
 if glEnv.has_key('GLLIB'):
-	glEnv.Prepend(LIBS=glEnv['GLLIB'])
+        glEnv.Prepend(LIBS=glEnv['GLLIB'])
 if glEnv.has_key('GLLIBDIR'):
-	glEnv.Prepend(LIBPATH=glEnv['GLLIBDIR'])
+        glEnv.Prepend(LIBPATH=glEnv['GLLIBDIR'])
 if glEnv.has_key('GLFLAGS'):
-	glEnv.Prepend(CPPFLAGS=glEnv['GLFLAGS'])
+        glEnv.Prepend(CPPFLAGS=glEnv['GLFLAGS'])
 if glEnv.has_key('GLINCLUDE'):
-	glEnv.Prepend(CPPPATH=glEnv['GLINCLUDE'])
+        glEnv.Prepend(CPPPATH=glEnv['GLINCLUDE'])
 
 if sys.platform == 'darwin':
-	glEnv_osx = glEnv.Clone()
-	glEnv_osx.ConfigureForObjectiveCPP()
-	libhw_objects += glEnv_osx.SharedObject(['nsglsession.mm',
-		'nsgldevice.mm', 'nsglrenderer.mm'])
+        glEnv_osx = glEnv.Clone()
+        glEnv_osx.ConfigureForObjectiveCPP()
+        libhw_objects += glEnv_osx.SharedObject(['nsglsession.mm',
+                'nsgldevice.mm', 'nsglrenderer.mm'])
 
 libhw = glEnv.SharedLibrary('mitsuba-hw', libhw_objects)
 if sys.platform == "darwin":
-	glEnv.AddPostAction(libhw, 'install_name_tool -id @rpath/libmitsuba-hw.dylib $TARGET')
+        glEnv.AddPostAction(libhw, 'install_name_tool -id @rpath/libmitsuba-hw.dylib $TARGET')
 
 env.Append(LIBS=['mitsuba-hw'])
 env.Append(LIBPATH=[os.path.join(env['BUILDDIR'], 'libhw')])

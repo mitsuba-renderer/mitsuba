@@ -29,52 +29,52 @@ MTS_NAMESPACE_BEGIN
  */
 class MitchellNetravaliFilter : public ReconstructionFilter {
 public:
-	MitchellNetravaliFilter(const Properties &props)
-		: ReconstructionFilter(props) {
-		/* Filter radius */
-		m_radius = 2.0f;
-		/* B parameter from the paper */
-		m_B = props.getFloat("B", 1.0f / 3.0f);
-		/* C parameter from the paper */
-		m_C = props.getFloat("C", 1.0f / 3.0f);
-	}
+    MitchellNetravaliFilter(const Properties &props)
+        : ReconstructionFilter(props) {
+        /* Filter radius */
+        m_radius = 2.0f;
+        /* B parameter from the paper */
+        m_B = props.getFloat("B", 1.0f / 3.0f);
+        /* C parameter from the paper */
+        m_C = props.getFloat("C", 1.0f / 3.0f);
+    }
 
-	MitchellNetravaliFilter(Stream *stream, InstanceManager *manager)
-		: ReconstructionFilter(stream, manager) {
-		m_B = stream->readFloat();
-		m_C = stream->readFloat();
-		configure();
-	}
+    MitchellNetravaliFilter(Stream *stream, InstanceManager *manager)
+        : ReconstructionFilter(stream, manager) {
+        m_B = stream->readFloat();
+        m_C = stream->readFloat();
+        configure();
+    }
 
-	void serialize(Stream *stream, InstanceManager *manager) const {
-		ReconstructionFilter::serialize(stream, manager);
-		stream->writeFloat(m_B);
-		stream->writeFloat(m_C);
-	}
+    void serialize(Stream *stream, InstanceManager *manager) const {
+        ReconstructionFilter::serialize(stream, manager);
+        stream->writeFloat(m_B);
+        stream->writeFloat(m_C);
+    }
 
-	Float eval(Float x) const {
-		x = std::abs(x);
+    Float eval(Float x) const {
+        x = std::abs(x);
 
-		Float x2 = x*x, x3 = x2*x;
+        Float x2 = x*x, x3 = x2*x;
 
-		if (x < 1) {
-			return 1.0f/6.0f * ((12-9*m_B-6*m_C)*x3
-					+ (-18+12*m_B+6*m_C) * x2 + (6-2*m_B));
-		} else if (x < 2) {
-			return 1.0f/6.0f * ((-m_B-6*m_C)*x3 + (6*m_B+30*m_C) * x2
-					+ (-12*m_B-48*m_C) * x + (8*m_B + 24*m_C));
-		} else {
-			return 0.0f;
-		}
-	}
+        if (x < 1) {
+            return 1.0f/6.0f * ((12-9*m_B-6*m_C)*x3
+                    + (-18+12*m_B+6*m_C) * x2 + (6-2*m_B));
+        } else if (x < 2) {
+            return 1.0f/6.0f * ((-m_B-6*m_C)*x3 + (6*m_B+30*m_C) * x2
+                    + (-12*m_B-48*m_C) * x + (8*m_B + 24*m_C));
+        } else {
+            return 0.0f;
+        }
+    }
 
-	std::string toString() const {
-		return formatString("MitchellNetravaliFilter[radius=%f, B=%f, C=%f]", m_radius, m_B, m_C);
-	}
+    std::string toString() const {
+        return formatString("MitchellNetravaliFilter[radius=%f, B=%f, C=%f]", m_radius, m_B, m_C);
+    }
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	Float m_B, m_C;
+    Float m_B, m_C;
 };
 
 MTS_IMPLEMENT_CLASS_S(MitchellNetravaliFilter, false, ReconstructionFilter);

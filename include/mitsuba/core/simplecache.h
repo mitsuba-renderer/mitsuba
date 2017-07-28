@@ -69,28 +69,28 @@ MTS_NAMESPACE_BEGIN
  *     Return type of the function whose return values should be cached
  */
 template <typename ArgType, typename ReturnType> class SimpleCache
-	: protected PrimitiveThreadLocal< std::pair<ArgType, ReturnType> > {
+    : protected PrimitiveThreadLocal< std::pair<ArgType, ReturnType> > {
 protected:
-	typedef std::pair<ArgType, ReturnType>     ValueType;
-	typedef PrimitiveThreadLocal<ValueType>    ParentType;
+    typedef std::pair<ArgType, ReturnType>     ValueType;
+    typedef PrimitiveThreadLocal<ValueType>    ParentType;
 public:
-	SimpleCache() : ParentType() { }
+    SimpleCache() : ParentType() { }
 
-	/**
-	 * \brief Return the cache entry for the argument \c argument
-	 * or run \c UpdateFunctor to compute it
-	 */
-	template <typename UpdateFunctor> inline ReturnType &get(const UpdateFunctor &functor, const ArgType &argument) {
-		bool existed;
-		ValueType *value = (ValueType *) this->m_base.get(existed);
+    /**
+     * \brief Return the cache entry for the argument \c argument
+     * or run \c UpdateFunctor to compute it
+     */
+    template <typename UpdateFunctor> inline ReturnType &get(const UpdateFunctor &functor, const ArgType &argument) {
+        bool existed;
+        ValueType *value = (ValueType *) this->m_base.get(existed);
 
-		if (EXPECT_NOT_TAKEN(!existed || value->first != argument)) {
-			value->first = argument;
-			functor(value->first, value->second);
-		}
+        if (EXPECT_NOT_TAKEN(!existed || value->first != argument)) {
+            value->first = argument;
+            functor(value->first, value->second);
+        }
 
-		return value->second;
-	}
+        return value->second;
+    }
 };
 
 MTS_NAMESPACE_END

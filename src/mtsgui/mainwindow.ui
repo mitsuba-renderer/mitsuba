@@ -128,7 +128,7 @@
     <addaction name="separator"/>
     <addaction name="actionSave"/>
     <addaction name="actionSaveAs"/>
-  	<addaction name="actionCopyImage"/>
+    <addaction name="actionCopyImage"/>
     <addaction name="actionExportImage"/>
     <addaction name="separator"/>
     <addaction name="actionClose"/>

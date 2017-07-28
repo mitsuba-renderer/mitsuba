@@ -39,28 +39,28 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_CORE NetworkedObject : public ConfigurableObject {
 public:
-	/// Bind any used resources to the process \a proc
-	virtual void bindUsedResources(ParallelProcess *proc) const;
+    /// Bind any used resources to the process \a proc
+    virtual void bindUsedResources(ParallelProcess *proc) const;
 
-	/// Retrieve any required resources
-	virtual void wakeup(ConfigurableObject *parent,
-		std::map<std::string, SerializableObject *> &params);
+    /// Retrieve any required resources
+    virtual void wakeup(ConfigurableObject *parent,
+        std::map<std::string, SerializableObject *> &params);
 
-	/// Serialize this object to a stream
-	virtual void serialize(Stream *stream, InstanceManager *manager) const;
+    /// Serialize this object to a stream
+    virtual void serialize(Stream *stream, InstanceManager *manager) const;
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	/// Virtual destructor
-	virtual ~NetworkedObject() { }
+    /// Virtual destructor
+    virtual ~NetworkedObject() { }
 
-	/// Constructor
-	inline NetworkedObject(const Properties &props) : ConfigurableObject(props) { }
+    /// Constructor
+    inline NetworkedObject(const Properties &props) : ConfigurableObject(props) { }
 
-	/// Unserialize a configurable object
-	inline NetworkedObject(Stream *stream, InstanceManager *manager)
-	 : ConfigurableObject(stream, manager) {
-	}
+    /// Unserialize a configurable object
+    inline NetworkedObject(Stream *stream, InstanceManager *manager)
+     : ConfigurableObject(stream, manager) {
+    }
 };
 
 MTS_NAMESPACE_END

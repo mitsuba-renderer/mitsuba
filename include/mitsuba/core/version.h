@@ -42,76 +42,76 @@ MTS_NAMESPACE_BEGIN
  */
 struct MTS_EXPORT_CORE Version {
 public:
-	/// Default constructor: initialize to an invalid version (0.0.0)
-	inline Version() : m_major(0), m_minor(0), m_release(0) { }
+    /// Default constructor: initialize to an invalid version (0.0.0)
+    inline Version() : m_major(0), m_minor(0), m_release(0) { }
 
-	/// Initialize with the specified version number
-	inline Version(int major, int minor, int release)
-		: m_major(major), m_minor(minor), m_release(release) { }
+    /// Initialize with the specified version number
+    inline Version(int major, int minor, int release)
+        : m_major(major), m_minor(minor), m_release(release) { }
 
-	/**
-	 * \brief Parse a version string of the form "major.minor.release"
-	 * and turn it into a \ref Version structure
-	 */
-	Version(const std::string &versionString);
+    /**
+     * \brief Parse a version string of the form "major.minor.release"
+     * and turn it into a \ref Version structure
+     */
+    Version(const std::string &versionString);
 
-	/// Check if this program version is \a older than \c other
-	inline bool operator<(const Version &other) const {
-		if (m_major < other.m_major)
-			return true;
-		else if (m_major > other.m_major)
-			return false;
-		else if (m_minor < other.m_minor)
-			return true;
-		else if (m_minor > other.m_minor)
-			return false;
-		else if (m_release < other.m_release)
-			return true;
-		else
-			return false;
-	}
+    /// Check if this program version is \a older than \c other
+    inline bool operator<(const Version &other) const {
+        if (m_major < other.m_major)
+            return true;
+        else if (m_major > other.m_major)
+            return false;
+        else if (m_minor < other.m_minor)
+            return true;
+        else if (m_minor > other.m_minor)
+            return false;
+        else if (m_release < other.m_release)
+            return true;
+        else
+            return false;
+    }
 
-	/// Check if this program version is \a older than or equal to \c other
-	inline bool operator<=(const Version &other) const {
-		return *this < other || *this == other;
-	}
+    /// Check if this program version is \a older than or equal to \c other
+    inline bool operator<=(const Version &other) const {
+        return *this < other || *this == other;
+    }
 
-	/// Check if two program versions match
-	inline bool operator==(const Version &other) const {
-		return m_major == other.m_major
-			&& m_minor == other.m_minor
-			&& m_release == other.m_release;
-	}
+    /// Check if two program versions match
+    inline bool operator==(const Version &other) const {
+        return m_major == other.m_major
+            && m_minor == other.m_minor
+            && m_release == other.m_release;
+    }
 
-	/// Is this a valid version number?
-	inline bool isValid() {
-		return m_major != 0 || m_minor != 0 || m_release != 0;
-	}
+    /// Is this a valid version number?
+    inline bool isValid() {
+        return m_major != 0 || m_minor != 0 || m_release != 0;
+    }
 
-	/// Are the following two versions compatible?
-	inline bool isCompatible(const Version &other) const {
-		return m_major == other.m_major &&
-			m_minor == other.m_minor;
-	}
+    /// Are the following two versions compatible?
+    inline bool isCompatible(const Version &other) const {
+        return m_major == other.m_major &&
+            m_minor == other.m_minor;
+    }
 
-	/// Turn into a string of the form "major.minor.release"
-	std::string toString() const;
+    /// Turn into a string of the form "major.minor.release"
+    std::string toString() const;
 
-	/// Turn into a string of the form "major.minor.release (Architecture)"
-	std::string toStringComplete() const;
+    /// Turn into a string of the form "major.minor.release (Architecture)"
+    std::string toStringComplete() const;
 
-	/// Return the major version
-	inline int getMajorVersion() const { return m_major; }
+    /// Return the major version
+    inline int getMajorVersion() const { return m_major; }
 
-	/// Return the minor version
-	inline int getMinorVersion() const { return m_minor; }
+    /// Return the minor version
+    inline int getMinorVersion() const { return m_minor; }
 
-	/// Return the release
-	inline int getRelease() const { return m_release; }
+    /// Return the release
+    inline int getRelease() const { return m_release; }
 private:
-	int m_major;
-	int m_minor;
-	int m_release;
+    int m_major;
+    int m_minor;
+    int m_release;
 };
 
 MTS_NAMESPACE_END

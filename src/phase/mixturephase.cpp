@@ -37,179 +37,179 @@ MTS_NAMESPACE_BEGIN
 
 class MixturePhase : public PhaseFunction {
 public:
-	MixturePhase(const Properties &props)
-		: PhaseFunction(props) {
-		/* Parse the weight parameter */
-		std::vector<std::string> weights =
-			tokenize(props.getString("weights", ""), " ,;");
-		if (weights.size() == 0)
-			Log(EError, "No weights were supplied!");
-		m_weights.resize(weights.size());
+    MixturePhase(const Properties &props)
+        : PhaseFunction(props) {
+        /* Parse the weight parameter */
+        std::vector<std::string> weights =
+            tokenize(props.getString("weights", ""), " ,;");
+        if (weights.size() == 0)
+            Log(EError, "No weights were supplied!");
+        m_weights.resize(weights.size());
 
-		char *end_ptr = NULL;
-		for (size_t i=0; i<weights.size(); ++i) {
-			Float weight = (Float) strtod(weights[i].c_str(), &end_ptr);
-			if (*end_ptr != '\0')
-				SLog(EError, "Could not parse the phase function weights!");
-			if (weight < 0)
-				SLog(EError, "Invalid phase function weight!");
-			m_weights[i] = weight;
-		}
-	}
+        char *end_ptr = NULL;
+        for (size_t i=0; i<weights.size(); ++i) {
+            Float weight = (Float) strtod(weights[i].c_str(), &end_ptr);
+            if (*end_ptr != '\0')
+                SLog(EError, "Could not parse the phase function weights!");
+            if (weight < 0)
+                SLog(EError, "Invalid phase function weight!");
+            m_weights[i] = weight;
+        }
+    }
 
-	MixturePhase(Stream *stream, InstanceManager *manager)
-	 : PhaseFunction(stream, manager) {
-		size_t phaseCount = stream->readSize();
-		m_weights.resize(phaseCount);
-		for (size_t i=0; i<phaseCount; ++i) {
-			m_weights[i] = stream->readFloat();
-			PhaseFunction *phase = static_cast<PhaseFunction *>(manager->getInstance(stream));
-			phase->incRef();
-			m_phaseFunctions.push_back(phase);
-		}
-		configure();
-	}
+    MixturePhase(Stream *stream, InstanceManager *manager)
+     : PhaseFunction(stream, manager) {
+        size_t phaseCount = stream->readSize();
+        m_weights.resize(phaseCount);
+        for (size_t i=0; i<phaseCount; ++i) {
+            m_weights[i] = stream->readFloat();
+            PhaseFunction *phase = static_cast<PhaseFunction *>(manager->getInstance(stream));
+            phase->incRef();
+            m_phaseFunctions.push_back(phase);
+        }
+        configure();
+    }
 
-	virtual ~MixturePhase() {
-		for (size_t i=0; i<m_phaseFunctions.size(); ++i)
-			m_phaseFunctions[i]->decRef();
-	}
+    virtual ~MixturePhase() {
+        for (size_t i=0; i<m_phaseFunctions.size(); ++i)
+            m_phaseFunctions[i]->decRef();
+    }
 
-	void serialize(Stream *stream, InstanceManager *manager) const {
-		PhaseFunction::serialize(stream, manager);
+    void serialize(Stream *stream, InstanceManager *manager) const {
+        PhaseFunction::serialize(stream, manager);
 
-		stream->writeSize(m_phaseFunctions.size());
-		for (size_t i=0; i<m_phaseFunctions.size(); ++i) {
-			stream->writeFloat(m_weights[i]);
-			manager->serialize(stream, m_phaseFunctions[i]);
-		}
-	}
+        stream->writeSize(m_phaseFunctions.size());
+        for (size_t i=0; i<m_phaseFunctions.size(); ++i) {
+            stream->writeFloat(m_weights[i]);
+            manager->serialize(stream, m_phaseFunctions[i]);
+        }
+    }
 
-	void configure() {
-		if (m_phaseFunctions.size() != m_weights.size())
-			Log(EError, "Phase function count mismatch: " SIZE_T_FMT " phase functions, but specified " SIZE_T_FMT " weights",
-				m_phaseFunctions.size(), m_phaseFunctions.size());
+    void configure() {
+        if (m_phaseFunctions.size() != m_weights.size())
+            Log(EError, "Phase function count mismatch: " SIZE_T_FMT " phase functions, but specified " SIZE_T_FMT " weights",
+                m_phaseFunctions.size(), m_phaseFunctions.size());
 
-		Float totalWeight = 0;
-		for (size_t i=0; i<m_weights.size(); ++i)
-			totalWeight += m_weights[i];
+        Float totalWeight = 0;
+        for (size_t i=0; i<m_weights.size(); ++i)
+            totalWeight += m_weights[i];
 
-		if (totalWeight <= 0)
-			Log(EError, "The weights must sum to a value greater than zero!");
+        if (totalWeight <= 0)
+            Log(EError, "The weights must sum to a value greater than zero!");
 
-		if (totalWeight > 1) {
-			std::ostringstream oss;
-			Float scale = 1.0f / totalWeight;
-			oss << "The phase function " << endl << toString() << endl
-				<< "potentially violates energy conservation, since the weights "
-				<< "sum to " << totalWeight << ", which is greater than one! "
-				<< "They will be re-scaled to avoid potential issues.";
-			Log(EWarn, "%s", oss.str().c_str());
-			for (size_t i=0; i<m_weights.size(); ++i)
-				m_weights[i] *= scale;
-		}
+        if (totalWeight > 1) {
+            std::ostringstream oss;
+            Float scale = 1.0f / totalWeight;
+            oss << "The phase function " << endl << toString() << endl
+                << "potentially violates energy conservation, since the weights "
+                << "sum to " << totalWeight << ", which is greater than one! "
+                << "They will be re-scaled to avoid potential issues.";
+            Log(EWarn, "%s", oss.str().c_str());
+            for (size_t i=0; i<m_weights.size(); ++i)
+                m_weights[i] *= scale;
+        }
 
-		m_pdf = DiscreteDistribution(m_phaseFunctions.size());
-		for (size_t i=0; i<m_phaseFunctions.size(); ++i)
-			m_pdf.append(m_weights[i]);
-		m_pdf.normalize();
-		PhaseFunction::configure();
-	}
+        m_pdf = DiscreteDistribution(m_phaseFunctions.size());
+        for (size_t i=0; i<m_phaseFunctions.size(); ++i)
+            m_pdf.append(m_weights[i]);
+        m_pdf.normalize();
+        PhaseFunction::configure();
+    }
 
-	Float eval(const PhaseFunctionSamplingRecord &pRec) const {
-		Float result = 0.0f;
+    Float eval(const PhaseFunctionSamplingRecord &pRec) const {
+        Float result = 0.0f;
 
-		for (size_t i=0; i<m_phaseFunctions.size(); ++i)
-			result += m_phaseFunctions[i]->eval(pRec) * m_weights[i];
+        for (size_t i=0; i<m_phaseFunctions.size(); ++i)
+            result += m_phaseFunctions[i]->eval(pRec) * m_weights[i];
 
-		return result;
-	}
+        return result;
+    }
 
-	Float pdf(const PhaseFunctionSamplingRecord &pRec) const {
-		Float result = 0.0f;
+    Float pdf(const PhaseFunctionSamplingRecord &pRec) const {
+        Float result = 0.0f;
 
-		for (size_t i=0; i<m_phaseFunctions.size(); ++i)
-			result += m_phaseFunctions[i]->pdf(pRec) * m_pdf[i];
+        for (size_t i=0; i<m_phaseFunctions.size(); ++i)
+            result += m_phaseFunctions[i]->pdf(pRec) * m_pdf[i];
 
-		return result;
-	}
+        return result;
+    }
 
-	Float sample(PhaseFunctionSamplingRecord &pRec, Sampler *sampler) const {
-		/* Choose a component based on the normalized weights */
-		size_t entry = m_pdf.sample(sampler->next1D());
+    Float sample(PhaseFunctionSamplingRecord &pRec, Sampler *sampler) const {
+        /* Choose a component based on the normalized weights */
+        size_t entry = m_pdf.sample(sampler->next1D());
 
-		Float pdf;
-		Float result = m_phaseFunctions[entry]->sample(pRec, pdf, sampler);
-		if (result == 0) // sampling failed
-			return result;
+        Float pdf;
+        Float result = m_phaseFunctions[entry]->sample(pRec, pdf, sampler);
+        if (result == 0) // sampling failed
+            return result;
 
-		result *= m_weights[entry] * pdf;
-		pdf *= m_pdf[entry];
+        result *= m_weights[entry] * pdf;
+        pdf *= m_pdf[entry];
 
-		for (size_t i=0; i<m_phaseFunctions.size(); ++i) {
-			if (entry == i)
-				continue;
-			pdf += m_phaseFunctions[i]->pdf(pRec) * m_pdf[i];
-			result += m_phaseFunctions[i]->eval(pRec) * m_weights[i];
-		}
+        for (size_t i=0; i<m_phaseFunctions.size(); ++i) {
+            if (entry == i)
+                continue;
+            pdf += m_phaseFunctions[i]->pdf(pRec) * m_pdf[i];
+            result += m_phaseFunctions[i]->eval(pRec) * m_weights[i];
+        }
 
-		return result / pdf;
-	}
+        return result / pdf;
+    }
 
-	Float sample(PhaseFunctionSamplingRecord &pRec, Float &pdf, Sampler *sampler) const {
-		/* Choose a component based on the normalized weights */
-		size_t entry = m_pdf.sample(sampler->next1D());
+    Float sample(PhaseFunctionSamplingRecord &pRec, Float &pdf, Sampler *sampler) const {
+        /* Choose a component based on the normalized weights */
+        size_t entry = m_pdf.sample(sampler->next1D());
 
-		Float result = m_phaseFunctions[entry]->sample(pRec, pdf, sampler);
-		if (result == 0) // sampling failed
-			return result;
+        Float result = m_phaseFunctions[entry]->sample(pRec, pdf, sampler);
+        if (result == 0) // sampling failed
+            return result;
 
-		result *= m_weights[entry] * pdf;
-		pdf *= m_pdf[entry];
+        result *= m_weights[entry] * pdf;
+        pdf *= m_pdf[entry];
 
-		for (size_t i=0; i<m_phaseFunctions.size(); ++i) {
-			if (entry == i)
-				continue;
-			pdf += m_phaseFunctions[i]->pdf(pRec) * m_pdf[i];
-			result += m_phaseFunctions[i]->eval(pRec) * m_weights[i];
-		}
+        for (size_t i=0; i<m_phaseFunctions.size(); ++i) {
+            if (entry == i)
+                continue;
+            pdf += m_phaseFunctions[i]->pdf(pRec) * m_pdf[i];
+            result += m_phaseFunctions[i]->eval(pRec) * m_weights[i];
+        }
 
-		return result/pdf;
-	}
+        return result/pdf;
+    }
 
-	void addChild(const std::string &name, ConfigurableObject *child) {
-		if (child->getClass()->derivesFrom(MTS_CLASS(PhaseFunction))) {
-			PhaseFunction *phase = static_cast<PhaseFunction *>(child);
-			m_phaseFunctions.push_back(phase);
-			phase->incRef();
-		} else {
-			PhaseFunction::addChild(name, child);
-		}
-	}
+    void addChild(const std::string &name, ConfigurableObject *child) {
+        if (child->getClass()->derivesFrom(MTS_CLASS(PhaseFunction))) {
+            PhaseFunction *phase = static_cast<PhaseFunction *>(child);
+            m_phaseFunctions.push_back(phase);
+            phase->incRef();
+        } else {
+            PhaseFunction::addChild(name, child);
+        }
+    }
 
-	std::string toString() const {
-		std::ostringstream oss;
-		oss << "MixturePhase[" << endl
-			<< "  weights = {";
-		for (size_t i=0; i<m_phaseFunctions.size(); ++i) {
-			oss << " " << m_weights[i];
-			if (i + 1 < m_phaseFunctions.size())
-				oss << ",";
-		}
-		oss << " }," << endl
-			<< "  phaseFunctions = {" << endl;
-		for (size_t i=0; i<m_phaseFunctions.size(); ++i)
-			oss << "    " << indent(m_phaseFunctions[i]->toString(), 2) << "," << endl;
-		oss << "  }" << endl
-			<< "]";
-		return oss.str();
-	}
+    std::string toString() const {
+        std::ostringstream oss;
+        oss << "MixturePhase[" << endl
+            << "  weights = {";
+        for (size_t i=0; i<m_phaseFunctions.size(); ++i) {
+            oss << " " << m_weights[i];
+            if (i + 1 < m_phaseFunctions.size())
+                oss << ",";
+        }
+        oss << " }," << endl
+            << "  phaseFunctions = {" << endl;
+        for (size_t i=0; i<m_phaseFunctions.size(); ++i)
+            oss << "    " << indent(m_phaseFunctions[i]->toString(), 2) << "," << endl;
+        oss << "  }" << endl
+            << "]";
+        return oss.str();
+    }
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 private:
-	std::vector<Float> m_weights;
-	std::vector<PhaseFunction *> m_phaseFunctions;
-	DiscreteDistribution m_pdf;
+    std::vector<Float> m_weights;
+    std::vector<PhaseFunction *> m_phaseFunctions;
+    DiscreteDistribution m_pdf;
 };
 
 MTS_IMPLEMENT_CLASS_S(MixturePhase, false, PhaseFunction)

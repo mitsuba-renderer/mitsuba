@@ -31,49 +31,49 @@ class Shader;
  */
 class MTS_EXPORT_HW GPUGeometry : public Object {
 public:
-	/// Create an empty geometry object
-	GPUGeometry(const TriMesh *mesh);
+    /// Create an empty geometry object
+    GPUGeometry(const TriMesh *mesh);
 
-	/// Return the name of this geometry object
-	inline std::string getName() const { return m_mesh->getName(); }
+    /// Return the name of this geometry object
+    inline std::string getName() const { return m_mesh->getName(); }
 
-	/// Return the associated triangle mesh
-	inline const TriMesh *getTriMesh() const { return m_mesh.get(); }
+    /// Return the associated triangle mesh
+    inline const TriMesh *getTriMesh() const { return m_mesh.get(); }
 
-	/// Upload the geometry object
-	virtual void init() = 0;
+    /// Upload the geometry object
+    virtual void init() = 0;
 
-	/// Refresh (re-upload) the geometry object
-	virtual void refresh() = 0;
+    /// Refresh (re-upload) the geometry object
+    virtual void refresh() = 0;
 
-	/// Bind the geometry object
-	virtual void bind() = 0;
+    /// Bind the geometry object
+    virtual void bind() = 0;
 
-	/// Unbind the geometry object
-	virtual void unbind() = 0;
+    /// Unbind the geometry object
+    virtual void unbind() = 0;
 
-	/// Free the geometry object from GPU memory
-	virtual void cleanup() = 0;
+    /// Free the geometry object from GPU memory
+    virtual void cleanup() = 0;
 
-	/// Return an (auxiliary) shader instance associated with the geometry
-	inline Shader *getShader() { return m_shader; }
+    /// Return an (auxiliary) shader instance associated with the geometry
+    inline Shader *getShader() { return m_shader; }
 
-	/// Return an (auxiliary) shader instance associated with the geometry
-	inline const Shader *getShader() const { return m_shader; }
+    /// Return an (auxiliary) shader instance associated with the geometry
+    inline const Shader *getShader() const { return m_shader; }
 
-	/// Set an (auxiliary) shader instance associated with the geometry
-	inline void setShader(Shader *shader) { m_shader = shader; }
+    /// Set an (auxiliary) shader instance associated with the geometry
+    inline void setShader(Shader *shader) { m_shader = shader; }
 
-	/// Return a string representation
-	std::string toString() const;
+    /// Return a string representation
+    std::string toString() const;
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	/// Virtual destructor
-	virtual ~GPUGeometry();
+    /// Virtual destructor
+    virtual ~GPUGeometry();
 protected:
-	ref<const TriMesh> m_mesh;
-	Shader *m_shader;
+    ref<const TriMesh> m_mesh;
+    Shader *m_shader;
 };
 
 MTS_NAMESPACE_END

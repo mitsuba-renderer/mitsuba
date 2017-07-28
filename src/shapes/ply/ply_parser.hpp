@@ -429,8 +429,8 @@ inline bool ply::ply_parser::parse_scalar_property(format_type format, std::istr
       }
       return false;
     }
-    if ((format == binary_big_endian_format && host_byte_order == little_endian_byte_order) 
-	 || (format == binary_little_endian_format && host_byte_order == big_endian_byte_order)) {
+    if ((format == binary_big_endian_format && host_byte_order == little_endian_byte_order)
+     || (format == binary_little_endian_format && host_byte_order == big_endian_byte_order)) {
       swap_byte_order(value);
     }
     if (scalar_property_callback) {
@@ -487,8 +487,8 @@ inline bool ply::ply_parser::parse_list_property(format_type format, std::istrea
   else {
     size_type size = 0;
     istream.read(reinterpret_cast<char*>(&size), sizeof(size_type));
-    if ((format == binary_big_endian_format && host_byte_order == little_endian_byte_order) 
-		|| ((format == binary_little_endian_format && host_byte_order == big_endian_byte_order))) {
+    if ((format == binary_big_endian_format && host_byte_order == little_endian_byte_order)
+        || ((format == binary_little_endian_format && host_byte_order == big_endian_byte_order))) {
       swap_byte_order(size);
     }
     if (!istream) {
@@ -510,7 +510,7 @@ inline bool ply::ply_parser::parse_list_property(format_type format, std::istrea
         return false;
       }
       if ((format == binary_big_endian_format && host_byte_order == little_endian_byte_order)
-		|| (format == binary_little_endian_format && host_byte_order == big_endian_byte_order)) {
+        || (format == binary_little_endian_format && host_byte_order == big_endian_byte_order)) {
         swap_byte_order(value);
       }
       if (list_property_element_callback) {

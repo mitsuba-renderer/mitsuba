@@ -32,59 +32,59 @@ MTS_NAMESPACE_BEGIN
 
 /** \brief SIMD quad-packed ray for coherent ray tracing */
 struct RayPacket4 {
-	QuadVector o, d;
-	QuadVector dRcp;
-	uint8_t signs[4][4];
+    QuadVector o, d;
+    QuadVector dRcp;
+    uint8_t signs[4][4];
 
-	inline RayPacket4() {
-	}
+    inline RayPacket4() {
+    }
 
-	inline bool load(const Ray *rays) {
-		for (int i=0; i<4; i++) {
-			for (int axis=0; axis<3; axis++) {
-				o[axis].f[i] = rays[i].o[axis];
-				d[axis].f[i] = rays[i].d[axis];
-				dRcp[axis].f[i] = rays[i].dRcp[axis];
-				signs[axis][i] = rays[i].d[axis] < 0 ? 1 : 0;
-				if (signs[axis][i] != signs[axis][0])
-					return false;
-			}
-		}
-		return true;
-	}
+    inline bool load(const Ray *rays) {
+        for (int i=0; i<4; i++) {
+            for (int axis=0; axis<3; axis++) {
+                o[axis].f[i] = rays[i].o[axis];
+                d[axis].f[i] = rays[i].d[axis];
+                dRcp[axis].f[i] = rays[i].dRcp[axis];
+                signs[axis][i] = rays[i].d[axis] < 0 ? 1 : 0;
+                if (signs[axis][i] != signs[axis][0])
+                    return false;
+            }
+        }
+        return true;
+    }
 };
 
 struct RayInterval4 {
-	SSEVector mint;
-	SSEVector maxt;
+    SSEVector mint;
+    SSEVector maxt;
 
-	inline RayInterval4() {
-		mint = SSEConstants::eps;
-		maxt = SSEConstants::p_inf;
-	}
+    inline RayInterval4() {
+        mint = SSEConstants::eps;
+        maxt = SSEConstants::p_inf;
+    }
 
-	inline RayInterval4(const Ray *rays) {
-		for (int i=0; i<4; i++) {
-			mint.f[i] = rays[i].mint;
-			maxt.f[i] = rays[i].maxt;
-		}
-	}
+    inline RayInterval4(const Ray *rays) {
+        for (int i=0; i<4; i++) {
+            mint.f[i] = rays[i].mint;
+            maxt.f[i] = rays[i].maxt;
+        }
+    }
 };
 
 struct Intersection4 {
-	SSEVector t;
-	SSEVector u;
-	SSEVector v;
-	SSEVector primIndex;
-	SSEVector shapeIndex;
+    SSEVector t;
+    SSEVector u;
+    SSEVector v;
+    SSEVector primIndex;
+    SSEVector shapeIndex;
 
-	inline Intersection4() {
-		t          = SSEConstants::p_inf;
-		u          = SSEConstants::zero;
-		v          = SSEConstants::zero;
-		primIndex  = SSEConstants::ffffffff;
-		shapeIndex = SSEConstants::ffffffff;
-	}
+    inline Intersection4() {
+        t          = SSEConstants::p_inf;
+        u          = SSEConstants::zero;
+        v          = SSEConstants::zero;
+        primIndex  = SSEConstants::ffffffff;
+        shapeIndex = SSEConstants::ffffffff;
+    }
 };
 
 MTS_NAMESPACE_END

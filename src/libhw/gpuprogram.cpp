@@ -31,28 +31,28 @@ GPUProgram::~GPUProgram() {
 }
 
 void GPUProgram::setSourceFile(EType type, const fs::path &path) {
-	fs::ifstream ifs(path);
-	if (ifs.fail() || ifs.bad())
-		Log(EError, "Unable to load GPU program \"%s\"",
-			path.string().c_str());
-	std::string code, line;
+    fs::ifstream ifs(path);
+    if (ifs.fail() || ifs.bad())
+        Log(EError, "Unable to load GPU program \"%s\"",
+            path.string().c_str());
+    std::string code, line;
 
-	while (getline(ifs, line)) {
-		code += line;
-		code += "\n";
-	}
+    while (getline(ifs, line)) {
+        code += line;
+        code += "\n";
+    }
 
-	ifs.close();
-	setSource(type, code);
+    ifs.close();
+    setSource(type, code);
 }
 
 std::string GPUProgram::toString() const {
-	std::ostringstream oss;
-	oss << "GPUProgram[name = '" << m_name<< "'";
-	if (m_maxVertices != 0)
-		oss << ", maxVertices=" << m_maxVertices;
-	oss << "]";
-	return oss.str();
+    std::ostringstream oss;
+    oss << "GPUProgram[name = '" << m_name<< "'";
+    if (m_maxVertices != 0)
+        oss << ", maxVertices=" << m_maxVertices;
+    oss << "]";
+    return oss.str();
 }
 
 MTS_IMPLEMENT_CLASS(GPUProgram, true, Object)

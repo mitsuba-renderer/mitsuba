@@ -22,18 +22,18 @@
 #include "common.h"
 
 namespace Ui {
-	class SceneInformationDialog;
+    class SceneInformationDialog;
 }
 
 class SceneInformationDialog : public QDialog {
     Q_OBJECT
 public:
-	SceneInformationDialog(QWidget *parent, Scene *scene);
-	~SceneInformationDialog();
+    SceneInformationDialog(QWidget *parent, Scene *scene);
+    ~SceneInformationDialog();
 protected:
     void changeEvent(QEvent *e);
 private:
-	Ui::SceneInformationDialog *ui;
+    Ui::SceneInformationDialog *ui;
 };
 
 #endif // __SCENEINFODLG_H

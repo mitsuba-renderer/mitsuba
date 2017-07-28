@@ -22,27 +22,27 @@
 #include "common.h"
 
 namespace Ui {
-	class ImportDialog;
+    class ImportDialog;
 }
 
 class ImportDialog : public QDialog {
     Q_OBJECT
 public:
-	ImportDialog(QWidget *parent, FileResolver *resolver);
-	~ImportDialog();
+    ImportDialog(QWidget *parent, FileResolver *resolver);
+    ~ImportDialog();
 public slots:
-	void accept();
+    void accept();
 protected slots:
-	void on_inputBrowse_clicked(bool checked);
-	void on_directoryBrowse_clicked(bool checked);
-	void on_adjustmentBrowse_clicked(bool checked);
-	void onLocateResource(const fs::path &path, fs::path *target);
-	void refresh();
+    void on_inputBrowse_clicked(bool checked);
+    void on_directoryBrowse_clicked(bool checked);
+    void on_adjustmentBrowse_clicked(bool checked);
+    void onLocateResource(const fs::path &path, fs::path *target);
+    void refresh();
 protected:
     void changeEvent(QEvent *e);
 private:
-	Ui::ImportDialog *ui;
-	ref<FileResolver> m_resolver;
+    Ui::ImportDialog *ui;
+    ref<FileResolver> m_resolver;
 };
 
 #endif // __IMPORTDLG_H

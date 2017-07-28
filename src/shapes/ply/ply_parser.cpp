@@ -22,7 +22,7 @@ bool ply::ply_parser::parse(std::istream& istream)
     }
     return false;
   }
-  if ((magic[0] != 'p') || (magic[1] != 'l') || (magic[2] != 'y')){
+  if ((magic[0] != 'p') || (magic[1] != 'l') || (magic[2] != 'y')) {
     if (error_callback_) {
       error_callback_(line_number_, "parse error");
     }
@@ -230,9 +230,9 @@ bool ply::ply_parser::parse(std::istream& istream)
             return false;
           }
           if (
-				(size_type_string == type_traits<uint8>::name()) || (size_type_string == type_traits<uint8>::old_name()) ||
-				(size_type_string == type_traits<int8>::name()) || (size_type_string == type_traits<int8>::old_name())
-			) {
+                (size_type_string == type_traits<uint8>::name()) || (size_type_string == type_traits<uint8>::old_name()) ||
+                (size_type_string == type_traits<int8>::name()) || (size_type_string == type_traits<int8>::old_name())
+            ) {
             typedef uint8 size_type;
             if ((scalar_type_string == type_traits<int8>::name()) || (scalar_type_string == type_traits<int8>::old_name())) {
               parse_list_property_definition<size_type, int8>(name);
@@ -266,9 +266,9 @@ bool ply::ply_parser::parse(std::istream& istream)
             }
           }
           else if (
-				(size_type_string == type_traits<uint16>::name()) || (size_type_string == type_traits<uint16>::old_name()) ||
-				(size_type_string == type_traits<int16>::name()) || (size_type_string == type_traits<int16>::old_name())
-			) {
+                (size_type_string == type_traits<uint16>::name()) || (size_type_string == type_traits<uint16>::old_name()) ||
+                (size_type_string == type_traits<int16>::name()) || (size_type_string == type_traits<int16>::old_name())
+            ) {
             typedef uint16 size_type;
             if ((scalar_type_string == type_traits<int8>::name()) || (scalar_type_string == type_traits<int8>::old_name())) {
               parse_list_property_definition<size_type, int8>(name);
@@ -302,9 +302,9 @@ bool ply::ply_parser::parse(std::istream& istream)
             }
           }
           else if (
-				(size_type_string == type_traits<uint32>::name()) || (size_type_string == type_traits<uint32>::old_name()) ||
-				(size_type_string == type_traits<int32>::name()) || (size_type_string == type_traits<int32>::old_name())
-			) {
+                (size_type_string == type_traits<uint32>::name()) || (size_type_string == type_traits<uint32>::old_name()) ||
+                (size_type_string == type_traits<int32>::name()) || (size_type_string == type_traits<int32>::old_name())
+            ) {
             typedef uint32 size_type;
             if ((scalar_type_string == type_traits<int8>::name()) || (scalar_type_string == type_traits<int8>::old_name())) {
               parse_list_property_definition<size_type, int8>(name);

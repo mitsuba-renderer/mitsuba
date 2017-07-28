@@ -1,19 +1,19 @@
 /*
-	This file is part of Mitsuba, a physically based rendering system.
+    This file is part of Mitsuba, a physically based rendering system.
 
-	Copyright (c) 2007-2014 by Wenzel Jakob and others.
+    Copyright (c) 2007-2014 by Wenzel Jakob and others.
 
-	Mitsuba is free software; you can redistribute it and/or modify
-	it under the terms of the GNU General Public License Version 3
-	as published by the Free Software Foundation.
+    Mitsuba is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License Version 3
+    as published by the Free Software Foundation.
 
-	Mitsuba is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-	GNU General Public License for more details.
+    Mitsuba is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+    GNU General Public License for more details.
 
-	You should have received a copy of the GNU General Public License
-	along with this program. If not, see <http://www.gnu.org/licenses/>.
+    You should have received a copy of the GNU General Public License
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <mitsuba/render/scene.h>
@@ -97,188 +97,188 @@ MTS_NAMESPACE_BEGIN
  */
 class SunSkyEmitter : public Emitter {
 public:
-	SunSkyEmitter(const Properties &props)
-		: Emitter(props) {
-		Float scale = props.getFloat("scale", 1.0f),
-		      sunScale = props.getFloat("sunScale", scale),
-		      skyScale = props.getFloat("skyScale", scale),
-			  sunRadiusScale = props.getFloat("sunRadiusScale", 1.0f);
+    SunSkyEmitter(const Properties &props)
+        : Emitter(props) {
+        Float scale = props.getFloat("scale", 1.0f),
+              sunScale = props.getFloat("sunScale", scale),
+              skyScale = props.getFloat("skyScale", scale),
+              sunRadiusScale = props.getFloat("sunRadiusScale", 1.0f);
 
-		const Transform &trafo = m_worldTransform->eval(0);
+        const Transform &trafo = m_worldTransform->eval(0);
 
-		Properties skyProps(props);
-		skyProps.removeProperty("toWorld");
-		if (props.hasProperty("sunDirection"))
-			skyProps.setVector("sunDirection", trafo.inverse()(props.getVector("sunDirection")));
-		skyProps.setPluginName("sky");
-		skyProps.setFloat("scale", skyScale, false);
+        Properties skyProps(props);
+        skyProps.removeProperty("toWorld");
+        if (props.hasProperty("sunDirection"))
+            skyProps.setVector("sunDirection", trafo.inverse()(props.getVector("sunDirection")));
+        skyProps.setPluginName("sky");
+        skyProps.setFloat("scale", skyScale, false);
 
-		ref<Emitter> sky = static_cast<Emitter *>(
-			PluginManager::getInstance()->createObject(
-			MTS_CLASS(Emitter), skyProps));
-		sky->configure();
-		props.markQueried("albedo");
+        ref<Emitter> sky = static_cast<Emitter *>(
+            PluginManager::getInstance()->createObject(
+            MTS_CLASS(Emitter), skyProps));
+        sky->configure();
+        props.markQueried("albedo");
 
-		int resolution = props.getInteger("resolution", 512);
-		ref<Bitmap> bitmap = new Bitmap(SUNSKY_PIXELFORMAT, Bitmap::EFloat,
-			Vector2i(resolution, resolution/2));
+        int resolution = props.getInteger("resolution", 512);
+        ref<Bitmap> bitmap = new Bitmap(SUNSKY_PIXELFORMAT, Bitmap::EFloat,
+            Vector2i(resolution, resolution/2));
 
-		Point2 factor((2*M_PI) / bitmap->getWidth(),
-			M_PI / bitmap->getHeight());
+        Point2 factor((2*M_PI) / bitmap->getWidth(),
+            M_PI / bitmap->getHeight());
 
-		ref<Timer> timer = new Timer();
-		Log(EDebug, "Rasterizing sun & skylight emitter to an %ix%i environment map ..",
-				resolution, resolution/2);
+        ref<Timer> timer = new Timer();
+        Log(EDebug, "Rasterizing sun & skylight emitter to an %ix%i environment map ..",
+                resolution, resolution/2);
 
-		Spectrum *data = (Spectrum *) bitmap->getFloatData();
+        Spectrum *data = (Spectrum *) bitmap->getFloatData();
 
-		/* First, rasterize the sky */
-		#if defined(MTS_OPENMP)
-			#pragma omp parallel for
-		#endif
-		for (int y=0; y<bitmap->getHeight(); ++y) {
-			Float theta = (y+.5f) * factor.y;
-			Spectrum *target = data + y * bitmap->getWidth();
+        /* First, rasterize the sky */
+        #if defined(MTS_OPENMP)
+            #pragma omp parallel for
+        #endif
+        for (int y=0; y<bitmap->getHeight(); ++y) {
+            Float theta = (y+.5f) * factor.y;
+            Spectrum *target = data + y * bitmap->getWidth();
 
-			for (int x=0; x<bitmap->getWidth(); ++x) {
-				Float phi = (x+.5f) * factor.x;
+            for (int x=0; x<bitmap->getWidth(); ++x) {
+                Float phi = (x+.5f) * factor.x;
 
-				RayDifferential ray(Point(0.0f),
-					toSphere(SphericalCoordinates(theta, phi)), 0.0f);
+                RayDifferential ray(Point(0.0f),
+                    toSphere(SphericalCoordinates(theta, phi)), 0.0f);
 
-				*target++ = sky->evalEnvironment(ray);
-			}
-		}
+                *target++ = sky->evalEnvironment(ray);
+            }
+        }
 
-		/* Rasterizing the sphere to an environment map and checking the
-		   individual pixels for coverage (which is what Mitsuba 0.3.0 did)
-		   was slow and not very effective; for instance the power varied
-		   dramatically with resolution changes. Since the sphere generally
-		   just covers a few pixels, the code below rasterizes it much more
-		   efficiently by generating a few thousand QMC samples.
+        /* Rasterizing the sphere to an environment map and checking the
+           individual pixels for coverage (which is what Mitsuba 0.3.0 did)
+           was slow and not very effective; for instance the power varied
+           dramatically with resolution changes. Since the sphere generally
+           just covers a few pixels, the code below rasterizes it much more
+           efficiently by generating a few thousand QMC samples.
 
-		   Step 1: compute a *very* rough estimate of how many
-		   pixel in the output environment map will be covered
-		   by the sun */
+           Step 1: compute a *very* rough estimate of how many
+           pixel in the output environment map will be covered
+           by the sun */
 
-		SphericalCoordinates sun = computeSunCoordinates(props);
-		Spectrum sunRadiance = computeSunRadiance(sun.elevation,
-			props.getFloat("turbidity", 3.0f)) * sunScale;
-		sun.elevation *= props.getFloat("stretch", 1.0f);
-		Frame sunFrame = Frame(toSphere(sun));
+        SphericalCoordinates sun = computeSunCoordinates(props);
+        Spectrum sunRadiance = computeSunRadiance(sun.elevation,
+            props.getFloat("turbidity", 3.0f)) * sunScale;
+        sun.elevation *= props.getFloat("stretch", 1.0f);
+        Frame sunFrame = Frame(toSphere(sun));
 
-		Float theta = degToRad(SUN_APP_RADIUS * 0.5f);
+        Float theta = degToRad(SUN_APP_RADIUS * 0.5f);
 
-		if (sunRadiusScale == 0) {
-			Float solidAngle = 2 * M_PI * (1 - std::cos(theta));
-			Properties props("directional");
-			props.setVector("direction", -trafo(sunFrame.n));
-			props.setFloat("samplingWeight", m_samplingWeight);
-			props.setSpectrum("irradiance", sunRadiance * solidAngle);
+        if (sunRadiusScale == 0) {
+            Float solidAngle = 2 * M_PI * (1 - std::cos(theta));
+            Properties props("directional");
+            props.setVector("direction", -trafo(sunFrame.n));
+            props.setFloat("samplingWeight", m_samplingWeight);
+            props.setSpectrum("irradiance", sunRadiance * solidAngle);
 
-			m_dirEmitter = static_cast<Emitter *>(
-				PluginManager::getInstance()->createObject(
-				MTS_CLASS(Emitter), props));
-		} else {
-			size_t pixelCount = resolution*resolution/2;
-			Float cosTheta = std::cos(theta * sunRadiusScale);
+            m_dirEmitter = static_cast<Emitter *>(
+                PluginManager::getInstance()->createObject(
+                MTS_CLASS(Emitter), props));
+        } else {
+            size_t pixelCount = resolution*resolution/2;
+            Float cosTheta = std::cos(theta * sunRadiusScale);
 
-			/* Ratio of the sphere that is covered by the sun */
-			Float coveredPortion = 0.5f * (1 - cosTheta);
+            /* Ratio of the sphere that is covered by the sun */
+            Float coveredPortion = 0.5f * (1 - cosTheta);
 
-			/* Approx. number of samples that need to be generated,
-			   be very conservative */
-			size_t nSamples = (size_t) std::max((Float) 100,
-				(pixelCount * coveredPortion * 1000));
+            /* Approx. number of samples that need to be generated,
+               be very conservative */
+            size_t nSamples = (size_t) std::max((Float) 100,
+                (pixelCount * coveredPortion * 1000));
 
-			factor = Point2(bitmap->getWidth() / (2*M_PI),
-				bitmap->getHeight() / M_PI);
+            factor = Point2(bitmap->getWidth() / (2*M_PI),
+                bitmap->getHeight() / M_PI);
 
-			Spectrum value =
-				sunRadiance * (2 * M_PI * (1-std::cos(theta))) *
-				static_cast<Float>(bitmap->getWidth() * bitmap->getHeight())
-				/ (2 * M_PI * M_PI * nSamples);
+            Spectrum value =
+                sunRadiance * (2 * M_PI * (1-std::cos(theta))) *
+                static_cast<Float>(bitmap->getWidth() * bitmap->getHeight())
+                / (2 * M_PI * M_PI * nSamples);
 
-			for (size_t i=0; i<nSamples; ++i) {
-				Vector dir = sunFrame.toWorld(
-					warp::squareToUniformCone(cosTheta, sample02(i)));
+            for (size_t i=0; i<nSamples; ++i) {
+                Vector dir = sunFrame.toWorld(
+                    warp::squareToUniformCone(cosTheta, sample02(i)));
 
-				Float sinTheta = math::safe_sqrt(1-dir.y*dir.y);
-				SphericalCoordinates sphCoords = fromSphere(dir);
+                Float sinTheta = math::safe_sqrt(1-dir.y*dir.y);
+                SphericalCoordinates sphCoords = fromSphere(dir);
 
-				Point2i pos(
-					std::min(std::max(0, (int) (sphCoords.azimuth * factor.x)), bitmap->getWidth()-1),
-					std::min(std::max(0, (int) (sphCoords.elevation * factor.y)), bitmap->getHeight()-1));
+                Point2i pos(
+                    std::min(std::max(0, (int) (sphCoords.azimuth * factor.x)), bitmap->getWidth()-1),
+                    std::min(std::max(0, (int) (sphCoords.elevation * factor.y)), bitmap->getHeight()-1));
 
-				data[pos.x + pos.y * bitmap->getWidth()] += value / std::max((Float) 1e-3f, sinTheta);
-			}
+                data[pos.x + pos.y * bitmap->getWidth()] += value / std::max((Float) 1e-3f, sinTheta);
+            }
 
-		}
+        }
 
-		Log(EDebug, "Done (took %i ms)", timer->getMilliseconds());
+        Log(EDebug, "Done (took %i ms)", timer->getMilliseconds());
 
-		/* Instantiate a nested envmap plugin */
-		Properties envProps("envmap");
-		Properties::Data bitmapData;
-		bitmapData.ptr = (uint8_t *) bitmap.get();
-		bitmapData.size = sizeof(Bitmap);
-		envProps.setData("bitmap", bitmapData);
-		envProps.setAnimatedTransform("toWorld", m_worldTransform);
-		envProps.setFloat("samplingWeight", m_samplingWeight);
-		m_envEmitter = static_cast<Emitter *>(
-			PluginManager::getInstance()->createObject(
-			MTS_CLASS(Emitter), envProps));
+        /* Instantiate a nested envmap plugin */
+        Properties envProps("envmap");
+        Properties::Data bitmapData;
+        bitmapData.ptr = (uint8_t *) bitmap.get();
+        bitmapData.size = sizeof(Bitmap);
+        envProps.setData("bitmap", bitmapData);
+        envProps.setAnimatedTransform("toWorld", m_worldTransform);
+        envProps.setFloat("samplingWeight", m_samplingWeight);
+        m_envEmitter = static_cast<Emitter *>(
+            PluginManager::getInstance()->createObject(
+            MTS_CLASS(Emitter), envProps));
 
-		#if 0
-			/* For debugging purposes */
-			ref<FileStream> fs = new FileStream("debug.exr", FileStream::ETruncReadWrite);
-			bitmap->write(Bitmap::EOpenEXR, fs);
-		#endif
-	}
+        #if 0
+            /* For debugging purposes */
+            ref<FileStream> fs = new FileStream("debug.exr", FileStream::ETruncReadWrite);
+            bitmap->write(Bitmap::EOpenEXR, fs);
+        #endif
+    }
 
-	SunSkyEmitter(Stream *stream, InstanceManager *manager)
-		: Emitter(stream, manager) {
-		m_envEmitter = static_cast<Emitter *>(manager->getInstance(stream));
-		if (stream->readBool())
-			m_dirEmitter = static_cast<Emitter *>(manager->getInstance(stream));
-	}
+    SunSkyEmitter(Stream *stream, InstanceManager *manager)
+        : Emitter(stream, manager) {
+        m_envEmitter = static_cast<Emitter *>(manager->getInstance(stream));
+        if (stream->readBool())
+            m_dirEmitter = static_cast<Emitter *>(manager->getInstance(stream));
+    }
 
-	void serialize(Stream *stream, InstanceManager *manager) const {
-		Emitter::serialize(stream, manager);
-		manager->serialize(stream, m_envEmitter.get());
-		stream->writeBool(m_dirEmitter.get() != NULL);
-		if (m_dirEmitter.get())
-			manager->serialize(stream, m_dirEmitter.get());
-	}
+    void serialize(Stream *stream, InstanceManager *manager) const {
+        Emitter::serialize(stream, manager);
+        manager->serialize(stream, m_envEmitter.get());
+        stream->writeBool(m_dirEmitter.get() != NULL);
+        if (m_dirEmitter.get())
+            manager->serialize(stream, m_dirEmitter.get());
+    }
 
-	void configure() {
-		Emitter::configure();
-		m_envEmitter->configure();
-		if (m_dirEmitter)
-			m_dirEmitter->configure();
-	}
+    void configure() {
+        Emitter::configure();
+        m_envEmitter->configure();
+        if (m_dirEmitter)
+            m_dirEmitter->configure();
+    }
 
-	bool isCompound() const {
-		return true;
-	}
+    bool isCompound() const {
+        return true;
+    }
 
-	AABB getAABB() const {
-		NotImplementedError("getAABB");
-	}
+    AABB getAABB() const {
+        NotImplementedError("getAABB");
+    }
 
-	Emitter *getElement(size_t i) {
-		if (i == 0)
-			return m_envEmitter;
-		else if (i == 1)
-			return m_dirEmitter;
-		else
-			return NULL;
-	}
+    Emitter *getElement(size_t i) {
+        if (i == 0)
+            return m_envEmitter;
+        else if (i == 1)
+            return m_dirEmitter;
+        else
+            return NULL;
+    }
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 private:
-	ref<Emitter> m_dirEmitter;
-	ref<Emitter> m_envEmitter;
+    ref<Emitter> m_dirEmitter;
+    ref<Emitter> m_envEmitter;
 };
 
 MTS_IMPLEMENT_CLASS_S(SunSkyEmitter, false, Emitter)

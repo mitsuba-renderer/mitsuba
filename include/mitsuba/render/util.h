@@ -31,44 +31,44 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_RENDER Utility : public Object {
 public:
-	/**
-	 * Run the utility. The supplied <tt>argc</tt>
-	 * and <tt>argv</tt> parameters contain any
-	 * extra arguments passed to mtsutil. The value
-	 * returned here will be used as the return value of the
-	 * 'mtsutil' process.
-	 */
-	virtual int run(int argc, char **argv) = 0;
+    /**
+     * Run the utility. The supplied <tt>argc</tt>
+     * and <tt>argv</tt> parameters contain any
+     * extra arguments passed to mtsutil. The value
+     * returned here will be used as the return value of the
+     * 'mtsutil' process.
+     */
+    virtual int run(int argc, char **argv) = 0;
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	typedef std::map<std::string, std::string, SimpleStringOrdering> ParameterMap;
+    typedef std::map<std::string, std::string, SimpleStringOrdering> ParameterMap;
 
-	/// Virtual destructor
-	virtual ~Utility() { }
+    /// Virtual destructor
+    virtual ~Utility() { }
 
-	/// Load a scene from an external file
-	ref<Scene> loadScene(const fs::path &fname,
-		const ParameterMap &params= ParameterMap());
+    /// Load a scene from an external file
+    ref<Scene> loadScene(const fs::path &fname,
+        const ParameterMap &params= ParameterMap());
 
-	/// Load a scene from a string
-	ref<Scene> loadSceneFromString(const std::string &content,
-		const ParameterMap &params= ParameterMap());
+    /// Load a scene from a string
+    ref<Scene> loadSceneFromString(const std::string &content,
+        const ParameterMap &params= ParameterMap());
 };
 
 #define MTS_DECLARE_UTILITY() \
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 
 #define MTS_EXPORT_UTILITY(name, descr) \
-	MTS_IMPLEMENT_CLASS(name, false, Utility) \
-	extern "C" { \
-		void MTS_EXPORT *CreateUtility() { \
-			return new name(); \
-		} \
-		const char MTS_EXPORT *GetDescription() { \
-			return descr; \
-		} \
-	}
+    MTS_IMPLEMENT_CLASS(name, false, Utility) \
+    extern "C" { \
+        void MTS_EXPORT *CreateUtility() { \
+            return new name(); \
+        } \
+        const char MTS_EXPORT *GetDescription() { \
+            return descr; \
+        } \
+    }
 
 MTS_NAMESPACE_END
 

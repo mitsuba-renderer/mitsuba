@@ -28,30 +28,30 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_HW NSGLSession : public Session {
 public:
-	/// Create a new session
-	NSGLSession();
+    /// Create a new session
+    NSGLSession();
 
-	/// Initialize the session
-	void init();
+    /// Initialize the session
+    void init();
 
-	/// Shut the session down
-	void shutdown();
+    /// Shut the session down
+    void shutdown();
 
-	/// Process all events and call event callbacks
-	void processEvents();
+    /// Process all events and call event callbacks
+    void processEvents();
 
-	/**
-	 * \brief Process all events and call event callbacks.
-	 *
-	 * This function will run until the \c stop parameter is set
-	 * to \c true from within an event callback.
-	 */
-	void processEventsBlocking(bool &stop);
+    /**
+     * \brief Process all events and call event callbacks.
+     *
+     * This function will run until the \c stop parameter is set
+     * to \c true from within an event callback.
+     */
+    void processEventsBlocking(bool &stop);
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	/// Virtual destructor
-	virtual ~NSGLSession();
+    /// Virtual destructor
+    virtual ~NSGLSession();
 };
 
 MTS_NAMESPACE_END

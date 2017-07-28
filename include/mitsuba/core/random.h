@@ -60,10 +60,10 @@
    References:
    M. Saito and M. Matsumoto,
      ``SIMD-oriented Fast Mersenne Twister:
-	   a 128-bit Pseudorandom Number Generator''
+       a 128-bit Pseudorandom Number Generator''
      Monte Carlo and Quasi-Monte Carlo Method 2006.
-	 Springer (2008) 607--622.
-	 DOI: 10.1007/978-3-540-74496-2_36
+     Springer (2008) 607--622.
+     DOI: 10.1007/978-3-540-74496-2_36
    T. Nishimura, ``Tables of 64-bit Mersenne Twisters''
      ACM Transactions on Modeling and
      Computer Simulation 10. (2000) 348--357.
@@ -87,80 +87,80 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_CORE Random : public SerializableObject {
 public:
-	/**
-	 * \brief Construct a new seeded random generator.
-	 *
-	 * Uses the default seed on Windows and '/dev/urandom'
-	 * on OSX and Linux.
-	 */
-	Random();
+    /**
+     * \brief Construct a new seeded random generator.
+     *
+     * Uses the default seed on Windows and '/dev/urandom'
+     * on OSX and Linux.
+     */
+    Random();
 
-	/**
-	 * \brief Construct a random generator with a custom seed
-	 */
-	Random(uint64_t seed);
+    /**
+     * \brief Construct a random generator with a custom seed
+     */
+    Random(uint64_t seed);
 
-	/// Construct a new random generator seeded from a pre-existing one
-	Random(Random *random);
+    /// Construct a new random generator seeded from a pre-existing one
+    Random(Random *random);
 
-	/// Unserialize a random generator
-	Random(Stream *stream, InstanceManager *manager);
+    /// Unserialize a random generator
+    Random(Stream *stream, InstanceManager *manager);
 
-	/// Copy the state from another random generator
-	void set(Random *random);
+    /// Copy the state from another random generator
+    void set(Random *random);
 
-	/// Seed the random generator with a single 64bit value
-	void seed(uint64_t value = 5489ULL);
+    /// Seed the random generator with a single 64bit value
+    void seed(uint64_t value = 5489ULL);
 
-	/// Seed the random generator from another random generator
-	void seed(Random *random);
+    /// Seed the random generator from another random generator
+    void seed(Random *random);
 
-	/**
-	 * \brief Seed the random generator from an array
-	 * \remark This function is currently not exposed
-	 * by the Python bindings
-	 */
-	void seed(uint64_t *values, uint64_t length);
+    /**
+     * \brief Seed the random generator from an array
+     * \remark This function is currently not exposed
+     * by the Python bindings
+     */
+    void seed(uint64_t *values, uint64_t length);
 
-	/// Return an integer on the [0, 2^63-1]-interval
-	uint64_t nextULong();
+    /// Return an integer on the [0, 2^63-1]-interval
+    uint64_t nextULong();
 
-	/// Return an integer on the [0, n)-interval
-	uint32_t nextUInt(uint32_t n);
+    /// Return an integer on the [0, n)-interval
+    uint32_t nextUInt(uint32_t n);
 
-	/// Return an integer on the [0, n)-interval
-	size_t nextSize(size_t n);
+    /// Return an integer on the [0, n)-interval
+    size_t nextSize(size_t n);
 
-	/// Return a floating point value on the [0, 1) interval
-	Float nextFloat();
+    /// Return a floating point value on the [0, 1) interval
+    Float nextFloat();
 
-	/// Return a normally distributed value
-	Float nextStandardNormal();
+    /// Return a normally distributed value
+    Float nextStandardNormal();
 
-	/**
-	 * \brief Draw a uniformly distributed permutation and permute the
-	 * given STL container.
-	 *
-	 * See Knuth, TAoCP Vol. 2 (3rd 3d), Section 3.4.2.
-	 *
-	 * \remark This function is currently not exposed
-	 * by the Python bindings
-	 */
-	template <typename Iterator> void shuffle(Iterator it1, Iterator it2) {
-		for (Iterator it = it2 - 1; it > it1; --it)
-			std::iter_swap(it, it1 + nextSize((size_t) (it-it1)));
-	}
+    /**
+     * \brief Draw a uniformly distributed permutation and permute the
+     * given STL container.
+     *
+     * See Knuth, TAoCP Vol. 2 (3rd 3d), Section 3.4.2.
+     *
+     * \remark This function is currently not exposed
+     * by the Python bindings
+     */
+    template <typename Iterator> void shuffle(Iterator it1, Iterator it2) {
+        for (Iterator it = it2 - 1; it > it1; --it)
+            std::iter_swap(it, it1 + nextSize((size_t) (it-it1)));
+    }
 
-	/// Serialize a random generator to a binary data stream
-	void serialize(Stream *stream, InstanceManager *manager) const;
+    /// Serialize a random generator to a binary data stream
+    void serialize(Stream *stream, InstanceManager *manager) const;
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	/// Virtual destructor
-	virtual ~Random();
+    /// Virtual destructor
+    virtual ~Random();
 private:
-	struct State;
-	State *mt;
+    struct State;
+    State *mt;
 };
 
 

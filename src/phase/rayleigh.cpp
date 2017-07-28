@@ -24,9 +24,9 @@
 MTS_NAMESPACE_BEGIN
 
 inline Float cuberoot(Float x) {
-	return (x < 0.0f) ?
-			-pow(-x, (Float) (1.0f/3.0f)) :
-			pow(x, (Float) (1.0f/3.0f));
+    return (x < 0.0f) ?
+            -pow(-x, (Float) (1.0f/3.0f)) :
+            pow(x, (Float) (1.0f/3.0f));
 }
 
 /*!\plugin{rayleigh}{Rayleigh phase function}
@@ -42,61 +42,61 @@ inline Float cuberoot(Float x) {
  */
 class RayleighPhaseFunction : public PhaseFunction {
 public:
-	RayleighPhaseFunction(const Properties &props)
-		: PhaseFunction(props) { }
+    RayleighPhaseFunction(const Properties &props)
+        : PhaseFunction(props) { }
 
-	RayleighPhaseFunction(Stream *stream, InstanceManager *manager)
-		: PhaseFunction(stream, manager) { }
+    RayleighPhaseFunction(Stream *stream, InstanceManager *manager)
+        : PhaseFunction(stream, manager) { }
 
-	virtual ~RayleighPhaseFunction() { }
+    virtual ~RayleighPhaseFunction() { }
 
-	void serialize(Stream *stream, InstanceManager *manager) const {
-		PhaseFunction::serialize(stream, manager);
-	}
+    void serialize(Stream *stream, InstanceManager *manager) const {
+        PhaseFunction::serialize(stream, manager);
+    }
 
-	inline Float sample(PhaseFunctionSamplingRecord &pRec,
-			Sampler *sampler) const {
-		Point2 sample(sampler->next2D());
+    inline Float sample(PhaseFunctionSamplingRecord &pRec,
+            Sampler *sampler) const {
+        Point2 sample(sampler->next2D());
 
-		Float z = 2 * (2*sample.x - 1),
-			  tmp = std::sqrt(z*z+1),
-			  A = cuberoot(z+tmp),
-			  B = cuberoot(z-tmp),
-			  cosTheta = A + B,
-			  sinTheta = math::safe_sqrt(1.0f-cosTheta*cosTheta),
-			  phi = 2*M_PI*sample.y,
-			  cosPhi = std::cos(phi),
-			  sinPhi = std::sin(phi);
+        Float z = 2 * (2*sample.x - 1),
+              tmp = std::sqrt(z*z+1),
+              A = cuberoot(z+tmp),
+              B = cuberoot(z-tmp),
+              cosTheta = A + B,
+              sinTheta = math::safe_sqrt(1.0f-cosTheta*cosTheta),
+              phi = 2*M_PI*sample.y,
+              cosPhi = std::cos(phi),
+              sinPhi = std::sin(phi);
 
-		Vector dir(
-			sinTheta * cosPhi,
-			sinTheta * sinPhi,
-			cosTheta);
+        Vector dir(
+            sinTheta * cosPhi,
+            sinTheta * sinPhi,
+            cosTheta);
 
-		pRec.wo = Frame(-pRec.wi).toWorld(dir);
-		return 1.0f;
-	}
+        pRec.wo = Frame(-pRec.wi).toWorld(dir);
+        return 1.0f;
+    }
 
-	Float sample(PhaseFunctionSamplingRecord &pRec,
-			Float &pdf, Sampler *sampler) const {
-		RayleighPhaseFunction::sample(pRec, sampler);
-		pdf = RayleighPhaseFunction::eval(pRec);
-		return 1.0f;
-	}
+    Float sample(PhaseFunctionSamplingRecord &pRec,
+            Float &pdf, Sampler *sampler) const {
+        RayleighPhaseFunction::sample(pRec, sampler);
+        pdf = RayleighPhaseFunction::eval(pRec);
+        return 1.0f;
+    }
 
 
-	Float eval(const PhaseFunctionSamplingRecord &pRec) const {
-		Float mu = dot(pRec.wi, pRec.wo);
-		return (3.0f/(16.0f*M_PI)) * (1+mu*mu);
-	}
+    Float eval(const PhaseFunctionSamplingRecord &pRec) const {
+        Float mu = dot(pRec.wi, pRec.wo);
+        return (3.0f/(16.0f*M_PI)) * (1+mu*mu);
+    }
 
-	std::string toString() const {
-		std::ostringstream oss;
-		oss << "RayleighPhaseFunction[]";
-		return oss.str();
-	}
+    std::string toString() const {
+        std::ostringstream oss;
+        oss << "RayleighPhaseFunction[]";
+        return oss.str();
+    }
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 };
 
 MTS_IMPLEMENT_CLASS_S(RayleighPhaseFunction, false, PhaseFunction)

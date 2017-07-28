@@ -33,205 +33,205 @@
 using namespace mitsuba;
 
 enum EConnectionType {
-	ESSHConnection = 0,
-	EDirectConnection
+    ESSHConnection = 0,
+    EDirectConnection
 };
 
 enum ENavigationMode {
-	EStandard = 0,
-	EFlythrough
+    EStandard = 0,
+    EFlythrough
 };
 
 enum ESelectionMode {
-	ENothing = 0,
-	EShape,
-	EScene
+    ENothing = 0,
+    EShape,
+    EScene
 };
 
 namespace mitsuba {
-	class RemoteWorker;
+    class RemoteWorker;
 };
 
 struct ServerConnection {
-	EConnectionType type;
-	QString hostName, userName, instDir;
-	int port;
-	RemoteWorker *worker;
-	bool isRegistered;
+    EConnectionType type;
+    QString hostName, userName, instDir;
+    int port;
+    RemoteWorker *worker;
+    bool isRegistered;
 
-	inline ServerConnection() : worker(NULL), isRegistered(false) { }
+    inline ServerConnection() : worker(NULL), isRegistered(false) { }
 
-	inline bool operator==(const ServerConnection &c) const {
-		return type == c.type && hostName == c.hostName
-			&& userName == c.userName && instDir == c.instDir
-			&& port == c.port && worker == c.worker
-			&& isRegistered == c.isRegistered;
-	}
+    inline bool operator==(const ServerConnection &c) const {
+        return type == c.type && hostName == c.hostName
+            && userName == c.userName && instDir == c.instDir
+            && port == c.port && worker == c.worker
+            && isRegistered == c.isRegistered;
+    }
 
-	inline void fromVariant(QList<QVariant> list) {
-		type = (EConnectionType) list[0].toInt();
-		hostName = list[1].toString();
-		port = list[2].toInt();
-		if (type == ESSHConnection) {
-			userName = list[3].toString();
-			instDir = list[4].toString();
-		}
-	}
+    inline void fromVariant(QList<QVariant> list) {
+        type = (EConnectionType) list[0].toInt();
+        hostName = list[1].toString();
+        port = list[2].toInt();
+        if (type == ESSHConnection) {
+            userName = list[3].toString();
+            instDir = list[4].toString();
+        }
+    }
 
-	inline QList<QVariant> toVariant() const {
-		QList<QVariant> result;
-		result.append(type);
-		result.append(hostName);
-		result.append(port);
-		if (type == ESSHConnection) {
-			result.append(userName);
-			result.append(instDir);
-		}
-		return result;
-	}
+    inline QList<QVariant> toVariant() const {
+        QList<QVariant> result;
+        result.append(type);
+        result.append(hostName);
+        result.append(port);
+        if (type == ESSHConnection) {
+            result.append(userName);
+            result.append(instDir);
+        }
+        return result;
+    }
 
-	inline QByteArray toByteArray() const {
-		QByteArray a;
-		QDataStream stream(&a, QIODevice::WriteOnly);
-		stream << toVariant();
-		return a;
-	}
+    inline QByteArray toByteArray() const {
+        QByteArray a;
+        QDataStream stream(&a, QIODevice::WriteOnly);
+        stream << toVariant();
+        return a;
+    }
 
-	inline void fromByteArray(QByteArray a) {
-		QDataStream stream(a);
-		QList<QVariant> variant;
-		stream >> variant;
-		fromVariant(variant);
-	}
+    inline void fromByteArray(QByteArray a) {
+        QDataStream stream(a);
+        QList<QVariant> variant;
+        stream >> variant;
+        fromVariant(variant);
+    }
 
-	bool createWorker(QWidget *parent);
+    bool createWorker(QWidget *parent);
 
-	QString toString() const;
+    QString toString() const;
 };
 
 enum EMode {
-	EPreview = 0,
-	ERender
+    EPreview = 0,
+    ERender
 };
 
 enum EPreviewMethod {
-	EDisabled = 0,
-	EOpenGL
+    EDisabled = 0,
+    EOpenGL
 };
 
 enum EToneMappingMethod {
-	EGamma = 0,
-	EReinhard
+    EGamma = 0,
+    EReinhard
 };
 
 namespace mitsuba {
-	class GPUSync;
-	class GPUTexture;
+    class GPUSync;
+    class GPUTexture;
 };
 
 struct PreviewQueueEntry {
-	int id;
-	size_t vplSampleOffset;
-	GPUTexture *buffer;
-	GPUSync *sync;
+    int id;
+    size_t vplSampleOffset;
+    GPUTexture *buffer;
+    GPUSync *sync;
 
-	inline PreviewQueueEntry(int id = 0)
-		: id(id), vplSampleOffset(0), buffer(NULL), sync(NULL) {
-	}
+    inline PreviewQueueEntry(int id = 0)
+        : id(id), vplSampleOffset(0), buffer(NULL), sync(NULL) {
+    }
 
-	void cleanup();
+    void cleanup();
 };
 
 struct VisualWorkUnit {
-	Point2i offset;
-	Vector2i size;
-	int worker;
+    Point2i offset;
+    Vector2i size;
+    int worker;
 
-	inline VisualWorkUnit(const Point2i &offset, const Vector2i &size, int worker = 0)
-		: offset(offset), size(size), worker(worker) { }
+    inline VisualWorkUnit(const Point2i &offset, const Vector2i &size, int worker = 0)
+        : offset(offset), size(size), worker(worker) { }
 };
 
 struct block_comparator : std::binary_function<VisualWorkUnit, VisualWorkUnit, bool> {
-	static int compare(const VisualWorkUnit &v1, const VisualWorkUnit &v2) {
-		if (v1.offset.x < v2.offset.x) return -1;
-		else if (v1.offset.x > v2.offset.x) return 1;
-		if (v1.offset.y < v2.offset.y) return -1;
-		else if (v1.offset.y > v2.offset.y) return 1;
-		if (v1.size.x < v2.size.x) return -1;
-		else if (v1.size.x > v2.size.x) return 1;
-		if (v1.size.y < v2.size.y) return -1;
-		else if (v1.size.y > v2.size.y) return 1;
-		return 0;
-	}
+    static int compare(const VisualWorkUnit &v1, const VisualWorkUnit &v2) {
+        if (v1.offset.x < v2.offset.x) return -1;
+        else if (v1.offset.x > v2.offset.x) return 1;
+        if (v1.offset.y < v2.offset.y) return -1;
+        else if (v1.offset.y > v2.offset.y) return 1;
+        if (v1.size.x < v2.size.x) return -1;
+        else if (v1.size.x > v2.size.x) return 1;
+        if (v1.size.y < v2.size.y) return -1;
+        else if (v1.size.y > v2.size.y) return 1;
+        return 0;
+    }
 
-	bool operator()(const VisualWorkUnit &v1, const VisualWorkUnit &v2) const {
-		return compare(v1, v2) < 0;
-	}
+    bool operator()(const VisualWorkUnit &v1, const VisualWorkUnit &v2) const {
+        return compare(v1, v2) < 0;
+    }
 };
 
 struct SceneContext {
-	/* Scene-related */
-	ref<Scene> scene;
-	int sceneResID;
-	QString fileName;
-	QString shortName;
-	Float movementScale;
-	Vector up;
+    /* Scene-related */
+    ref<Scene> scene;
+    int sceneResID;
+    QString fileName;
+    QString shortName;
+    Float movementScale;
+    Vector up;
 
-	/* Rendering/Preview-related */
-	RenderJob *renderJob;
-	bool cancelled;
-	bool wasRendering;
-	float progress;
-	QString eta, progressName;
-	ref<Bitmap> framebuffer;
-	std::vector<std::pair<std::string, Bitmap*> > layers;
-	std::set<VisualWorkUnit, block_comparator> workUnits;
-	int currentLayer;
-	EMode mode, cancelMode;
-	Float gamma, exposure, clamping;
-	bool srgb;
-	int pathLength, shadowMapResolution;
-	EPreviewMethod previewMethod;
-	EToneMappingMethod toneMappingMethod;
-	QSize windowSize, sizeIncrease;
-	Vector2i scrollOffset;
-	Float reinhardKey, reinhardBurn;
-	bool diffuseSources;
-	bool diffuseReceivers;
-	bool showKDTree;
-	int shownKDTreeLevel;
-	ESelectionMode selectionMode;
-	const Shape *selectedShape;
-	Vector2i originalSize;
-	QDomDocument doc;
+    /* Rendering/Preview-related */
+    RenderJob *renderJob;
+    bool cancelled;
+    bool wasRendering;
+    float progress;
+    QString eta, progressName;
+    ref<Bitmap> framebuffer;
+    std::vector<std::pair<std::string, Bitmap*> > layers;
+    std::set<VisualWorkUnit, block_comparator> workUnits;
+    int currentLayer;
+    EMode mode, cancelMode;
+    Float gamma, exposure, clamping;
+    bool srgb;
+    int pathLength, shadowMapResolution;
+    EPreviewMethod previewMethod;
+    EToneMappingMethod toneMappingMethod;
+    QSize windowSize, sizeIncrease;
+    Vector2i scrollOffset;
+    Float reinhardKey, reinhardBurn;
+    bool diffuseSources;
+    bool diffuseReceivers;
+    bool showKDTree;
+    int shownKDTreeLevel;
+    ESelectionMode selectionMode;
+    const Shape *selectedShape;
+    Vector2i originalSize;
+    QDomDocument doc;
 
-	/* Preview state */
-	std::deque<VPL> vpls;
-	PreviewQueueEntry previewBuffer;
+    /* Preview state */
+    std::deque<VPL> vpls;
+    PreviewQueueEntry previewBuffer;
 
-	SceneContext() : scene(NULL), sceneResID(-1),
-		renderJob(NULL), wasRendering(false),
-		currentLayer(0),
-		selectionMode(ENothing),
-		selectedShape(NULL) { }
+    SceneContext() : scene(NULL), sceneResID(-1),
+        renderJob(NULL), wasRendering(false),
+        currentLayer(0),
+        selectionMode(ENothing),
+        selectedShape(NULL) { }
 
-	/// Detect the path length
-	int detectPathLength() const;
+    /// Detect the path length
+    int detectPathLength() const;
 
-	/* Clone a scene */
-	SceneContext(SceneContext *ctx);
-	~SceneContext();
+    /* Clone a scene */
+    SceneContext(SceneContext *ctx);
+    ~SceneContext();
 };
 
 class NonClosableDialog : public QDialog {
 public:
-	NonClosableDialog(QWidget *parent) : QDialog(parent) {
-	}
+    NonClosableDialog(QWidget *parent) : QDialog(parent) {
+    }
 
-	void closeEvent(QCloseEvent *e) {
-		e->ignore();
-	}
+    void closeEvent(QCloseEvent *e) {
+        e->ignore();
+    }
 };
 
 #define QStringToUTF8(str) str.toUtf8().data()
@@ -239,19 +239,19 @@ public:
 inline QString fromFsPath(const fs::path &path) {
 #if defined(__WINDOWS__)
 # if defined(_MSC_VER) && _MSC_VER >= 1600
-	static_assert(sizeof(QChar) == sizeof(fs::path::value_type), "Incompatible!");
+    static_assert(sizeof(QChar) == sizeof(fs::path::value_type), "Incompatible!");
 # endif
-	return QString(reinterpret_cast<const QChar*>(path.c_str()));
+    return QString(reinterpret_cast<const QChar*>(path.c_str()));
 #else
-	return QString::fromUtf8(path.c_str());
+    return QString::fromUtf8(path.c_str());
 #endif
 }
 
 inline fs::path toFsPath(const QString &str) {
 #if defined(__WINDOWS__)
-	return fs::path(reinterpret_cast<const fs::path::value_type*>(str.constData()));
+    return fs::path(reinterpret_cast<const fs::path::value_type*>(str.constData()));
 #else
-	return fs::path(QStringToUTF8(str));
+    return fs::path(QStringToUTF8(str));
 #endif
 }
 

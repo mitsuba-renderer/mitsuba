@@ -34,82 +34,82 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_CORE MemoryStream : public Stream {
 public:
-	// =============================================================
-	//! @{ \name Constructors
-	// =============================================================
+    // =============================================================
+    //! @{ \name Constructors
+    // =============================================================
 
-	/// Create a new memory stream
-	MemoryStream(size_t initialSize = 512);
+    /// Create a new memory stream
+    MemoryStream(size_t initialSize = 512);
 
-	/**
-	 * \brief Create a memory stream, which operates on a
-	 * pre-allocated buffer.
-	 *
-	 * A memory stream created in this way will never resize the
-	 * underlying buffer. An exception is thrown e.g. when attempting
-	 * to extend its size
-	 *
-	 * \remark This constructor is not available in the python bindings
-	 */
-	MemoryStream(void *ptr, size_t size);
+    /**
+     * \brief Create a memory stream, which operates on a
+     * pre-allocated buffer.
+     *
+     * A memory stream created in this way will never resize the
+     * underlying buffer. An exception is thrown e.g. when attempting
+     * to extend its size
+     *
+     * \remark This constructor is not available in the python bindings
+     */
+    MemoryStream(void *ptr, size_t size);
 
-	//! @}
-	// =============================================================
+    //! @}
+    // =============================================================
 
-	// =============================================================
-	//! @{ \name Memory stream-specific features
-	// =============================================================
+    // =============================================================
+    //! @{ \name Memory stream-specific features
+    // =============================================================
 
-	/// Return the underlying data
-	inline uint8_t *getData() { return m_data; }
+    /// Return the underlying data
+    inline uint8_t *getData() { return m_data; }
 
-	/// Return the underlying data (const version)
-	inline const uint8_t *getData() const { return m_data; }
+    /// Return the underlying data (const version)
+    inline const uint8_t *getData() const { return m_data; }
 
-	/// Return the underlying data at the current position
-	inline uint8_t *getCurrentData() { return m_data + m_pos; }
+    /// Return the underlying data at the current position
+    inline uint8_t *getCurrentData() { return m_data + m_pos; }
 
-	/// Return the underlying data at the current position (const version)
-	inline const uint8_t *getCurrentData() const { return m_data + m_pos; }
+    /// Return the underlying data at the current position (const version)
+    inline const uint8_t *getCurrentData() const { return m_data + m_pos; }
 
-	/// Set size and position to zero without changing the underlying buffer
-	void reset();
+    /// Set size and position to zero without changing the underlying buffer
+    void reset();
 
-	//! @}
-	// =============================================================
+    //! @}
+    // =============================================================
 
-	// =============================================================
-	//! @{ \name Implementation of the Stream interface
-	// =============================================================
+    // =============================================================
+    //! @{ \name Implementation of the Stream interface
+    // =============================================================
 
-	void read(void *ptr, size_t size);
-	void write(const void *ptr, size_t size);
-	void seek(size_t pos);
-	size_t getPos() const;
-	size_t getSize() const;
-	void truncate(size_t size);
-	void flush();
-	bool canWrite() const;
-	bool canRead() const;
+    void read(void *ptr, size_t size);
+    void write(const void *ptr, size_t size);
+    void seek(size_t pos);
+    size_t getPos() const;
+    size_t getSize() const;
+    void truncate(size_t size);
+    void flush();
+    bool canWrite() const;
+    bool canRead() const;
 
-	//! @}
-	// =============================================================
+    //! @}
+    // =============================================================
 
-	/// Return a string representation
-	std::string toString() const;
+    /// Return a string representation
+    std::string toString() const;
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	void resize(size_t newSize);
+    void resize(size_t newSize);
 
-	// \brief Virtual destructor
-	virtual ~MemoryStream();
+    // \brief Virtual destructor
+    virtual ~MemoryStream();
 protected:
-	size_t m_capacity;
-	size_t m_size;
-	size_t m_pos;
-	bool m_ownsBuffer;
-	uint8_t *m_data;
+    size_t m_capacity;
+    size_t m_size;
+    size_t m_pos;
+    bool m_ownsBuffer;
+    uint8_t *m_data;
 };
 
 MTS_NAMESPACE_END

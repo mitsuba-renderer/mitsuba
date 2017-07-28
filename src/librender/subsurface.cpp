@@ -26,13 +26,13 @@ Subsurface::Subsurface(const Properties &props)
  : NetworkedObject(props), m_active(false) { }
 
 Subsurface::Subsurface(Stream *stream, InstanceManager *manager) :
-	NetworkedObject(stream, manager) {
-	size_t shapeCount = stream->readSize();
-	for (size_t i=0; i<shapeCount; ++i) {
-		Shape *shape = static_cast<Shape *>(manager->getInstance(stream));
-		m_shapes.push_back(shape);
-	}
-	m_active = false;
+    NetworkedObject(stream, manager) {
+    size_t shapeCount = stream->readSize();
+    for (size_t i=0; i<shapeCount; ++i) {
+        Shape *shape = static_cast<Shape *>(manager->getInstance(stream));
+        m_shapes.push_back(shape);
+    }
+    m_active = false;
 }
 
 Subsurface::~Subsurface() { }
@@ -40,22 +40,22 @@ Subsurface::~Subsurface() { }
 void Subsurface::cancel() { }
 
 void Subsurface::setParent(ConfigurableObject *parent) {
-	if (parent->getClass()->derivesFrom(MTS_CLASS(Shape))) {
-		Shape *shape = static_cast<Shape *>(parent);
-		if (shape->isCompound())
-			return;
-		if (std::find(m_shapes.begin(), m_shapes.end(), shape) == m_shapes.end()) {
-			m_shapes.push_back(shape);
-		}
-	}
+    if (parent->getClass()->derivesFrom(MTS_CLASS(Shape))) {
+        Shape *shape = static_cast<Shape *>(parent);
+        if (shape->isCompound())
+            return;
+        if (std::find(m_shapes.begin(), m_shapes.end(), shape) == m_shapes.end()) {
+            m_shapes.push_back(shape);
+        }
+    }
 }
 
 void Subsurface::serialize(Stream *stream, InstanceManager *manager) const {
-	NetworkedObject::serialize(stream, manager);
+    NetworkedObject::serialize(stream, manager);
 
-	stream->writeSize(m_shapes.size());
-	for (unsigned int i=0; i<m_shapes.size(); ++i)
-		manager->serialize(stream, m_shapes[i]);
+    stream->writeSize(m_shapes.size());
+    for (unsigned int i=0; i<m_shapes.size(); ++i)
+        manager->serialize(stream, m_shapes[i]);
 }
 
 MTS_IMPLEMENT_CLASS(Subsurface, true, NetworkedObject)

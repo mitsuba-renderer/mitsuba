@@ -34,48 +34,48 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_RENDER BlockedImageProcess : public ParallelProcess {
 public:
-	// ======================================================================
-	//! @{ \name Implementation of the ParallelProcess interface
-	// ======================================================================
+    // ======================================================================
+    //! @{ \name Implementation of the ParallelProcess interface
+    // ======================================================================
 
-	virtual EStatus generateWork(WorkUnit *unit, int worker);
+    virtual EStatus generateWork(WorkUnit *unit, int worker);
 
-	//! @}
-	// ======================================================================
+    //! @}
+    // ======================================================================
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	/**
-	 * Initialize the image process
-	 *
-	 * \param offset
-	 *    Integer offset of the image region to be processed
-	 * \param size
-	 *    Size of the image region to be processed
-	 * \param blockSize
-	 *    Size of the generated square pixel blocks
-	 */
-	void init(const Point2i &offset, const Vector2i &size, uint32_t blockSize);
+    /**
+     * Initialize the image process
+     *
+     * \param offset
+     *    Integer offset of the image region to be processed
+     * \param size
+     *    Size of the image region to be processed
+     * \param blockSize
+     *    Size of the generated square pixel blocks
+     */
+    void init(const Point2i &offset, const Vector2i &size, uint32_t blockSize);
 
-	/// Protected constructor
-	inline BlockedImageProcess() { }
-	/// Virtual destructor
-	virtual ~BlockedImageProcess() { }
+    /// Protected constructor
+    inline BlockedImageProcess() { }
+    /// Virtual destructor
+    virtual ~BlockedImageProcess() { }
 protected:
-	enum EDirection {
-		ERight = 0,
-		EDown,
-		ELeft,
-		EUp
-	};
+    enum EDirection {
+        ERight = 0,
+        EDown,
+        ELeft,
+        EUp
+    };
 
-	Point2i m_offset;
-	Vector2i m_size, m_numBlocks;
-	Point2i m_curBlock;
-	int m_direction, m_numSteps;
-	int m_stepsLeft, m_numBlocksTotal;
-	int m_numBlocksGenerated;
-	int m_blockSize;
+    Point2i m_offset;
+    Vector2i m_size, m_numBlocks;
+    Point2i m_curBlock;
+    int m_direction, m_numSteps;
+    int m_stepsLeft, m_numBlocksTotal;
+    int m_numBlocksGenerated;
+    int m_blockSize;
 };
 
 MTS_NAMESPACE_END

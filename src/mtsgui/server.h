@@ -43,41 +43,41 @@
 #define CONN_BACKLOG 5
 
 namespace mitsuba {
-	class RenderJob;
+    class RenderJob;
 };
 
 class ServerThread : public Thread {
 public:
-	ServerThread(Logger *logger, int listenPort,
-		const std::string &nodeName);
-	virtual ~ServerThread();
+    ServerThread(Logger *logger, int listenPort,
+        const std::string &nodeName);
+    virtual ~ServerThread();
 
-	void run();
-	void shutdown();
+    void run();
+    void shutdown();
 private:
-	SOCKET m_socket;
-	int m_listenPort;
-	bool m_active;
-	std::string m_nodeName;
+    SOCKET m_socket;
+    int m_listenPort;
+    bool m_active;
+    std::string m_nodeName;
 };
 
 class ServerWidget : public QMainWindow {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	ServerWidget(QWidget *parent,
-		const QString &nodeName, int listenPort);
-	virtual ~ServerWidget();
-	void show();
+    ServerWidget(QWidget *parent,
+        const QString &nodeName, int listenPort);
+    virtual ~ServerWidget();
+    void show();
 signals:
-	void closed();
+    void closed();
 protected slots:
-	void onTextMessage(ELogLevel level, const QString &message);
+    void onTextMessage(ELogLevel level, const QString &message);
 protected:
-	void closeEvent(QCloseEvent *event);
+    void closeEvent(QCloseEvent *event);
 private:
-	QTextEdit *m_contents;
-	ref<Logger> m_logger;
-	ref<ServerThread> m_thread;
+    QTextEdit *m_contents;
+    ref<Logger> m_logger;
+    ref<ServerThread> m_thread;
 };
 
 #endif /* __SERVERWIDGET_H */

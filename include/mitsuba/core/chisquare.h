@@ -80,111 +80,111 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_CORE ChiSquare : public Object {
 public:
-	/// Possible outcomes in \ref runTest()
-	enum ETestResult {
-		/// The null hypothesis was rejected
-		EReject = 0,
-		/// The null hypothesis was accepted
-		EAccept = 1,
-		/// The degrees of freedom were too low
-		ELowDoF = 2
-	};
+    /// Possible outcomes in \ref runTest()
+    enum ETestResult {
+        /// The null hypothesis was rejected
+        EReject = 0,
+        /// The null hypothesis was accepted
+        EAccept = 1,
+        /// The degrees of freedom were too low
+        ELowDoF = 2
+    };
 
-	/**
-	 * \brief Create a new Chi-square test instance with the given
-	 * resolution and sample count
-	 *
-	 * \param thetaBins
-	 *    Number of bins wrt. latitude. The default is 10
-	 *
-	 * \param phiBins
-	 *    Number of bins wrt. azimuth. The default is to use
-	 *    twice the number of \c thetaBins
-	 *
-	 * \param numTests
-	 *    Number of independent tests that will be performed. This
-	 *    is used to compute the Sidak-correction factor.
-	 *
-	 * \param sampleCount
-	 *    Number of samples to be used when computing the bin
-	 *    values. The default is \c thetaBins*phiBins*5000
-	 */
-	ChiSquare(int thetaBins = 10, int phiBins = 0,
-			int numTests = 1, size_t sampleCount = 0);
+    /**
+     * \brief Create a new Chi-square test instance with the given
+     * resolution and sample count
+     *
+     * \param thetaBins
+     *    Number of bins wrt. latitude. The default is 10
+     *
+     * \param phiBins
+     *    Number of bins wrt. azimuth. The default is to use
+     *    twice the number of \c thetaBins
+     *
+     * \param numTests
+     *    Number of independent tests that will be performed. This
+     *    is used to compute the Sidak-correction factor.
+     *
+     * \param sampleCount
+     *    Number of samples to be used when computing the bin
+     *    values. The default is \c thetaBins*phiBins*5000
+     */
+    ChiSquare(int thetaBins = 10, int phiBins = 0,
+            int numTests = 1, size_t sampleCount = 0);
 
-	/// Get the log level
-	inline ELogLevel getLogLevel() const { return m_logLevel; }
+    /// Get the log level
+    inline ELogLevel getLogLevel() const { return m_logLevel; }
 
-	/// Set the log level
-	inline void setLogLevel(ELogLevel logLevel) { m_logLevel = logLevel; }
+    /// Set the log level
+    inline void setLogLevel(ELogLevel logLevel) { m_logLevel = logLevel; }
 
-	/**
-	 * \brief Set the tolerance threshold for bins with very low
-	 * aggregate probabilities
-	 *
-	 * When the Chi-square test integrates the supplied probability
-	 * density function over the support of a bin and determines that
-	 * the aggregate bin probability is zero, the test would ordinarily
-	 * fail if as much as one sample is placed in that bin in the
-	 * subsequent sampling step. However, due to various numerical
-	 * errors in a system based on finite-precision arithmetic, it
-	 * may be a good idea to tolerate at least a few samples without
-	 * immediately rejecting the null hypothesis. This parameter
-	 * sets this threshold. The default value is \c number-of-samples*1e-4f
-	 */
-	inline void setTolerance(Float tolerance) { m_tolerance = tolerance; }
+    /**
+     * \brief Set the tolerance threshold for bins with very low
+     * aggregate probabilities
+     *
+     * When the Chi-square test integrates the supplied probability
+     * density function over the support of a bin and determines that
+     * the aggregate bin probability is zero, the test would ordinarily
+     * fail if as much as one sample is placed in that bin in the
+     * subsequent sampling step. However, due to various numerical
+     * errors in a system based on finite-precision arithmetic, it
+     * may be a good idea to tolerate at least a few samples without
+     * immediately rejecting the null hypothesis. This parameter
+     * sets this threshold. The default value is \c number-of-samples*1e-4f
+     */
+    inline void setTolerance(Float tolerance) { m_tolerance = tolerance; }
 
-	/**
-	 * \brief Fill the actual and reference bin counts
-	 *
-	 * Please see the class documentation for a description
-	 * on how to invoke this function
-	 */
-	void fill(
-		const boost::function<boost::tuple<Vector, Float, EMeasure>()> &sampleFn,
-		const boost::function<Float (const Vector &, EMeasure)> &pdfFn);
+    /**
+     * \brief Fill the actual and reference bin counts
+     *
+     * Please see the class documentation for a description
+     * on how to invoke this function
+     */
+    void fill(
+        const boost::function<boost::tuple<Vector, Float, EMeasure>()> &sampleFn,
+        const boost::function<Float (const Vector &, EMeasure)> &pdfFn);
 
-	/**
-	 * \brief Dump the bin counts to a file using MATLAB format
-	 */
-	void dumpTables(const fs::path &filename);
+    /**
+     * \brief Dump the bin counts to a file using MATLAB format
+     */
+    void dumpTables(const fs::path &filename);
 
-	/**
-	 * \brief Perform the actual chi-square test
-	 *
-	 * \param pvalThresh
-	 *     The implementation will reject the null hypothesis
-	 *     when the computed p-value lies below this parameter
-	 *     (default: 0.01f)
-	 *
-	 * \return A status value of type \ref ETestResult
-	 */
-	ETestResult runTest(Float pvalThresh = 0.01f);
+    /**
+     * \brief Perform the actual chi-square test
+     *
+     * \param pvalThresh
+     *     The implementation will reject the null hypothesis
+     *     when the computed p-value lies below this parameter
+     *     (default: 0.01f)
+     *
+     * \return A status value of type \ref ETestResult
+     */
+    ETestResult runTest(Float pvalThresh = 0.01f);
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	/// Release all memory
-	virtual ~ChiSquare();
+    /// Release all memory
+    virtual ~ChiSquare();
 
-	/// Functor to evaluate the pdf values in parallel using OpenMP
-	static void integrand(
-		const boost::function<Float (const Vector &, EMeasure)> &pdfFn,
-			size_t nPts, const Float *in, Float *out) {
-		#if defined(MTS_OPENMP)
-		#pragma omp parallel for
-		#endif
-		for (int i=0; i<(int) nPts; ++i)
-			out[i] = pdfFn(sphericalDirection(in[2*i], in[2*i+1]), ESolidAngle)
-				* std::sin(in[2*i]);
-	}
+    /// Functor to evaluate the pdf values in parallel using OpenMP
+    static void integrand(
+        const boost::function<Float (const Vector &, EMeasure)> &pdfFn,
+            size_t nPts, const Float *in, Float *out) {
+        #if defined(MTS_OPENMP)
+        #pragma omp parallel for
+        #endif
+        for (int i=0; i<(int) nPts; ++i)
+            out[i] = pdfFn(sphericalDirection(in[2*i], in[2*i+1]), ESolidAngle)
+                * std::sin(in[2*i]);
+    }
 private:
-	ELogLevel m_logLevel;
-	Float m_tolerance;
-	int m_thetaBins, m_phiBins;
-	int m_numTests;
-	size_t m_sampleCount;
-	Float *m_table;
-	Float *m_refTable;
+    ELogLevel m_logLevel;
+    Float m_tolerance;
+    int m_thetaBins, m_phiBins;
+    int m_numTests;
+    size_t m_sampleCount;
+    Float *m_table;
+    Float *m_refTable;
 };
 
 MTS_NAMESPACE_END

@@ -22,21 +22,21 @@
 #include "common.h"
 
 namespace Ui {
-	class AboutDialog;
+    class AboutDialog;
 }
 
 class AboutDialog : public QDialog {
     Q_OBJECT
 public:
-	AboutDialog(QWidget *parent);
-	~AboutDialog();
+    AboutDialog(QWidget *parent);
+    ~AboutDialog();
 
 protected slots:
-	void onCredits();
+    void onCredits();
 protected:
     void changeEvent(QEvent *e);
 private:
-	Ui::AboutDialog *ui;
+    Ui::AboutDialog *ui;
 };
 
 #endif // __ABOUTDLG_H

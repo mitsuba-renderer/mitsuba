@@ -26,18 +26,18 @@ bidirEnv.Append(LIBS=['mitsuba-bidir'])
 bidirEnv.Append(LIBPATH=['#src/libbidir'])
 
 plugins += bidirEnv.SharedLibrary('bdpt',
-	['bdpt/bdpt.cpp', 'bdpt/bdpt_wr.cpp', 'bdpt/bdpt_proc.cpp'])
+        ['bdpt/bdpt.cpp', 'bdpt/bdpt_wr.cpp', 'bdpt/bdpt_proc.cpp'])
 
 plugins += bidirEnv.SharedLibrary('pssmlt',
-	['pssmlt/pssmlt.cpp', 'pssmlt/pssmlt_sampler.cpp',
+        ['pssmlt/pssmlt.cpp', 'pssmlt/pssmlt_sampler.cpp',
     'pssmlt/pssmlt_proc.cpp']);
 
 plugins += bidirEnv.SharedLibrary('mlt',
-	['mlt/mlt.cpp', 'mlt/mlt_proc.cpp']
+        ['mlt/mlt.cpp', 'mlt/mlt_proc.cpp']
 )
 
 plugins += bidirEnv.SharedLibrary('erpt',
-	['erpt/erpt.cpp', 'erpt/erpt_proc.cpp']
+        ['erpt/erpt.cpp', 'erpt/erpt_proc.cpp']
 )
 
 Export('plugins')

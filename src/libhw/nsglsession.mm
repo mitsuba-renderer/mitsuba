@@ -27,77 +27,77 @@ NSGLSession::NSGLSession()
 
 NSGLSession::~NSGLSession() {
     Log(EDebug, "Destroying NSGL session");
-	if (m_initialized)
-		shutdown();
+    if (m_initialized)
+        shutdown();
 }
 
 void NSGLSession::init() {
-	Session::init();
+    Session::init();
     Log(EDebug, "Initializing NSGL session");
-	m_initialized = true;
+    m_initialized = true;
 }
 
 void NSGLSession::shutdown() {
-	Session::shutdown();
+    Session::shutdown();
     Log(EDebug, "Shutting down NSGL session");
-	m_initialized = false;
+    m_initialized = false;
 }
 
 void NSGLSession::processEvents() {
-	/* Separate autorelease pool */
-	NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-	NSEvent *event;
+    /* Separate autorelease pool */
+    NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+    NSEvent *event;
 
-	/* NSRunloop emulation */
-	do {
-		event = [NSApp nextEventMatchingMask: NSAnyEventMask
-			untilDate: nil inMode: NSDefaultRunLoopMode dequeue: YES];
-		if (event == nil)
-			break;
-		[NSApp sendEvent: event];
-	} while (true);
+    /* NSRunloop emulation */
+    do {
+        event = [NSApp nextEventMatchingMask: NSAnyEventMask
+            untilDate: nil inMode: NSDefaultRunLoopMode dequeue: YES];
+        if (event == nil)
+            break;
+        [NSApp sendEvent: event];
+    } while (true);
 
-	[pool release];
+    [pool release];
 
-	/* After the events have been delivered to the devices, process them */
-	for (std::vector<Device *>::iterator it = m_devices.begin(); it!=m_devices.end(); ++it)
-		static_cast<NSGLDevice *>(*it)->processEvents();
+    /* After the events have been delivered to the devices, process them */
+    for (std::vector<Device *>::iterator it = m_devices.begin(); it!=m_devices.end(); ++it)
+        static_cast<NSGLDevice *>(*it)->processEvents();
 }
 
 void NSGLSession::processEventsBlocking(bool &stop) {
-	/* Separate autorelease pool */
-	NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-	NSEvent *event;
+    /* Separate autorelease pool */
+    NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+    NSEvent *event;
 
-	/* NSRunloop emulation */
-	while (true) {
-		event = [NSApp nextEventMatchingMask: NSAnyEventMask
-			untilDate: nil inMode: NSDefaultRunLoopMode dequeue: YES];
+    /* NSRunloop emulation */
+    while (true) {
+        event = [NSApp nextEventMatchingMask: NSAnyEventMask
+            untilDate: nil inMode: NSDefaultRunLoopMode dequeue: YES];
 
-		if (event != nil) {
-			[NSApp sendEvent: event];
-		} else {
-			/* No more event -- process them */
-			for (std::vector<Device *>::iterator it = m_devices.begin(); it!=m_devices.end(); ++it)
-				static_cast<NSGLDevice *>(*it)->processEvents();
+        if (event != nil) {
+            [NSApp sendEvent: event];
+        } else {
+            /* No more event -- process them */
+            for (std::vector<Device *>::iterator it = m_devices.begin(); it!=m_devices.end(); ++it)
+                static_cast<NSGLDevice *>(*it)->processEvents();
 
-			if (stop)
-				break;
+            if (stop)
+                break;
 
-			/* Wait for the next event (blocking) */
-			event = [NSApp nextEventMatchingMask: NSAnyEventMask
-				untilDate: [NSDate distantFuture] inMode: NSDefaultRunLoopMode dequeue: YES];
+            /* Wait for the next event (blocking) */
+            event = [NSApp nextEventMatchingMask: NSAnyEventMask
+                untilDate: [NSDate distantFuture] inMode: NSDefaultRunLoopMode dequeue: YES];
 
-			if (event != nil)
-				[NSApp sendEvent: event];
-		}
-	}
+            if (event != nil)
+                [NSApp sendEvent: event];
+        }
+    }
 
-	[pool release];
+    [pool release];
 
-	/* After the events have been delivered to the devices, process them */
-	for (std::vector<Device *>::iterator it = m_devices.begin(); it!=m_devices.end(); ++it)
-		static_cast<NSGLDevice *>(*it)->processEvents();
+    /* After the events have been delivered to the devices, process them */
+    for (std::vector<Device *>::iterator it = m_devices.begin(); it!=m_devices.end(); ++it)
+        static_cast<NSGLDevice *>(*it)->processEvents();
 }
 
 MTS_IMPLEMENT_CLASS(NSGLSession, false, Session)

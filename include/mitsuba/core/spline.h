@@ -56,7 +56,7 @@ MTS_NAMESPACE_BEGIN
  *      and \c x lies outside of [\c min, \c max]
  */
 extern MTS_EXPORT_CORE Float evalCubicInterp1D(Float x, const Float *values,
-		size_t size, Float min, Float max, bool extrapolate = false);
+        size_t size, Float min, Float max, bool extrapolate = false);
 
 /**
  * \brief Evaluate a cubic spline interpolant of a \a nonuniformly sampled 1D function
@@ -83,7 +83,7 @@ extern MTS_EXPORT_CORE Float evalCubicInterp1D(Float x, const Float *values,
  *      and \c x lies outside of \a [\c min, \c max]
  */
 extern MTS_EXPORT_CORE Float evalCubicInterp1DN(Float x, const Float *nodes,
-		const Float *values, size_t size, bool extrapolate = false);
+        const Float *values, size_t size, bool extrapolate = false);
 
 /**
  * \brief Computes the definite integral over a segment of a uniformly
@@ -107,7 +107,7 @@ extern MTS_EXPORT_CORE Float evalCubicInterp1DN(Float x, const Float *nodes,
  *      The definite integral over the specified segment
  */
 extern MTS_EXPORT_CORE Float integrateCubicInterp1D(size_t idx,
-		const Float *values, size_t size, Float min, Float max);
+        const Float *values, size_t size, Float min, Float max);
 
 /**
  * \brief Computes the definite integral over a segment of a \a nonuniformly
@@ -131,7 +131,7 @@ extern MTS_EXPORT_CORE Float integrateCubicInterp1D(size_t idx,
  *      The definite integral over the specified segment
  */
 extern MTS_EXPORT_CORE Float integrateCubicInterp1DN(size_t idx,
-		const Float *nodes, const Float *values, size_t size);
+        const Float *nodes, const Float *values, size_t size);
 
 /**
  * \brief Importance sample a segment of a uniformly sampled 1D Catmull-Rom
@@ -157,7 +157,7 @@ extern MTS_EXPORT_CORE Float integrateCubicInterp1DN(size_t idx,
  *      The sampled position
  */
 extern MTS_EXPORT_CORE Float sampleCubicInterp1D(size_t idx, const Float *values,
-		size_t size, Float min, Float max, Float sample, Float *fval = NULL);
+        size_t size, Float min, Float max, Float sample, Float *fval = NULL);
 
 /**
  * \brief Importance sample a segment of a \a nonuniformly sampled 1D Catmull-Rom
@@ -183,7 +183,7 @@ extern MTS_EXPORT_CORE Float sampleCubicInterp1D(size_t idx, const Float *values
  *      The sampled position
  */
 extern MTS_EXPORT_CORE Float sampleCubicInterp1DN(size_t idx, const Float *nodes,
-		const Float *values, size_t size, Float sample, Float *fval = NULL);
+        const Float *values, size_t size, Float sample, Float *fval = NULL);
 
 /**
  * \brief Evaluate a cubic spline interpolant of a uniformly sampled 2D function
@@ -211,7 +211,7 @@ extern MTS_EXPORT_CORE Float sampleCubicInterp1DN(size_t idx, const Float *nodes
  *      \c p lies outside of the knot range
  */
 extern MTS_EXPORT_CORE Float evalCubicInterp2D(const Point2 &p, const Float *values,
-		const Size2 &size, const Point2 &min, const Point2 &max, bool extrapolate = false);
+        const Size2 &size, const Point2 &min, const Point2 &max, bool extrapolate = false);
 
 /**
  * \brief Evaluate a cubic spline interpolant of a \a nonuniformly sampled 2D function
@@ -242,7 +242,7 @@ extern MTS_EXPORT_CORE Float evalCubicInterp2D(const Point2 &p, const Float *val
  *      \c p lies outside of the knot range
  */
 extern MTS_EXPORT_CORE Float evalCubicInterp2DN(const Point2 &p, const Float **nodes,
-		const Float *values, const Size2 &size, bool extrapolate = false);
+        const Float *values, const Size2 &size, bool extrapolate = false);
 
 /**
  * \brief Evaluate a cubic spline interpolant of a uniformly sampled 3D function
@@ -271,7 +271,7 @@ extern MTS_EXPORT_CORE Float evalCubicInterp2DN(const Point2 &p, const Float **n
  *      \c p lies outside of the knot range
  */
 extern MTS_EXPORT_CORE Float evalCubicInterp3D(const Point3 &p, const Float *values,
-		const Size3 &size, const Point3 &min, const Point3 &max, bool extrapolate = false);
+        const Size3 &size, const Point3 &min, const Point3 &max, bool extrapolate = false);
 
 /**
  * \brief Evaluate a cubic spline interpolant of a \a nonuniformly sampled 3D function
@@ -303,7 +303,7 @@ extern MTS_EXPORT_CORE Float evalCubicInterp3D(const Point3 &p, const Float *val
  *      \c p lies outside of the knot range
  */
 extern MTS_EXPORT_CORE Float evalCubicInterp3DN(const Point3 &p, const Float **nodes,
-		const Float *values, const Size3 &size, bool extrapolate = false);
+        const Float *values, const Size3 &size, bool extrapolate = false);
 
 //! @}
 // -----------------------------------------------------------------------

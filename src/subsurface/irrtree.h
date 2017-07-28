@@ -27,52 +27,52 @@ MTS_NAMESPACE_BEGIN
 
 class IrradianceOctree : public StaticOctree<IrradianceSample, IrradianceSample>, public SerializableObject {
 public:
-	/// Construct a new irradiance octree
-	IrradianceOctree(const AABB &aabb, Float solidAngleThreshold,
-		std::vector<IrradianceSample> &records);
+    /// Construct a new irradiance octree
+    IrradianceOctree(const AABB &aabb, Float solidAngleThreshold,
+        std::vector<IrradianceSample> &records);
 
-	/// Unserialize an octree from a binary data stream
-	IrradianceOctree(Stream *stream, InstanceManager *manager);
+    /// Unserialize an octree from a binary data stream
+    IrradianceOctree(Stream *stream, InstanceManager *manager);
 
-	/// Serialize an octree to a binary data stream
-	void serialize(Stream *stream, InstanceManager *manager) const;
+    /// Serialize an octree to a binary data stream
+    void serialize(Stream *stream, InstanceManager *manager) const;
 
-	/// Query the octree using a customizable functor, while representatives for distant nodes
-	template <typename QueryType> inline void performQuery(QueryType &query) const {
-		performQuery(m_aabb, m_root, query);
-	}
+    /// Query the octree using a customizable functor, while representatives for distant nodes
+    template <typename QueryType> inline void performQuery(QueryType &query) const {
+        performQuery(m_aabb, m_root, query);
+    }
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	/// Propagate irradiance approximations througout the tree
-	void propagate(OctreeNode *node);
+    /// Propagate irradiance approximations througout the tree
+    void propagate(OctreeNode *node);
 
-	/// Query the octree using a customizable functor, while representatives for distant nodes
-	template <typename QueryType> void performQuery(const AABB &aabb, OctreeNode *node, QueryType &query) const {
-		/* Compute the approximate solid angle subtended by samples within this node */
-		Float approxSolidAngle = node->data.area / (query.p - node->data.p).lengthSquared();
+    /// Query the octree using a customizable functor, while representatives for distant nodes
+    template <typename QueryType> void performQuery(const AABB &aabb, OctreeNode *node, QueryType &query) const {
+        /* Compute the approximate solid angle subtended by samples within this node */
+        Float approxSolidAngle = node->data.area / (query.p - node->data.p).lengthSquared();
 
-		/* Use the representative if this is a distant node */
-		if (!aabb.contains(query.p) && approxSolidAngle < m_solidAngleThreshold) {
-			query(node->data);
-		} else {
-			if (node->leaf) {
-				for (uint32_t i=0; i<node->count; ++i)
-					query(m_items[node->offset + i]);
-			} else {
-				Point center = aabb.getCenter();
-				for (int i=0; i<8; i++) {
-					if (!node->children[i])
-						continue;
+        /* Use the representative if this is a distant node */
+        if (!aabb.contains(query.p) && approxSolidAngle < m_solidAngleThreshold) {
+            query(node->data);
+        } else {
+            if (node->leaf) {
+                for (uint32_t i=0; i<node->count; ++i)
+                    query(m_items[node->offset + i]);
+            } else {
+                Point center = aabb.getCenter();
+                for (int i=0; i<8; i++) {
+                    if (!node->children[i])
+                        continue;
 
-					AABB childAABB = childBounds(i, aabb, center);
-					performQuery(childAABB, node->children[i], query);
-				}
-			}
-		}
-	}
+                    AABB childAABB = childBounds(i, aabb, center);
+                    performQuery(childAABB, node->children[i], query);
+                }
+            }
+        }
+    }
 private:
-	Float m_solidAngleThreshold;
+    Float m_solidAngleThreshold;
 };
 
 MTS_NAMESPACE_END

@@ -26,65 +26,65 @@ MTS_NAMESPACE_BEGIN
 
 Medium::Medium(const Properties &props)
  : NetworkedObject(props) {
-	Spectrum g;
-	lookupMaterial(props, m_sigmaS, m_sigmaA, g);
+    Spectrum g;
+    lookupMaterial(props, m_sigmaS, m_sigmaA, g);
 
-	/* For now, ignore the anisotropy information of preset materials
-	   and use the reduced scattering coefficient */
-	m_sigmaS *= Spectrum(1.0f) - g;
+    /* For now, ignore the anisotropy information of preset materials
+       and use the reduced scattering coefficient */
+    m_sigmaS *= Spectrum(1.0f) - g;
 
-	m_sigmaT = m_sigmaA + m_sigmaS;
+    m_sigmaT = m_sigmaA + m_sigmaS;
 }
 
 Medium::Medium(Stream *stream, InstanceManager *manager)
  : NetworkedObject(stream, manager) {
-	m_phaseFunction = static_cast<PhaseFunction *>(manager->getInstance(stream));
-	m_sigmaA = Spectrum(stream);
-	m_sigmaS = Spectrum(stream);
-	m_sigmaT = m_sigmaA + m_sigmaS;
+    m_phaseFunction = static_cast<PhaseFunction *>(manager->getInstance(stream));
+    m_sigmaA = Spectrum(stream);
+    m_sigmaS = Spectrum(stream);
+    m_sigmaT = m_sigmaA + m_sigmaS;
 }
 
 void Medium::addChild(const std::string &name, ConfigurableObject *child) {
-	const Class *cClass = child->getClass();
+    const Class *cClass = child->getClass();
 
-	if (cClass->derivesFrom(MTS_CLASS(PhaseFunction))) {
-		Assert(m_phaseFunction == NULL);
-		m_phaseFunction = static_cast<PhaseFunction *>(child);
-	} else {
-		Log(EError, "Medium: Invalid child node! (\"%s\")",
-			cClass->getName().c_str());
-	}
+    if (cClass->derivesFrom(MTS_CLASS(PhaseFunction))) {
+        Assert(m_phaseFunction == NULL);
+        m_phaseFunction = static_cast<PhaseFunction *>(child);
+    } else {
+        Log(EError, "Medium: Invalid child node! (\"%s\")",
+            cClass->getName().c_str());
+    }
 }
 
 void Medium::configure() {
-	if (m_phaseFunction == NULL) {
-		m_phaseFunction = static_cast<PhaseFunction *> (PluginManager::getInstance()->
-				createObject(MTS_CLASS(PhaseFunction), Properties("isotropic")));
-		m_phaseFunction->configure();
-	}
+    if (m_phaseFunction == NULL) {
+        m_phaseFunction = static_cast<PhaseFunction *> (PluginManager::getInstance()->
+                createObject(MTS_CLASS(PhaseFunction), Properties("isotropic")));
+        m_phaseFunction->configure();
+    }
 }
 
 void Medium::serialize(Stream *stream, InstanceManager *manager) const {
-	NetworkedObject::serialize(stream, manager);
-	manager->serialize(stream, m_phaseFunction.get());
-	m_sigmaA.serialize(stream);
-	m_sigmaS.serialize(stream);
+    NetworkedObject::serialize(stream, manager);
+    manager->serialize(stream, m_phaseFunction.get());
+    m_sigmaA.serialize(stream);
+    m_sigmaS.serialize(stream);
 }
 
 std::string MediumSamplingRecord::toString() const {
-	std::ostringstream oss;
-	oss << "MediumSamplingRecord[" << endl
-		<< "  t = " << t << "," << endl
-		<< "  p = " << p.toString() << "," << endl
-		<< "  sigmaA = " << sigmaA.toString() << "," << endl
-		<< "  sigmaS = " << sigmaS.toString() << "," << endl
-		<< "  pdfFailure = " << pdfFailure << "," << endl
-		<< "  pdfSuccess = " << pdfSuccess << "," << endl
-		<< "  pdfSuccessRev = " << pdfSuccessRev << "," << endl
-		<< "  transmittance = " << transmittance.toString() << "," << endl
-		<< "  medium = " << indent(medium ? medium->toString().c_str() : "null") << endl
-		<< "]";
-	return oss.str();
+    std::ostringstream oss;
+    oss << "MediumSamplingRecord[" << endl
+        << "  t = " << t << "," << endl
+        << "  p = " << p.toString() << "," << endl
+        << "  sigmaA = " << sigmaA.toString() << "," << endl
+        << "  sigmaS = " << sigmaS.toString() << "," << endl
+        << "  pdfFailure = " << pdfFailure << "," << endl
+        << "  pdfSuccess = " << pdfSuccess << "," << endl
+        << "  pdfSuccessRev = " << pdfSuccessRev << "," << endl
+        << "  transmittance = " << transmittance.toString() << "," << endl
+        << "  medium = " << indent(medium ? medium->toString().c_str() : "null") << endl
+        << "]";
+    return oss.str();
 }
 
 MTS_IMPLEMENT_CLASS(Medium, true, NetworkedObject)

@@ -2,19 +2,19 @@ Import('env', 'plugins')
 
 filmEnv = env.Clone()
 if filmEnv.has_key('OEXRLIBDIR'):
-	filmEnv.Prepend(LIBPATH=env['OEXRLIBDIR'])
+        filmEnv.Prepend(LIBPATH=env['OEXRLIBDIR'])
 if filmEnv.has_key('OEXRINCLUDE'):
-	filmEnv.Prepend(CPPPATH=env['OEXRINCLUDE'])
+        filmEnv.Prepend(CPPPATH=env['OEXRINCLUDE'])
 if filmEnv.has_key('OEXRFLAGS'):
-	filmEnv.Prepend(CPPFLAGS=env['OEXRFLAGS'])
+        filmEnv.Prepend(CPPFLAGS=env['OEXRFLAGS'])
 if filmEnv.has_key('OEXRLIB'):
-	filmEnv.Prepend(LIBS=env['OEXRLIB'])
+        filmEnv.Prepend(LIBS=env['OEXRLIB'])
 
 plugins += filmEnv.SharedLibrary('mfilm', ['mfilm.cpp', 'cnpy.cpp'])
 plugins += filmEnv.SharedLibrary('ldrfilm', ['ldrfilm.cpp'])
 plugins += filmEnv.SharedLibrary('hdrfilm', ['hdrfilm.cpp'])
 
 if ['MTS_HAS_OPENEXR', 1] in filmEnv['CPPDEFINES']:
-	plugins += filmEnv.SharedLibrary('tiledhdrfilm', ['tiledhdrfilm.cpp'])
+        plugins += filmEnv.SharedLibrary('tiledhdrfilm', ['tiledhdrfilm.cpp'])
 
 Export('plugins')

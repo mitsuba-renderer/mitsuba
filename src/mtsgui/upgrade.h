@@ -25,12 +25,12 @@
 class UpgradeManager : public QObject {
     Q_OBJECT
 public:
-	UpgradeManager(const FileResolver *resolver);
+    UpgradeManager(const FileResolver *resolver);
 
-	void performUpgrade(const QString &path, const Version &version);
+    void performUpgrade(const QString &path, const Version &version);
 private:
-	const FileResolver *m_resolver;
-	std::vector<std::pair<Version, fs::path> > m_transformations;
+    const FileResolver *m_resolver;
+    std::vector<std::pair<Version, fs::path> > m_transformations;
 };
 
 #endif // __UPGRADEMGR_H

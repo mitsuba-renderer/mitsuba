@@ -39,56 +39,56 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_CORE ConfigurableObject : public SerializableObject {
 public:
-	/**
-	 * \brief Notify the \ref ConfigurableObject instance about
-	 * its parent object
-	 *
-	 * The default implementation does nothing.
-	 */
-	virtual void setParent(ConfigurableObject *parent);
+    /**
+     * \brief Notify the \ref ConfigurableObject instance about
+     * its parent object
+     *
+     * The default implementation does nothing.
+     */
+    virtual void setParent(ConfigurableObject *parent);
 
-	/// Add a child (default implementation throws an error)
-	virtual void addChild(const std::string &name, ConfigurableObject *child);
+    /// Add a child (default implementation throws an error)
+    virtual void addChild(const std::string &name, ConfigurableObject *child);
 
-	/// Add an unnamed child
-	inline void addChild(ConfigurableObject *child) { addChild("", child); }
+    /// Add an unnamed child
+    inline void addChild(ConfigurableObject *child) { addChild("", child); }
 
-	/** \brief Configure the object (called \a once after construction
-	   and addition of all child \ref ConfigurableObject instances)) */
-	virtual void configure();
+    /** \brief Configure the object (called \a once after construction
+       and addition of all child \ref ConfigurableObject instances)) */
+    virtual void configure();
 
-	/// Serialize this object to a binary data stream
-	virtual void serialize(Stream *stream, InstanceManager *manager) const;
+    /// Serialize this object to a binary data stream
+    virtual void serialize(Stream *stream, InstanceManager *manager) const;
 
-	/// Return the identifier associated with this instance (or "unnamed")
-	inline const std::string &getID() const { return m_properties.getID(); }
+    /// Return the identifier associated with this instance (or "unnamed")
+    inline const std::string &getID() const { return m_properties.getID(); }
 
-	/// Set the identifier associated with this instance
-	inline void setID(const std::string &name) { m_properties.setID(name); }
+    /// Set the identifier associated with this instance
+    inline void setID(const std::string &name) { m_properties.setID(name); }
 
-	/**
-	 * \brief Return the properties object that was originally used to
-	 * create this instance
-	 *
-	 * This feature mainly of use for editors and other graphical
-	 * user interfaces, which present the properties of an object
-	 * in some form.
-	 */
-	inline const Properties &getProperties() const { return m_properties; }
+    /**
+     * \brief Return the properties object that was originally used to
+     * create this instance
+     *
+     * This feature mainly of use for editors and other graphical
+     * user interfaces, which present the properties of an object
+     * in some form.
+     */
+    inline const Properties &getProperties() const { return m_properties; }
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	/// Virtual destructor
-	virtual ~ConfigurableObject() { }
+    /// Virtual destructor
+    virtual ~ConfigurableObject() { }
 
-	/// Construct a configurable object
-	inline ConfigurableObject(const Properties &props)
-		: SerializableObject(), m_properties(props) { }
+    /// Construct a configurable object
+    inline ConfigurableObject(const Properties &props)
+        : SerializableObject(), m_properties(props) { }
 
-	/// Unserialize a configurable object
-	ConfigurableObject(Stream *stream, InstanceManager *manager);
+    /// Unserialize a configurable object
+    ConfigurableObject(Stream *stream, InstanceManager *manager);
 protected:
-	Properties m_properties;
+    Properties m_properties;
 };
 
 /** \brief This macro creates the binary interface, which Mitsuba
@@ -97,14 +97,14 @@ protected:
  * \ingroup libcore
  */
 #define MTS_EXPORT_PLUGIN(name, descr) \
-	extern "C" { \
-		void MTS_EXPORT *CreateInstance(const Properties &props) { \
-			return new name(props); \
-		} \
-		const char MTS_EXPORT *GetDescription() { \
-			return descr; \
-		} \
-	}
+    extern "C" { \
+        void MTS_EXPORT *CreateInstance(const Properties &props) { \
+            return new name(props); \
+        } \
+        const char MTS_EXPORT *GetDescription() { \
+            return descr; \
+        } \
+    }
 
 MTS_NAMESPACE_END
 

@@ -32,38 +32,38 @@ MTS_NAMESPACE_BEGIN
  */
 class IrradianceRecordVector : public WorkResult {
 public:
-	IrradianceRecordVector() { }
+    IrradianceRecordVector() { }
 
-	inline void put(const IrradianceCache::Record *rec) {
-		if (rec)
-			m_samples.push_back(new IrradianceCache::Record(rec));
-	}
+    inline void put(const IrradianceCache::Record *rec) {
+        if (rec)
+            m_samples.push_back(new IrradianceCache::Record(rec));
+    }
 
-	inline size_t size() const {
-		return m_samples.size();
-	}
+    inline size_t size() const {
+        return m_samples.size();
+    }
 
-	inline void clear() {
-		for (size_t i=0; i<m_samples.size(); ++i)
-			delete m_samples[i];
-		m_samples.clear();
-	}
+    inline void clear() {
+        for (size_t i=0; i<m_samples.size(); ++i)
+            delete m_samples[i];
+        m_samples.clear();
+    }
 
-	inline const IrradianceCache::Record *operator[](size_t index) const {
-		return m_samples[index];
-	}
+    inline const IrradianceCache::Record *operator[](size_t index) const {
+        return m_samples[index];
+    }
 
-	/* WorkUnit interface */
-	void load(Stream *stream);
-	void save(Stream *stream) const;
-	std::string toString() const;
+    /* WorkUnit interface */
+    void load(Stream *stream);
+    void save(Stream *stream) const;
+    std::string toString() const;
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	// Virtual destructor
-	virtual ~IrradianceRecordVector();
+    // Virtual destructor
+    virtual ~IrradianceRecordVector();
 private:
-	std::vector<IrradianceCache::Record *> m_samples;
+    std::vector<IrradianceCache::Record *> m_samples;
 };
 
 /**
@@ -71,31 +71,31 @@ private:
  */
 class OvertureProcess : public BlockedImageProcess {
 public:
-	OvertureProcess(const RenderJob *job, int resolution, bool gradients,
-		bool clampNeighbor, bool clampScreen, Float quality);
+    OvertureProcess(const RenderJob *job, int resolution, bool gradients,
+        bool clampNeighbor, bool clampScreen, Float quality);
 
-	inline const IrradianceRecordVector *getSamples() const {
-		return m_samples.get();
-	}
+    inline const IrradianceRecordVector *getSamples() const {
+        return m_samples.get();
+    }
 
-	ref<WorkProcessor> createWorkProcessor() const;
-	void processResult(const WorkResult *wr, bool cancelled);
-	void bindResource(const std::string &name, int id);
+    ref<WorkProcessor> createWorkProcessor() const;
+    void processResult(const WorkResult *wr, bool cancelled);
+    void bindResource(const std::string &name, int id);
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	/// Virtual destructor
-	virtual ~OvertureProcess();
+    /// Virtual destructor
+    virtual ~OvertureProcess();
 private:
-	const RenderJob *m_job;
-	ref<Scene> m_scene;
-	int m_resultCount;
-	ref<Mutex> m_resultMutex;
-	ref<IrradianceRecordVector> m_samples;
-	int m_resolution;
-	bool m_gradients, m_clampNeighbor, m_clampScreen;
-	Float m_quality;
-	ProgressReporter *m_progress;
+    const RenderJob *m_job;
+    ref<Scene> m_scene;
+    int m_resultCount;
+    ref<Mutex> m_resultMutex;
+    ref<IrradianceRecordVector> m_samples;
+    int m_resolution;
+    bool m_gradients, m_clampNeighbor, m_clampScreen;
+    Float m_quality;
+    ProgressReporter *m_progress;
 };
 
 MTS_NAMESPACE_END

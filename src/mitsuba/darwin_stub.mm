@@ -21,9 +21,9 @@
 extern int mts_main(int argc, char **argv);
 
 int main(int argc, char **argv) {
-	NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-	int retval = mts_main(argc, argv);
-	[pool release];
-	return retval;
+    NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+    int retval = mts_main(argc, argv);
+    [pool release];
+    return retval;
 }
 

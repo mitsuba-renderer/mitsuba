@@ -30,37 +30,37 @@ MTS_NAMESPACE_BEGIN
  * \ingroup libhw
  */
 class MTS_EXPORT_HW WGLSession : public Session {
-	friend class WGLDevice;
-	friend class WGLRenderer;
+    friend class WGLDevice;
+    friend class WGLRenderer;
 public:
-	/// Create a new session
-	WGLSession();
+    /// Create a new session
+    WGLSession();
 
-	/// Initialize the session
-	void init();
+    /// Initialize the session
+    void init();
 
-	/// Shut the session down
-	void shutdown();
+    /// Shut the session down
+    void shutdown();
 
-	/// Process all events and call event callbacks
-	void processEvents();
+    /// Process all events and call event callbacks
+    void processEvents();
 
-	/**
-	 * \brief Process all events and call event callbacks.
-	 *
-	 * This function will run until the \c stop parameter is set
-	 * to \c true from within an event callback.
-	 */
-	void processEventsBlocking(bool &stop);
+    /**
+     * \brief Process all events and call event callbacks.
+     *
+     * This function will run until the \c stop parameter is set
+     * to \c true from within an event callback.
+     */
+    void processEventsBlocking(bool &stop);
 
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	/// Virtual destructor
-	virtual ~WGLSession();
+    /// Virtual destructor
+    virtual ~WGLSession();
 protected:
-	HINSTANCE m_hinstance;
-	std::string m_wndClassName;
+    HINSTANCE m_hinstance;
+    std::string m_wndClassName;
 };
 
 MTS_NAMESPACE_END

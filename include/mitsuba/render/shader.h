@@ -38,9 +38,9 @@ class GPUProgram;
  */
 class MTS_EXPORT_RENDER HWResource {
 public:
-	virtual Shader *createShader(Renderer *renderer) const;
+    virtual Shader *createShader(Renderer *renderer) const;
 
-	virtual ~HWResource() { }
+    virtual ~HWResource() { }
 };
 
 /**
@@ -53,87 +53,87 @@ public:
  */
 class MTS_EXPORT_RENDER Shader : public Object {
 public:
-	enum EShaderType {
-		EBSDFShader = 0,
-		ETextureShader,
-		EEmitterShader
-	};
+    enum EShaderType {
+        EBSDFShader = 0,
+        ETextureShader,
+        EEmitterShader
+    };
 
-	enum EFlags {
-		ETransparent = 0x01
-	};
+    enum EFlags {
+        ETransparent = 0x01
+    };
 
-	// Return the type of shader represented by this instance
-	inline EShaderType getType() const { return m_type; }
+    // Return the type of shader represented by this instance
+    inline EShaderType getType() const { return m_type; }
 
-	/// Return a list of flags
-	inline uint32_t getFlags() const { return m_flags; }
+    /// Return a list of flags
+    inline uint32_t getFlags() const { return m_flags; }
 
-	/**
-	 * \brief For transparent objects, this function returns
-	 * the alpha blending weight
-	 */
-	virtual Float getAlpha() const;
+    /**
+     * \brief For transparent objects, this function returns
+     * the alpha blending weight
+     */
+    virtual Float getAlpha() const;
 
-	// List other shaders, on which this instance depends
-	virtual void putDependencies(std::vector<Shader *> &deps);
+    // List other shaders, on which this instance depends
+    virtual void putDependencies(std::vector<Shader *> &deps);
 
-	/**
-	 * \brief Is this shader complete?
-	 *
-	 * This is mainly useful to check whether all dependencies
-	 * could be constructed successfully. The default
-	 * implementation returns \c true.
-	 */
-	virtual bool isComplete() const;
+    /**
+     * \brief Is this shader complete?
+     *
+     * This is mainly useful to check whether all dependencies
+     * could be constructed successfully. The default
+     * implementation returns \c true.
+     */
+    virtual bool isComplete() const;
 
-	/**
-	 * \brief Generate a string version of this shader's evaluation
-	 * routine.
-	 *
-	 * The appended string should assign the name \c evalName to this
-	 * function. The function names of depedencies (as specified by
-	 * \ref putDependencies), are supplied in the parameter \c depNames
-	 * in identical order.
-	 */
-	virtual void generateCode(std::ostringstream &oss,
-			const std::string &evalName,
-			const std::vector<std::string> &depNames) const = 0;
+    /**
+     * \brief Generate a string version of this shader's evaluation
+     * routine.
+     *
+     * The appended string should assign the name \c evalName to this
+     * function. The function names of depedencies (as specified by
+     * \ref putDependencies), are supplied in the parameter \c depNames
+     * in identical order.
+     */
+    virtual void generateCode(std::ostringstream &oss,
+            const std::string &evalName,
+            const std::vector<std::string> &depNames) const = 0;
 
-	/**
-	 * \brief This function can optionally be implemented to resolve named
-	 * program parameters to numerical IDs for increased performance.
-	 *
-	 * The int array returned here will later be passed to \ref bind().
-	 * The default implementation does nothing.
-	 */
-	virtual void resolve(const GPUProgram *program, const std::string &evalName,
-		std::vector<int> &parameterIDs) const;
+    /**
+     * \brief This function can optionally be implemented to resolve named
+     * program parameters to numerical IDs for increased performance.
+     *
+     * The int array returned here will later be passed to \ref bind().
+     * The default implementation does nothing.
+     */
+    virtual void resolve(const GPUProgram *program, const std::string &evalName,
+        std::vector<int> &parameterIDs) const;
 
-	/**
-	 * \brief Configure the the associated GPU program.
-	 *
-	 * This function is typically used to bind textures and
-	 * to set program pararameters.
-	 */
-	virtual void bind(GPUProgram *program, const std::vector<int> &parameterIDs,
-		int &textureUnitOffset) const;
+    /**
+     * \brief Configure the the associated GPU program.
+     *
+     * This function is typically used to bind textures and
+     * to set program pararameters.
+     */
+    virtual void bind(GPUProgram *program, const std::vector<int> &parameterIDs,
+        int &textureUnitOffset) const;
 
-	/// Release any bound resources.
-	virtual void unbind() const;
+    /// Release any bound resources.
+    virtual void unbind() const;
 
-	/// Release all resources
-	virtual void cleanup(Renderer *renderer);
+    /// Release all resources
+    virtual void cleanup(Renderer *renderer);
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	Shader(Renderer *renderer, EShaderType type);
+    Shader(Renderer *renderer, EShaderType type);
 
-	/// Virtual destructor
-	virtual ~Shader();
+    /// Virtual destructor
+    virtual ~Shader();
 protected:
-	EShaderType m_type;
-	uint32_t m_flags;
+    EShaderType m_type;
+    uint32_t m_flags;
 };
 
 MTS_NAMESPACE_END
