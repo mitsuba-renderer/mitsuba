@@ -374,10 +374,11 @@ void GLWidget::downloadFramebuffer() {
 }
 
 QSize GLWidget::sizeHint() const {
+    float ratio = windowHandle()->devicePixelRatio();
     QSize minimumSize(440, 170);
     if (m_context) {
-        return QSize(std::max(minimumSize.width(), m_context->framebuffer->getWidth()),
-                     std::max(minimumSize.height(), m_context->framebuffer->getHeight()));
+        return QSize(std::max(minimumSize.width(), int(m_context->framebuffer->getWidth()/ratio)),
+                     std::max(minimumSize.height(), int(m_context->framebuffer->getHeight()/ratio)));
     } else {
         return minimumSize;
     }
@@ -609,12 +610,11 @@ void GLWidget::keyReleaseEvent(QKeyEvent *event) {
 }
 
 void GLWidget::mouseMoveEvent(QMouseEvent *event) {
-    QPoint rel = event->pos() - m_mousePos;
+    float ratio = windowHandle()->devicePixelRatio();
+    QPoint rel = event->pos() - m_mousePos / ratio;
     if (!m_context || !m_context->scene
      || !m_mouseDrag || rel == QPoint(0,0) || m_animation)
         return;
-
-    m_mousePos = event->pos();
 
     //  if (m_ignoreMouseEvent == rel) {
     if (m_ignoreMouseEvent != QPoint(0, 0)) {
@@ -766,8 +766,10 @@ void GLWidget::mousePressEvent(QMouseEvent *event) {
     if (m_context == NULL || m_context->scene == NULL)
         return;
 
-    m_mousePos = event->pos();
-    m_initialMousePos = mapToGlobal(m_mousePos);
+    float ratio = windowHandle()->devicePixelRatio();
+    m_mousePos = event->pos()*ratio;
+
+    m_initialMousePos = mapToGlobal(event->pos());
     m_mouseDrag = true;
 
     if (m_cropping) {
@@ -977,7 +979,8 @@ void GLWidget::paintGL() {
         Point2i lowerRight = upperLeft +
                 m_context->framebuffer->getSize();
 
-        if (width() > size.x || height() > size.y) {
+        float ratio = windowHandle()->devicePixelRatio();
+        if (width() * ratio > size.x || height() * ratio > size.y) {
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
             /* Draw a border to highlight the region occupied by the image */
             glColor4f(0.4f, 0.4f, 0.4f, 1.0f);
@@ -1369,10 +1372,11 @@ void GLWidget::updateScrollBars() {
         return;
     }
 
+    float ratio = windowHandle()->devicePixelRatio();
     int reqWidth = m_context->framebuffer->getWidth(),
         reqHeight = m_context->framebuffer->getHeight(),
-        width = size().width(),
-        height = size().height();
+        width = size().width()*ratio,
+        height = size().height()*ratio;
 
     if (m_hScroll->isVisible())
         height += m_hScroll->size().height();

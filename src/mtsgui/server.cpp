@@ -134,8 +134,10 @@ ServerWidget::ServerWidget(QWidget *parent,
         const QString &nodeName, int listenPort)
         : QMainWindow(parent) {
     m_contents = new QTextEdit(this);
-    QFont font("Monospace");
-    font.setStyleHint(QFont::TypeWriter);
+    QFont font = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+#if defined(__OSX__)
+    font.setPointSize(14);
+#endif
     m_contents->setFont(font);
     m_contents->setReadOnly(true);
     QPalette palette;
