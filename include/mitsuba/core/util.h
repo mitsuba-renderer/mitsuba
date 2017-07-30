@@ -22,6 +22,10 @@
 
 #include <boost/static_assert.hpp>
 
+#if defined(__MSVC__)
+# include <intrin.h>
+#endif
+
 MTS_NAMESPACE_BEGIN
 
 /*! \addtogroup libcore

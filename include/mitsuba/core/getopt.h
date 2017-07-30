@@ -18,11 +18,6 @@
    Boston, MA 02111-1307, USA.  */
 
 #pragma once
-#ifndef _GETOPT_H
-
-#ifndef __need_getopt
-# define _GETOPT_H 1
-#endif
 
 #if !defined(MTS_EXPORT_CORE)
     #if MTS_BUILD_MODULE == MTS_MODULE_CORE
@@ -134,27 +129,23 @@ struct option
 /* Many other libraries have conflicting prototypes for getopt, with
    differences in the consts, in stdlib.h.  To avoid compilation
    errors, only prototype getopt for the GNU C library.  */
-extern MTS_EXPORT_CORE int getopt (int __argc, char *const *__argv, const char *__shortopts);
+extern MTS_EXPORT_CORE int getopt (int argc, char *const *argv, const char *shortopts);
 
-# ifndef __need_getopt
-extern MTS_EXPORT_CORE int getopt_long (int __argc, char *const *__argv, const char *__shortopts,
-                const struct option *__longopts, int *__longind);
-extern MTS_EXPORT_CORE int getopt_long_only (int __argc, char *const *__argv,
-                 const char *__shortopts,
-                     const struct option *__longopts, int *__longind);
+# ifndef need_getopt
+extern MTS_EXPORT_CORE int getopt_long (int argc, char *const *argv, const char *shortopts,
+                const struct option *longopts, int *longind);
+extern MTS_EXPORT_CORE int getopt_long_only (int argc, char *const *argv,
+                 const char *shortopts,
+                     const struct option *longopts, int *longind);
 
 /* Internal only.  Users should not call this directly.  */
-extern MTS_EXPORT_CORE int _getopt_internal (int __argc, char *const *__argv,
-                 const char *__shortopts,
-                     const struct option *__longopts, int *__longind,
-                 int __long_only);
+extern MTS_EXPORT_CORE int _getopt_internal (int argc, char *const *argv,
+                 const char *shortopts,
+                     const struct option *longopts, int *longind,
+                 int long_only);
 # endif
 
 #ifdef  __cplusplus
 }
 #endif
 
-/* Make sure we later can get all the definitions and declarations.  */
-#undef __need_getopt
-
-#endif /* getopt.h */

@@ -35,15 +35,10 @@ if hasQt:
                 del qtEnv['LINKFLAGS'][index]
                 qtEnv.Append(CXXFLAGS=['/D', '_WINDOWS', '/D', 'MTS_CUSTOM_QTMAIN', '/D', 'MTSGUI_STATIC_QFILEDIALOG=1'])
                 qtEnv.Append(LINKFLAGS=['/SUBSYSTEM:WINDOWS'])
-                if hasBreakpad:
-                        qtEnv.Append(CPPPATH=['#dependencies/include/breakpad'])
-                        qtEnv.Append(LIBS=['breakpad_common', 'breakpad_exception_handler', 'breakpad_crash_generation_client',
-                                'breakpad_crash_report_sender', 'wininet'])
+                qtEnv.Append(LIBS=['qtmain', 'shell32'])
         elif sys.platform == 'darwin':
                 qtEnv.Append(LINKFLAGS=['-Fdependencies/frameworks', '-framework',
                         'BWToolkitFramework', '-framework', 'Security', '-framework', 'CoreFoundation'])
-                if hasBreakpad:
-                        qtEnv.Append(LINKFLAGS=['-framework', 'Breakpad'])
                 # Qt 4 headers cause a lot of warnings on clang/OSX -- turn them off
                 if qtEnv['CXX'] == 'clang++':
                         qtEnv.Append(CPPFLAGS=['-Wno-unused-private-field', '-Wno-uninitialized'])

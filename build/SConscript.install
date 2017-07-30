@@ -60,9 +60,9 @@ if sys.platform == 'win32':
                 if '.dll' in plugin.__str__():
                         installTargets += env.Install(os.path.join(distDir, 'plugins'), plugin)
 
-        compilerType = 'vc' + env['MSVC_VERSION'].replace('.', '')
+        compilerType = 'vc141'
         archType = 'x64' if 'WIN64' in env['CXXFLAGS'] else 'i386'
-        dllprefix = '#dependencies/lib/%s_%s' % (archType, compilerType[:-1])
+        dllprefix = '#dependencies/lib'
 
         if hasCollada:
                 install(distDir, ['converter/mtsimport.exe'])
@@ -80,22 +80,18 @@ if sys.platform == 'win32':
                         [ ('#' + os.path.join(includeDir, fname)) for fname in entry[2] ])
         for ver in hasPython:
                 installAs(os.path.join(distDir, 'python/'+ver+'/mitsuba.pyd'), 'libpython/mitsuba_python' + ver + '.dll')
-        install(distDir, ['Iex.dll', 'Half.dll','IlmThread.dll', 'Imath.dll','IlmImf.dll','zlib.dll',
-                'libpng16.dll', 'jpeg62.dll', 'xerces-c_3_1.dll', 'glew32mx.dll', 'libfftw-3.3.dll'],
+        install(distDir, ['Iex.dll', 'Half.dll','IlmThread.dll', 'Imath.dll','IlmImf.dll','zlib1.dll',
+                'libpng16.dll', 'jpeg.dll', 'xerces-c_3_1.dll', 'glew32mx.dll', 'libfftw3-3.dll'],
                 prefix=dllprefix)
-        install(distDir, ['libcollada14dom24.dll'], dllprefix)
-        for boostlib in ['python27', 'python32', 'python33', 'python34', 'system', 'filesystem', 'chrono', 'thread']:
-                install(distDir, ['boost_%s-%s-mt-1_53.dll' % (boostlib, compilerType)], dllprefix)
+        for boostlib in ['python27', 'python35', 'python36', 'system', 'filesystem', 'chrono', 'thread']:
+                install(distDir, ['boost_%s-%s-mt-1_64.dll' % (boostlib, compilerType)], dllprefix)
 
         installTargets += env.Install(distDir, '#data/windows/README.txt')
 
-        if 'REDIST_PATH' in env:
-                install(distDir, ['libmmd.dll', 'libiomp5md.dll', 'svml_dispmd.dll'], prefix = env['REDIST_PATH'])
-
         if hasQt:
                 install(distDir, ['mtsgui/mtsgui.exe'])
-                install(distDir, ['QtCore5.dll', 'QtGui5.dll', 'QtWidgets5.dll', 'QtXml5.dll',
-                        'QtNetwork5.dll', 'QtOpenGL5.dll', 'QtXmlPatterns5.dll'], prefix = env['QT5_LIBPATH'])
+                install(distDir, ['Qt5Core.dll', 'Qt5Gui.dll', 'Qt5Widgets.dll', 'Qt5Xml.dll',
+                        'Qt5Network.dll', 'Qt5OpenGL.dll', 'Qt5XmlPatterns.dll'], prefix = env['QT5_LIBPATH'])
 elif sys.platform == 'darwin':
         for i in plugins:
                 plugin = env.Install(os.path.join(distDir, 'plugins'), i)

@@ -179,7 +179,7 @@ protected:
     public:
         QtDevice(QGLWidget *widget) : WGLDevice(NULL), m_widget(widget) { }
         void init(Device *other = NULL) {
-            m_hwnd = m_widget->winId();
+            m_hwnd = (HWND) m_widget->winId();
             m_hdc = wglGetCurrentDC();
         }
 #else
