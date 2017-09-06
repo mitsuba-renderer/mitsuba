@@ -132,7 +132,7 @@ Spectrum Sensor::sampleRayDifferential(RayDifferential &ray,
 }
 
 Float Sensor::pdfTime(const Ray &ray, EMeasure measure) const {
-    if (ray.time < m_shutterOpen || ray.time > m_shutterOpenTime + m_shutterOpenTime)
+    if (ray.time < m_shutterOpen || ray.time > m_shutterOpen + m_shutterOpenTime)
         return 0.0f;
 
     if (m_shutterOpenTime == 0 && measure == EDiscrete)
