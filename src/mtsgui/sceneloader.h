@@ -28,30 +28,30 @@ using namespace mitsuba;
 
 class SceneLoader : public Thread {
 public:
-	SceneLoader(FileResolver *resolver,
-			const fs::path &filename,
-			const fs::path &destFile,
-			const std::map<std::string, std::string, SimpleStringOrdering> &parameters);
-	void run();
+    SceneLoader(FileResolver *resolver,
+            const fs::path &filename,
+            const fs::path &destFile,
+            const std::map<std::string, std::string, SimpleStringOrdering> &parameters);
+    void run();
 
-	inline void wait(int ms) { m_wait->wait(ms); }
+    inline void wait(int ms) { m_wait->wait(ms); }
 
-	inline SceneContext *getResult() { return m_result; }
-	inline const std::string &getError() const { return m_error; }
-	inline bool isVersionError() const { return m_versionError; }
-	inline const Version &getVersion() const { return m_version; }
+    inline SceneContext *getResult() { return m_result; }
+    inline const std::string &getError() const { return m_error; }
+    inline bool isVersionError() const { return m_versionError; }
+    inline const Version &getVersion() const { return m_version; }
 protected:
-	virtual ~SceneLoader();
+    virtual ~SceneLoader();
 private:
-	ref<FileResolver> m_resolver;
-	ref<WaitFlag> m_wait;
-	SceneContext *m_result;
-	std::string m_error;
-	const QString m_filename;
-	fs::path m_destFile;
-	bool m_versionError;
-	Version m_version;
-	const std::map<std::string, std::string, SimpleStringOrdering> &m_parameters;
+    ref<FileResolver> m_resolver;
+    ref<WaitFlag> m_wait;
+    SceneContext *m_result;
+    std::string m_error;
+    const QString m_filename;
+    fs::path m_destFile;
+    bool m_versionError;
+    Version m_version;
+    const std::map<std::string, std::string, SimpleStringOrdering> &m_parameters;
 };
 
 #endif // __SCENELOADER_H

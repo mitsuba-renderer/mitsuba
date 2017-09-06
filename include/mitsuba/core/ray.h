@@ -34,103 +34,103 @@ MTS_NAMESPACE_BEGIN
  * \ingroup libpython
 */
 template <typename _PointType, typename _VectorType> struct TRay {
-	typedef _PointType                  PointType;
-	typedef _VectorType                 VectorType;
-	typedef typename PointType::Scalar  Scalar;
+    typedef _PointType                  PointType;
+    typedef _VectorType                 VectorType;
+    typedef typename PointType::Scalar  Scalar;
 
-	/* The somewhat peculiar ordering of the attributes is for
-	   alignment purposes in the 3D case and should not be changed. */
+    /* The somewhat peculiar ordering of the attributes is for
+       alignment purposes in the 3D case and should not be changed. */
 
-	PointType o;     ///< Ray origin
-	Scalar mint;     ///< Minimum range for intersection tests
-	VectorType d;    ///< Ray direction
-	Scalar maxt;     ///< Maximum range for intersection tests
-	VectorType dRcp; ///< Componentwise reciprocals of the ray direction
-	Float time;  ///< Time value associated with this ray
+    PointType o;     ///< Ray origin
+    Scalar mint;     ///< Minimum range for intersection tests
+    VectorType d;    ///< Ray direction
+    Scalar maxt;     ///< Maximum range for intersection tests
+    VectorType dRcp; ///< Componentwise reciprocals of the ray direction
+    Float time;  ///< Time value associated with this ray
 
-	/// Construct a new ray
-	inline TRay() : mint(Epsilon),
-		maxt(std::numeric_limits<Scalar>::infinity()), time(0) {
-	}
+    /// Construct a new ray
+    inline TRay() : mint(Epsilon),
+        maxt(std::numeric_limits<Scalar>::infinity()), time(0) {
+    }
 
-	/// Copy constructor (1)
-	inline TRay(const TRay &ray)
-	 : o(ray.o), mint(ray.mint), d(ray.d), maxt(ray.maxt),
-	   dRcp(ray.dRcp), time(ray.time) {
-	}
+    /// Copy constructor (1)
+    inline TRay(const TRay &ray)
+     : o(ray.o), mint(ray.mint), d(ray.d), maxt(ray.maxt),
+       dRcp(ray.dRcp), time(ray.time) {
+    }
 
-	/// Copy constructor (2)
-	inline TRay(const TRay &ray, Scalar mint, Scalar maxt)
-	 : o(ray.o), mint(mint), d(ray.d), maxt(maxt),
-	   dRcp(ray.dRcp), time(ray.time) { }
+    /// Copy constructor (2)
+    inline TRay(const TRay &ray, Scalar mint, Scalar maxt)
+     : o(ray.o), mint(mint), d(ray.d), maxt(maxt),
+       dRcp(ray.dRcp), time(ray.time) { }
 
-	/// Construct a new ray, while not specifying a direction yet
-	inline TRay(const PointType &o, Scalar time) : o(o), mint(Epsilon),
-	  maxt(std::numeric_limits<Scalar>::infinity()), time(time) { }
+    /// Construct a new ray, while not specifying a direction yet
+    inline TRay(const PointType &o, Scalar time) : o(o), mint(Epsilon),
+      maxt(std::numeric_limits<Scalar>::infinity()), time(time) { }
 
-	/// Construct a new ray
-	inline TRay(const PointType &o, const VectorType &d, Scalar time)
-		: o(o), mint(Epsilon),  d(d),
-		  maxt(std::numeric_limits<Scalar>::infinity()), time(time) {
+    /// Construct a new ray
+    inline TRay(const PointType &o, const VectorType &d, Scalar time)
+        : o(o), mint(Epsilon),  d(d),
+          maxt(std::numeric_limits<Scalar>::infinity()), time(time) {
 #ifdef MTS_DEBUG_FP
-		bool state = disableFPExceptions();
+        bool state = disableFPExceptions();
 #endif
-		for (int i=0; i<3; ++i)
-			dRcp[i] = (Scalar) 1 / d[i];
+        for (int i=0; i<3; ++i)
+            dRcp[i] = (Scalar) 1 / d[i];
 #ifdef MTS_DEBUG_FP
-		restoreFPExceptions(state);
+        restoreFPExceptions(state);
 #endif
-	}
+    }
 
-	/// Construct a new ray
-	inline TRay(const PointType &o, const VectorType &d, Scalar mint, Scalar maxt,
-		Scalar time) : o(o), mint(mint),  d(d), maxt(maxt), time(time) {
+    /// Construct a new ray
+    inline TRay(const PointType &o, const VectorType &d, Scalar mint, Scalar maxt,
+        Scalar time) : o(o), mint(mint),  d(d), maxt(maxt), time(time) {
 #ifdef MTS_DEBUG_FP
-		bool state = disableFPExceptions();
+        bool state = disableFPExceptions();
 #endif
-		for (int i=0; i<3; ++i)
-			dRcp[i] = (Scalar) 1 / d[i];
+        for (int i=0; i<3; ++i)
+            dRcp[i] = (Scalar) 1 / d[i];
 #ifdef MTS_DEBUG_FP
-		restoreFPExceptions(state);
+        restoreFPExceptions(state);
 #endif
-	}
+    }
 
-	/// Set the origin
-	inline void setOrigin(const PointType &pos) { o = pos; }
+    /// Set the origin
+    inline void setOrigin(const PointType &pos) { o = pos; }
 
-	/// Set the time
-	inline void setTime(Scalar tval) { time = tval; }
+    /// Set the time
+    inline void setTime(Scalar tval) { time = tval; }
 
-	/// Set the direction and update the reciprocal
-	inline void setDirection(const VectorType &dir) {
-		d = dir;
+    /// Set the direction and update the reciprocal
+    inline void setDirection(const VectorType &dir) {
+        d = dir;
 #ifdef MTS_DEBUG_FP
-		bool state = disableFPExceptions();
+        bool state = disableFPExceptions();
 #endif
-		for (int i=0; i<3; ++i)
-			dRcp[i] = (Scalar) 1 / dir[i];
+        for (int i=0; i<3; ++i)
+            dRcp[i] = (Scalar) 1 / dir[i];
 #ifdef MTS_DEBUG_FP
-		restoreFPExceptions(state);
+        restoreFPExceptions(state);
 #endif
-	}
+    }
 
-	/**
-	 * \brief Return the position of a point along the ray
-	 *
-	 * \remark In the Python bindings, this operator is
-	 * exposed as a function named \c eval -- i.e.
-	 * position lookups should be written as \c ray.eval(t)
-	 */
-	inline PointType operator() (Scalar t) const { return o + t * d; }
+    /**
+     * \brief Return the position of a point along the ray
+     *
+     * \remark In the Python bindings, this operator is
+     * exposed as a function named \c eval -- i.e.
+     * position lookups should be written as \c ray.eval(t)
+     */
+    inline PointType operator() (Scalar t) const { return o + t * d; }
 
-	/// Return a string representation of this ray
-	inline std::string toString() const {
-		std::ostringstream oss;
-		oss << "Ray[origin=" << o.toString() << ", direction="
-			<< d.toString() << ", mint=" << mint
-			<< ", maxt=" << maxt << ", time=" << time << "]";
-		return oss.str();
-	}
+    /// Return a string representation of this ray
+    inline std::string toString() const {
+        std::ostringstream oss;
+        oss << "Ray[origin=" << o.toString() << ", direction="
+            << d.toString() << ", mint=" << mint
+            << ", maxt=" << maxt << ", time=" << time << "]";
+        return oss.str();
+    }
 };
 
 /** \brief %Ray differential -- enhances the basic ray class with
@@ -138,93 +138,93 @@ template <typename _PointType, typename _VectorType> struct TRay {
    \ingroup libcore
 */
 struct RayDifferential : public Ray {
-	Point rxOrigin, ryOrigin;
-	Vector rxDirection, ryDirection;
-	bool hasDifferentials;
+    Point rxOrigin, ryOrigin;
+    Vector rxDirection, ryDirection;
+    bool hasDifferentials;
 
-	inline RayDifferential()
-		: hasDifferentials(false) {
-	}
+    inline RayDifferential()
+        : hasDifferentials(false) {
+    }
 
-	inline RayDifferential(const Point &p, const Vector &d, Float time)
-		: Ray(p, d, time), hasDifferentials(false) {
-	}
+    inline RayDifferential(const Point &p, const Vector &d, Float time)
+        : Ray(p, d, time), hasDifferentials(false) {
+    }
 
-	inline explicit RayDifferential(const Ray &ray)
-		: Ray(ray), hasDifferentials(false) {
-	}
+    inline explicit RayDifferential(const Ray &ray)
+        : Ray(ray), hasDifferentials(false) {
+    }
 
-	inline RayDifferential(const RayDifferential &ray)
-		: Ray(ray), rxOrigin(ray.rxOrigin), ryOrigin(ray.ryOrigin),
-		  rxDirection(ray.rxDirection), ryDirection(ray.ryDirection),
-		  hasDifferentials(ray.hasDifferentials) {
-	}
+    inline RayDifferential(const RayDifferential &ray)
+        : Ray(ray), rxOrigin(ray.rxOrigin), ryOrigin(ray.ryOrigin),
+          rxDirection(ray.rxDirection), ryDirection(ray.ryDirection),
+          hasDifferentials(ray.hasDifferentials) {
+    }
 
-	void scaleDifferential(Float amount) {
-		rxOrigin = o + (rxOrigin - o) * amount;
-		ryOrigin = o + (ryOrigin - o) * amount;
-		rxDirection = d + (rxDirection - d) * amount;
-		ryDirection = d + (ryDirection - d) * amount;
-	}
+    void scaleDifferential(Float amount) {
+        rxOrigin = o + (rxOrigin - o) * amount;
+        ryOrigin = o + (ryOrigin - o) * amount;
+        rxDirection = d + (rxDirection - d) * amount;
+        ryDirection = d + (ryDirection - d) * amount;
+    }
 
-	void scaleDifferentialUV(const Vector2 amountUV) {
-		rxOrigin = o + (rxOrigin - o) * amountUV.x;
-		ryOrigin = o + (ryOrigin - o) * amountUV.y;
-		rxDirection = d + (rxDirection - d) * amountUV.x;
-		ryDirection = d + (ryDirection - d) * amountUV.y;
-	}
+    void scaleDifferentialUV(const Vector2 amountUV) {
+        rxOrigin = o + (rxOrigin - o) * amountUV.x;
+        ryOrigin = o + (ryOrigin - o) * amountUV.y;
+        rxDirection = d + (rxDirection - d) * amountUV.x;
+        ryDirection = d + (ryDirection - d) * amountUV.y;
+    }
 
-	inline void operator=(const RayDifferential &ray) {
-		o = ray.o;
-		mint = ray.mint;
-		d = ray.d;
-		maxt = ray.maxt;
+    inline void operator=(const RayDifferential &ray) {
+        o = ray.o;
+        mint = ray.mint;
+        d = ray.d;
+        maxt = ray.maxt;
 #ifdef MTS_DEBUG_FP
-		bool state = disableFPExceptions();
+        bool state = disableFPExceptions();
 #endif
-		dRcp = ray.dRcp;
+        dRcp = ray.dRcp;
 #ifdef MTS_DEBUG_FP
-		restoreFPExceptions(state);
+        restoreFPExceptions(state);
 #endif
-		hasDifferentials = ray.hasDifferentials;
-		rxOrigin = ray.rxOrigin;
-		ryOrigin = ray.ryOrigin;
-		rxDirection = ray.rxDirection;
-		ryDirection = ray.ryDirection;
-	}
+        hasDifferentials = ray.hasDifferentials;
+        rxOrigin = ray.rxOrigin;
+        ryOrigin = ray.ryOrigin;
+        rxDirection = ray.rxDirection;
+        ryDirection = ray.ryDirection;
+    }
 
-	inline void operator=(const Ray &ray) {
-		o = ray.o;
-		mint = ray.mint;
-		d = ray.d;
-		maxt = ray.maxt;
+    inline void operator=(const Ray &ray) {
+        o = ray.o;
+        mint = ray.mint;
+        d = ray.d;
+        maxt = ray.maxt;
 #ifdef MTS_DEBUG_FP
-		bool state = disableFPExceptions();
+        bool state = disableFPExceptions();
 #endif
-		dRcp = ray.dRcp;
+        dRcp = ray.dRcp;
 #ifdef MTS_DEBUG_FP
-		restoreFPExceptions(state);
+        restoreFPExceptions(state);
 #endif
-		hasDifferentials = false;
-	}
+        hasDifferentials = false;
+    }
 
-	/// Return a string representation of this ray
-	inline std::string toString() const {
-		std::ostringstream oss;
-		oss << "RayDifferential[" << endl
-			<< "  origin = " << o.toString() << "," << endl
-			<< "  direction  = " << d.toString() << "," << endl
-			<< "  mint = " << mint << "," << endl
-			<< "  maxt = " << maxt << "," << endl
-			<< "  time = " << time << "," << endl
-			<< "  hasDifferentials = " << hasDifferentials << "," << endl
-			<< "  rxOrigin = " << rxOrigin.toString() << "," << endl
-			<< "  ryOrigin = " << ryOrigin.toString() << "," << endl
-			<< "  rxDirection = " << rxDirection.toString() << "," << endl
-			<< "  ryDirection = " << ryDirection.toString() << endl
-			<< "]" << endl;
-		return oss.str();
-	}
+    /// Return a string representation of this ray
+    inline std::string toString() const {
+        std::ostringstream oss;
+        oss << "RayDifferential[" << endl
+            << "  origin = " << o.toString() << "," << endl
+            << "  direction  = " << d.toString() << "," << endl
+            << "  mint = " << mint << "," << endl
+            << "  maxt = " << maxt << "," << endl
+            << "  time = " << time << "," << endl
+            << "  hasDifferentials = " << hasDifferentials << "," << endl
+            << "  rxOrigin = " << rxOrigin.toString() << "," << endl
+            << "  ryOrigin = " << ryOrigin.toString() << "," << endl
+            << "  rxDirection = " << rxDirection.toString() << "," << endl
+            << "  ryDirection = " << ryDirection.toString() << endl
+            << "]" << endl;
+        return oss.str();
+    }
 };
 
 MTS_NAMESPACE_END

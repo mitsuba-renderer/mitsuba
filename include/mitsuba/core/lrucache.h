@@ -60,96 +60,96 @@ MTS_NAMESPACE_BEGIN
  */
 template <typename K, typename KComp, typename V> struct LRUCache : public Object {
 public:
-	typedef int dummy_type;
+    typedef int dummy_type;
 
-	// Bimap with key access on left view, key access
-	// history on right view, and associated value.
-	typedef boost::bimaps::bimap<
-			boost::bimaps::set_of<K, KComp>,
-			boost::bimaps::list_of<dummy_type>,
-			boost::bimaps::with_info<V> > cache_type;
+    // Bimap with key access on left view, key access
+    // history on right view, and associated value.
+    typedef boost::bimaps::bimap<
+            boost::bimaps::set_of<K, KComp>,
+            boost::bimaps::list_of<dummy_type>,
+            boost::bimaps::with_info<V> > cache_type;
 
-	LRUCache() { }
+    LRUCache() { }
 
-	// Constuctor specifies the cached function and
-	// the maximum number of records to be stored.
-	LRUCache(size_t capacity,
-		const boost::function<V(const K&)>& generatorFunction,
-		const boost::function<void (const V&)>& cleanupFunction = NULL)
-		: m_capacity(capacity), m_generatorFunction(generatorFunction),
-		  m_cleanupFunction(cleanupFunction) {
-		SAssert(m_capacity != 0);
-	}
+    // Constuctor specifies the cached function and
+    // the maximum number of records to be stored.
+    LRUCache(size_t capacity,
+        const boost::function<V(const K&)>& generatorFunction,
+        const boost::function<void (const V&)>& cleanupFunction = NULL)
+        : m_capacity(capacity), m_generatorFunction(generatorFunction),
+          m_cleanupFunction(cleanupFunction) {
+        SAssert(m_capacity != 0);
+    }
 
-	virtual ~LRUCache() {
-		typename cache_type::right_iterator
-			src = m_cache.right.begin();
-		if (m_cleanupFunction) {
-			while (src != m_cache.right.end())
-				m_cleanupFunction((*src++).info);
-		}
-	}
+    virtual ~LRUCache() {
+        typename cache_type::right_iterator
+            src = m_cache.right.begin();
+        if (m_cleanupFunction) {
+            while (src != m_cache.right.end())
+                m_cleanupFunction((*src++).info);
+        }
+    }
 
-	bool isFull() const {
-		return m_cache.size() == m_capacity;
-	}
+    bool isFull() const {
+        return m_cache.size() == m_capacity;
+    }
 
-	// Obtain value of the cached function for k
-	V get(const K& k, bool &hit) {
-		// Attempt to find existing record
-		const typename cache_type::left_iterator it
-			= m_cache.left.find(k);
+    // Obtain value of the cached function for k
+    V get(const K& k, bool &hit) {
+        // Attempt to find existing record
+        const typename cache_type::left_iterator it
+            = m_cache.left.find(k);
 
-		if (it == m_cache.left.end()) {
-			// We don't have it:
-			// Evaluate function and create new record
+        if (it == m_cache.left.end()) {
+            // We don't have it:
+            // Evaluate function and create new record
 
-			const V v = m_generatorFunction(k);
-			insert(k,v);
-			hit = false;
-			return v;
-		} else {
-			// We do have it:
-			// Update the access record view.
+            const V v = m_generatorFunction(k);
+            insert(k,v);
+            hit = false;
+            return v;
+        } else {
+            // We do have it:
+            // Update the access record view.
 
-			m_cache.right.relocate(
-				m_cache.right.end(),
-				m_cache.project_right(it)
-			);
-			hit = true;
-		}
-		return it->info;
-	}
+            m_cache.right.relocate(
+                m_cache.right.end(),
+                m_cache.project_right(it)
+            );
+            hit = true;
+        }
+        return it->info;
+    }
 
-	// Obtain the cached keys, most recently used element
-	// at head, least recently used at tail.
-	// This method is provided purely to support testing.
-	template <typename IT> void get_keys(IT dst) const {
-		typename cache_type::right_const_reverse_iterator
-			src = m_cache.right.rbegin();
-		while (src != m_cache.right.rend())
-			*dst++=(*src++).second;
-	}
+    // Obtain the cached keys, most recently used element
+    // at head, least recently used at tail.
+    // This method is provided purely to support testing.
+    template <typename IT> void get_keys(IT dst) const {
+        typename cache_type::right_const_reverse_iterator
+            src = m_cache.right.rbegin();
+        while (src != m_cache.right.rend())
+            *dst++=(*src++).second;
+    }
 protected:
-	void insert(const K& k,const V& v) {
-		SAssert(m_cache.size() <= m_capacity);
-		if (m_cache.size() == m_capacity) {
-			if (m_cleanupFunction)
-				m_cleanupFunction(m_cache.right.begin()->info);
-			// If necessary, make space
-			// by purging the least-recently-used element
-			m_cache.right.erase(m_cache.right.begin());
-		}
+    void insert(const K& k,const V& v) {
+        SAssert(m_cache.size() <= m_capacity);
+        if (m_cache.size() == m_capacity) {
+            if (m_cleanupFunction)
+                m_cleanupFunction(m_cache.right.begin()->info);
+            // If necessary, make space
+            // by purging the least-recently-used element
+            m_cache.right.erase(m_cache.right.begin());
+        }
 
-		// Create a new record from the key, a dummy and the value
-		m_cache.insert(typename cache_type::value_type(k,0,v));
-	}
+        // Create a new record from the key, a dummy and the value
+        m_cache.insert(typename cache_type::value_type(k,0,v));
+    }
 
 private:
-	size_t m_capacity;
-	boost::function<V(const K&)> m_generatorFunction;
-	boost::function<void(const V&)> m_cleanupFunction;
-	cache_type m_cache;
+    size_t m_capacity;
+    boost::function<V(const K&)> m_generatorFunction;
+    boost::function<void(const V&)> m_cleanupFunction;
+    cache_type m_cache;
 };
 
 MTS_NAMESPACE_END

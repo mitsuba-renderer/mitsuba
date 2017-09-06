@@ -27,36 +27,36 @@ MTS_NAMESPACE_BEGIN
  * \parameters{
  *     \parameter{maxDepth}{\Integer}{Specifies the longest path depth
  *         in the generated output image (where \code{-1} corresponds to $\infty$).
- *	       A value of \code{1} will only render directly visible light sources.
- *	       \code{2} will lead to single-bounce (direct-only) illumination,
- *	       and so on. \default{\code{-1}}
- *	   }
- *	   \parameter{lightImage}{\Boolean}{Include sampling strategies that connect
- *	      paths traced from emitters directly to the camera? (i.e. what \pluginref{ptracer} does)
- *	      This improves the effectiveness of bidirectional path tracing
- *	      but severely increases the local and remote communication
- *	      overhead, since large \emph{light images} must be transferred between threads
- *	      or over the network. See the text below for a more detailed explanation.
- *	      \default{include these strategies, i.e. \code{true}}
+ *         A value of \code{1} will only render directly visible light sources.
+ *         \code{2} will lead to single-bounce (direct-only) illumination,
+ *         and so on. \default{\code{-1}}
+ *     }
+ *     \parameter{lightImage}{\Boolean}{Include sampling strategies that connect
+ *        paths traced from emitters directly to the camera? (i.e. what \pluginref{ptracer} does)
+ *        This improves the effectiveness of bidirectional path tracing
+ *        but severely increases the local and remote communication
+ *        overhead, since large \emph{light images} must be transferred between threads
+ *        or over the network. See the text below for a more detailed explanation.
+ *        \default{include these strategies, i.e. \code{true}}
  *     }
  *     \parameter{sampleDirect}{\Boolean}{Enable direct sampling strategies? This is a generalization
  *        of direct illumination sampling that works with both emitters and sensors. Usually a good idea.
  *        \default{use direct sampling, i.e. \code{true}}}
- *	   \parameter{rrDepth}{\Integer}{Specifies the minimum path depth, after
- *	      which the implementation will start to use the ``russian roulette''
- *	      path termination criterion. \default{\code{5}}
- *	   }
+ *     \parameter{rrDepth}{\Integer}{Specifies the minimum path depth, after
+ *        which the implementation will start to use the ``russian roulette''
+ *        path termination criterion. \default{\code{5}}
+ *     }
  * }
  *
  ** \renderings{
  *     \rendering{Path tracer, 32 samples/pixel}{integrator_bdpt_path}
  *     \rendering{Bidirectional path tracer, 32 samples/pixel}{integrator_bdpt_bdpt}
  *     \caption{
- *     	The bidirectional path tracer finds light paths by generating partial
- *     	paths starting at the emitters and the sensor and connecting them in every possible way.
- *     	This works particularly well in closed scenes as the one shown above. Here, the unidirectional
- *     	path tracer has severe difficulties finding some of the indirect illumination paths.
- *     	Modeled after a scene by Eric Veach.
+ *      The bidirectional path tracer finds light paths by generating partial
+ *      paths starting at the emitters and the sensor and connecting them in every possible way.
+ *      This works particularly well in closed scenes as the one shown above. Here, the unidirectional
+ *      path tracer has severe difficulties finding some of the indirect illumination paths.
+ *      Modeled after a scene by Eric Veach.
  *     }
  * }
  * \renderings{
@@ -132,110 +132,110 @@ MTS_NAMESPACE_BEGIN
  */
 class BDPTIntegrator : public Integrator {
 public:
-	BDPTIntegrator(const Properties &props) : Integrator(props) {
-		/* Load the parameters / defaults */
-		m_config.maxDepth = props.getInteger("maxDepth", -1);
-		m_config.rrDepth = props.getInteger("rrDepth", 5);
-		m_config.lightImage = props.getBoolean("lightImage", true);
-		m_config.sampleDirect = props.getBoolean("sampleDirect", true);
-		m_config.showWeighted = props.getBoolean("showWeighted", false);
+    BDPTIntegrator(const Properties &props) : Integrator(props) {
+        /* Load the parameters / defaults */
+        m_config.maxDepth = props.getInteger("maxDepth", -1);
+        m_config.rrDepth = props.getInteger("rrDepth", 5);
+        m_config.lightImage = props.getBoolean("lightImage", true);
+        m_config.sampleDirect = props.getBoolean("sampleDirect", true);
+        m_config.showWeighted = props.getBoolean("showWeighted", false);
 
-		#if BDPT_DEBUG == 1
-		if (m_config.maxDepth == -1 || m_config.maxDepth > 6) {
-			/* Limit the maximum depth when rendering image
-			   matrices in BDPT debug mode (the number of
-			   these images grows quadratically with depth) */
-			Log(EWarn, "Limiting max. path depth to 6 to avoid an "
-				"extremely large number of debug output images");
-			m_config.maxDepth = 6;
-		}
-		#endif
+        #if BDPT_DEBUG == 1
+        if (m_config.maxDepth == -1 || m_config.maxDepth > 6) {
+            /* Limit the maximum depth when rendering image
+               matrices in BDPT debug mode (the number of
+               these images grows quadratically with depth) */
+            Log(EWarn, "Limiting max. path depth to 6 to avoid an "
+                "extremely large number of debug output images");
+            m_config.maxDepth = 6;
+        }
+        #endif
 
-		if (m_config.rrDepth <= 0)
-			Log(EError, "'rrDepth' must be set to a value greater than zero!");
+        if (m_config.rrDepth <= 0)
+            Log(EError, "'rrDepth' must be set to a value greater than zero!");
 
-		if (m_config.maxDepth <= 0 && m_config.maxDepth != -1)
-			Log(EError, "'maxDepth' must be set to -1 (infinite) or a value greater than zero!");
-	}
+        if (m_config.maxDepth <= 0 && m_config.maxDepth != -1)
+            Log(EError, "'maxDepth' must be set to -1 (infinite) or a value greater than zero!");
+    }
 
-	/// Unserialize from a binary data stream
-	BDPTIntegrator(Stream *stream, InstanceManager *manager)
-	 : Integrator(stream, manager) {
-		m_config = BDPTConfiguration(stream);
-	}
+    /// Unserialize from a binary data stream
+    BDPTIntegrator(Stream *stream, InstanceManager *manager)
+     : Integrator(stream, manager) {
+        m_config = BDPTConfiguration(stream);
+    }
 
-	void serialize(Stream *stream, InstanceManager *manager) const {
-		Integrator::serialize(stream, manager);
-		m_config.serialize(stream);
-	}
+    void serialize(Stream *stream, InstanceManager *manager) const {
+        Integrator::serialize(stream, manager);
+        m_config.serialize(stream);
+    }
 
-	bool preprocess(const Scene *scene, RenderQueue *queue,
-			const RenderJob *job, int sceneResID, int sensorResID,
-			int samplerResID) {
-		Integrator::preprocess(scene, queue, job, sceneResID,
-				sensorResID, samplerResID);
+    bool preprocess(const Scene *scene, RenderQueue *queue,
+            const RenderJob *job, int sceneResID, int sensorResID,
+            int samplerResID) {
+        Integrator::preprocess(scene, queue, job, sceneResID,
+                sensorResID, samplerResID);
 
-		if (scene->getSubsurfaceIntegrators().size() > 0)
-			Log(EError, "Subsurface integrators are not supported "
-				"by the bidirectional path tracer!");
+        if (scene->getSubsurfaceIntegrators().size() > 0)
+            Log(EError, "Subsurface integrators are not supported "
+                "by the bidirectional path tracer!");
 
-		return true;
-	}
+        return true;
+    }
 
-	void cancel() {
-		Scheduler::getInstance()->cancel(m_process);
-	}
+    void cancel() {
+        Scheduler::getInstance()->cancel(m_process);
+    }
 
-	void configureSampler(const Scene *scene, Sampler *sampler) {
-		/* Prepare the sampler for tile-based rendering */
-		sampler->setFilmResolution(scene->getFilm()->getCropSize(), true);
-	}
+    void configureSampler(const Scene *scene, Sampler *sampler) {
+        /* Prepare the sampler for tile-based rendering */
+        sampler->setFilmResolution(scene->getFilm()->getCropSize(), true);
+    }
 
-	bool render(Scene *scene, RenderQueue *queue, const RenderJob *job,
-			int sceneResID, int sensorResID, int samplerResID) {
-		ref<Scheduler> scheduler = Scheduler::getInstance();
-		ref<Sensor> sensor = scene->getSensor();
-		const Film *film = sensor->getFilm();
-		size_t sampleCount = scene->getSampler()->getSampleCount();
-		size_t nCores = scheduler->getCoreCount();
+    bool render(Scene *scene, RenderQueue *queue, const RenderJob *job,
+            int sceneResID, int sensorResID, int samplerResID) {
+        ref<Scheduler> scheduler = Scheduler::getInstance();
+        ref<Sensor> sensor = scene->getSensor();
+        const Film *film = sensor->getFilm();
+        size_t sampleCount = scene->getSampler()->getSampleCount();
+        size_t nCores = scheduler->getCoreCount();
 
-		Log(EDebug, "Size of data structures: PathVertex=%i bytes, PathEdge=%i bytes",
-			(int) sizeof(PathVertex), (int) sizeof(PathEdge));
+        Log(EDebug, "Size of data structures: PathVertex=%i bytes, PathEdge=%i bytes",
+            (int) sizeof(PathVertex), (int) sizeof(PathEdge));
 
-		Log(EInfo, "Starting render job (%ix%i, " SIZE_T_FMT " samples, " SIZE_T_FMT
-			" %s, " SSE_STR ") ..", film->getCropSize().x, film->getCropSize().y,
-			sampleCount, nCores, nCores == 1 ? "core" : "cores");
+        Log(EInfo, "Starting render job (%ix%i, " SIZE_T_FMT " samples, " SIZE_T_FMT
+            " %s, " SSE_STR ") ..", film->getCropSize().x, film->getCropSize().y,
+            sampleCount, nCores, nCores == 1 ? "core" : "cores");
 
-		m_config.blockSize = scene->getBlockSize();
-		m_config.cropSize = film->getCropSize();
-		m_config.sampleCount = sampleCount;
-		m_config.dump();
+        m_config.blockSize = scene->getBlockSize();
+        m_config.cropSize = film->getCropSize();
+        m_config.sampleCount = sampleCount;
+        m_config.dump();
 
-		ref<BDPTProcess> process = new BDPTProcess(job, queue, m_config);
-		m_process = process;
+        ref<BDPTProcess> process = new BDPTProcess(job, queue, m_config);
+        m_process = process;
 
-		process->bindResource("scene", sceneResID);
-		process->bindResource("sensor", sensorResID);
-		process->bindResource("sampler", samplerResID);
-		scheduler->schedule(process);
+        process->bindResource("scene", sceneResID);
+        process->bindResource("sensor", sensorResID);
+        process->bindResource("sampler", samplerResID);
+        scheduler->schedule(process);
 
-		scheduler->wait(process);
-		m_process = NULL;
-		process->develop();
+        scheduler->wait(process);
+        m_process = NULL;
+        process->develop();
 
-		#if BDPT_DEBUG == 1
-			fs::path path = scene->getDestinationFile();
-			if (m_config.lightImage)
-				process->getResult()->dump(m_config, path.parent_path(), path.stem());
-		#endif
+        #if BDPT_DEBUG == 1
+            fs::path path = scene->getDestinationFile();
+            if (m_config.lightImage)
+                process->getResult()->dump(m_config, path.parent_path(), path.stem());
+        #endif
 
-		return process->getReturnStatus() == ParallelProcess::ESuccess;
-	}
+        return process->getReturnStatus() == ParallelProcess::ESuccess;
+    }
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 private:
-	ref<ParallelProcess> m_process;
-	BDPTConfiguration m_config;
+    ref<ParallelProcess> m_process;
+    BDPTConfiguration m_config;
 };
 
 MTS_IMPLEMENT_CLASS_S(BDPTIntegrator, false, Integrator)

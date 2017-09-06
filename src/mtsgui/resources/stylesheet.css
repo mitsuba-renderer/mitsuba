@@ -1,47 +1,47 @@
 QTreeView {
-	background-color: palette(base);
-	alternate-background-color: palette(alternate-base);
-	show-decoration-selected: 0;
+    background-color: palette(base);
+    alternate-background-color: palette(alternate-base);
+    show-decoration-selected: 0;
 }
 
 QTreeView::branch:has-siblings:!adjoins-item {
-	/* border-image: url(:/resources/vline.png) 0; */
-	border: none;
+    /* border-image: url(:/resources/vline.png) 0; */
+    border: none;
 }
 
 QTreeView::branch:has-siblings:adjoins-item {
-	/* border-image: url(:/resources/branch-more.png) 0; */
-	border: none;
+    /* border-image: url(:/resources/branch-more.png) 0; */
+    border: none;
 }
 
 QTreeView::branch:!has-children:!has-siblings:adjoins-item {
-	/* border-image: url(:/resources/branch-end.png) 0; */
-	border: none;
+    /* border-image: url(:/resources/branch-end.png) 0; */
+    border: none;
 }
 
 QTreeView::branch:selected {
-	background-color: palette(highlight);
-	color: palette(highlighted-text);
+    background-color: palette(highlight);
+    color: palette(highlighted-text);
 }
 
 
 QTreeView::branch:has-children:!has-siblings:closed,
 QTreeView::branch:closed:has-children:has-siblings {
-	border-image: none;
-	image: url(:/resources/branch-closed.png);
-	background-color: rgb(144, 144, 144);
+    border-image: none;
+    image: url(:/resources/branch-closed.png);
+    background-color: rgb(144, 144, 144);
 }
 
 QTreeView::branch:open:has-children:!has-siblings,
 QTreeView::branch:open:has-children:has-siblings  {
-	border-image: none;
-	image: url(:/resources/branch-open.png);
-	background-color: rgb(144, 144, 144);
+    border-image: none;
+    image: url(:/resources/branch-open.png);
+    background-color: rgb(144, 144, 144);
 }
 
 QTreeView::item:selected {
-	background-color: palette(highlight);
-	alternate-background-color: palette(highlight);
-	color: palette(highlighted-text);
+    background-color: palette(highlight);
+    alternate-background-color: palette(highlight);
+    color: palette(highlighted-text);
 }
 

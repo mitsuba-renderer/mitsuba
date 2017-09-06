@@ -27,7 +27,7 @@ MTS_NAMESPACE_BEGIN
  * \order{5}
  * \parameters{
  *     \parameter{toWorld}{\Transform\Or\Animation}{
- *	      Specifies an optional emitter-to-world transformation.
+ *        Specifies an optional emitter-to-world transformation.
  *        \default{none (i.e. emitter space $=$ world space)}
  *     }
  *     \parameter{power}{\Spectrum}{
@@ -55,102 +55,102 @@ MTS_NAMESPACE_BEGIN
 
 class CollimatedBeamEmitter : public Emitter {
 public:
-	CollimatedBeamEmitter(const Properties &props) : Emitter(props) {
-		m_type |= EDeltaPosition | EDeltaDirection;
+    CollimatedBeamEmitter(const Properties &props) : Emitter(props) {
+        m_type |= EDeltaPosition | EDeltaDirection;
 
-		m_power = props.getSpectrum("power", Spectrum::getD65());
+        m_power = props.getSpectrum("power", Spectrum::getD65());
 
-		if (props.getTransform("toWorld", Transform()).hasScale())
-			Log(EError, "Scale factors in the emitter-to-world "
-				"transformation are not allowed!");
-	}
+        if (props.getTransform("toWorld", Transform()).hasScale())
+            Log(EError, "Scale factors in the emitter-to-world "
+                "transformation are not allowed!");
+    }
 
-	CollimatedBeamEmitter(Stream *stream, InstanceManager *manager)
-	 : Emitter(stream, manager) {
-		configure();
-		m_power = Spectrum(stream);
-	}
+    CollimatedBeamEmitter(Stream *stream, InstanceManager *manager)
+     : Emitter(stream, manager) {
+        configure();
+        m_power = Spectrum(stream);
+    }
 
-	void serialize(Stream *stream, InstanceManager *manager) const {
-		Emitter::serialize(stream, manager);
-		m_power.serialize(stream);
-	}
+    void serialize(Stream *stream, InstanceManager *manager) const {
+        Emitter::serialize(stream, manager);
+        m_power.serialize(stream);
+    }
 
-	Spectrum samplePosition(PositionSamplingRecord &pRec, const Point2 &sample, const Point2 *extra) const {
-		const Transform &trafo = m_worldTransform->eval(pRec.time);
-		pRec.p = trafo(Point(0.0f));
-		pRec.n = trafo(Vector(0.0f, 0.0f, 1.0f));
-		pRec.pdf = 1.0f;
-		pRec.measure = EDiscrete;
-		return m_power;
-	}
+    Spectrum samplePosition(PositionSamplingRecord &pRec, const Point2 &sample, const Point2 *extra) const {
+        const Transform &trafo = m_worldTransform->eval(pRec.time);
+        pRec.p = trafo(Point(0.0f));
+        pRec.n = trafo(Vector(0.0f, 0.0f, 1.0f));
+        pRec.pdf = 1.0f;
+        pRec.measure = EDiscrete;
+        return m_power;
+    }
 
-	Spectrum evalPosition(const PositionSamplingRecord &pRec) const {
-		return (pRec.measure == EDiscrete) ? m_power : Spectrum(0.0f);
-	}
+    Spectrum evalPosition(const PositionSamplingRecord &pRec) const {
+        return (pRec.measure == EDiscrete) ? m_power : Spectrum(0.0f);
+    }
 
-	Float pdfPosition(const PositionSamplingRecord &pRec) const {
-		return (pRec.measure == EDiscrete) ? 1.0f : 0.0f;
-	}
+    Float pdfPosition(const PositionSamplingRecord &pRec) const {
+        return (pRec.measure == EDiscrete) ? 1.0f : 0.0f;
+    }
 
-	Spectrum sampleDirection(DirectionSamplingRecord &dRec,
-			PositionSamplingRecord &pRec,
-			const Point2 &sample, const Point2 *extra) const {
-		dRec.d = pRec.n;
-		dRec.pdf = 1.0f;
-		dRec.measure = EDiscrete;
-		return Spectrum(1.0f);
-	}
+    Spectrum sampleDirection(DirectionSamplingRecord &dRec,
+            PositionSamplingRecord &pRec,
+            const Point2 &sample, const Point2 *extra) const {
+        dRec.d = pRec.n;
+        dRec.pdf = 1.0f;
+        dRec.measure = EDiscrete;
+        return Spectrum(1.0f);
+    }
 
-	Float pdfDirection(const DirectionSamplingRecord &dRec,
-			const PositionSamplingRecord &pRec) const {
-		return (dRec.measure == EDiscrete) ? 1.0f : 0.0f;
-	}
+    Float pdfDirection(const DirectionSamplingRecord &dRec,
+            const PositionSamplingRecord &pRec) const {
+        return (dRec.measure == EDiscrete) ? 1.0f : 0.0f;
+    }
 
-	Spectrum evalDirection(const DirectionSamplingRecord &dRec,
-			const PositionSamplingRecord &pRec) const {
-		return Spectrum((dRec.measure == EDiscrete) ? 1.0f : 0.0f);
-	}
+    Spectrum evalDirection(const DirectionSamplingRecord &dRec,
+            const PositionSamplingRecord &pRec) const {
+        return Spectrum((dRec.measure == EDiscrete) ? 1.0f : 0.0f);
+    }
 
-	Spectrum sampleRay(Ray &ray,
-			const Point2 &spatialSample,
-			const Point2 &directionalSample,
-			Float time) const {
-		const Transform &trafo = m_worldTransform->eval(time);
-		ray.setTime(time);
-		ray.setOrigin(trafo.transformAffine(Point(0.0f)));
-		ray.setDirection(trafo(Vector(0.0f, 0.0f, 1.0f)));
-		return m_power;
-	}
+    Spectrum sampleRay(Ray &ray,
+            const Point2 &spatialSample,
+            const Point2 &directionalSample,
+            Float time) const {
+        const Transform &trafo = m_worldTransform->eval(time);
+        ray.setTime(time);
+        ray.setOrigin(trafo.transformAffine(Point(0.0f)));
+        ray.setDirection(trafo(Vector(0.0f, 0.0f, 1.0f)));
+        return m_power;
+    }
 
-	Spectrum sampleDirect(DirectSamplingRecord &dRec, const Point2 &sample) const {
-		/* Direct sampling always fails for a response function on a 0D space */
-		dRec.pdf = 0.0f;
-		return Spectrum(0.0f);
-	}
+    Spectrum sampleDirect(DirectSamplingRecord &dRec, const Point2 &sample) const {
+        /* Direct sampling always fails for a response function on a 0D space */
+        dRec.pdf = 0.0f;
+        return Spectrum(0.0f);
+    }
 
-	Float pdfDirect(const DirectSamplingRecord &dRec) const {
-		return 0.0f;
-	}
+    Float pdfDirect(const DirectSamplingRecord &dRec) const {
+        return 0.0f;
+    }
 
-	AABB getAABB() const {
-		return m_worldTransform->getTranslationBounds();
-	}
+    AABB getAABB() const {
+        return m_worldTransform->getTranslationBounds();
+    }
 
-	std::string toString() const {
-		std::ostringstream oss;
-		oss << "CollimatedBeamEmitter[" << endl
-			<< "  power = " << m_power.toString() << "," << endl
-			<< "  samplingWeight = " << m_samplingWeight << "," << endl
-			<< "  worldTransform = " << indent(m_worldTransform.toString()) << "," << endl
-			<< "  medium = " << indent(m_medium.toString()) << endl
-			<< "]";
-		return oss.str();
-	}
+    std::string toString() const {
+        std::ostringstream oss;
+        oss << "CollimatedBeamEmitter[" << endl
+            << "  power = " << m_power.toString() << "," << endl
+            << "  samplingWeight = " << m_samplingWeight << "," << endl
+            << "  worldTransform = " << indent(m_worldTransform.toString()) << "," << endl
+            << "  medium = " << indent(m_medium.toString()) << endl
+            << "]";
+        return oss.str();
+    }
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 private:
-	Spectrum m_power;
+    Spectrum m_power;
 };
 
 MTS_IMPLEMENT_CLASS_S(CollimatedBeamEmitter, false, Emitter)

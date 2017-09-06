@@ -27,96 +27,96 @@ void TestCase::init() { }
 void TestCase::shutdown() { }
 
 void TestCase::assertTrueImpl(bool value, const char *expr, const char *file, int line) {
-	if (!value)
-		Thread::getThread()->getLogger()->log(EError, NULL, file, line, "Assertion '%s == true' failed!", expr);
+    if (!value)
+        Thread::getThread()->getLogger()->log(EError, NULL, file, line, "Assertion '%s == true' failed!", expr);
 }
 
 void TestCase::assertFalseImpl(bool value, const char *expr, const char *file, int line) {
-	if (value)
-		Thread::getThread()->getLogger()->log(EError, NULL, file, line, "Assertion '%s == false' failed!", expr);
+    if (value)
+        Thread::getThread()->getLogger()->log(EError, NULL, file, line, "Assertion '%s == false' failed!", expr);
 }
 
 void TestCase::assertEqualsImpl(int actual, int expected, Float epsilon, const char *file, int line) {
-	if (std::abs(actual-expected)>epsilon)
-		Thread::getThread()->getLogger()->log(EError, NULL, file, line, "Assertion failure: "
-			"expected integer value %i, got %i.", expected, actual);
+    if (std::abs(actual-expected)>epsilon)
+        Thread::getThread()->getLogger()->log(EError, NULL, file, line, "Assertion failure: "
+            "expected integer value %i, got %i.", expected, actual);
 }
 
 void TestCase::assertEqualsImpl(Float actual, Float expected, Float epsilon, const char *file, int line) {
-	if (std::abs(actual-expected) > epsilon)
-		Thread::getThread()->getLogger()->log(EError, NULL, file, line, "Assertion failure: "
-			"expected floating point value %f, got %f.", expected, actual);
+    if (std::abs(actual-expected) > epsilon)
+        Thread::getThread()->getLogger()->log(EError, NULL, file, line, "Assertion failure: "
+            "expected floating point value %f, got %f.", expected, actual);
 }
 
 void TestCase::assertEqualsImpl(const Spectrum &actual, const Spectrum &expected, Float epsilon, const char *file, int line) {
-	bool match = true;
-	for (int i=0; i<SPECTRUM_SAMPLES; ++i)
-		if (std::abs(actual[i]-expected[i]) > epsilon)
-			match = false;
-	if (!match)
-		Thread::getThread()->getLogger()->log(EError, NULL, file, line, "Assertion failure: "
-			"expected vector %s, got %s.", expected.toString().c_str(), actual.toString().c_str());
+    bool match = true;
+    for (int i=0; i<SPECTRUM_SAMPLES; ++i)
+        if (std::abs(actual[i]-expected[i]) > epsilon)
+            match = false;
+    if (!match)
+        Thread::getThread()->getLogger()->log(EError, NULL, file, line, "Assertion failure: "
+            "expected vector %s, got %s.", expected.toString().c_str(), actual.toString().c_str());
 }
 
 void TestCase::assertEqualsImpl(const Vector2 &actual, const Vector2 &expected, Float epsilon, const char *file, int line) {
-	bool match = true;
-	for (int i=0; i<2; ++i)
-		if (std::abs(actual[i]-expected[i]) > epsilon)
-			match = false;
-	if (!match)
-		Thread::getThread()->getLogger()->log(EError, NULL, file, line, "Assertion failure: "
-			"expected vector %s, got %s.", expected.toString().c_str(), actual.toString().c_str());
+    bool match = true;
+    for (int i=0; i<2; ++i)
+        if (std::abs(actual[i]-expected[i]) > epsilon)
+            match = false;
+    if (!match)
+        Thread::getThread()->getLogger()->log(EError, NULL, file, line, "Assertion failure: "
+            "expected vector %s, got %s.", expected.toString().c_str(), actual.toString().c_str());
 }
 
 
 void TestCase::assertEqualsImpl(const Point2 &actual, const Point2 &expected, Float epsilon, const char *file, int line) {
-	bool match = true;
-	for (int i=0; i<2; ++i)
-		if (std::abs(actual[i]-expected[i]) > epsilon)
-			match = false;
-	if (!match)
-		Thread::getThread()->getLogger()->log(EError, NULL, file, line, "Assertion failure: "
-			"expected point %s, got %s.", expected.toString().c_str(), actual.toString().c_str());
+    bool match = true;
+    for (int i=0; i<2; ++i)
+        if (std::abs(actual[i]-expected[i]) > epsilon)
+            match = false;
+    if (!match)
+        Thread::getThread()->getLogger()->log(EError, NULL, file, line, "Assertion failure: "
+            "expected point %s, got %s.", expected.toString().c_str(), actual.toString().c_str());
 }
 
 void TestCase::assertEqualsImpl(const Vector &actual, const Vector &expected, Float epsilon, const char *file, int line) {
-	bool match = true;
-	for (int i=0; i<3; ++i)
-		if (std::abs(actual[i]-expected[i]) > epsilon)
-			match = false;
-	if (!match)
-		Thread::getThread()->getLogger()->log(EError, NULL, file, line, "Assertion failure: "
-			"expected vector %s, got %s.", expected.toString().c_str(), actual.toString().c_str());
+    bool match = true;
+    for (int i=0; i<3; ++i)
+        if (std::abs(actual[i]-expected[i]) > epsilon)
+            match = false;
+    if (!match)
+        Thread::getThread()->getLogger()->log(EError, NULL, file, line, "Assertion failure: "
+            "expected vector %s, got %s.", expected.toString().c_str(), actual.toString().c_str());
 }
 
 void TestCase::assertEqualsImpl(const Point &actual, const Point &expected, Float epsilon, const char *file, int line) {
-	bool match = true;
-	for (int i=0; i<3; ++i)
-		if (std::abs(actual[i]-expected[i]) > epsilon)
-			match = false;
-	if (!match)
-		Thread::getThread()->getLogger()->log(EError, NULL, file, line, "Assertion failure: "
-			"expected point %s, got %s.", expected.toString().c_str(), actual.toString().c_str());
+    bool match = true;
+    for (int i=0; i<3; ++i)
+        if (std::abs(actual[i]-expected[i]) > epsilon)
+            match = false;
+    if (!match)
+        Thread::getThread()->getLogger()->log(EError, NULL, file, line, "Assertion failure: "
+            "expected point %s, got %s.", expected.toString().c_str(), actual.toString().c_str());
 }
 
 void TestCase::assertEqualsImpl(const Vector4 &actual, const Vector4 &expected, Float epsilon, const char *file, int line) {
-	bool match = true;
-	for (int i=0; i<4; ++i)
-		if (std::abs(actual[i]-expected[i]) > epsilon)
-			match = false;
-	if (!match)
-		Thread::getThread()->getLogger()->log(EError, NULL, file, line, "Assertion failure: "
-			"expected vector %s, got %s.", expected.toString().c_str(), actual.toString().c_str());
+    bool match = true;
+    for (int i=0; i<4; ++i)
+        if (std::abs(actual[i]-expected[i]) > epsilon)
+            match = false;
+    if (!match)
+        Thread::getThread()->getLogger()->log(EError, NULL, file, line, "Assertion failure: "
+            "expected vector %s, got %s.", expected.toString().c_str(), actual.toString().c_str());
 }
 
 void TestCase::failAndContinueImpl(const std::string &msg, const char *file, int line) {
-	Thread::getThread()->getLogger()->log(EWarn, NULL, file, line, "Failure: %s", msg.c_str());
-	m_executed++;
+    Thread::getThread()->getLogger()->log(EWarn, NULL, file, line, "Failure: %s", msg.c_str());
+    m_executed++;
 }
 
 void TestCase::succeed() {
-	m_executed++;
-	m_succeeded++;
+    m_executed++;
+    m_succeeded++;
 }
 
 MTS_IMPLEMENT_CLASS(TestCase, false, Utility)

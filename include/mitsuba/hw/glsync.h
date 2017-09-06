@@ -30,27 +30,27 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_HW GLSync : public GPUSync {
 public:
-	/// Allocate memory for a new synchronization object
-	GLSync();
+    /// Allocate memory for a new synchronization object
+    GLSync();
 
-	/// Create the synchronization object on the GL
-	void init();
+    /// Create the synchronization object on the GL
+    void init();
 
-	/// Wait on the fence (blocking)
-	void wait();
+    /// Wait on the fence (blocking)
+    void wait();
 
-	/// Enqueue a wait command, but do not block
-	void enqueueWait();
+    /// Enqueue a wait command, but do not block
+    void enqueueWait();
 
-	/// Remove the synchronization object
-	void cleanup();
+    /// Remove the synchronization object
+    void cleanup();
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	/// Virtual destructor
-	virtual ~GLSync();
+    /// Virtual destructor
+    virtual ~GLSync();
 protected:
-	GLsync m_sync;
+    GLsync m_sync;
 };
 
 MTS_NAMESPACE_END

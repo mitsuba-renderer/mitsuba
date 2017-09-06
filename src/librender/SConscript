@@ -3,25 +3,25 @@ Import('env', 'sys', 'os')
 renderEnv = env.Clone()
 renderEnv.Append(CPPDEFINES = [['MTS_BUILD_MODULE', 'MTS_MODULE_RENDER']] )
 if renderEnv.has_key('XERCESINCLUDE'):
-	renderEnv.Prepend(CPPPATH=renderEnv['XERCESINCLUDE'])
+        renderEnv.Prepend(CPPPATH=renderEnv['XERCESINCLUDE'])
 if renderEnv.has_key('XERCESLIBDIR'):
-	renderEnv.Prepend(LIBPATH=renderEnv['XERCESLIBDIR'])
+        renderEnv.Prepend(LIBPATH=renderEnv['XERCESLIBDIR'])
 if renderEnv.has_key('XERCESLIB'):
-	renderEnv.Prepend(LIBS=renderEnv['XERCESLIB'])
+        renderEnv.Prepend(LIBS=renderEnv['XERCESLIB'])
 
 librender = renderEnv.SharedLibrary('mitsuba-render', [
-	'bsdf.cpp', 'film.cpp', 'integrator.cpp', 'emitter.cpp', 'sensor.cpp',
-	'skdtree.cpp', 'medium.cpp', 'renderjob.cpp', 'imageproc.cpp',
-	'rectwu.cpp', 'renderproc.cpp', 'imageblock.cpp', 'particleproc.cpp',
-	'renderqueue.cpp', 'scene.cpp',  'subsurface.cpp', 'texture.cpp',
-	'shape.cpp', 'trimesh.cpp', 'sampler.cpp', 'util.cpp', 'irrcache.cpp',
-	'testcase.cpp', 'photonmap.cpp', 'gatherproc.cpp', 'volume.cpp',
-	'vpl.cpp', 'shader.cpp', 'scenehandler.cpp', 'intersection.cpp',
-	'common.cpp', 'phase.cpp', 'noise.cpp', 'photon.cpp'
+        'bsdf.cpp', 'film.cpp', 'integrator.cpp', 'emitter.cpp', 'sensor.cpp',
+        'skdtree.cpp', 'medium.cpp', 'renderjob.cpp', 'imageproc.cpp',
+        'rectwu.cpp', 'renderproc.cpp', 'imageblock.cpp', 'particleproc.cpp',
+        'renderqueue.cpp', 'scene.cpp',  'subsurface.cpp', 'texture.cpp',
+        'shape.cpp', 'trimesh.cpp', 'sampler.cpp', 'util.cpp', 'irrcache.cpp',
+        'testcase.cpp', 'photonmap.cpp', 'gatherproc.cpp', 'volume.cpp',
+        'vpl.cpp', 'shader.cpp', 'scenehandler.cpp', 'intersection.cpp',
+        'common.cpp', 'phase.cpp', 'noise.cpp', 'photon.cpp'
 ])
 
 if sys.platform == "darwin":
-	renderEnv.AddPostAction(librender, 'install_name_tool -id @rpath/libmitsuba-render.dylib $TARGET')
+        renderEnv.AddPostAction(librender, 'install_name_tool -id @rpath/libmitsuba-render.dylib $TARGET')
 
 env.Append(LIBS=['mitsuba-render'])
 env.Append(LIBPATH=[os.path.join(env['BUILDDIR'], 'librender')])

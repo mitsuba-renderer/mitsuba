@@ -20,26 +20,26 @@
 #include "sceneinfodlg.h"
 
 SceneInformationDialog::SceneInformationDialog(QWidget *parent, Scene *scene) :
-		QDialog(parent),
-	ui(new Ui::SceneInformationDialog) {
-	ui->setupUi(this);
+        QDialog(parent),
+    ui(new Ui::SceneInformationDialog) {
+    ui->setupUi(this);
 #if defined(__OSX__)
-	QFont font = ui->textEdit->currentFont();
-	font.setPointSize(12);
-	ui->textEdit->setCurrentFont(font);
+    QFont font = ui->textEdit->currentFont();
+    font.setPointSize(12);
+    ui->textEdit->setCurrentFont(font);
 #endif
-	ui->textEdit->setText(scene->toString().c_str());
+    ui->textEdit->setText(scene->toString().c_str());
 }
 
 SceneInformationDialog::~SceneInformationDialog() {
-	delete ui;
+    delete ui;
 }
 
 void SceneInformationDialog::changeEvent(QEvent *e) {
     QDialog::changeEvent(e);
     switch (e->type()) {
     case QEvent::LanguageChange:
-		ui->retranslateUi(this);
+        ui->retranslateUi(this);
         break;
     default:
         break;

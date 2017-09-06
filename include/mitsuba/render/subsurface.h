@@ -37,51 +37,51 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_RENDER Subsurface : public NetworkedObject {
 public:
-	/**
-	 * \brief Possibly perform a pre-process task.
-	 *
-	 * The last three parameters are resource IDs of the associated scene,
-	 * camera and sample generator, which have been made available to all
-	 * local and remote workers.
-	 */
-	virtual bool preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job,
-		int sceneResID, int cameraResID, int samplerResID) = 0;
+    /**
+     * \brief Possibly perform a pre-process task.
+     *
+     * The last three parameters are resource IDs of the associated scene,
+     * camera and sample generator, which have been made available to all
+     * local and remote workers.
+     */
+    virtual bool preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job,
+        int sceneResID, int cameraResID, int samplerResID) = 0;
 
-	/// Selectively activate/deactivate the subsurface integrator
-	inline void setActive(bool active) { m_active = active; }
+    /// Selectively activate/deactivate the subsurface integrator
+    inline void setActive(bool active) { m_active = active; }
 
-	/// Return whether or not the subsurface integrator is currently active
-	inline bool isActive() const { return m_active; }
+    /// Return whether or not the subsurface integrator is currently active
+    inline bool isActive() const { return m_active; }
 
-	/// Cancel any running pre-process tasks
-	virtual void cancel();
+    /// Cancel any running pre-process tasks
+    virtual void cancel();
 
-	/// Return the list of shapes associated with this subsurface integrator
-	inline const std::vector<Shape *> getShapes() const { return m_shapes; }
+    /// Return the list of shapes associated with this subsurface integrator
+    inline const std::vector<Shape *> getShapes() const { return m_shapes; }
 
-	/// Get the exitant radiance for a point on the surface
-	virtual Spectrum Lo(const Scene *scene, Sampler *sampler,
-		const Intersection &its, const Vector &d, int depth = 0) const = 0;
+    /// Get the exitant radiance for a point on the surface
+    virtual Spectrum Lo(const Scene *scene, Sampler *sampler,
+        const Intersection &its, const Vector &d, int depth = 0) const = 0;
 
-	/// Serialize this subsurface integrator to a binary data stream
-	void serialize(Stream *stream, InstanceManager *manager) const;
+    /// Serialize this subsurface integrator to a binary data stream
+    void serialize(Stream *stream, InstanceManager *manager) const;
 
-	/// Set the parent node of the subsurface integrator
-	void setParent(ConfigurableObject *parent);
+    /// Set the parent node of the subsurface integrator
+    void setParent(ConfigurableObject *parent);
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	/// Create a new subsurface scattering class
-	Subsurface(const Properties &props);
+    /// Create a new subsurface scattering class
+    Subsurface(const Properties &props);
 
-	/// Unserialize a subsurface integrator from a binary data stream
-	Subsurface(Stream *stream, InstanceManager *manager);
+    /// Unserialize a subsurface integrator from a binary data stream
+    Subsurface(Stream *stream, InstanceManager *manager);
 
-	/// Virtual destructor
-	virtual ~Subsurface();
+    /// Virtual destructor
+    virtual ~Subsurface();
 protected:
-	std::vector<Shape *> m_shapes;
-	bool m_active;
+    std::vector<Shape *> m_shapes;
+    bool m_active;
 };
 
 MTS_NAMESPACE_END

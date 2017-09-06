@@ -30,35 +30,35 @@ MTS_NAMESPACE_BEGIN
  */
 class LanczosSincFilter : public ReconstructionFilter {
 public:
-	LanczosSincFilter(const Properties &props)
-		: ReconstructionFilter(props) {
-		m_radius = (Float) props.getInteger("lobes", 3);
-	}
+    LanczosSincFilter(const Properties &props)
+        : ReconstructionFilter(props) {
+        m_radius = (Float) props.getInteger("lobes", 3);
+    }
 
-	LanczosSincFilter(Stream *stream, InstanceManager *manager)
-		: ReconstructionFilter(stream, manager) {
-		configure();
-	}
+    LanczosSincFilter(Stream *stream, InstanceManager *manager)
+        : ReconstructionFilter(stream, manager) {
+        configure();
+    }
 
-	Float eval(Float x) const {
-		x = std::abs(x);
+    Float eval(Float x) const {
+        x = std::abs(x);
 
-		if (x < Epsilon)
-			return 1.0f;
-		else if (x > m_radius)
-			return 0.0f;
+        if (x < Epsilon)
+            return 1.0f;
+        else if (x > m_radius)
+            return 0.0f;
 
-		Float x1 = M_PI * x;
-		Float x2 = x1 / m_radius;
+        Float x1 = M_PI * x;
+        Float x2 = x1 / m_radius;
 
-		return (std::sin(x1) * std::sin(x2)) / (x1 * x2);
-	}
+        return (std::sin(x1) * std::sin(x2)) / (x1 * x2);
+    }
 
-	std::string toString() const {
-		return formatString("LanczosSincFilter[lobes=%f]", m_radius);
-	}
+    std::string toString() const {
+        return formatString("LanczosSincFilter[lobes=%f]", m_radius);
+    }
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 };
 
 MTS_IMPLEMENT_CLASS_S(LanczosSincFilter, false, ReconstructionFilter);

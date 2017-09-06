@@ -35,56 +35,56 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_BIDIR MultiChainPerturbation : public MutatorBase {
 public:
-	/**
-	 * \brief Construct a new lens perturbation strategy
-	 *
-	 * \param scene
-	 *     A pointer to the underlying scene
-	 *
-	 * \param sampler
-	 *     A sample generator
-	 *
-	 * \param pool
-	 *     A memory pool used to allocate new path vertices and edges
-	 *
-	 * \param minJump
-	 *     Minimum jump distance in fractional pixel coordinates
-	 *
-	 * \param coveredArea
-	 *     Approximate fractional image plane area that is
-	 *     reachable using the lens perturbation
-	 */
-	MultiChainPerturbation(const Scene *scene, Sampler *sampler,
-		MemoryPool &pool, Float minJump, Float coveredArea);
+    /**
+     * \brief Construct a new lens perturbation strategy
+     *
+     * \param scene
+     *     A pointer to the underlying scene
+     *
+     * \param sampler
+     *     A sample generator
+     *
+     * \param pool
+     *     A memory pool used to allocate new path vertices and edges
+     *
+     * \param minJump
+     *     Minimum jump distance in fractional pixel coordinates
+     *
+     * \param coveredArea
+     *     Approximate fractional image plane area that is
+     *     reachable using the lens perturbation
+     */
+    MultiChainPerturbation(const Scene *scene, Sampler *sampler,
+        MemoryPool &pool, Float minJump, Float coveredArea);
 
-	// =============================================================
-	//! @{ \name Implementation of the Mutator interface
+    // =============================================================
+    //! @{ \name Implementation of the Mutator interface
 
-	EMutationType getType() const;
-	Float suitability(const Path &path) const;
-	bool sampleMutation(Path &source, Path &proposal,
-			MutationRecord &muRec, const MutationRecord& sourceMuRec);
-	Float Q(const Path &source, const Path &proposal,
-			const MutationRecord &muRec) const;
-	void accept(const MutationRecord &muRec);
+    EMutationType getType() const;
+    Float suitability(const Path &path) const;
+    bool sampleMutation(Path &source, Path &proposal,
+            MutationRecord &muRec, const MutationRecord& sourceMuRec);
+    Float Q(const Path &source, const Path &proposal,
+            const MutationRecord &muRec) const;
+    void accept(const MutationRecord &muRec);
 
-	//! @}
-	// =============================================================
+    //! @}
+    // =============================================================
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	/// Virtual destructor
-	virtual ~MultiChainPerturbation();
+    /// Virtual destructor
+    virtual ~MultiChainPerturbation();
 protected:
-	ref<const Scene> m_scene;
-	ref<Sampler> m_sampler;
-	MemoryPool &m_pool;
-	Vector2 m_filmRes;
-	Float m_r1, m_r2;
-	Float m_theta1, m_theta2;
-	Float m_logRatio, m_thetaLogRatio;
-	Float m_imagePlaneArea;
-	Float m_mediumConcentration;
+    ref<const Scene> m_scene;
+    ref<Sampler> m_sampler;
+    MemoryPool &m_pool;
+    Vector2 m_filmRes;
+    Float m_r1, m_r2;
+    Float m_theta1, m_theta2;
+    Float m_logRatio, m_thetaLogRatio;
+    Float m_imagePlaneArea;
+    Float m_mediumConcentration;
 };
 
 MTS_NAMESPACE_END

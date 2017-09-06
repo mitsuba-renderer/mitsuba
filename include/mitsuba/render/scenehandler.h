@@ -50,18 +50,18 @@ namespace xercesc = XERCES_CPP_NAMESPACE;
  */
 class MTS_EXPORT_RENDER VersionException : public std::runtime_error {
 public:
-	VersionException(const std::string &str, const Version &version) :
-		std::runtime_error(str), m_version(version) { }
+    VersionException(const std::string &str, const Version &version) :
+        std::runtime_error(str), m_version(version) { }
 
-	/* For stupid and subtle reasons when compiling with GCC, it is important
-	   that this class has a virtual member. This will ensure that its typeid
-	   structure is in librender, which is important for throwing exceptions
-	   across DLL boundaries */
-	virtual ~VersionException() throw ();
+    /* For stupid and subtle reasons when compiling with GCC, it is important
+       that this class has a virtual member. This will ensure that its typeid
+       structure is in librender, which is important for throwing exceptions
+       across DLL boundaries */
+    virtual ~VersionException() throw ();
 
-	inline const Version &getVersion() const { return m_version; }
+    inline const Version &getVersion() const { return m_version; }
 private:
-	Version m_version;
+    Version m_version;
 };
 
 #ifdef _MSC_VER
@@ -82,101 +82,101 @@ extern MTS_EXPORT_RENDER void pushSceneCleanupHandler(void (*cleanup)());
  */
 class MTS_EXPORT_RENDER SceneHandler : public xercesc::HandlerBase {
 public:
-	typedef std::map<std::string, ConfigurableObject *> NamedObjectMap;
-	typedef std::map<std::string, std::string, SimpleStringOrdering> ParameterMap;
+    typedef std::map<std::string, ConfigurableObject *> NamedObjectMap;
+    typedef std::map<std::string, std::string, SimpleStringOrdering> ParameterMap;
 
-	SceneHandler(const ParameterMap &params, NamedObjectMap *objects = NULL,
-			bool isIncludedFile = false);
-	virtual ~SceneHandler();
+    SceneHandler(const ParameterMap &params, NamedObjectMap *objects = NULL,
+            bool isIncludedFile = false);
+    virtual ~SceneHandler();
 
-	/// Convenience method -- load a scene from a given filename
-	static ref<Scene> loadScene(const fs::path &filename,
-		const ParameterMap &params= ParameterMap());
+    /// Convenience method -- load a scene from a given filename
+    static ref<Scene> loadScene(const fs::path &filename,
+        const ParameterMap &params= ParameterMap());
 
-	/// Convenience method -- load a scene from a given string
-	static ref<Scene> loadSceneFromString(const std::string &string,
-		const ParameterMap &params= ParameterMap());
+    /// Convenience method -- load a scene from a given string
+    static ref<Scene> loadSceneFromString(const std::string &string,
+        const ParameterMap &params= ParameterMap());
 
-	/// Initialize Xerces-C++ (needs to be called once at program startup)
-	static void staticInitialization();
+    /// Initialize Xerces-C++ (needs to be called once at program startup)
+    static void staticInitialization();
 
-	/// Free the memory taken up by staticInitialization()
-	static void staticShutdown();
+    /// Free the memory taken up by staticInitialization()
+    static void staticShutdown();
 
-	// -----------------------------------------------------------------------
-	//  Implementation of the SAX DocumentHandler interface
-	// -----------------------------------------------------------------------
-	virtual void startDocument();
-	virtual void endDocument();
-	virtual void startElement(
-		const XMLCh* const name,
-		xercesc::AttributeList& attributes
-	);
-	virtual void endElement(const XMLCh* const name);
-	virtual void characters(const XMLCh* const chars, const XMLSize_t length);
+    // -----------------------------------------------------------------------
+    //  Implementation of the SAX DocumentHandler interface
+    // -----------------------------------------------------------------------
+    virtual void startDocument();
+    virtual void endDocument();
+    virtual void startElement(
+        const XMLCh* const name,
+        xercesc::AttributeList& attributes
+    );
+    virtual void endElement(const XMLCh* const name);
+    virtual void characters(const XMLCh* const chars, const XMLSize_t length);
     virtual void setDocumentLocator(const xercesc::Locator* const locator);
 
-	inline const Scene *getScene() const { return m_scene.get(); }
-	inline Scene *getScene() { return m_scene; }
+    inline const Scene *getScene() const { return m_scene.get(); }
+    inline Scene *getScene() { return m_scene; }
 
-	// -----------------------------------------------------------------------
-	//  Implementation of the SAX ErrorHandler interface
-	// -----------------------------------------------------------------------
-	void warning(const xercesc::SAXParseException& exc);
-	void error(const xercesc::SAXParseException& exc);
-	void fatalError(const xercesc::SAXParseException& exc);
+    // -----------------------------------------------------------------------
+    //  Implementation of the SAX ErrorHandler interface
+    // -----------------------------------------------------------------------
+    void warning(const xercesc::SAXParseException& exc);
+    void error(const xercesc::SAXParseException& exc);
+    void fatalError(const xercesc::SAXParseException& exc);
 protected:
-	std::string transcode(const XMLCh * input) const;
+    std::string transcode(const XMLCh * input) const;
 
-	Float parseFloat(const std::string &name, const std::string &str,
-			Float defVal = -1) const;
+    Float parseFloat(const std::string &name, const std::string &str,
+            Float defVal = -1) const;
 
-	void clear();
+    void clear();
 
 private:
-	/**
-	 * Enumeration of all possible tags that can be encountered in a
-	 * Mitsuba scene file
-	 */
-	enum ETag {
-		EScene, EShape, ESampler, EFilm,
-		EIntegrator, ETexture, ESensor,
-		EEmitter, ESubsurface, EMedium,
-		EVolume, EPhase, EBSDF, ERFilter,
-		ENull, EReference, EInteger, EFloat,
-		EBoolean, EString, ETranslate, ERotate,
-		ELookAt, EScale, EMatrix, EPoint,
-		EVector, ERGB, ESRGB, EBlackBody,
-		ESpectrum, ETransform, EAnimation,
-		EInclude, EAlias, EDefault
-	};
+    /**
+     * Enumeration of all possible tags that can be encountered in a
+     * Mitsuba scene file
+     */
+    enum ETag {
+        EScene, EShape, ESampler, EFilm,
+        EIntegrator, ETexture, ESensor,
+        EEmitter, ESubsurface, EMedium,
+        EVolume, EPhase, EBSDF, ERFilter,
+        ENull, EReference, EInteger, EFloat,
+        EBoolean, EString, ETranslate, ERotate,
+        ELookAt, EScale, EMatrix, EPoint,
+        EVector, ERGB, ESRGB, EBlackBody,
+        ESpectrum, ETransform, EAnimation,
+        EInclude, EAlias, EDefault
+    };
 
-	struct ParseContext {
-		inline ParseContext(ParseContext *_parent, ETag tag)
-		 : parent(_parent), tag(tag) { }
+    struct ParseContext {
+        inline ParseContext(ParseContext *_parent, ETag tag)
+         : parent(_parent), tag(tag) { }
 
-		ParseContext *parent;
-		ETag tag;
-		Properties properties;
-		std::map<std::string, std::string> attributes;
-		std::vector<std::pair<std::string, ConfigurableObject *> > children;
-	};
+        ParseContext *parent;
+        ETag tag;
+        Properties properties;
+        std::map<std::string, std::string> attributes;
+        std::vector<std::pair<std::string, ConfigurableObject *> > children;
+    };
 
 
-	typedef std::pair<ETag, const Class *> TagEntry;
-	typedef boost::unordered_map<std::string, TagEntry> TagMap;
+    typedef std::pair<ETag, const Class *> TagEntry;
+    typedef boost::unordered_map<std::string, TagEntry> TagMap;
 
-	const xercesc::Locator *m_locator;
-	xercesc::XMLTranscoder* m_transcoder;
-	ref<Scene> m_scene;
-	ParameterMap m_params;
-	NamedObjectMap *m_namedObjects;
-	PluginManager *m_pluginManager;
-	std::stack<ParseContext> m_context;
-	TagMap m_tags;
-	Transform m_transform;
-	ref<AnimatedTransform> m_animatedTransform;
-	bool m_isIncludedFile;
+    const xercesc::Locator *m_locator;
+    xercesc::XMLTranscoder* m_transcoder;
+    ref<Scene> m_scene;
+    ParameterMap m_params;
+    NamedObjectMap *m_namedObjects;
+    PluginManager *m_pluginManager;
+    std::stack<ParseContext> m_context;
+    TagMap m_tags;
+    Transform m_transform;
+    ref<AnimatedTransform> m_animatedTransform;
+    bool m_isIncludedFile;
 };
 
 MTS_NAMESPACE_END

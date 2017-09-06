@@ -31,15 +31,15 @@ MTS_NAMESPACE_BEGIN
  * \ingroup librender
  */
 enum ETransportMode {
-	/* Note to self: do not change these enumeration
-	   values, some code depends on them. */
+    /* Note to self: do not change these enumeration
+       values, some code depends on them. */
 
-	/// Radiance transport
-	ERadiance = 0,
-	/// Importance transport
-	EImportance = 1,
-	/// Specifies the number of supported transport modes
-	ETransportModes = 2
+    /// Radiance transport
+    ERadiance = 0,
+    /// Importance transport
+    EImportance = 1,
+    /// Specifies the number of supported transport modes
+    ETransportModes = 2
 };
 
 /**
@@ -54,16 +54,16 @@ enum ETransportMode {
  * \ingroup librender
  */
 enum EMeasure {
-	/// Invalid measure
-	EInvalidMeasure = 0,
-	/// Solid angle measure
-	ESolidAngle = 1,
-	/// Length measure
-	ELength = 2,
-	/// Area measure
-	EArea = 3,
-	/// Discrete measure
-	EDiscrete = 4
+    /// Invalid measure
+    EInvalidMeasure = 0,
+    /// Solid angle measure
+    ESolidAngle = 1,
+    /// Length measure
+    ELength = 2,
+    /// Area measure
+    EArea = 3,
+    /// Discrete measure
+    EDiscrete = 4
 };
 
 /**
@@ -81,75 +81,75 @@ enum EMeasure {
  */
 struct MTS_EXPORT_RENDER PositionSamplingRecord {
 public:
-	/// Sampled position
-	Point p;
+    /// Sampled position
+    Point p;
 
-	/// Associated time value
-	Float time;
+    /// Associated time value
+    Float time;
 
-	/// Sampled surface normal (if applicable)
-	Normal n;
+    /// Sampled surface normal (if applicable)
+    Normal n;
 
-	/// Probability density at the sample
-	Float pdf;
+    /// Probability density at the sample
+    Float pdf;
 
-	/**
-	 * \brief Denotes the measure associated with the sample.
-	 *
-	 * This is necessary to deal with quantities that are defined on
-	 * unusual spaces, e.g. areas that have collapsed to a point
-	 * or a line.
-	 */
-	EMeasure measure;
+    /**
+     * \brief Denotes the measure associated with the sample.
+     *
+     * This is necessary to deal with quantities that are defined on
+     * unusual spaces, e.g. areas that have collapsed to a point
+     * or a line.
+     */
+    EMeasure measure;
 
-	/**
-	 * \brief Optional: 2D sample position associated with the record
-	 *
-	 * In some uses of this record, a sampled position may be associated
-	 * with an important 2D quantity, such as the texture coordinates on
-	 * a triangle mesh or a position on the aperture of a sensor. When
-	 * applicable, such positions are stored in the \c uv attribute.
-	 */
-	Point2 uv;
+    /**
+     * \brief Optional: 2D sample position associated with the record
+     *
+     * In some uses of this record, a sampled position may be associated
+     * with an important 2D quantity, such as the texture coordinates on
+     * a triangle mesh or a position on the aperture of a sensor. When
+     * applicable, such positions are stored in the \c uv attribute.
+     */
+    Point2 uv;
 
-	/**
-	 * \brief Optional: Pointer to an associated object
-	 *
-	 * In some uses of this record, sampling a position also involves
-	 * choosing one of several objects (shapes, emitters, ..) on which
-	 * the position lies. In that case, the \c object attribute stores
-	 * a pointer to this object.
-	 */
-	const ConfigurableObject *object;
+    /**
+     * \brief Optional: Pointer to an associated object
+     *
+     * In some uses of this record, sampling a position also involves
+     * choosing one of several objects (shapes, emitters, ..) on which
+     * the position lies. In that case, the \c object attribute stores
+     * a pointer to this object.
+     */
+    const ConfigurableObject *object;
 public:
-	/// Create an invalid position sampling record
-	inline PositionSamplingRecord() { }
+    /// Create an invalid position sampling record
+    inline PositionSamplingRecord() { }
 
-	/**
-	 * \brief Create a new position sampling record that can be
-	 * passed e.g. to \ref Shape::samplePosition
-	 *
-	 * \param time
-	 *    Specifies the time that should be associated with the
-	 *    position sample. This only matters when things are in motion
-	 */
-	inline PositionSamplingRecord(Float time) : time(time),
-		uv(0.0f), object(NULL) { }
+    /**
+     * \brief Create a new position sampling record that can be
+     * passed e.g. to \ref Shape::samplePosition
+     *
+     * \param time
+     *    Specifies the time that should be associated with the
+     *    position sample. This only matters when things are in motion
+     */
+    inline PositionSamplingRecord(Float time) : time(time),
+        uv(0.0f), object(NULL) { }
 
-	/**
-	 * \brief Create a position sampling record
-	 * from a surface intersection
-	 *
-	 * This is useful to determine the hypothetical sampling
-	 * density on a surface after hitting it using standard
-	 * ray tracing. This happens for instance in path tracing
-	 * with multiple importance sampling.
-	 */
-	inline PositionSamplingRecord(const Intersection &its,
-		EMeasure measure = EArea);
+    /**
+     * \brief Create a position sampling record
+     * from a surface intersection
+     *
+     * This is useful to determine the hypothetical sampling
+     * density on a surface after hitting it using standard
+     * ray tracing. This happens for instance in path tracing
+     * with multiple importance sampling.
+     */
+    inline PositionSamplingRecord(const Intersection &its,
+        EMeasure measure = EArea);
 
-	/// Return a human-readable description of the record
-	std::string toString() const;
+    /// Return a human-readable description of the record
+    std::string toString() const;
 };
 
 /**
@@ -167,54 +167,54 @@ public:
  */
 struct MTS_EXPORT_RENDER DirectionSamplingRecord {
 public:
-	/// Sampled direction
-	Vector d;
+    /// Sampled direction
+    Vector d;
 
-	/// Probability density at the sample
-	Float pdf;
+    /// Probability density at the sample
+    Float pdf;
 
-	/// Measure associated with the density function
-	EMeasure measure;
+    /// Measure associated with the density function
+    EMeasure measure;
 
 public:
-	/// Return a human-readable description of the record
-	std::string toString() const;
+    /// Return a human-readable description of the record
+    std::string toString() const;
 
-	/**
-	 * \brief Create an uninitialized position sampling record
-	 *
-	 * The resulting data structure is meant to be used
-	 * to generate a new direction sample.
-	 *
-	 * \sa Emitter::sampleDirection
-	 */
-	inline DirectionSamplingRecord() { }
+    /**
+     * \brief Create an uninitialized position sampling record
+     *
+     * The resulting data structure is meant to be used
+     * to generate a new direction sample.
+     *
+     * \sa Emitter::sampleDirection
+     */
+    inline DirectionSamplingRecord() { }
 
-	/**
-	 * \brief Create a direction sampling record filled with a
-	 * specified direction.
-	 *
-	 * The resulting data structure is meant to be used to
-	 * query the density of a direction sampling technique
-	 *
-	 * \sa Emitter::pdfDirection
-	 */
-	inline DirectionSamplingRecord(const Vector &d,
-			EMeasure measure = ESolidAngle)
-		: d(d), measure(measure) { }
+    /**
+     * \brief Create a direction sampling record filled with a
+     * specified direction.
+     *
+     * The resulting data structure is meant to be used to
+     * query the density of a direction sampling technique
+     *
+     * \sa Emitter::pdfDirection
+     */
+    inline DirectionSamplingRecord(const Vector &d,
+            EMeasure measure = ESolidAngle)
+        : d(d), measure(measure) { }
 
-	/**
-	 * \brief Create a direction sampling record
-	 * from a surface intersection
-	 *
-	 * This is useful to determine the hypothetical sampling
-	 * density of a direction after hitting it using standard
-	 * ray tracing. This happens for instance when hitting
-	 * the camera aperture in bidirectional rendering
-	 * techniques.
-	 */
-	inline DirectionSamplingRecord(const Intersection &its,
-		EMeasure measure = ESolidAngle);
+    /**
+     * \brief Create a direction sampling record
+     * from a surface intersection
+     *
+     * This is useful to determine the hypothetical sampling
+     * density of a direction after hitting it using standard
+     * ray tracing. This happens for instance when hitting
+     * the camera aperture in bidirectional rendering
+     * techniques.
+     */
+    inline DirectionSamplingRecord(const Intersection &its,
+        EMeasure measure = ESolidAngle);
 };
 
 /**
@@ -237,77 +237,77 @@ public:
  */
 struct MTS_EXPORT_RENDER DirectSamplingRecord : public PositionSamplingRecord {
 public:
-	/// Reference point for direct sampling
-	Point ref;
+    /// Reference point for direct sampling
+    Point ref;
 
-	/**
-	 * \brief Optional: normal vector associated with the reference point
-	 *
-	 * When nonzero, the direct sampling method can use the normal vector
-	 * to sample according to the projected solid angle at \c ref.
-	 */
-	Normal refN;
+    /**
+     * \brief Optional: normal vector associated with the reference point
+     *
+     * When nonzero, the direct sampling method can use the normal vector
+     * to sample according to the projected solid angle at \c ref.
+     */
+    Normal refN;
 
-	/// Unit direction from the reference point to the target direction
-	Vector d;
+    /// Unit direction from the reference point to the target direction
+    Vector d;
 
-	/// Distance from the reference point to the target direction
-	Float dist;
+    /// Distance from the reference point to the target direction
+    Float dist;
 
 public:
-	/// Create an invalid direct sampling record
-	inline DirectSamplingRecord() { }
+    /// Create an invalid direct sampling record
+    inline DirectSamplingRecord() { }
 
-	/**
-	 * \brief Create an new direct sampling record for a reference point
-	 * \c ref located somewhere in space (i.e. \a not on a surface)
-	 *
-	 * \param ref
-	 *     The reference point
-	 * \param time
-	 *     An associated time value
-	 */
-	inline DirectSamplingRecord(const Point &ref, Float time)
-		: PositionSamplingRecord(time), ref(ref), refN(0.0f) { }
+    /**
+     * \brief Create an new direct sampling record for a reference point
+     * \c ref located somewhere in space (i.e. \a not on a surface)
+     *
+     * \param ref
+     *     The reference point
+     * \param time
+     *     An associated time value
+     */
+    inline DirectSamplingRecord(const Point &ref, Float time)
+        : PositionSamplingRecord(time), ref(ref), refN(0.0f) { }
 
-	/**
-	 * \brief Create an new direct sampling record for a reference point
-	 * \c ref located on a surface.
-	 *
-	 * \param its
-	 *     The reference point specified using an intersection record
-	 */
-	inline DirectSamplingRecord(const Intersection &refIts);
+    /**
+     * \brief Create an new direct sampling record for a reference point
+     * \c ref located on a surface.
+     *
+     * \param its
+     *     The reference point specified using an intersection record
+     */
+    inline DirectSamplingRecord(const Intersection &refIts);
 
-	/**
-	 * \brief Create an new direct sampling record for a reference point
-	 * \c ref located in a medium
-	 *
-	 * \param mRec
-	 *     The reference point specified using an medium sampling record
-	 */
-	inline DirectSamplingRecord(const MediumSamplingRecord &mRec);
+    /**
+     * \brief Create an new direct sampling record for a reference point
+     * \c ref located in a medium
+     *
+     * \param mRec
+     *     The reference point specified using an medium sampling record
+     */
+    inline DirectSamplingRecord(const MediumSamplingRecord &mRec);
 
-	/**
-	 * \brief Create a direct sampling record, which can be used to \a query
-	 * the density of a surface position (where there reference point lies on
-	 * a \a surface)
-	 *
-	 * \param ray
-	 *     Reference to the ray that generated the intersection \c its.
-	 *     The ray origin must be located at \c refIts.p
-	 *
-	 * \param its
-	 *     A surface intersection record (usually on an emitter)
-	 */
+    /**
+     * \brief Create a direct sampling record, which can be used to \a query
+     * the density of a surface position (where there reference point lies on
+     * a \a surface)
+     *
+     * \param ray
+     *     Reference to the ray that generated the intersection \c its.
+     *     The ray origin must be located at \c refIts.p
+     *
+     * \param its
+     *     A surface intersection record (usually on an emitter)
+     */
 
-	inline void setQuery(
-		const Ray &ray,
-		const Intersection &its,
-		EMeasure measure = ESolidAngle);
+    inline void setQuery(
+        const Ray &ray,
+        const Intersection &its,
+        EMeasure measure = ESolidAngle);
 
-	/// Return a human-readable description of the record
-	std::string toString() const;
+    /// Return a human-readable description of the record
+    std::string toString() const;
 };
 
 /// \cond

@@ -24,30 +24,30 @@
 MTS_NAMESPACE_BEGIN
 
 struct MaterialEntry {
-	const char *name;
-	Float sigmaS[3];
-	Float sigmaA[3];
-	Float g[3];
-	Float eta;
+    const char *name;
+    Float sigmaS[3];
+    Float sigmaA[3];
+    Float g[3];
+    Float eta;
 };
 
 static MaterialEntry materialData[] = {
-	/* Fitted data from "A Practical Model for Subsurface scattering" (Jensen et al.). No anisotropy data available. */
-	{ "Apple",                      { 2.29f, 2.39f, 1.97f }, { 0.0030f, 0.0034f, 0.046f  }, { 0.0f, 0.0f, 0.0f }, 1.3f },
-	{ "Chicken1",                   { 0.15f, 0.21f, 0.38f }, { 0.0015f, 0.077f,  0.19f   }, { 0.0f, 0.0f, 0.0f }, 1.3f },
-	{ "Chicken2",                   { 0.19f, 0.25f, 0.32f }, { 0.0018f, 0.088f,  0.20f   }, { 0.0f, 0.0f, 0.0f }, 1.3f },
-	{ "Cream",                      { 7.38f, 5.47f, 3.15f }, { 0.0002f, 0.0028f, 0.0163f }, { 0.0f, 0.0f, 0.0f }, 1.3f },
-	{ "Ketchup",                    { 0.18f, 0.07f, 0.03f }, { 0.061f,  0.97f,   1.45f   }, { 0.0f, 0.0f, 0.0f }, 1.3f },
-	{ "Marble",                     { 2.19f, 2.62f, 3.00f }, { 0.0021f, 0.0041f, 0.0071f }, { 0.0f, 0.0f, 0.0f }, 1.5f },
-	{ "Potato",                     { 0.68f, 0.70f, 0.55f }, { 0.0024f, 0.0090f, 0.12f   }, { 0.0f, 0.0f, 0.0f }, 1.3f },
-	{ "Skimmilk",                   { 0.70f, 1.22f, 1.90f }, { 0.0014f, 0.0025f, 0.0142f }, { 0.0f, 0.0f, 0.0f }, 1.3f },
-	{ "Skin1",                      { 0.74f, 0.88f, 1.01f }, { 0.032f,  0.17f,   0.48f   }, { 0.0f, 0.0f, 0.0f }, 1.3f },
-	{ "Skin2",                      { 1.09f, 1.59f, 1.79f }, { 0.013f,  0.070f,  0.145f  }, { 0.0f, 0.0f, 0.0f }, 1.3f },
-	{ "Spectralon",                 { 11.6f, 20.4f, 14.9f }, { 0.00f,   0.00f,   0.00f   }, { 0.0f, 0.0f, 0.0f }, 1.3f },
-	{ "Wholemilk",                  { 2.55f, 3.21f, 3.77f }, { 0.0011f, 0.0024f, 0.014f  }, { 0.0f, 0.0f, 0.0f }, 1.3f },
+    /* Fitted data from "A Practical Model for Subsurface scattering" (Jensen et al.). No anisotropy data available. */
+    { "Apple",                      { 2.29f, 2.39f, 1.97f }, { 0.0030f, 0.0034f, 0.046f  }, { 0.0f, 0.0f, 0.0f }, 1.3f },
+    { "Chicken1",                   { 0.15f, 0.21f, 0.38f }, { 0.0015f, 0.077f,  0.19f   }, { 0.0f, 0.0f, 0.0f }, 1.3f },
+    { "Chicken2",                   { 0.19f, 0.25f, 0.32f }, { 0.0018f, 0.088f,  0.20f   }, { 0.0f, 0.0f, 0.0f }, 1.3f },
+    { "Cream",                      { 7.38f, 5.47f, 3.15f }, { 0.0002f, 0.0028f, 0.0163f }, { 0.0f, 0.0f, 0.0f }, 1.3f },
+    { "Ketchup",                    { 0.18f, 0.07f, 0.03f }, { 0.061f,  0.97f,   1.45f   }, { 0.0f, 0.0f, 0.0f }, 1.3f },
+    { "Marble",                     { 2.19f, 2.62f, 3.00f }, { 0.0021f, 0.0041f, 0.0071f }, { 0.0f, 0.0f, 0.0f }, 1.5f },
+    { "Potato",                     { 0.68f, 0.70f, 0.55f }, { 0.0024f, 0.0090f, 0.12f   }, { 0.0f, 0.0f, 0.0f }, 1.3f },
+    { "Skimmilk",                   { 0.70f, 1.22f, 1.90f }, { 0.0014f, 0.0025f, 0.0142f }, { 0.0f, 0.0f, 0.0f }, 1.3f },
+    { "Skin1",                      { 0.74f, 0.88f, 1.01f }, { 0.032f,  0.17f,   0.48f   }, { 0.0f, 0.0f, 0.0f }, 1.3f },
+    { "Skin2",                      { 1.09f, 1.59f, 1.79f }, { 0.013f,  0.070f,  0.145f  }, { 0.0f, 0.0f, 0.0f }, 1.3f },
+    { "Spectralon",                 { 11.6f, 20.4f, 14.9f }, { 0.00f,   0.00f,   0.00f   }, { 0.0f, 0.0f, 0.0f }, 1.3f },
+    { "Wholemilk",                  { 2.55f, 3.21f, 3.77f }, { 0.0011f, 0.0024f, 0.014f  }, { 0.0f, 0.0f, 0.0f }, 1.3f },
 
-	/* From "Acquiring Scattering Properties of Participating Media by Dilution"
-	   by Narasimhan, Gupta, Donner, Ramamoorthi, Nayar, Jensen (SIGGRAPH 2006) */
+    /* From "Acquiring Scattering Properties of Participating Media by Dilution"
+       by Narasimhan, Gupta, Donner, Ramamoorthi, Nayar, Jensen (SIGGRAPH 2006) */
     { "Lowfat Milk",                 { 13.1157f, 15.4445f, 17.9572f }, { 0.00287f, 0.00575f, 0.01150f }, { 0.93200f, 0.90200f, 0.85900f }, 1.33f },
     { "Reduced Milk",                { 13.7335f, 15.6003f, 17.8007f }, { 0.00256f, 0.00511f, 0.01278f }, { 0.81900f, 0.79700f, 0.74600f }, 1.33f },
     { "Regular Milk",                { 18.2052f, 20.3826f, 22.3698f }, { 0.00153f, 0.00460f, 0.01993f }, { 0.75000f, 0.71400f, 0.68100f }, 1.33f },
@@ -84,115 +84,115 @@ static MaterialEntry materialData[] = {
     { "Suisse Mocha Powder",         { 30.0848f, 33.4452f, 38.7191f }, { 17.5020f, 27.0044f, 35.4334f }, { 0.90700f, 0.89400f, 0.88800f }, 1.33f },
     { "Pacific Ocean Surface Water", { 0.00180f, 0.00183f, 0.00228f }, { 0.03184f, 0.03132f, 0.03015f }, { 0.90200f, 0.82500f, 0.91400f }, 1.33f },
 
-	{ NULL,                          { 0.0f,  0.0f,   0.0f   }, { 0.0f,   0.0f,   0.0f   }, { 0.0f,   0.0f,  0.0f   }, 0.0f  }
+    { NULL,                          { 0.0f,  0.0f,   0.0f   }, { 0.0f,   0.0f,   0.0f   }, { 0.0f,   0.0f,  0.0f   }, 0.0f  }
 };
 
 static void lookupMaterial(const Properties &props, Spectrum &sigmaS, Spectrum &sigmaA, Spectrum &g, Float *eta = NULL) {
-	bool hasSigmaAS = props.hasProperty("sigmaS") || props.hasProperty("sigmaA"),
-		hasSigmaTAlbedo = props.hasProperty("sigmaT") || props.hasProperty("albedo"),
-		hasIOR = props.hasProperty("intIOR") || props.hasProperty("extIOR"),
-		manual = hasSigmaAS || hasSigmaTAlbedo,
-		hasPreset = props.hasProperty("material");
+    bool hasSigmaAS = props.hasProperty("sigmaS") || props.hasProperty("sigmaA"),
+        hasSigmaTAlbedo = props.hasProperty("sigmaT") || props.hasProperty("albedo"),
+        hasIOR = props.hasProperty("intIOR") || props.hasProperty("extIOR"),
+        manual = hasSigmaAS || hasSigmaTAlbedo,
+        hasPreset = props.hasProperty("material");
 
-	if (manual && hasPreset)
-		SLog(EError, "Please specify either a preset material or "
-			"scattering coefficients (you provided both!)");
+    if (manual && hasPreset)
+        SLog(EError, "Please specify either a preset material or "
+            "scattering coefficients (you provided both!)");
 
-	if (props.hasProperty("densityMultiplier") || props.hasProperty("sizeMultiplier"))
-		SLog(EError, "The 'densityMultiplier' parameter has been deprecated and is now called 'scale'.");
+    if (props.hasProperty("densityMultiplier") || props.hasProperty("sizeMultiplier"))
+        SLog(EError, "The 'densityMultiplier' parameter has been deprecated and is now called 'scale'.");
 
-	if (hasSigmaAS && hasSigmaTAlbedo)
-		SLog(EError, "You can either specify sigmaS & sigmaA *or* "
-			"sigmaT & albedo, but no other combinations!");
+    if (hasSigmaAS && hasSigmaTAlbedo)
+        SLog(EError, "You can either specify sigmaS & sigmaA *or* "
+            "sigmaT & albedo, but no other combinations!");
 
-	std::string material =
-		boost::to_lower_copy(props.getString("material", "Skin1"));
+    std::string material =
+        boost::to_lower_copy(props.getString("material", "Skin1"));
 
-	/* Start with a preset */
-	bool found = false;
-	MaterialEntry *matEntry = materialData;
-	while (matEntry->name) {
-		if (material == boost::to_lower_copy(std::string(matEntry->name))) {
-			sigmaS.fromLinearRGB(
-				matEntry->sigmaS[0],
-				matEntry->sigmaS[1],
-				matEntry->sigmaS[2]);
-			sigmaA.fromLinearRGB(
-				matEntry->sigmaA[0],
-				matEntry->sigmaA[1],
-				matEntry->sigmaA[2]);
-			g.fromLinearRGB(
-				matEntry->g[0],
-				matEntry->g[1],
-				matEntry->g[2]);
-			sigmaS *= 100;
-			sigmaA *= 100;
-			if (eta)
-				*eta = matEntry->eta;
-			found = true;
-			break;
-		}
-		++matEntry;
-	}
+    /* Start with a preset */
+    bool found = false;
+    MaterialEntry *matEntry = materialData;
+    while (matEntry->name) {
+        if (material == boost::to_lower_copy(std::string(matEntry->name))) {
+            sigmaS.fromLinearRGB(
+                matEntry->sigmaS[0],
+                matEntry->sigmaS[1],
+                matEntry->sigmaS[2]);
+            sigmaA.fromLinearRGB(
+                matEntry->sigmaA[0],
+                matEntry->sigmaA[1],
+                matEntry->sigmaA[2]);
+            g.fromLinearRGB(
+                matEntry->g[0],
+                matEntry->g[1],
+                matEntry->g[2]);
+            sigmaS *= 100;
+            sigmaA *= 100;
+            if (eta)
+                *eta = matEntry->eta;
+            found = true;
+            break;
+        }
+        ++matEntry;
+    }
 
-	if (!found) {
-		std::ostringstream oss;
-		oss << "Unable to find a material preset for \"" << material
-			<< "\"! Valid choices are:";
+    if (!found) {
+        std::ostringstream oss;
+        oss << "Unable to find a material preset for \"" << material
+            << "\"! Valid choices are:";
 
-		/* Unable to find the material preset by name -- print an error
-		message that lists all possible options */
-		for (matEntry = materialData; matEntry->name != NULL; ++matEntry) {
-			oss << matEntry->name;
-			if ((matEntry+1)->name)
-				oss << ", ";
-		}
+        /* Unable to find the material preset by name -- print an error
+        message that lists all possible options */
+        for (matEntry = materialData; matEntry->name != NULL; ++matEntry) {
+            oss << matEntry->name;
+            if ((matEntry+1)->name)
+                oss << ", ";
+        }
 
-		SLog(EError, "%s", oss.str().c_str());
-	}
+        SLog(EError, "%s", oss.str().c_str());
+    }
 
-	if (hasSigmaAS) {
-		sigmaS = props.getSpectrum("sigmaS", sigmaS);
-		sigmaA = props.getSpectrum("sigmaA", sigmaA);
-	} else if (hasSigmaTAlbedo) {
-		Spectrum albedo, sigmaT;
-		sigmaT = props.getSpectrum("sigmaT", sigmaA + sigmaS);
-		albedo = props.getSpectrum("albedo", sigmaS / (sigmaS + sigmaA));
-		sigmaS = albedo * sigmaT;
-		sigmaA = sigmaT - sigmaS;
-	}
+    if (hasSigmaAS) {
+        sigmaS = props.getSpectrum("sigmaS", sigmaS);
+        sigmaA = props.getSpectrum("sigmaA", sigmaA);
+    } else if (hasSigmaTAlbedo) {
+        Spectrum albedo, sigmaT;
+        sigmaT = props.getSpectrum("sigmaT", sigmaA + sigmaS);
+        albedo = props.getSpectrum("albedo", sigmaS / (sigmaS + sigmaA));
+        sigmaS = albedo * sigmaT;
+        sigmaA = sigmaT - sigmaS;
+    }
 
-	if (props.hasProperty("g")) {
-		if (props.getType("g") == Properties::ESpectrum)
-			g = props.getSpectrum("g");
-		else
-			g = Spectrum(props.getFloat("g"));
-	}
+    if (props.hasProperty("g")) {
+        if (props.getType("g") == Properties::ESpectrum)
+            g = props.getSpectrum("g");
+        else
+            g = Spectrum(props.getFloat("g"));
+    }
 
-	if (g.min() <= -1 || g.max() >= 1)
-		SLog(EError, "The anisotropy parameter 'g' must be in the range (-1, 1)!");
+    if (g.min() <= -1 || g.max() >= 1)
+        SLog(EError, "The anisotropy parameter 'g' must be in the range (-1, 1)!");
 
-	if (eta && hasIOR) {
-		/* Specifies the internal index of refraction at the interface */
-		Float intIOR = lookupIOR(props, "intIOR", "bk7");
+    if (eta && hasIOR) {
+        /* Specifies the internal index of refraction at the interface */
+        Float intIOR = lookupIOR(props, "intIOR", "bk7");
 
-		/* Specifies the external index of refraction at the interface */
-		Float extIOR = lookupIOR(props, "extIOR", "air");
+        /* Specifies the external index of refraction at the interface */
+        Float extIOR = lookupIOR(props, "extIOR", "air");
 
-		if (intIOR < 0 || extIOR < 0)
-			SLog(EError, "The interior and exterior indices of "
-				"refraction must be positive!");
+        if (intIOR < 0 || extIOR < 0)
+            SLog(EError, "The interior and exterior indices of "
+                "refraction must be positive!");
 
-		*eta = intIOR / extIOR;
-	}
+        *eta = intIOR / extIOR;
+    }
 
-	Float scale = props.getFloat("scale", 1.0f);
-	sigmaS *= scale;
-	sigmaA *= scale;
+    Float scale = props.getFloat("scale", 1.0f);
+    sigmaS *= scale;
+    sigmaA *= scale;
 
-	std::ostringstream oss;
-	oss << "Medium parameters: sigmaS=" << sigmaS.toString() << ", sigmaA=" << sigmaA.toString() << ", g=" << g.average();
-	SLog(EDebug, "%s", oss.str().c_str());
+    std::ostringstream oss;
+    oss << "Medium parameters: sigmaS=" << sigmaS.toString() << ", sigmaA=" << sigmaA.toString() << ", g=" << g.average();
+    SLog(EDebug, "%s", oss.str().c_str());
 }
 
 MTS_NAMESPACE_END

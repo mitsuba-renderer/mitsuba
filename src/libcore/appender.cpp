@@ -27,109 +27,109 @@ MTS_NAMESPACE_BEGIN
 
 StreamAppender::StreamAppender(std::ostream *stream)
  : m_stream(stream), m_isFile(false) {
-	m_lastMessageWasProgress = false;
+    m_lastMessageWasProgress = false;
 }
 
 StreamAppender::StreamAppender(const std::string &filename)
  : m_fileName(filename), m_isFile(true) {
-	std::fstream *stream = new std::fstream();
-	stream->open(filename.c_str(),
-		std::fstream::in | std::fstream::out | std::fstream::trunc);
-	m_stream = stream;
-	m_lastMessageWasProgress = false;
+    std::fstream *stream = new std::fstream();
+    stream->open(filename.c_str(),
+        std::fstream::in | std::fstream::out | std::fstream::trunc);
+    m_stream = stream;
+    m_lastMessageWasProgress = false;
 }
 
 void StreamAppender::readLog(std::string &target) {
-	Assert(m_isFile);
-	std::fstream &stream = * ((std::fstream *) m_stream);
-	if (!stream.good()) {
-		target = "";
-		return;
-	}
-	stream.flush();
-	stream.seekg(0, std::ios::end);
-	std::streamoff size = stream.tellg();
-	if (stream.fail() || size == 0) {
-		target = "";
-		return;
-	}
-	target.resize((size_t) size);
-	stream.seekg(0, std::ios::beg);
+    Assert(m_isFile);
+    std::fstream &stream = * ((std::fstream *) m_stream);
+    if (!stream.good()) {
+        target = "";
+        return;
+    }
+    stream.flush();
+    stream.seekg(0, std::ios::end);
+    std::streamoff size = stream.tellg();
+    if (stream.fail() || size == 0) {
+        target = "";
+        return;
+    }
+    target.resize((size_t) size);
+    stream.seekg(0, std::ios::beg);
 
-	std::istreambuf_iterator<std::string::value_type> it(stream);
-	std::istreambuf_iterator<std::string::value_type> it_eof;
-	target.insert(target.begin(), it, it_eof);
+    std::istreambuf_iterator<std::string::value_type> it(stream);
+    std::istreambuf_iterator<std::string::value_type> it_eof;
+    target.insert(target.begin(), it, it_eof);
 
-	stream.seekg(0, std::ios::end);
-	Assert(!stream.fail());
+    stream.seekg(0, std::ios::end);
+    Assert(!stream.fail());
 }
 
 void StreamAppender::append(ELogLevel level, const std::string &text) {
-	/* Insert a newline if the last message was a progress message */
-	if (m_lastMessageWasProgress && !m_isFile)
-		(*m_stream) << endl;
-	(*m_stream) << text << endl;
-	m_lastMessageWasProgress = false;
+    /* Insert a newline if the last message was a progress message */
+    if (m_lastMessageWasProgress && !m_isFile)
+        (*m_stream) << endl;
+    (*m_stream) << text << endl;
+    m_lastMessageWasProgress = false;
 }
 
 void StreamAppender::logProgress(Float progress, const std::string &name,
-	const std::string &formatted, const std::string &eta, const void *ptr) {
-	if (!m_isFile) {
-		(*m_stream) << formatted;
-		m_stream->flush();
-	}
-	m_lastMessageWasProgress = true;
+    const std::string &formatted, const std::string &eta, const void *ptr) {
+    if (!m_isFile) {
+        (*m_stream) << formatted;
+        m_stream->flush();
+    }
+    m_lastMessageWasProgress = true;
 }
 
 std::string StreamAppender::toString() const {
-	std::ostringstream oss;
+    std::ostringstream oss;
 
-	oss << "StreamAppender[stream=";
+    oss << "StreamAppender[stream=";
 
-	if (m_isFile) {
-		oss << "\"" << m_fileName << "\"";
-	} else {
-		oss << "<std::ostream>";
-	}
+    if (m_isFile) {
+        oss << "\"" << m_fileName << "\"";
+    } else {
+        oss << "<std::ostream>";
+    }
 
-	oss << "]";
+    oss << "]";
 
-	return oss.str();
+    return oss.str();
 }
 
 StreamAppender::~StreamAppender() {
-	if (m_isFile) {
-		((std::fstream *) m_stream)->close();
-		delete m_stream;
-	}
+    if (m_isFile) {
+        ((std::fstream *) m_stream)->close();
+        delete m_stream;
+    }
 }
 
 UnbufferedAppender::UnbufferedAppender(int fd)
  : m_fd(fd) {
-	m_lastMessageWasProgress = false;
+    m_lastMessageWasProgress = false;
 }
 
 void UnbufferedAppender::append(ELogLevel level, const std::string &text) {
-	std::string value = text + std::string("\n");
+    std::string value = text + std::string("\n");
 #if defined(__WINDOWS__)
-	write(m_fd, value.c_str(), (unsigned int) value.length());
+    write(m_fd, value.c_str(), (unsigned int) value.length());
 #else
-	if (write(m_fd, value.c_str(), value.length()) != (ssize_t) value.length())
-		Log(EError, "Unsuccessful write!");
+    if (write(m_fd, value.c_str(), value.length()) != (ssize_t) value.length())
+        Log(EError, "Unsuccessful write!");
 #endif
 }
 
 void UnbufferedAppender::logProgress(Float progress, const std::string &name,
-	const std::string &formatted, const std::string &eta, const void *ptr) {
-	/* Ignore */
+    const std::string &formatted, const std::string &eta, const void *ptr) {
+    /* Ignore */
 }
 
 std::string UnbufferedAppender::toString() const {
-	return "UnbufferedAppender[]";
+    return "UnbufferedAppender[]";
 }
 
 UnbufferedAppender::~UnbufferedAppender() {
-	close(m_fd);
+    close(m_fd);
 }
 
 MTS_IMPLEMENT_CLASS(Appender, true, Object)

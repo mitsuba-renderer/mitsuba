@@ -30,38 +30,38 @@ class Device;
  * \ingroup libhw
  */
 class MTS_EXPORT_HW Session : public Object {
-	friend class Device;
+    friend class Device;
 public:
-	/// Create a new session using the appropriate implementation
-	static Session *create();
+    /// Create a new session using the appropriate implementation
+    static Session *create();
 
-	/// Initialize the session
-	virtual void init();
+    /// Initialize the session
+    virtual void init();
 
-	/// Shut the session down
-	virtual void shutdown();
+    /// Shut the session down
+    virtual void shutdown();
 
-	/// Process all events and call event callbacks
-	virtual void processEvents() = 0;
+    /// Process all events and call event callbacks
+    virtual void processEvents() = 0;
 
-	/**
-	 * \brief Process all events and call event callbacks.
-	 *
-	 * This function will run until the \c stop parameter is set
-	 * to \c true from within an event callback.
-	 */
-	virtual void processEventsBlocking(bool &stop) = 0;
+    /**
+     * \brief Process all events and call event callbacks.
+     *
+     * This function will run until the \c stop parameter is set
+     * to \c true from within an event callback.
+     */
+    virtual void processEventsBlocking(bool &stop) = 0;
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	/// Virtual destructor
-	virtual ~Session() { }
+    /// Virtual destructor
+    virtual ~Session() { }
 
-	/// Create a new session
-	Session();
+    /// Create a new session
+    Session();
 protected:
-	bool m_initialized;
-	std::vector<Device *> m_devices;
+    bool m_initialized;
+    std::vector<Device *> m_devices;
 };
 
 MTS_NAMESPACE_END

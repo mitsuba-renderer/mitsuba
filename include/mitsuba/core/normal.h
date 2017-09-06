@@ -37,41 +37,41 @@ MTS_NAMESPACE_BEGIN
  * \ingroup libpython
  */
 struct Normal : public TVector3<Float> {
-	/** \brief Construct a new normal without initializing it.
-	 *
-	 * This construtor is useful when the normal will either not
-	 * be used at all (it might be part of a larger data structure)
-	 * or initialized at a later point in time. Always make sure
-	 * that one of the two is the case! Otherwise your program will do
-	 * computations involving uninitialized memory, which will probably
-	 * lead to a difficult-to-find bug.
-	 */
-	Normal() { }
+    /** \brief Construct a new normal without initializing it.
+     *
+     * This construtor is useful when the normal will either not
+     * be used at all (it might be part of a larger data structure)
+     * or initialized at a later point in time. Always make sure
+     * that one of the two is the case! Otherwise your program will do
+     * computations involving uninitialized memory, which will probably
+     * lead to a difficult-to-find bug.
+     */
+    Normal() { }
 
-	/// Initialize the vector with the specified X and Z components
-	Normal(Float x, Float y, Float z) : TVector3<Float>(x, y, z) { }
+    /// Initialize the vector with the specified X and Z components
+    Normal(Float x, Float y, Float z) : TVector3<Float>(x, y, z) { }
 
-	/// Initialize all components of the the normal with the specified value
-	explicit Normal(Float val) : TVector3<Float>(val) { }
+    /// Initialize all components of the the normal with the specified value
+    explicit Normal(Float val) : TVector3<Float>(val) { }
 
-	/// Unserialize a normal from a binary data stream
-	Normal(Stream *stream) {
-		x = stream->readElement<Float>();
-		y = stream->readElement<Float>();
-		z = stream->readElement<Float>();
-	}
+    /// Unserialize a normal from a binary data stream
+    Normal(Stream *stream) {
+        x = stream->readElement<Float>();
+        y = stream->readElement<Float>();
+        z = stream->readElement<Float>();
+    }
 
-	/// Construct a normal from a vector data structure
-	Normal(const TVector3<Float> &v) : TVector3<Float>(v.x, v.y, v.z) { }
+    /// Construct a normal from a vector data structure
+    Normal(const TVector3<Float> &v) : TVector3<Float>(v.x, v.y, v.z) { }
 
-	/// Assign a vector to this normal
-	void operator=(const TVector3<Float> &v) {
-		x = v.x; y = v.y; z = v.z;
-	}
+    /// Assign a vector to this normal
+    void operator=(const TVector3<Float> &v) {
+        x = v.x; y = v.y; z = v.z;
+    }
 };
 
 inline Normal normalize(const Normal &n) {
-	return n / n.length();
+    return n / n.length();
 }
 
 MTS_NAMESPACE_END

@@ -185,4 +185,8 @@ namespace boost { namespace filesystem3 { class path; }}
 namespace fs = boost::filesystem3;
 #endif
 
+#ifndef INFINITY
+#  define INFINITY std::numeric_limits<double>::infinity()
+#endif
+
 #endif /* __MITSUBA_CORE_FWD_H_ */

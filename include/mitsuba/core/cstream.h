@@ -31,40 +31,40 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_CORE ConsoleStream : public Stream {
 public:
-	// =============================================================
-	//! @{ \name Constructors
-	// =============================================================
+    // =============================================================
+    //! @{ \name Constructors
+    // =============================================================
 
-	/// Create a new console stream
-	ConsoleStream();
+    /// Create a new console stream
+    ConsoleStream();
 
-	//! @}
-	// =============================================================
+    //! @}
+    // =============================================================
 
-	// =============================================================
-	//! @{ \name Implementation of the Stream interface
-	// =============================================================
+    // =============================================================
+    //! @{ \name Implementation of the Stream interface
+    // =============================================================
 
-	void read(void *ptr, size_t size);
-	void write(const void *ptr, size_t size);
-	void seek(size_t pos);
-	size_t getPos() const;
-	size_t getSize() const;
-	void truncate(size_t size);
-	void flush();
-	bool canWrite() const;
-	bool canRead() const;
+    void read(void *ptr, size_t size);
+    void write(const void *ptr, size_t size);
+    void seek(size_t pos);
+    size_t getPos() const;
+    size_t getSize() const;
+    void truncate(size_t size);
+    void flush();
+    bool canWrite() const;
+    bool canRead() const;
 
-	//! @}
-	// =============================================================
+    //! @}
+    // =============================================================
 
-	/// Return a string representation
-	std::string toString() const;
+    /// Return a string representation
+    std::string toString() const;
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	/// Virtual destructor
-	virtual ~ConsoleStream();
+    /// Virtual destructor
+    virtual ~ConsoleStream();
 };
 
 MTS_NAMESPACE_END

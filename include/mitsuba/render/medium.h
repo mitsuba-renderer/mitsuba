@@ -34,67 +34,67 @@ MTS_NAMESPACE_BEGIN
 struct MTS_EXPORT_RENDER MediumSamplingRecord {
 public:
 
-	/// Traveled distance
-	Float t;
+    /// Traveled distance
+    Float t;
 
-	/// Location of the scattering interaction
-	Point p;
+    /// Location of the scattering interaction
+    Point p;
 
-	/// Time value associated with the medium scattering event
-	Float time;
+    /// Time value associated with the medium scattering event
+    Float time;
 
-	/// Local particle orientation at \ref p
-	Vector orientation;
+    /// Local particle orientation at \ref p
+    Vector orientation;
 
-	/**
-	 * \brief Specifies the transmittance along the segment [mint, t]
-	 *
-	 * When sampling a distance fails, this contains the
-	 * transmittance along the whole ray segment [mint, maxDist].
-	 */
-	Spectrum transmittance;
+    /**
+     * \brief Specifies the transmittance along the segment [mint, t]
+     *
+     * When sampling a distance fails, this contains the
+     * transmittance along the whole ray segment [mint, maxDist].
+     */
+    Spectrum transmittance;
 
-	/// The medium's absorption coefficient at \ref p
-	Spectrum sigmaA;
+    /// The medium's absorption coefficient at \ref p
+    Spectrum sigmaA;
 
-	/// The medium's scattering coefficient at \ref p
-	Spectrum sigmaS;
+    /// The medium's scattering coefficient at \ref p
+    Spectrum sigmaS;
 
-	/// Records the probability density of sampling a medium interaction at p
-	Float pdfSuccess;
+    /// Records the probability density of sampling a medium interaction at p
+    Float pdfSuccess;
 
-	/**
-	 * \brief Records the probability density of sampling a medium
-	 * interaction in the reverse direction
-	 *
-	 * This is essentially the density of obtained by calling \ref sampleDistance,
-	 * but starting at \c p and stopping at \c ray.o. These probabilities
-	 * are important for bidirectional methods.
-	 */
-	Float pdfSuccessRev;
+    /**
+     * \brief Records the probability density of sampling a medium
+     * interaction in the reverse direction
+     *
+     * This is essentially the density of obtained by calling \ref sampleDistance,
+     * but starting at \c p and stopping at \c ray.o. These probabilities
+     * are important for bidirectional methods.
+     */
+    Float pdfSuccessRev;
 
-	/**
-	 * When the \ref Medium::sampleDistance() is successful, this function
-	 * returns the probability of \a not having generated a medium interaction
-	 * until \ref t. Otherwise, it records the probability of
-	 * not generating any interactions in the whole interval [mint, maxt].
-	 * This probability is assumed to be symmetric with respect to
-	 * sampling from the other direction, which is why there is no
-	 * \c pdfFailureRev field.
-	 */
-	Float pdfFailure;
+    /**
+     * When the \ref Medium::sampleDistance() is successful, this function
+     * returns the probability of \a not having generated a medium interaction
+     * until \ref t. Otherwise, it records the probability of
+     * not generating any interactions in the whole interval [mint, maxt].
+     * This probability is assumed to be symmetric with respect to
+     * sampling from the other direction, which is why there is no
+     * \c pdfFailureRev field.
+     */
+    Float pdfFailure;
 
-	/// Pointer to the associated medium
-	const Medium *medium;
+    /// Pointer to the associated medium
+    const Medium *medium;
 
 public:
-	inline MediumSamplingRecord() : medium(NULL) { }
+    inline MediumSamplingRecord() : medium(NULL) { }
 
-	/// Return a pointer to the phase function
-	inline const PhaseFunction *getPhaseFunction() const;
+    /// Return a pointer to the phase function
+    inline const PhaseFunction *getPhaseFunction() const;
 
-	/// Return a string representation
-	std::string toString() const;
+    /// Return a string representation
+    std::string toString() const;
 };
 
 /** \brief Abstract participating medium
@@ -102,110 +102,110 @@ public:
  */
 class MTS_EXPORT_RENDER Medium : public NetworkedObject {
 public:
-	// =============================================================
-	//! @{ \name Medium sampling strategy
-	// =============================================================
+    // =============================================================
+    //! @{ \name Medium sampling strategy
+    // =============================================================
 
-	/**
-	 * \brief Sample a distance along the ray segment [mint, maxt]
-	 *
-	 * Should ideally importance sample with respect to the transmittance.
-	 * It is assumed that the ray has a normalized direction value.
-	 *
-	 * \param ray      Ray, along which a distance should be sampled
-	 * \param mRec     Medium sampling record to be filled with the result
-	 * \return         \c false if the maximum distance was exceeded, or if
-	 *                 no interaction inside the medium could be sampled.
-	 */
-	virtual bool sampleDistance(const Ray &ray,
-		MediumSamplingRecord &mRec, Sampler *sampler) const = 0;
+    /**
+     * \brief Sample a distance along the ray segment [mint, maxt]
+     *
+     * Should ideally importance sample with respect to the transmittance.
+     * It is assumed that the ray has a normalized direction value.
+     *
+     * \param ray      Ray, along which a distance should be sampled
+     * \param mRec     Medium sampling record to be filled with the result
+     * \return         \c false if the maximum distance was exceeded, or if
+     *                 no interaction inside the medium could be sampled.
+     */
+    virtual bool sampleDistance(const Ray &ray,
+        MediumSamplingRecord &mRec, Sampler *sampler) const = 0;
 
-	/**
-	 * \brief Compute the 1D density of sampling distance \a ray.maxt
-	 * along the ray using the sampling strategy implemented by
-	 * \a sampleDistance.
-	 *
-	 * The function computes the continuous densities in the case of
-	 * a successful \ref sampleDistance() invocation (in both directions),
-	 * as well as the Dirac delta density associated with a failure.
-	 * For convenience, it also stores the transmittance along the
-	 * supplied ray segment within \a mRec.
-	 */
-	virtual void eval(const Ray &ray,
-		MediumSamplingRecord &mRec) const = 0;
+    /**
+     * \brief Compute the 1D density of sampling distance \a ray.maxt
+     * along the ray using the sampling strategy implemented by
+     * \a sampleDistance.
+     *
+     * The function computes the continuous densities in the case of
+     * a successful \ref sampleDistance() invocation (in both directions),
+     * as well as the Dirac delta density associated with a failure.
+     * For convenience, it also stores the transmittance along the
+     * supplied ray segment within \a mRec.
+     */
+    virtual void eval(const Ray &ray,
+        MediumSamplingRecord &mRec) const = 0;
 
-	//! @}
-	// =============================================================
+    //! @}
+    // =============================================================
 
-	// =============================================================
-	//! @{ \name Functions for querying the medium
-	// =============================================================
+    // =============================================================
+    //! @{ \name Functions for querying the medium
+    // =============================================================
 
-	/**
-	 * \brief Compute the transmittance along a ray segment
-	 *
-	 * Computes the transmittance along a ray segment
-	 * [mint, maxt] associated with the ray. It is assumed
-	 * that the ray has a normalized direction value.
-	 */
-	virtual Spectrum evalTransmittance(const Ray &ray,
-		Sampler *sampler = NULL) const = 0;
+    /**
+     * \brief Compute the transmittance along a ray segment
+     *
+     * Computes the transmittance along a ray segment
+     * [mint, maxt] associated with the ray. It is assumed
+     * that the ray has a normalized direction value.
+     */
+    virtual Spectrum evalTransmittance(const Ray &ray,
+        Sampler *sampler = NULL) const = 0;
 
-	/// Return the phase function of this medium
-	inline const PhaseFunction *getPhaseFunction() const { return m_phaseFunction.get(); }
+    /// Return the phase function of this medium
+    inline const PhaseFunction *getPhaseFunction() const { return m_phaseFunction.get(); }
 
-	/// Determine whether the medium is homogeneous
-	virtual bool isHomogeneous() const = 0;
+    /// Determine whether the medium is homogeneous
+    virtual bool isHomogeneous() const = 0;
 
-	/// For homogeneous media: return the absorption coefficient
-	inline const Spectrum &getSigmaA() const { return m_sigmaA; }
+    /// For homogeneous media: return the absorption coefficient
+    inline const Spectrum &getSigmaA() const { return m_sigmaA; }
 
-	/// For homogeneous media: return the scattering coefficient
-	inline const Spectrum &getSigmaS() const { return m_sigmaS; }
+    /// For homogeneous media: return the scattering coefficient
+    inline const Spectrum &getSigmaS() const { return m_sigmaS; }
 
-	/// For homogeneous media: return the extinction coefficient
-	inline const Spectrum &getSigmaT() const { return m_sigmaT; }
+    /// For homogeneous media: return the extinction coefficient
+    inline const Spectrum &getSigmaT() const { return m_sigmaT; }
 
-	//! @}
-	// =============================================================
+    //! @}
+    // =============================================================
 
-	// =============================================================
-	//! @{ \name Miscellaneous
-	// =============================================================
+    // =============================================================
+    //! @{ \name Miscellaneous
+    // =============================================================
 
-	/** \brief Configure the object (called \a once after construction
-	   and addition of all child \ref ConfigurableObject instances). */
-	virtual void configure();
+    /** \brief Configure the object (called \a once after construction
+       and addition of all child \ref ConfigurableObject instances). */
+    virtual void configure();
 
-	/// Serialize this medium to a stream
-	virtual void serialize(Stream *stream, InstanceManager *manager) const;
+    /// Serialize this medium to a stream
+    virtual void serialize(Stream *stream, InstanceManager *manager) const;
 
-	/// Add a child ConfigurableObject
-	virtual void addChild(const std::string &name, ConfigurableObject *child);
-	/// Add an unnamed child
-	inline void addChild(ConfigurableObject *child) { addChild("", child); }
+    /// Add a child ConfigurableObject
+    virtual void addChild(const std::string &name, ConfigurableObject *child);
+    /// Add an unnamed child
+    inline void addChild(ConfigurableObject *child) { addChild("", child); }
 
-	/// Return a string representation
-	virtual std::string toString() const = 0;
+    /// Return a string representation
+    virtual std::string toString() const = 0;
 
-	//! @}
-	// =============================================================
+    //! @}
+    // =============================================================
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	/// Create a new participating medium instance
-	Medium(const Properties &props);
+    /// Create a new participating medium instance
+    Medium(const Properties &props);
 
-	/// Unserialize a participating medium
-	Medium(Stream *stream, InstanceManager *manager);
+    /// Unserialize a participating medium
+    Medium(Stream *stream, InstanceManager *manager);
 
-	/// Virtual destructor
-	virtual ~Medium() { }
+    /// Virtual destructor
+    virtual ~Medium() { }
 protected:
-	ref<PhaseFunction> m_phaseFunction;
-	Spectrum m_sigmaA;
-	Spectrum m_sigmaS;
-	Spectrum m_sigmaT;
+    ref<PhaseFunction> m_phaseFunction;
+    Spectrum m_sigmaA;
+    Spectrum m_sigmaS;
+    Spectrum m_sigmaT;
 };
 
 MTS_NAMESPACE_END

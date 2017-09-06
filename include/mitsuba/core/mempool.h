@@ -41,71 +41,71 @@ MTS_NAMESPACE_BEGIN
  */
 template <typename T> class BasicMemoryPool {
 public:
-	/// Create a new memory pool with an initial set of 128 entries
-	BasicMemoryPool(size_t nEntries = MTS_MEMPOOL_GRANULARITY) : m_size(0) {
-		increaseCapacity(nEntries);
-	}
+    /// Create a new memory pool with an initial set of 128 entries
+    BasicMemoryPool(size_t nEntries = MTS_MEMPOOL_GRANULARITY) : m_size(0) {
+        increaseCapacity(nEntries);
+    }
 
-	/// Destruct the memory pool and release all entries
-	~BasicMemoryPool() {
-		for (size_t i=0; i<m_cleanup.size(); ++i)
-			freeAligned(m_cleanup[i]);
-	}
+    /// Destruct the memory pool and release all entries
+    ~BasicMemoryPool() {
+        for (size_t i=0; i<m_cleanup.size(); ++i)
+            freeAligned(m_cleanup[i]);
+    }
 
-	/// Acquire an entry
-	inline T *alloc() {
-		if (EXPECT_NOT_TAKEN(m_free.empty()))
-			increaseCapacity();
-		T *result = m_free.back();
-		m_free.pop_back();
-		return result;
-	}
+    /// Acquire an entry
+    inline T *alloc() {
+        if (EXPECT_NOT_TAKEN(m_free.empty()))
+            increaseCapacity();
+        T *result = m_free.back();
+        m_free.pop_back();
+        return result;
+    }
 
-	void assertNotContained(T *ptr) {
+    void assertNotContained(T *ptr) {
 #if MTS_DEBUG_MEMPOOL == 1
-		if (std::find(m_free.begin(), m_free.end(), ptr) != m_free.end())
-			SLog(EError, "BasicMemoryPool:assertNotContained(): Memory pool inconsistency!");
+        if (std::find(m_free.begin(), m_free.end(), ptr) != m_free.end())
+            SLog(EError, "BasicMemoryPool:assertNotContained(): Memory pool inconsistency!");
 #endif
-	}
+    }
 
-	/// Release an entry
-	inline void release(T *ptr) {
+    /// Release an entry
+    inline void release(T *ptr) {
 #if MTS_DEBUG_MEMPOOL == 1
-		if (std::find(m_free.begin(), m_free.end(), ptr) != m_free.end())
-			SLog(EError, "BasicMemoryPool::release(): Memory pool "
-				"inconsistency. Tried to release %s", ptr->toString().c_str());
+        if (std::find(m_free.begin(), m_free.end(), ptr) != m_free.end())
+            SLog(EError, "BasicMemoryPool::release(): Memory pool "
+                "inconsistency. Tried to release %s", ptr->toString().c_str());
 #endif
-		m_free.push_back(ptr);
-	}
+        m_free.push_back(ptr);
+    }
 
-	/// Return the total size of the memory pool
-	inline size_t size() const {
-		return m_size;
-	}
+    /// Return the total size of the memory pool
+    inline size_t size() const {
+        return m_size;
+    }
 
-	/// Check if every entry has been released
-	bool unused() const {
-		return m_free.size() == m_size;
-	}
+    /// Check if every entry has been released
+    bool unused() const {
+        return m_free.size() == m_size;
+    }
 
-	/// Return a human-readable description
-	std::string toString() const {
-		std::ostringstream oss;
-		oss << "BasicMemoryPool[size=" << m_size << ", free=" << m_free.size() << "]";
-		return oss.str();
-	}
+    /// Return a human-readable description
+    std::string toString() const {
+        std::ostringstream oss;
+        oss << "BasicMemoryPool[size=" << m_size << ", free=" << m_free.size() << "]";
+        return oss.str();
+    }
 private:
-	void increaseCapacity(size_t nEntries = MTS_MEMPOOL_GRANULARITY) {
-		T *ptr = static_cast<T *>(allocAligned(sizeof(T) * nEntries));
-		for (size_t i=0; i<nEntries; ++i)
-			m_free.push_back(&ptr[i]);
-		m_cleanup.push_back(ptr);
-		m_size += nEntries;
-	}
+    void increaseCapacity(size_t nEntries = MTS_MEMPOOL_GRANULARITY) {
+        T *ptr = static_cast<T *>(allocAligned(sizeof(T) * nEntries));
+        for (size_t i=0; i<nEntries; ++i)
+            m_free.push_back(&ptr[i]);
+        m_cleanup.push_back(ptr);
+        m_size += nEntries;
+    }
 private:
-	std::vector<T *> m_free;
-	std::vector<T *> m_cleanup;
-	size_t m_size;
+    std::vector<T *> m_free;
+    std::vector<T *> m_cleanup;
+    size_t m_size;
 };
 
 MTS_NAMESPACE_END

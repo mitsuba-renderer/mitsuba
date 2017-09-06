@@ -37,69 +37,69 @@ MTS_NAMESPACE_BEGIN
  */
 struct MTS_EXPORT_CORE VonMisesFisherDistr {
 public:
-	/**
-	 * \brief Create a new von Mises-Fisher distribution
-	 * with the given concentration parameter
-	 */
-	explicit inline VonMisesFisherDistr(Float kappa = 0) : m_kappa(kappa) { }
+    /**
+     * \brief Create a new von Mises-Fisher distribution
+     * with the given concentration parameter
+     */
+    explicit inline VonMisesFisherDistr(Float kappa = 0) : m_kappa(kappa) { }
 
-	/// Return the concentration parameter kappa
-	inline void setKappa(Float kappa) {
-		m_kappa = kappa;
-	}
+    /// Return the concentration parameter kappa
+    inline void setKappa(Float kappa) {
+        m_kappa = kappa;
+    }
 
-	/// Return the concentration parameter kappa
-	inline Float getKappa() const {
-		return m_kappa;
-	}
+    /// Return the concentration parameter kappa
+    inline Float getKappa() const {
+        return m_kappa;
+    }
 
-	/// Return the mean cosine of the distribution
-	Float getMeanCosine() const;
+    /// Return the mean cosine of the distribution
+    Float getMeanCosine() const;
 
-	/// Evaluate the distribution for a given value of cos(theta)
-	Float eval(Float cosTheta) const;
+    /// Evaluate the distribution for a given value of cos(theta)
+    Float eval(Float cosTheta) const;
 
-	/**
-	 * \brief Generate a sample from this distribution
-	 *
-	 * \param sample
-	 *     A uniformly distributed point on <tt>[0,1]^2</tt>
-	 */
-	Vector sample(const Point2 &sample) const;
+    /**
+     * \brief Generate a sample from this distribution
+     *
+     * \param sample
+     *     A uniformly distributed point on <tt>[0,1]^2</tt>
+     */
+    Vector sample(const Point2 &sample) const;
 
-	/// Return a string representation
-	std::string toString() const;
+    /// Return a string representation
+    std::string toString() const;
 
-	/**
-	 * \brief Compute an appropriate concentration parameter so that
-	 * the associated vMF distribution takes on the value \c x at its peak
-	 */
-	static Float forPeakValue(Float x);
+    /**
+     * \brief Compute an appropriate concentration parameter so that
+     * the associated vMF distribution takes on the value \c x at its peak
+     */
+    static Float forPeakValue(Float x);
 
-	/**
-	 * \brief Estimate the vMF concentration parameter
-	 * based on the length of the mean vector that is produced
-	 * by simply averaging a set of sampled directions
-	 *
-	 * This is an unbiased estimator [Banerjee et al. 05]
-	 */
-	static Float forMeanLength(Float length);
+    /**
+     * \brief Estimate the vMF concentration parameter
+     * based on the length of the mean vector that is produced
+     * by simply averaging a set of sampled directions
+     *
+     * This is an unbiased estimator [Banerjee et al. 05]
+     */
+    static Float forMeanLength(Float length);
 
-	/**
-	 * \brief Compute an appropriate concentration parameter so that
-	 * the associated vMF distribution has the mean cosine \c g.
-	 */
-	static Float forMeanCosine(Float g);
+    /**
+     * \brief Compute an appropriate concentration parameter so that
+     * the associated vMF distribution has the mean cosine \c g.
+     */
+    static Float forMeanCosine(Float g);
 
-	/**
-	 * \brief Compute an concentration parameter that approximately
-	 * corresponds to the spherical convolution of two vMF distributions.
-	 *
-	 * For details, see "Directional Statistics" by Mardia and Jupp, p.44
-	 */
-	static Float convolve(Float kappa1, Float kappa2);
+    /**
+     * \brief Compute an concentration parameter that approximately
+     * corresponds to the spherical convolution of two vMF distributions.
+     *
+     * For details, see "Directional Statistics" by Mardia and Jupp, p.44
+     */
+    static Float convolve(Float kappa1, Float kappa2);
 private:
-	Float m_kappa;
+    Float m_kappa;
 };
 
 MTS_NAMESPACE_END

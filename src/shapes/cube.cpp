@@ -33,13 +33,13 @@ static uint32_t CubeData_triangles[][3] = {{0, 1, 2}, {3, 0, 2}, {4, 5, 6}, {7, 
  * \order{0}
  * \parameters{
  *     \parameter{toWorld}{\Transform\Or\Animation}{
- *	      Specifies an optional linear object-to-world transformation.
+ *        Specifies an optional linear object-to-world transformation.
  *        \default{none (i.e. object space $=$ world space)}
  *     }
  *     \parameter{flipNormals}{\Boolean}{
- *	      Is the cube inverted, i.e. should the normal vectors
- *		  be flipped? \default{\code{false}, i.e. the normals point outside}
- *	   }
+ *        Is the cube inverted, i.e. should the normal vectors
+ *        be flipped? \default{\code{false}, i.e. the normals point outside}
+ *     }
  * }
  *
  * \renderings{
@@ -72,41 +72,41 @@ static uint32_t CubeData_triangles[][3] = {{0, 1, 2}, {3, 0, 2}, {4, 5, 6}, {7, 
  */
 class Cube : public TriMesh {
 public:
-	Cube(const Properties &props) : TriMesh(props) {
-		m_triangleCount = 12;
-		m_vertexCount = 24;
-		m_positions = new Point[m_vertexCount];
-		m_texcoords = new Point2[m_vertexCount];
-		m_normals = new Normal[m_vertexCount];
-		m_triangles = new Triangle[m_triangleCount];
+    Cube(const Properties &props) : TriMesh(props) {
+        m_triangleCount = 12;
+        m_vertexCount = 24;
+        m_positions = new Point[m_vertexCount];
+        m_texcoords = new Point2[m_vertexCount];
+        m_normals = new Normal[m_vertexCount];
+        m_triangles = new Triangle[m_triangleCount];
 
-		Transform toWorld = props.getTransform("toWorld", Transform());
-		for (uint32_t i=0; i<m_vertexCount; ++i) {
-			Normal n;
-			Point p;
-			Point2 uv;
+        Transform toWorld = props.getTransform("toWorld", Transform());
+        for (uint32_t i=0; i<m_vertexCount; ++i) {
+            Normal n;
+            Point p;
+            Point2 uv;
 
-			for (int j=0; j<3; ++j) {
-				p[j] = CubeData_vertexPositions[i][j];
-				n[j] = CubeData_vertexNormals[i][j];
-			}
-			for (int j=0; j<2; ++j)
-				uv[j] = CubeData_texcoords[i][j];
+            for (int j=0; j<3; ++j) {
+                p[j] = CubeData_vertexPositions[i][j];
+                n[j] = CubeData_vertexNormals[i][j];
+            }
+            for (int j=0; j<2; ++j)
+                uv[j] = CubeData_texcoords[i][j];
 
-			m_positions[i] = toWorld(p);
-			m_normals[i] = normalize(toWorld(n));
-			m_texcoords[i] = uv;
-		}
+            m_positions[i] = toWorld(p);
+            m_normals[i] = normalize(toWorld(n));
+            m_texcoords[i] = uv;
+        }
 
-		for (uint32_t i=0; i<m_triangleCount; ++i)
-			for (int j=0; j<3; ++j)
-				m_triangles[i].idx[j] = CubeData_triangles[i][j];
-	}
+        for (uint32_t i=0; i<m_triangleCount; ++i)
+            for (int j=0; j<3; ++j)
+                m_triangles[i].idx[j] = CubeData_triangles[i][j];
+    }
 
-	Cube(Stream *stream, InstanceManager *manager)
-		: TriMesh(stream, manager) { }
+    Cube(Stream *stream, InstanceManager *manager)
+        : TriMesh(stream, manager) { }
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 };
 
 MTS_IMPLEMENT_CLASS_S(Cube, false, TriMesh)

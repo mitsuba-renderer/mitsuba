@@ -31,9 +31,9 @@ MTS_NAMESPACE_BEGIN
  * \parameters{
  *     \parameter{maxDepth}{\Integer}{Specifies the longest path depth
  *         in the generated output image (where \code{-1} corresponds to $\infty$).
- *	       A value of \code{2} will lead to direct-only illumination.
- *	       \default{\code{5}}
- *	   }
+ *         A value of \code{2} will lead to direct-only illumination.
+ *         \default{\code{5}}
+ *     }
  *     \parameter{shadowMap\showbreak Resolution}{\Integer}{
  *       Resolution of the shadow maps that are used
  *       to compute the point-to-point visibility \default{512}
@@ -78,189 +78,189 @@ MTS_NAMESPACE_BEGIN
  */
 class VPLIntegrator : public Integrator {
 public:
-	VPLIntegrator(const Properties &props) : Integrator(props) {
-		/* Shadow map resolution (e.g. 512x512) */
-		m_shadowMapResolution = props.getInteger("shadowMapResolution", 512);
-		/* Max. depth (expressed as path length) */
-		m_maxDepth = props.getInteger("maxDepth", 5);
-		/* Relative clamping factor (0=no clamping, 1=full clamping) */
-		m_clamping = props.getFloat("clamping", 0.1f);
+    VPLIntegrator(const Properties &props) : Integrator(props) {
+        /* Shadow map resolution (e.g. 512x512) */
+        m_shadowMapResolution = props.getInteger("shadowMapResolution", 512);
+        /* Max. depth (expressed as path length) */
+        m_maxDepth = props.getInteger("maxDepth", 5);
+        /* Relative clamping factor (0=no clamping, 1=full clamping) */
+        m_clamping = props.getFloat("clamping", 0.1f);
 
-		m_session = Session::create();
-		m_device = Device::create(m_session);
-		m_renderer = Renderer::create(m_session);
+        m_session = Session::create();
+        m_device = Device::create(m_session);
+        m_renderer = Renderer::create(m_session);
 
-		m_random = new Random();
-	}
+        m_random = new Random();
+    }
 
-	/// Draw the full scene using additive blending and shadow maps
-	void drawShadowedScene(const Scene *scene, const VPL &vpl) {
-		const ProjectiveCamera *sensor = static_cast<const ProjectiveCamera *>(scene->getSensor());
+    /// Draw the full scene using additive blending and shadow maps
+    void drawShadowedScene(const Scene *scene, const VPL &vpl) {
+        const ProjectiveCamera *sensor = static_cast<const ProjectiveCamera *>(scene->getSensor());
 
-		Point2 aaSample = Point2(m_random->nextFloat(), m_random->nextFloat());
-		Point2 apertureSample(0.5f);
-		if (sensor->needsApertureSample())
-			apertureSample = Point2(m_random->nextFloat(), m_random->nextFloat());
+        Point2 aaSample = Point2(m_random->nextFloat(), m_random->nextFloat());
+        Point2 apertureSample(0.5f);
+        if (sensor->needsApertureSample())
+            apertureSample = Point2(m_random->nextFloat(), m_random->nextFloat());
 
-		Transform projTransform = sensor->getProjectionTransform(apertureSample, aaSample);
-		Transform worldTransform = sensor->getWorldTransform()->eval(
-			sensor->getShutterOpen() +
-			m_random->nextFloat() * sensor->getShutterOpenTime());
-		m_shaderManager->setVPL(vpl);
-		m_framebuffer->activateTarget();
-		m_framebuffer->clear();
-		m_renderer->setCamera(projTransform.getMatrix(), worldTransform.getInverseMatrix());
-		m_shaderManager->drawAllGeometryForVPL(vpl, sensor);
-		m_shaderManager->drawBackground(sensor, projTransform, vpl.emitterScale);
-		m_framebuffer->releaseTarget();
-	}
+        Transform projTransform = sensor->getProjectionTransform(apertureSample, aaSample);
+        Transform worldTransform = sensor->getWorldTransform()->eval(
+            sensor->getShutterOpen() +
+            m_random->nextFloat() * sensor->getShutterOpenTime());
+        m_shaderManager->setVPL(vpl);
+        m_framebuffer->activateTarget();
+        m_framebuffer->clear();
+        m_renderer->setCamera(projTransform.getMatrix(), worldTransform.getInverseMatrix());
+        m_shaderManager->drawAllGeometryForVPL(vpl, sensor);
+        m_shaderManager->drawBackground(sensor, projTransform, vpl.emitterScale);
+        m_framebuffer->releaseTarget();
+    }
 
-	bool preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job,
-		int sceneResID, int sensorResID, int samplerResID) {
-		Integrator::preprocess(scene, queue, job, sceneResID, sensorResID, samplerResID);
+    bool preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job,
+        int sceneResID, int sensorResID, int samplerResID) {
+        Integrator::preprocess(scene, queue, job, sceneResID, sensorResID, samplerResID);
 
-		if (!(scene->getSensor()->getType() & Sensor::EProjectiveCamera))
-			Log(EError, "The VPL integrator requires a projective camera "
-				"(e.g. perspective/thinlens/orthographic/telecentric)!");
+        if (!(scene->getSensor()->getType() & Sensor::EProjectiveCamera))
+            Log(EError, "The VPL integrator requires a projective camera "
+                "(e.g. perspective/thinlens/orthographic/telecentric)!");
 
-		m_vpls.clear();
-		size_t sampleCount = scene->getSampler()->getSampleCount();
-		Float normalization = (Float) 1 / generateVPLs(scene, m_random,
-				0, sampleCount, m_maxDepth, true, m_vpls);
-		for (size_t i=0; i<m_vpls.size(); ++i) {
-			m_vpls[i].P *= normalization;
-			m_vpls[i].emitterScale *= normalization;
-		}
-		Log(EInfo, "Generated %i virtual point lights", m_vpls.size());
+        m_vpls.clear();
+        size_t sampleCount = scene->getSampler()->getSampleCount();
+        Float normalization = (Float) 1 / generateVPLs(scene, m_random,
+                0, sampleCount, m_maxDepth, true, m_vpls);
+        for (size_t i=0; i<m_vpls.size(); ++i) {
+            m_vpls[i].P *= normalization;
+            m_vpls[i].emitterScale *= normalization;
+        }
+        Log(EInfo, "Generated %i virtual point lights", m_vpls.size());
 
-		return true;
-	}
+        return true;
+    }
 
-	void cancel() {
-		m_cancel = true;
-	}
+    void cancel() {
+        m_cancel = true;
+    }
 
-	bool render(Scene *scene, RenderQueue *queue,
-		const RenderJob *job, int sceneResID, int sensorResID, int samplerResID) {
-		ref<Sensor> sensor = scene->getSensor();
-		ref<Film> film = sensor->getFilm();
-		m_cancel = false;
+    bool render(Scene *scene, RenderQueue *queue,
+        const RenderJob *job, int sceneResID, int sensorResID, int samplerResID) {
+        ref<Sensor> sensor = scene->getSensor();
+        ref<Film> film = sensor->getFilm();
+        m_cancel = false;
 
-		if (!sensor->getClass()->derivesFrom(MTS_CLASS(ProjectiveCamera)))
-			Log(EError, "The VPL renderer requires a projective camera!");
+        if (!sensor->getClass()->derivesFrom(MTS_CLASS(ProjectiveCamera)))
+            Log(EError, "The VPL renderer requires a projective camera!");
 
-		/* Initialize hardware rendering */
-		m_framebuffer = m_renderer->createGPUTexture("Framebuffer", NULL);
-		m_framebuffer->setFrameBufferType(GPUTexture::EColorBuffer);
-		m_framebuffer->setComponentFormat(GPUTexture::EFloat32);
-		m_framebuffer->setPixelFormat(GPUTexture::ERGB);
-		m_framebuffer->setSize(Point3i(film->getSize().x, film->getSize().y, 1));
-		m_framebuffer->setFilterType(GPUTexture::ENearest);
-		m_framebuffer->setMipMapped(false);
+        /* Initialize hardware rendering */
+        m_framebuffer = m_renderer->createGPUTexture("Framebuffer", NULL);
+        m_framebuffer->setFrameBufferType(GPUTexture::EColorBuffer);
+        m_framebuffer->setComponentFormat(GPUTexture::EFloat32);
+        m_framebuffer->setPixelFormat(GPUTexture::ERGB);
+        m_framebuffer->setSize(Point3i(film->getSize().x, film->getSize().y, 1));
+        m_framebuffer->setFilterType(GPUTexture::ENearest);
+        m_framebuffer->setMipMapped(false);
 
-		m_accumBuffer = m_renderer->createGPUTexture("Accumulation buffer",
-			new Bitmap(Bitmap::ERGB, Bitmap::EFloat32, film->getSize()));
-		m_accumBuffer->setFrameBufferType(GPUTexture::EColorBuffer);
-		m_framebuffer->setComponentFormat(GPUTexture::EFloat32);
-		m_framebuffer->setPixelFormat(GPUTexture::ERGB);
-		m_accumBuffer->setMipMapped(false);
+        m_accumBuffer = m_renderer->createGPUTexture("Accumulation buffer",
+            new Bitmap(Bitmap::ERGB, Bitmap::EFloat32, film->getSize()));
+        m_accumBuffer->setFrameBufferType(GPUTexture::EColorBuffer);
+        m_framebuffer->setComponentFormat(GPUTexture::EFloat32);
+        m_framebuffer->setPixelFormat(GPUTexture::ERGB);
+        m_accumBuffer->setMipMapped(false);
 
-		MTS_AUTORELEASE_BEGIN()
-		m_session->init();
-		m_device->setSize(film->getSize());
-		m_device->init();
-		m_device->setVisible(false);
-		m_renderer->init(m_device);
+        MTS_AUTORELEASE_BEGIN()
+        m_session->init();
+        m_device->setSize(film->getSize());
+        m_device->init();
+        m_device->setVisible(false);
+        m_renderer->init(m_device);
 
-		if (!m_renderer->getCapabilities()->isSupported(
-			RendererCapabilities::EShadingLanguage))
-			Log(EError, "Support for GLSL is required!");
-		if (!m_renderer->getCapabilities()->isSupported(
-			RendererCapabilities::ERenderToTexture))
-			Log(EError, "Render-to-texture support is required!");
-		if (!m_renderer->getCapabilities()->isSupported(
-			RendererCapabilities::EFloatingPointTextures))
-			Log(EError, "Floating point texture support is required!");
-		if (!m_renderer->getCapabilities()->isSupported(
-			RendererCapabilities::EFloatingPointBuffer))
-			Log(EError, "Floating point render buffer support is required!");
-		if (!m_renderer->getCapabilities()->isSupported(
-			RendererCapabilities::EVertexBufferObjects))
-			Log(EError, "Vertex buffer object support is required!");
-		if (!m_renderer->getCapabilities()->isSupported(
-			RendererCapabilities::EGeometryShaders))
-			Log(EError, "Geometry shader support is required!");
+        if (!m_renderer->getCapabilities()->isSupported(
+            RendererCapabilities::EShadingLanguage))
+            Log(EError, "Support for GLSL is required!");
+        if (!m_renderer->getCapabilities()->isSupported(
+            RendererCapabilities::ERenderToTexture))
+            Log(EError, "Render-to-texture support is required!");
+        if (!m_renderer->getCapabilities()->isSupported(
+            RendererCapabilities::EFloatingPointTextures))
+            Log(EError, "Floating point texture support is required!");
+        if (!m_renderer->getCapabilities()->isSupported(
+            RendererCapabilities::EFloatingPointBuffer))
+            Log(EError, "Floating point render buffer support is required!");
+        if (!m_renderer->getCapabilities()->isSupported(
+            RendererCapabilities::EVertexBufferObjects))
+            Log(EError, "Vertex buffer object support is required!");
+        if (!m_renderer->getCapabilities()->isSupported(
+            RendererCapabilities::EGeometryShaders))
+            Log(EError, "Geometry shader support is required!");
 
-		/* Initialize and clear the framebuffer */
-		m_framebuffer->init();
-		m_accumBuffer->init();
-		m_accumBuffer->activateTarget();
-		m_accumBuffer->clear();
-		m_accumBuffer->releaseTarget();
+        /* Initialize and clear the framebuffer */
+        m_framebuffer->init();
+        m_accumBuffer->init();
+        m_accumBuffer->activateTarget();
+        m_accumBuffer->clear();
+        m_accumBuffer->releaseTarget();
 
-		m_shaderManager = new VPLShaderManager(m_renderer);
-		m_shaderManager->setShadowMapResolution(m_shadowMapResolution);
-		m_shaderManager->setClamping(m_clamping);
-		m_shaderManager->init();
-		m_shaderManager->setScene(scene);
+        m_shaderManager = new VPLShaderManager(m_renderer);
+        m_shaderManager->setShadowMapResolution(m_shadowMapResolution);
+        m_shaderManager->setClamping(m_clamping);
+        m_shaderManager->init();
+        m_shaderManager->setScene(scene);
 
-		ProgressReporter progress("Rendering", m_vpls.size(), job);
-		for (size_t i=0; i<m_vpls.size() && !m_cancel; ++i) {
-			const VPL &vpl = m_vpls[i];
+        ProgressReporter progress("Rendering", m_vpls.size(), job);
+        for (size_t i=0; i<m_vpls.size() && !m_cancel; ++i) {
+            const VPL &vpl = m_vpls[i];
 
-			m_renderer->setDepthMask(true);
-			m_renderer->setDepthTest(true);
-			m_renderer->setBlendMode(Renderer::EBlendNone);
-			m_shaderManager->setVPL(vpl);
+            m_renderer->setDepthMask(true);
+            m_renderer->setDepthTest(true);
+            m_renderer->setBlendMode(Renderer::EBlendNone);
+            m_shaderManager->setVPL(vpl);
 
-			m_framebuffer->activateTarget();
-			m_framebuffer->clear();
-			drawShadowedScene(scene, vpl);
-			m_framebuffer->releaseTarget();
+            m_framebuffer->activateTarget();
+            m_framebuffer->clear();
+            drawShadowedScene(scene, vpl);
+            m_framebuffer->releaseTarget();
 
-			m_renderer->setDepthMask(false);
-			m_renderer->setDepthTest(false);
-			m_renderer->setBlendMode(Renderer::EBlendAdditive);
-			m_accumBuffer->activateTarget();
-			m_renderer->blitTexture(m_framebuffer, true);
-			m_accumBuffer->releaseTarget();
+            m_renderer->setDepthMask(false);
+            m_renderer->setDepthTest(false);
+            m_renderer->setBlendMode(Renderer::EBlendAdditive);
+            m_accumBuffer->activateTarget();
+            m_renderer->blitTexture(m_framebuffer, true);
+            m_accumBuffer->releaseTarget();
 
-			if ((i%20) == 0) {
-				m_renderer->flush();
-				m_renderer->checkError();
-			}
-			progress.update(i);
-		}
-		progress.finish();
+            if ((i%20) == 0) {
+                m_renderer->flush();
+                m_renderer->checkError();
+            }
+            progress.update(i);
+        }
+        progress.finish();
 
-		m_accumBuffer->download();
-		film->setBitmap(m_accumBuffer->getBitmap());
+        m_accumBuffer->download();
+        film->setBitmap(m_accumBuffer->getBitmap());
 
-		m_shaderManager->cleanup();
-		m_shaderManager = NULL;
+        m_shaderManager->cleanup();
+        m_shaderManager = NULL;
 
-		m_framebuffer->cleanup();
-		m_accumBuffer->cleanup();
-		m_renderer->shutdown();
-		m_device->shutdown();
-		m_session->shutdown();
-		MTS_AUTORELEASE_END()
-		return !m_cancel;
-	}
+        m_framebuffer->cleanup();
+        m_accumBuffer->cleanup();
+        m_renderer->shutdown();
+        m_device->shutdown();
+        m_session->shutdown();
+        MTS_AUTORELEASE_END()
+        return !m_cancel;
+    }
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 private:
-	ref<Session> m_session;
-	ref<Device> m_device;
-	ref<Renderer> m_renderer;
-	ref<GPUTexture> m_framebuffer, m_accumBuffer;
-	ref<VPLShaderManager> m_shaderManager;
-	std::deque<VPL> m_vpls;
-	ref<Random> m_random;
-	int m_maxDepth;
-	int m_shadowMapResolution;
-	Float m_clamping;
-	bool m_cancel;
+    ref<Session> m_session;
+    ref<Device> m_device;
+    ref<Renderer> m_renderer;
+    ref<GPUTexture> m_framebuffer, m_accumBuffer;
+    ref<VPLShaderManager> m_shaderManager;
+    std::deque<VPL> m_vpls;
+    ref<Random> m_random;
+    int m_maxDepth;
+    int m_shadowMapResolution;
+    Float m_clamping;
+    bool m_cancel;
 };
 
 MTS_IMPLEMENT_CLASS(VPLIntegrator, false, Integrator)

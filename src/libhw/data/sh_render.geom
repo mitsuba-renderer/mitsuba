@@ -30,26 +30,26 @@ varying out vec3 normal;
 varying out vec2 uv;
 
 #ifdef VERTEX_COLORS
-	varying in vec3 vertexColor_vertex[3];
-	varying out vec3 vertexColor;
+    varying in vec3 vertexColor_vertex[3];
+    varying out vec3 vertexColor;
 #endif
 
 void main() {
-	vec3 edge1 = posInWorldSpace_vertex[0]-posInWorldSpace_vertex[1];
-	vec3 edge2 = posInWorldSpace_vertex[0]-posInWorldSpace_vertex[2];
+    vec3 edge1 = posInWorldSpace_vertex[0]-posInWorldSpace_vertex[1];
+    vec3 edge2 = posInWorldSpace_vertex[0]-posInWorldSpace_vertex[2];
 
-	normal = cross(edge1, edge2);
-	for (int i=0; i<gl_VerticesIn; ++i) {
-		gl_Position = gl_PositionIn[i];
-		posInWorldSpace = posInWorldSpace_vertex[i];
-		posInVPLSpace = posInVPLSpace_vertex[i];
-		uv = uv_vertex[i];
+    normal = cross(edge1, edge2);
+    for (int i=0; i<gl_VerticesIn; ++i) {
+        gl_Position = gl_PositionIn[i];
+        posInWorldSpace = posInWorldSpace_vertex[i];
+        posInVPLSpace = posInVPLSpace_vertex[i];
+        uv = uv_vertex[i];
 
-		#ifdef VERTEX_COLORS
-			vertexColor = vertexColor_vertex[i];
-		#endif
+        #ifdef VERTEX_COLORS
+            vertexColor = vertexColor_vertex[i];
+        #endif
 
-		EmitVertex();
-	}
-	EndPrimitive();
+        EmitVertex();
+    }
+    EndPrimitive();
 }

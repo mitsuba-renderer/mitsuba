@@ -31,7 +31,7 @@ namespace cnpy {
         void destruct()
         {
             npz_t::iterator it = this->begin();
-            for(; it != this->end(); ++it) (*it).second.destruct();
+            for (; it != this->end(); ++it) (*it).second.destruct();
         }
     };
 
@@ -46,7 +46,7 @@ namespace cnpy {
 
     template<typename T> std::vector<char>& operator+=(std::vector<char>& lhs, const T rhs) {
         //write in little endian
-        for(unsigned char byte = 0; byte < sizeof(T); byte++) {
+        for (unsigned char byte = 0; byte < sizeof(T); byte++) {
             char val = *((char*)&rhs+byte);
             lhs.push_back(val);
         }
@@ -66,9 +66,9 @@ namespace cnpy {
     template<typename T> void npy_save(std::string fname, const T* data, const unsigned int* shape, const unsigned int ndims, std::string mode = "w") {
         FILE* fp = NULL;
 
-        if(mode == "a") fp = fopen(fname.c_str(),"r+b");
+        if (mode == "a") fp = fopen(fname.c_str(),"r+b");
 
-        if(fp) {
+        if (fp) {
             //file exists. we need to append to it. read the header, modify the array size
             unsigned int word_size, tmp_dims;
             unsigned int* tmp_shape = 0;
@@ -76,17 +76,17 @@ namespace cnpy {
             parse_npy_header(fp,word_size,tmp_shape,tmp_dims,fortran_order);
             assert(!fortran_order);
 
-            if(word_size != sizeof(T)) {
+            if (word_size != sizeof(T)) {
                 std::cout<<"libnpy error: "<<fname<<" has word size "<<word_size<<" but npy_save appending data sized "<<sizeof(T)<<"\n";
                 assert( word_size == sizeof(T) );
             }
-            if(tmp_dims != ndims) {
+            if (tmp_dims != ndims) {
                 std::cout<<"libnpy error: npy_save attempting to append misdimensioned data to "<<fname<<"\n";
                 assert(tmp_dims == ndims);
             }
 
-            for(unsigned int i = 1; i < ndims; i++) {
-                if(shape[i] != tmp_shape[i]) {
+            for (unsigned int i = 1; i < ndims; i++) {
+                if (shape[i] != tmp_shape[i]) {
                     std::cout<<"libnpy error: npy_save attempting to append misshaped data to "<<fname<<"\n";
                     assert(shape[i] == tmp_shape[i]);
                 }
@@ -107,7 +107,7 @@ namespace cnpy {
         }
 
         unsigned int nels = 1;
-        for(unsigned int i = 0;i < ndims;i++) nels *= shape[i];
+        for (unsigned int i = 0;i < ndims;i++) nels *= shape[i];
 
         fwrite(data,sizeof(T),nels,fp);
         fclose(fp);
@@ -124,9 +124,9 @@ namespace cnpy {
         unsigned int global_header_offset = 0;
         std::vector<char> global_header;
 
-        if(mode == "a") fp = fopen(zipname.c_str(),"r+b");
+        if (mode == "a") fp = fopen(zipname.c_str(),"r+b");
 
-        if(fp) {
+        if (fp) {
             //zip file exists. we need to add a new npy file to it.
             //first read the footer. this gives us the offset and size of the global header
             //then read and store the global header.
@@ -136,7 +136,7 @@ namespace cnpy {
             fseek(fp,global_header_offset,SEEK_SET);
             global_header.resize(global_header_size);
             size_t res = fread(&global_header[0],sizeof(char),global_header_size,fp);
-            if(res != global_header_size){
+            if (res != global_header_size) {
                 throw std::runtime_error("npz_save: header read error while adding to existing zip");
             }
             fseek(fp,global_header_offset,SEEK_SET);
@@ -213,11 +213,11 @@ namespace cnpy {
         dict += tostring(sizeof(T));
         dict += "', 'fortran_order': False, 'shape': (";
         dict += tostring(shape[0]);
-        for(unsigned int i = 1;i < ndims;i++) {
+        for (unsigned int i = 1;i < ndims;i++) {
             dict += ", ";
             dict += tostring(shape[i]);
         }
-        if(ndims == 1) dict += ",";
+        if (ndims == 1) dict += ",";
         dict += "), }";
         //pad with spaces so that preamble+dict is modulo 16 bytes. preamble is 10 bytes. dict needs to end with \n
         int remainder = 16 - (10 + dict.size()) % 16;

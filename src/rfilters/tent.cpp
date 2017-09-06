@@ -29,25 +29,25 @@ MTS_NAMESPACE_BEGIN
  */
 class TentFilter : public ReconstructionFilter {
 public:
-	TentFilter(const Properties &props)
-		: ReconstructionFilter(props) {
-		m_radius = 1.0f;
-	}
+    TentFilter(const Properties &props)
+        : ReconstructionFilter(props) {
+        m_radius = 1.0f;
+    }
 
-	TentFilter(Stream *stream, InstanceManager *manager)
-		: ReconstructionFilter(stream, manager) {
-		configure();
-	}
+    TentFilter(Stream *stream, InstanceManager *manager)
+        : ReconstructionFilter(stream, manager) {
+        configure();
+    }
 
-	Float eval(Float x) const {
-		return std::max((Float) 0.0f, 1.0f - std::abs(x / m_radius));
-	}
+    Float eval(Float x) const {
+        return std::max((Float) 0.0f, 1.0f - std::abs(x / m_radius));
+    }
 
-	std::string toString() const {
-		return formatString("TentFilter[radius=%f]", m_radius);
-	}
+    std::string toString() const {
+        return formatString("TentFilter[radius=%f]", m_radius);
+    }
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 };
 
 MTS_IMPLEMENT_CLASS_S(TentFilter, false, ReconstructionFilter);

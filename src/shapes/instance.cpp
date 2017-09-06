@@ -26,7 +26,7 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{\Unnamed}{\ShapeGroup}{A reference to a
  *     shape group that should be instantiated}
  *     \parameter{toWorld}{\Transform\Or\Animation}{
- *	      Specifies an optional linear instance-to-world transformation.
+ *        Specifies an optional linear instance-to-world transformation.
  *        \default{none (i.e. instance space $=$ world space)}
  *     }
  * }
@@ -55,135 +55,135 @@ MTS_NAMESPACE_BEGIN
  */
 
 Instance::Instance(const Properties &props) : Shape(props) {
-	m_transform = props.getAnimatedTransform("toWorld", Transform());
+    m_transform = props.getAnimatedTransform("toWorld", Transform());
 }
 
 Instance::Instance(Stream *stream, InstanceManager *manager)
-	: Shape(stream, manager) {
-	m_shapeGroup = static_cast<ShapeGroup *>(manager->getInstance(stream));
-	m_transform = new AnimatedTransform(stream);
+    : Shape(stream, manager) {
+    m_shapeGroup = static_cast<ShapeGroup *>(manager->getInstance(stream));
+    m_transform = new AnimatedTransform(stream);
 }
 
 void Instance::serialize(Stream *stream, InstanceManager *manager) const {
-	Shape::serialize(stream, manager);
-	manager->serialize(stream, m_shapeGroup.get());
-	m_transform->serialize(stream);
+    Shape::serialize(stream, manager);
+    manager->serialize(stream, m_shapeGroup.get());
+    m_transform->serialize(stream);
 }
 
 void Instance::configure() {
-	if (!m_shapeGroup)
-		Log(EError, "A reference to a 'shapegroup' must be specified!");
+    if (!m_shapeGroup)
+        Log(EError, "A reference to a 'shapegroup' must be specified!");
 }
 
 AABB Instance::getAABB() const {
-	const ShapeKDTree *kdtree = m_shapeGroup->getKDTree();
-	const AABB &aabb = kdtree->getAABB();
-	if (!aabb.isValid()) // the geometry group is empty
-		return aabb;
+    const ShapeKDTree *kdtree = m_shapeGroup->getKDTree();
+    const AABB &aabb = kdtree->getAABB();
+    if (!aabb.isValid()) // the geometry group is empty
+        return aabb;
 
-	std::set<Float> times;
-	m_transform->collectKeyframes(times);
+    std::set<Float> times;
+    m_transform->collectKeyframes(times);
 
-	AABB result;
-	for (std::set<Float>::iterator it = times.begin(); it != times.end(); ++it) {
-		const Transform &trafo = m_transform->eval(*it);
+    AABB result;
+    for (std::set<Float>::iterator it = times.begin(); it != times.end(); ++it) {
+        const Transform &trafo = m_transform->eval(*it);
 
-		for (int i=0; i<8; ++i)
-			result.expandBy(trafo(aabb.getCorner(i)));
-	}
+        for (int i=0; i<8; ++i)
+            result.expandBy(trafo(aabb.getCorner(i)));
+    }
 
-	return result;
+    return result;
 }
 
 void Instance::addChild(const std::string &name, ConfigurableObject *child) {
-	const Class *cClass = child->getClass();
-	if (cClass->getName() == "ShapeGroup") {
-		m_shapeGroup = static_cast<ShapeGroup *>(child);
-	} else {
-		Shape::addChild(name, child);
-	}
+    const Class *cClass = child->getClass();
+    if (cClass->getName() == "ShapeGroup") {
+        m_shapeGroup = static_cast<ShapeGroup *>(child);
+    } else {
+        Shape::addChild(name, child);
+    }
 }
 
 size_t Instance::getPrimitiveCount() const {
-	return 0;
+    return 0;
 }
 
 size_t Instance::getEffectivePrimitiveCount() const {
-	return m_shapeGroup->getPrimitiveCount();
+    return m_shapeGroup->getPrimitiveCount();
 }
 
 bool Instance::rayIntersect(const Ray &_ray, Float mint,
-		Float maxt, Float &t, void *temp) const {
-	const ShapeKDTree *kdtree = m_shapeGroup->getKDTree();
-	const Transform &trafo = m_transform->eval(_ray.time);
-	Ray ray;
-	trafo.inverse()(_ray, ray);
-	return kdtree->rayIntersect(ray, mint, maxt, t, temp);
+        Float maxt, Float &t, void *temp) const {
+    const ShapeKDTree *kdtree = m_shapeGroup->getKDTree();
+    const Transform &trafo = m_transform->eval(_ray.time);
+    Ray ray;
+    trafo.inverse()(_ray, ray);
+    return kdtree->rayIntersect(ray, mint, maxt, t, temp);
 }
 
 bool Instance::rayIntersect(const Ray &_ray, Float mint, Float maxt) const {
-	const ShapeKDTree *kdtree = m_shapeGroup->getKDTree();
-	Ray ray;
-	const Transform &trafo = m_transform->eval(_ray.time);
-	trafo.inverse()(_ray, ray);
-	return kdtree->rayIntersect(ray, mint, maxt);
+    const ShapeKDTree *kdtree = m_shapeGroup->getKDTree();
+    Ray ray;
+    const Transform &trafo = m_transform->eval(_ray.time);
+    trafo.inverse()(_ray, ray);
+    return kdtree->rayIntersect(ray, mint, maxt);
 }
 
 void Instance::adjustTime(Intersection &its, Float time) const {
-	Transform trafo = m_transform->eval(its.time).inverse();
-	trafo = m_transform->eval(time) * trafo;
+    Transform trafo = m_transform->eval(its.time).inverse();
+    trafo = m_transform->eval(time) * trafo;
 
-	its.dpdu = trafo(its.dpdu);
-	its.dpdv = trafo(its.dpdv);
-	its.geoFrame = Frame(normalize(trafo(its.geoFrame.n)));
-	its.p = trafo(its.p);
-	computeShadingFrame(normalize(trafo(its.shFrame.n)), its.dpdu, its.shFrame);
-	its.wi = normalize(trafo(its.wi));
-	its.instance = this;
-	its.time = time;
+    its.dpdu = trafo(its.dpdu);
+    its.dpdv = trafo(its.dpdv);
+    its.geoFrame = Frame(normalize(trafo(its.geoFrame.n)));
+    its.p = trafo(its.p);
+    computeShadingFrame(normalize(trafo(its.shFrame.n)), its.dpdu, its.shFrame);
+    its.wi = normalize(trafo(its.wi));
+    its.instance = this;
+    its.time = time;
 }
 
 void Instance::fillIntersectionRecord(const Ray &_ray,
-	const void *temp, Intersection &its) const {
-	const ShapeKDTree *kdtree = m_shapeGroup->getKDTree();
-	const Transform &trafo = m_transform->eval(_ray.time);
-	Ray ray;
-	trafo.inverse()(_ray, ray);
-	kdtree->fillIntersectionRecord<false>(ray, temp, its);
+    const void *temp, Intersection &its) const {
+    const ShapeKDTree *kdtree = m_shapeGroup->getKDTree();
+    const Transform &trafo = m_transform->eval(_ray.time);
+    Ray ray;
+    trafo.inverse()(_ray, ray);
+    kdtree->fillIntersectionRecord<false>(ray, temp, its);
 
-	its.shFrame.n = normalize(trafo(its.shFrame.n));
-	its.geoFrame = Frame(normalize(trafo(its.geoFrame.n)));
-	its.dpdu = trafo(its.dpdu);
-	its.dpdv = trafo(its.dpdv);
-	its.p = trafo(its.p);
-	its.instance = this;
+    its.shFrame.n = normalize(trafo(its.shFrame.n));
+    its.geoFrame = Frame(normalize(trafo(its.geoFrame.n)));
+    its.dpdu = trafo(its.dpdu);
+    its.dpdv = trafo(its.dpdv);
+    its.p = trafo(its.p);
+    its.instance = this;
 }
 
 void Instance::getNormalDerivative(const Intersection &its,
-		Vector &dndu, Vector &dndv, bool shadingFrame) const {
-	const Transform &trafo = m_transform->eval(its.time);
-	const Transform invTrafo = trafo.inverse();
+        Vector &dndu, Vector &dndv, bool shadingFrame) const {
+    const Transform &trafo = m_transform->eval(its.time);
+    const Transform invTrafo = trafo.inverse();
 
-	/* The following is really super-inefficient, but it's
-	   needed to be able to deal with general transformations */
-	Intersection temp(its);
-	temp.p = invTrafo(its.p);
-	temp.dpdu = invTrafo(its.dpdu);
-	temp.dpdv = invTrafo(its.dpdv);
+    /* The following is really super-inefficient, but it's
+       needed to be able to deal with general transformations */
+    Intersection temp(its);
+    temp.p = invTrafo(its.p);
+    temp.dpdu = invTrafo(its.dpdu);
+    temp.dpdv = invTrafo(its.dpdv);
 
-	/* Determine the length of the transformed normal
-	   *before* it was re-normalized */
-	Normal tn = trafo(normalize(invTrafo(its.shFrame.n)));
-	Float invLen = 1 / tn.length();
-	tn *= invLen;
+    /* Determine the length of the transformed normal
+       *before* it was re-normalized */
+    Normal tn = trafo(normalize(invTrafo(its.shFrame.n)));
+    Float invLen = 1 / tn.length();
+    tn *= invLen;
 
-	its.shape->getNormalDerivative(temp, dndu, dndv, shadingFrame);
+    its.shape->getNormalDerivative(temp, dndu, dndv, shadingFrame);
 
-	dndu = trafo(Normal(dndu)) * invLen;
-	dndv = trafo(Normal(dndv)) * invLen;
+    dndu = trafo(Normal(dndu)) * invLen;
+    dndv = trafo(Normal(dndv)) * invLen;
 
-	dndu -= tn * dot(tn, dndu);
-	dndv -= tn * dot(tn, dndv);
+    dndu -= tn * dot(tn, dndu);
+    dndv -= tn * dot(tn, dndv);
 }
 
 MTS_IMPLEMENT_CLASS_S(Instance, false, Shape)

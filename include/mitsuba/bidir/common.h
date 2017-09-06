@@ -46,19 +46,19 @@ MTS_NAMESPACE_BEGIN
  * \ingroup libbidir
  */
 struct EndpointRecord {
-	/// Time value associated with the path
-	Float time;
+    /// Time value associated with the path
+    Float time;
 
-	/// Create a new endpoint record for a given time value
-	inline EndpointRecord(Float time)
-		: time(time) { }
+    /// Create a new endpoint record for a given time value
+    inline EndpointRecord(Float time)
+        : time(time) { }
 
-	/// Create a new endpoint record for a given time value
-	inline EndpointRecord(Float time,
-		const Point2 &uv) : time(time) { }
+    /// Create a new endpoint record for a given time value
+    inline EndpointRecord(Float time,
+        const Point2 &uv) : time(time) { }
 
-	/// Return a human-readable description
-	std::string toString() const;
+    /// Return a human-readable description
+    std::string toString() const;
 };
 
 /* Forward declarations */

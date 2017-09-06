@@ -31,13 +31,13 @@
 MTS_NAMESPACE_BEGIN
 
 ref<Scene> Utility::loadScene(const fs::path &filename,
-		const ParameterMap &params) {
-	return SceneHandler::loadScene(filename, params);
+        const ParameterMap &params) {
+    return SceneHandler::loadScene(filename, params);
 }
 
 ref<Scene> Utility::loadSceneFromString(const std::string &content,
-		const ParameterMap &params) {
-	return SceneHandler::loadSceneFromString(content, params);
+        const ParameterMap &params) {
+    return SceneHandler::loadSceneFromString(content, params);
 }
 
 MTS_IMPLEMENT_CLASS(Utility, true, Object)

@@ -71,179 +71,179 @@ MTS_NAMESPACE_BEGIN
 
 class LowDiscrepancySampler : public Sampler {
 public:
-	LowDiscrepancySampler() : Sampler(Properties()) { }
+    LowDiscrepancySampler() : Sampler(Properties()) { }
 
-	LowDiscrepancySampler(const Properties &props) : Sampler(props) {
-		/* Sample count (will be rounded up to the next power of two) */
-		m_sampleCount = props.getSize("sampleCount", 4);
+    LowDiscrepancySampler(const Properties &props) : Sampler(props) {
+        /* Sample count (will be rounded up to the next power of two) */
+        m_sampleCount = props.getSize("sampleCount", 4);
 
-		/* Dimension, up to which which low discrepancy samples are guaranteed to be available. */
-		m_maxDimension = props.getInteger("dimension", 4);
+        /* Dimension, up to which which low discrepancy samples are guaranteed to be available. */
+        m_maxDimension = props.getInteger("dimension", 4);
 
-		if (!math::isPowerOfTwo(m_sampleCount)) {
-			m_sampleCount = math::roundToPowerOfTwo(m_sampleCount);
-			Log(EWarn, "Sample count should be a power of two -- rounding to "
-					SIZE_T_FMT, m_sampleCount);
-		}
+        if (!math::isPowerOfTwo(m_sampleCount)) {
+            m_sampleCount = math::roundToPowerOfTwo(m_sampleCount);
+            Log(EWarn, "Sample count should be a power of two -- rounding to "
+                    SIZE_T_FMT, m_sampleCount);
+        }
 
-		m_samples1D = new Float*[m_maxDimension];
-		m_samples2D = new Point2*[m_maxDimension];
+        m_samples1D = new Float*[m_maxDimension];
+        m_samples2D = new Point2*[m_maxDimension];
 
-		for (size_t i=0; i<m_maxDimension; i++) {
-			m_samples1D[i] = new Float[m_sampleCount];
-			m_samples2D[i] = new Point2[m_sampleCount];
-		}
+        for (size_t i=0; i<m_maxDimension; i++) {
+            m_samples1D[i] = new Float[m_sampleCount];
+            m_samples2D[i] = new Point2[m_sampleCount];
+        }
 
-		m_random = new Random();
-	}
+        m_random = new Random();
+    }
 
-	LowDiscrepancySampler(Stream *stream, InstanceManager *manager)
-	 : Sampler(stream, manager) {
-		m_random = static_cast<Random *>(manager->getInstance(stream));
-		m_maxDimension = stream->readSize();
+    LowDiscrepancySampler(Stream *stream, InstanceManager *manager)
+     : Sampler(stream, manager) {
+        m_random = static_cast<Random *>(manager->getInstance(stream));
+        m_maxDimension = stream->readSize();
 
-		m_samples1D = new Float*[m_maxDimension];
-		m_samples2D = new Point2*[m_maxDimension];
-		for (size_t i=0; i<m_maxDimension; i++) {
-			m_samples1D[i] = new Float[(size_t) m_sampleCount];
-			m_samples2D[i] = new Point2[(size_t) m_sampleCount];
-		}
-	}
+        m_samples1D = new Float*[m_maxDimension];
+        m_samples2D = new Point2*[m_maxDimension];
+        for (size_t i=0; i<m_maxDimension; i++) {
+            m_samples1D[i] = new Float[(size_t) m_sampleCount];
+            m_samples2D[i] = new Point2[(size_t) m_sampleCount];
+        }
+    }
 
-	virtual ~LowDiscrepancySampler() {
-		for (size_t i=0; i<m_maxDimension; i++) {
-			delete[] m_samples1D[i];
-			delete[] m_samples2D[i];
-		}
-		delete[] m_samples1D;
-		delete[] m_samples2D;
-	}
+    virtual ~LowDiscrepancySampler() {
+        for (size_t i=0; i<m_maxDimension; i++) {
+            delete[] m_samples1D[i];
+            delete[] m_samples2D[i];
+        }
+        delete[] m_samples1D;
+        delete[] m_samples2D;
+    }
 
-	void serialize(Stream *stream, InstanceManager *manager) const {
-		Sampler::serialize(stream, manager);
-		manager->serialize(stream, m_random.get());
-		stream->writeSize(m_maxDimension);
-	}
+    void serialize(Stream *stream, InstanceManager *manager) const {
+        Sampler::serialize(stream, manager);
+        manager->serialize(stream, m_random.get());
+        stream->writeSize(m_maxDimension);
+    }
 
-	ref<Sampler> clone() {
-		ref<LowDiscrepancySampler> sampler = new LowDiscrepancySampler();
+    ref<Sampler> clone() {
+        ref<LowDiscrepancySampler> sampler = new LowDiscrepancySampler();
 
-		sampler->m_sampleCount = m_sampleCount;
-		sampler->m_maxDimension = m_maxDimension;
-		sampler->m_random = new Random(m_random);
-		sampler->m_samples1D = new Float*[m_maxDimension];
-		sampler->m_samples2D = new Point2*[m_maxDimension];
-		for (size_t i=0; i<m_maxDimension; i++) {
-			sampler->m_samples1D[i] = new Float[m_sampleCount];
-			sampler->m_samples2D[i] = new Point2[m_sampleCount];
-		}
-		for (size_t i=0; i<m_req1D.size(); ++i)
-			sampler->request1DArray(m_req1D[i]);
-		for (size_t i=0; i<m_req2D.size(); ++i)
-			sampler->request2DArray(m_req2D[i]);
+        sampler->m_sampleCount = m_sampleCount;
+        sampler->m_maxDimension = m_maxDimension;
+        sampler->m_random = new Random(m_random);
+        sampler->m_samples1D = new Float*[m_maxDimension];
+        sampler->m_samples2D = new Point2*[m_maxDimension];
+        for (size_t i=0; i<m_maxDimension; i++) {
+            sampler->m_samples1D[i] = new Float[m_sampleCount];
+            sampler->m_samples2D[i] = new Point2[m_sampleCount];
+        }
+        for (size_t i=0; i<m_req1D.size(); ++i)
+            sampler->request1DArray(m_req1D[i]);
+        for (size_t i=0; i<m_req2D.size(); ++i)
+            sampler->request2DArray(m_req2D[i]);
 
-		return sampler.get();
-	}
+        return sampler.get();
+    }
 
-	inline void generate1D(Float *samples, size_t sampleCount) {
-		#if defined(SINGLE_PRECISION)
-			uint32_t scramble = m_random->nextULong() & 0xFFFFFFFF;
-			for (size_t i = 0; i < sampleCount; ++i)
-				samples[i] = radicalInverse2Single((uint32_t) i, scramble);
-		#else
-			uint64_t scramble = m_random->nextULong();
-			for (size_t i = 0; i < sampleCount; ++i)
-				samples[i] = radicalInverse2Double(i, scramble);
-		#endif
+    inline void generate1D(Float *samples, size_t sampleCount) {
+        #if defined(SINGLE_PRECISION)
+            uint32_t scramble = m_random->nextULong() & 0xFFFFFFFF;
+            for (size_t i = 0; i < sampleCount; ++i)
+                samples[i] = radicalInverse2Single((uint32_t) i, scramble);
+        #else
+            uint64_t scramble = m_random->nextULong();
+            for (size_t i = 0; i < sampleCount; ++i)
+                samples[i] = radicalInverse2Double(i, scramble);
+        #endif
 
-		m_random->shuffle(samples, samples + sampleCount);
-	}
+        m_random->shuffle(samples, samples + sampleCount);
+    }
 
-	inline void generate2D(Point2 *samples, size_t sampleCount) {
-		#if defined(SINGLE_PRECISION)
-			union {
-				uint64_t qword;
-				uint32_t dword[2];
-			} scramble;
+    inline void generate2D(Point2 *samples, size_t sampleCount) {
+        #if defined(SINGLE_PRECISION)
+            union {
+                uint64_t qword;
+                uint32_t dword[2];
+            } scramble;
 
-			scramble.qword = m_random->nextULong();
+            scramble.qword = m_random->nextULong();
 
-			for (size_t i = 0; i < sampleCount; ++i)
-				samples[i] = sample02Single((uint32_t) i, scramble.dword);
-		#else
-			uint64_t scramble[2];
-			scramble[0] = m_random->nextULong();
-			scramble[1] = m_random->nextULong();
+            for (size_t i = 0; i < sampleCount; ++i)
+                samples[i] = sample02Single((uint32_t) i, scramble.dword);
+        #else
+            uint64_t scramble[2];
+            scramble[0] = m_random->nextULong();
+            scramble[1] = m_random->nextULong();
 
-			for (size_t i = 0; i < sampleCount; ++i)
-				samples[i] = sample02Double(i, scramble);
-		#endif
+            for (size_t i = 0; i < sampleCount; ++i)
+                samples[i] = sample02Double(i, scramble);
+        #endif
 
-		m_random->shuffle(samples, samples + sampleCount);
-	}
+        m_random->shuffle(samples, samples + sampleCount);
+    }
 
-	void generate(const Point2i &) {
-		for (size_t i=0; i<m_maxDimension; ++i) {
-			generate1D(m_samples1D[i], m_sampleCount);
-			generate2D(m_samples2D[i], m_sampleCount);
-		}
+    void generate(const Point2i &) {
+        for (size_t i=0; i<m_maxDimension; ++i) {
+            generate1D(m_samples1D[i], m_sampleCount);
+            generate2D(m_samples2D[i], m_sampleCount);
+        }
 
-		for (size_t i=0; i<m_req1D.size(); i++)
-			generate1D(m_sampleArrays1D[i], m_sampleCount * m_req1D[i]);
+        for (size_t i=0; i<m_req1D.size(); i++)
+            generate1D(m_sampleArrays1D[i], m_sampleCount * m_req1D[i]);
 
-		for (size_t i=0; i<m_req2D.size(); i++)
-			generate2D(m_sampleArrays2D[i], m_sampleCount * m_req2D[i]);
+        for (size_t i=0; i<m_req2D.size(); i++)
+            generate2D(m_sampleArrays2D[i], m_sampleCount * m_req2D[i]);
 
-		m_sampleIndex = 0;
-		m_dimension1D = m_dimension2D = 0;
-		m_dimension1DArray = m_dimension2DArray = 0;
-	}
+        m_sampleIndex = 0;
+        m_dimension1D = m_dimension2D = 0;
+        m_dimension1DArray = m_dimension2DArray = 0;
+    }
 
-	void advance() {
-		m_sampleIndex++;
-		m_dimension1D = m_dimension2D = 0;
-		m_dimension1DArray = m_dimension2DArray = 0;
-	}
+    void advance() {
+        m_sampleIndex++;
+        m_dimension1D = m_dimension2D = 0;
+        m_dimension1DArray = m_dimension2DArray = 0;
+    }
 
-	void setSampleIndex(size_t sampleIndex) {
-		m_sampleIndex = sampleIndex;
-		m_dimension1D = m_dimension2D = 0;
-		m_dimension1DArray = m_dimension2DArray = 0;
-	}
+    void setSampleIndex(size_t sampleIndex) {
+        m_sampleIndex = sampleIndex;
+        m_dimension1D = m_dimension2D = 0;
+        m_dimension1DArray = m_dimension2DArray = 0;
+    }
 
-	Float next1D() {
-		Assert(m_sampleIndex < m_sampleCount);
-		if (m_dimension1D < m_maxDimension)
-			return m_samples1D[m_dimension1D++][m_sampleIndex];
-		else
-			return m_random->nextFloat();
-	}
+    Float next1D() {
+        Assert(m_sampleIndex < m_sampleCount);
+        if (m_dimension1D < m_maxDimension)
+            return m_samples1D[m_dimension1D++][m_sampleIndex];
+        else
+            return m_random->nextFloat();
+    }
 
-	Point2 next2D() {
-		Assert(m_sampleIndex < m_sampleCount);
-		if (m_dimension2D < m_maxDimension)
-			return m_samples2D[m_dimension2D++][m_sampleIndex];
-		else
-			return Point2(m_random->nextFloat(), m_random->nextFloat());
-	}
+    Point2 next2D() {
+        Assert(m_sampleIndex < m_sampleCount);
+        if (m_dimension2D < m_maxDimension)
+            return m_samples2D[m_dimension2D++][m_sampleIndex];
+        else
+            return Point2(m_random->nextFloat(), m_random->nextFloat());
+    }
 
-	std::string toString() const {
-		std::ostringstream oss;
-		oss << "LowDiscrepancySampler[" << endl
-			<< "  sampleCount = " << m_sampleCount << "," << endl
-			<< "  dimension = " << m_maxDimension << endl
-			<< "]";
-		return oss.str();
-	}
+    std::string toString() const {
+        std::ostringstream oss;
+        oss << "LowDiscrepancySampler[" << endl
+            << "  sampleCount = " << m_sampleCount << "," << endl
+            << "  dimension = " << m_maxDimension << endl
+            << "]";
+        return oss.str();
+    }
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 private:
-	ref<Random> m_random;
-	size_t m_maxDimension;
-	size_t m_dimension1D;
-	size_t m_dimension2D;
-	Float **m_samples1D;
-	Point2 **m_samples2D;
+    ref<Random> m_random;
+    size_t m_maxDimension;
+    size_t m_dimension1D;
+    size_t m_dimension2D;
+    Float **m_samples1D;
+    Point2 **m_samples2D;
 };
 
 MTS_IMPLEMENT_CLASS_S(LowDiscrepancySampler, false, Sampler)

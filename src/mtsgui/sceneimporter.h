@@ -27,42 +27,42 @@
 using namespace mitsuba;
 
 class GUIGeometryConverter : public QObject, public GeometryConverter {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	inline GUIGeometryConverter() { }
+    inline GUIGeometryConverter() { }
 protected:
-	fs::path locateResource(const fs::path &resource);
+    fs::path locateResource(const fs::path &resource);
 signals:
-	void locateResource(const fs::path &resource, fs::path *result);
+    void locateResource(const fs::path &resource, fs::path *result);
 };
 
 class SceneImporter : public Thread {
 public:
-	SceneImporter(FileResolver *resolver,
-		const fs::path &sourceFile, const fs::path &directory,
-		const fs::path &targetScene, const fs::path &adjustmentFile,
-		bool sRGB);
+    SceneImporter(FileResolver *resolver,
+        const fs::path &sourceFile, const fs::path &directory,
+        const fs::path &targetScene, const fs::path &adjustmentFile,
+        bool sRGB);
 
-	void run();
+    void run();
 
-	inline void wait(int ms) { m_wait->wait(ms); }
+    inline void wait(int ms) { m_wait->wait(ms); }
 
-	inline GUIGeometryConverter *getConverter() { return &m_converter; }
+    inline GUIGeometryConverter *getConverter() { return &m_converter; }
 
-	inline const fs::path &getResult() const { return m_result; }
+    inline const fs::path &getResult() const { return m_result; }
 protected:
-	virtual ~SceneImporter();
+    virtual ~SceneImporter();
 
 private:
-	GUIGeometryConverter m_converter;
-	ref<FileResolver> m_resolver;
-	ref<WaitFlag> m_wait;
-	fs::path m_sourceFile;
-	fs::path m_directory;
-	fs::path m_targetScene;
-	fs::path m_adjustmentFile;
-	fs::path m_result;
-	bool m_srgb;
+    GUIGeometryConverter m_converter;
+    ref<FileResolver> m_resolver;
+    ref<WaitFlag> m_wait;
+    fs::path m_sourceFile;
+    fs::path m_directory;
+    fs::path m_targetScene;
+    fs::path m_adjustmentFile;
+    fs::path m_result;
+    bool m_srgb;
 };
 
 #endif // __SCENELOADER_H

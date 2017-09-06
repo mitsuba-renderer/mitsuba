@@ -25,9 +25,9 @@
 MTS_NAMESPACE_BEGIN
 
 enum EVPLType {
-	EPointEmitterVPL = 0,
-	EDirectionalEmitterVPL,
-	ESurfaceVPL
+    EPointEmitterVPL = 0,
+    EDirectionalEmitterVPL,
+    ESurfaceVPL
 };
 
 /**
@@ -36,16 +36,16 @@ enum EVPLType {
  * \ingroup librender
  */
 struct VPL {
-	inline VPL(EVPLType type, const Spectrum &P)
-		: type(type), P(P) {
-	}
-	EVPLType type;
-	Spectrum P;
-	Intersection its;
-	const Emitter *emitter;
-	Float emitterScale;
+    inline VPL(EVPLType type, const Spectrum &P)
+        : type(type), P(P) {
+    }
+    EVPLType type;
+    Spectrum P;
+    Intersection its;
+    const Emitter *emitter;
+    Float emitterScale;
 
-	std::string toString() const;
+    std::string toString() const;
 };
 
 /**
@@ -61,9 +61,9 @@ struct VPL {
  * is used to prune VPLs in an unbiased manner.
  */
 extern MTS_EXPORT_RENDER size_t generateVPLs(const Scene *scene,
-		Random *random, size_t offset,
-		size_t count, int maxDepth, bool prune,
-		std::deque<VPL> &vpls);
+        Random *random, size_t offset,
+        size_t count, int maxDepth, bool prune,
+        std::deque<VPL> &vpls);
 
 MTS_NAMESPACE_END
 

@@ -21,93 +21,93 @@
 #include "acknowledgmentdlg.h"
 
 AboutDialog::AboutDialog(QWidget *parent) :
-		QDialog(parent),
-	ui(new Ui::AboutDialog) {
-	ui->setupUi(this);
-	QString configFlags;
+        QDialog(parent),
+    ui(new Ui::AboutDialog) {
+    ui->setupUi(this);
+    QString configFlags;
 
 #if defined(SINGLE_PRECISION)
-	configFlags += "SINGLE_PRECISION ";
+    configFlags += "SINGLE_PRECISION ";
 #elif defined(DOUBLE_PRECISION)
-	configFlags += "DOUBLE_PRECISION ";
+    configFlags += "DOUBLE_PRECISION ";
 #else
 #error Unknown precision
 #endif
 
 #if defined(MTS_DEBUG)
-	configFlags += "MTS_DEBUG ";
+    configFlags += "MTS_DEBUG ";
 #endif
 
 #if defined(MTS_DEBUG_FP)
-	configFlags += "MTS_DEBUG_FP ";
+    configFlags += "MTS_DEBUG_FP ";
 #endif
 
 #if defined(MTS_SSE)
-	configFlags += "MTS_SSE ";
+    configFlags += "MTS_SSE ";
 #endif
 
 #if defined(MTS_KD_CONSERVE_MEMORY)
-	configFlags += "MTS_KD_CONSERVE_MEMORY ";
+    configFlags += "MTS_KD_CONSERVE_MEMORY ";
 #endif
 
 #if defined(MTS_KD_DEBUG)
-	configFlags += "MTS_KD_DEBUG ";
+    configFlags += "MTS_KD_DEBUG ";
 #endif
 
 #if defined(MTS_HAS_COHERENT_RT)
-	configFlags += "MTS_HAS_COHERENT_RT ";
+    configFlags += "MTS_HAS_COHERENT_RT ";
 #endif
 
 #if defined(MTS_HAS_COLLADA)
-	configFlags += "MTS_HAS_COLLADA ";
+    configFlags += "MTS_HAS_COLLADA ";
 #endif
 
 #if defined(MTS_HAS_LIBJPEG)
-	configFlags += "MTS_HAS_LIBJPEG ";
+    configFlags += "MTS_HAS_LIBJPEG ";
 #endif
 
 #if defined(MTS_HAS_LIBPNG)
-	configFlags += "MTS_HAS_LIBPNG ";
+    configFlags += "MTS_HAS_LIBPNG ";
 #endif
 
 #if defined(MTS_HAS_OPENEXR)
-	configFlags += "MTS_HAS_OPENEXR ";
+    configFlags += "MTS_HAS_OPENEXR ";
 #endif
 
 #if defined(MTS_HAS_BREAKPAD)
-	configFlags += "MTS_HAS_BREAKPAD ";
+    configFlags += "MTS_HAS_BREAKPAD ";
 #endif
 
 #if defined(MTS_HAS_FFTW)
-	configFlags += "MTS_HAS_FFTW ";
+    configFlags += "MTS_HAS_FFTW ";
 #endif
 
-	configFlags += formatString("SPECTRUM_SAMPLES=%i ",
-		SPECTRUM_SAMPLES).c_str();
+    configFlags += formatString("SPECTRUM_SAMPLES=%i ",
+        SPECTRUM_SAMPLES).c_str();
 
-	ui->label->setText(ui->label->text().replace("MTS_VERSION", MTS_VERSION));
-	ui->label->setText(ui->label->text().replace("MTS_YEAR", MTS_YEAR));
-	ui->label->setText(ui->label->text().replace("CONFIG_FLAGS", configFlags));
+    ui->label->setText(ui->label->text().replace("MTS_VERSION", MTS_VERSION));
+    ui->label->setText(ui->label->text().replace("MTS_YEAR", MTS_YEAR));
+    ui->label->setText(ui->label->text().replace("CONFIG_FLAGS", configFlags));
 
 #if defined(__OSX__)
-	ui->label->setText(ui->label->text().replace("font-size:10pt", "font-size:14pt"));
+    ui->label->setText(ui->label->text().replace("font-size:10pt", "font-size:14pt"));
 #endif
 }
 
 AboutDialog::~AboutDialog() {
-	delete ui;
+    delete ui;
 }
 
 void AboutDialog::onCredits() {
-	AcknowledgmentDialog ackdlg(this);
-	ackdlg.exec();
+    AcknowledgmentDialog ackdlg(this);
+    ackdlg.exec();
 }
 
 void AboutDialog::changeEvent(QEvent *e) {
     QDialog::changeEvent(e);
     switch (e->type()) {
     case QEvent::LanguageChange:
-		ui->retranslateUi(this);
+        ui->retranslateUi(this);
         break;
     default:
         break;

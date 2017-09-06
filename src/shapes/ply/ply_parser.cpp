@@ -9,7 +9,7 @@ bool ply::ply_parser::parse(std::istream& istream)
   std::size_t number_of_format_statements = 0, number_of_element_statements = 0, number_of_property_statements = 0, number_of_obj_info_statements = 0, number_of_comment_statements = 0;
 
   format_type format = ascii_format;
-  std::vector< std::tr1::shared_ptr<element> > elements;
+  std::vector< std::shared_ptr<element> > elements;
 
   // magic
   char magic[3];
@@ -22,7 +22,7 @@ bool ply::ply_parser::parse(std::istream& istream)
     }
     return false;
   }
-  if ((magic[0] != 'p') || (magic[1] != 'l') || (magic[2] != 'y')){
+  if ((magic[0] != 'p') || (magic[1] != 'l') || (magic[2] != 'y')) {
     if (error_callback_) {
       error_callback_(line_number_, "parse error");
     }
@@ -52,7 +52,7 @@ bool ply::ply_parser::parse(std::istream& istream)
         std::string format_string, version;
         char space_format_format_string, space_format_string_version;
         stringstream >> space_format_format_string >> std::ws >> format_string >> space_format_string_version >> std::ws >> version >> std::ws;
-        if (!stringstream || !stringstream.eof() || !std::isspace(space_format_format_string) || !std::isspace(space_format_string_version)) {
+        if (!stringstream.eof() || !std::isspace(space_format_format_string) || !std::isspace(space_format_string_version)) {
           if (error_callback_) {
             error_callback_(line_number_, "parse error");
           }
@@ -97,13 +97,13 @@ bool ply::ply_parser::parse(std::istream& istream)
         std::size_t count;
         char space_element_name, space_name_count;
         stringstream >> space_element_name >> std::ws >> name >> space_name_count >> std::ws >> count >> std::ws;
-        if (!stringstream || !stringstream.eof() || !std::isspace(space_element_name) || !std::isspace(space_name_count)) {
+        if ( !stringstream.eof() || !std::isspace(space_element_name) || !std::isspace(space_name_count)) {
           if (error_callback_) {
             error_callback_(line_number_, "parse error");
           }
           return false;
         }
-        std::vector< std::tr1::shared_ptr<element> >::const_iterator iterator;
+        std::vector< std::shared_ptr<element> >::const_iterator iterator;
         for (iterator = elements.begin(); iterator != elements.end(); ++iterator) {
           const struct element& element = *(iterator->get());
           if (element.name == name) {
@@ -121,8 +121,8 @@ bool ply::ply_parser::parse(std::istream& istream)
         if (element_definition_callbacks_) {
           element_callbacks = element_definition_callbacks_(name, count);
         }
-        std::tr1::shared_ptr<element> element_ptr(new element(name, count, std::tr1::get<0>(element_callbacks), std::tr1::get<1>(element_callbacks)));
-        elements.push_back(std::tr1::shared_ptr<element>(element_ptr));
+        std::shared_ptr<element> element_ptr(new element(name, count, std::get<0>(element_callbacks), std::get<1>(element_callbacks)));
+        elements.push_back(std::shared_ptr<element>(element_ptr));
         current_element_ = element_ptr.get();
       }
 
@@ -131,7 +131,7 @@ bool ply::ply_parser::parse(std::istream& istream)
         std::string type_or_list;
         char space_property_type_or_list;
         stringstream >> space_property_type_or_list >> std::ws >> type_or_list;
-        if (!stringstream || !std::isspace(space_property_type_or_list)) {
+        if ( !std::isspace(space_property_type_or_list)) {
           if (error_callback_) {
             error_callback_(line_number_, "parse error");
           }
@@ -154,7 +154,7 @@ bool ply::ply_parser::parse(std::istream& istream)
             }
             return false;
           }
-          std::vector< std::tr1::shared_ptr<property> >::const_iterator iterator;
+          std::vector< std::shared_ptr<property> >::const_iterator iterator;
           for (iterator = current_element_->properties.begin(); iterator != current_element_->properties.end(); ++iterator) {
             const struct property& property = *(iterator->get());
             if (property.name == name) {
@@ -204,7 +204,7 @@ bool ply::ply_parser::parse(std::istream& istream)
           std::string size_type_string, scalar_type_string;
           char space_list_size_type, space_size_type_scalar_type, space_scalar_type_name;
           stringstream >> space_list_size_type >> std::ws >> size_type_string >> space_size_type_scalar_type >> std::ws >> scalar_type_string >> space_scalar_type_name >> std::ws >> name >> std::ws;
-          if (!stringstream || !std::isspace(space_list_size_type) || !std::isspace(space_size_type_scalar_type) || !std::isspace(space_scalar_type_name)) {
+          if ( !std::isspace(space_list_size_type) || !std::isspace(space_size_type_scalar_type) || !std::isspace(space_scalar_type_name)) {
             if (error_callback_) {
               error_callback_(line_number_, "parse error");
             }
@@ -216,7 +216,7 @@ bool ply::ply_parser::parse(std::istream& istream)
             }
             return false;
           }
-          std::vector< std::tr1::shared_ptr<property> >::const_iterator iterator;
+          std::vector< std::shared_ptr<property> >::const_iterator iterator;
           for (iterator = current_element_->properties.begin(); iterator != current_element_->properties.end(); ++iterator) {
             const struct property& property = *(iterator->get());
             if (property.name == name) {
@@ -230,9 +230,9 @@ bool ply::ply_parser::parse(std::istream& istream)
             return false;
           }
           if (
-				(size_type_string == type_traits<uint8>::name()) || (size_type_string == type_traits<uint8>::old_name()) ||
-				(size_type_string == type_traits<int8>::name()) || (size_type_string == type_traits<int8>::old_name())
-			) {
+                (size_type_string == type_traits<uint8>::name()) || (size_type_string == type_traits<uint8>::old_name()) ||
+                (size_type_string == type_traits<int8>::name()) || (size_type_string == type_traits<int8>::old_name())
+            ) {
             typedef uint8 size_type;
             if ((scalar_type_string == type_traits<int8>::name()) || (scalar_type_string == type_traits<int8>::old_name())) {
               parse_list_property_definition<size_type, int8>(name);
@@ -266,9 +266,9 @@ bool ply::ply_parser::parse(std::istream& istream)
             }
           }
           else if (
-				(size_type_string == type_traits<uint16>::name()) || (size_type_string == type_traits<uint16>::old_name()) ||
-				(size_type_string == type_traits<int16>::name()) || (size_type_string == type_traits<int16>::old_name())
-			) {
+                (size_type_string == type_traits<uint16>::name()) || (size_type_string == type_traits<uint16>::old_name()) ||
+                (size_type_string == type_traits<int16>::name()) || (size_type_string == type_traits<int16>::old_name())
+            ) {
             typedef uint16 size_type;
             if ((scalar_type_string == type_traits<int8>::name()) || (scalar_type_string == type_traits<int8>::old_name())) {
               parse_list_property_definition<size_type, int8>(name);
@@ -302,9 +302,9 @@ bool ply::ply_parser::parse(std::istream& istream)
             }
           }
           else if (
-				(size_type_string == type_traits<uint32>::name()) || (size_type_string == type_traits<uint32>::old_name()) ||
-				(size_type_string == type_traits<int32>::name()) || (size_type_string == type_traits<int32>::old_name())
-			) {
+                (size_type_string == type_traits<uint32>::name()) || (size_type_string == type_traits<uint32>::old_name()) ||
+                (size_type_string == type_traits<int32>::name()) || (size_type_string == type_traits<int32>::old_name())
+            ) {
             typedef uint32 size_type;
             if ((scalar_type_string == type_traits<int8>::name()) || (scalar_type_string == type_traits<int8>::old_name())) {
               parse_list_property_definition<size_type, int8>(name);
@@ -392,7 +392,7 @@ bool ply::ply_parser::parse(std::istream& istream)
 
   // ascii
   if (format == ascii_format) {
-    for (std::vector< std::tr1::shared_ptr<element> >::const_iterator element_iterator = elements.begin(); element_iterator != elements.end(); ++element_iterator) {
+    for (std::vector< std::shared_ptr<element> >::const_iterator element_iterator = elements.begin(); element_iterator != elements.end(); ++element_iterator) {
       struct element& element = *(element_iterator->get());
       for (std::size_t element_index = 0; element_index < element.count; ++element_index) {
         if (element.begin_element_callback) {
@@ -408,7 +408,7 @@ bool ply::ply_parser::parse(std::istream& istream)
         std::istringstream stringstream(line);
         stringstream.unsetf(std::ios_base::skipws);
         stringstream >> std::ws;
-        for (std::vector< std::tr1::shared_ptr<property> >::const_iterator property_iterator = element.properties.begin(); property_iterator != element.properties.end(); ++property_iterator) {
+        for (std::vector< std::shared_ptr<property> >::const_iterator property_iterator = element.properties.begin(); property_iterator != element.properties.end(); ++property_iterator) {
           struct property& property = *(property_iterator->get());
           if (property.parse(*this, format, stringstream) == false) {
             return false;
@@ -437,13 +437,13 @@ bool ply::ply_parser::parse(std::istream& istream)
 
   // binary
   else {
-    for (std::vector< std::tr1::shared_ptr<element> >::const_iterator element_iterator = elements.begin(); element_iterator != elements.end(); ++element_iterator) {
+    for (std::vector< std::shared_ptr<element> >::const_iterator element_iterator = elements.begin(); element_iterator != elements.end(); ++element_iterator) {
       struct element& element = *(element_iterator->get());
       for (std::size_t element_index = 0; element_index < element.count; ++element_index) {
         if (element.begin_element_callback) {
           element.begin_element_callback();
         }
-        for (std::vector< std::tr1::shared_ptr<property> >::const_iterator property_iterator = element.properties.begin(); property_iterator != element.properties.end(); ++property_iterator) {
+        for (std::vector< std::shared_ptr<property> >::const_iterator property_iterator = element.properties.begin(); property_iterator != element.properties.end(); ++property_iterator) {
           struct property& property = *(property_iterator->get());
           if (property.parse(*this, format, istream) == false) {
             return false;

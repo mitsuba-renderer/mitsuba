@@ -20,10 +20,10 @@ uniform mat4 clipToWorld;
 varying vec3 position;
 
 void main() {
-	vec4 pos = ftransform();
-	gl_Position = pos;
+    vec4 pos = ftransform();
+    gl_Position = pos;
 
-	vec4 tmp = clipToWorld * pos;
-	position = tmp.xyz / tmp.w;
+    vec4 tmp = clipToWorld * pos;
+    position = tmp.xyz / tmp.w;
 }
 

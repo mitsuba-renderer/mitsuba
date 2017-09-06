@@ -33,19 +33,19 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_RENDER BlockListener {
 public:
-	/// Called whenever an image block is acquired
-	virtual void acquireBlockEvent(const ImageBlock *block) = 0;
+    /// Called whenever an image block is acquired
+    virtual void acquireBlockEvent(const ImageBlock *block) = 0;
 
-	/// Called whenever an image block is released
-	virtual void releaseBlockEvent(const ImageBlock *block) = 0;
+    /// Called whenever an image block is released
+    virtual void releaseBlockEvent(const ImageBlock *block) = 0;
 
-	/// Called when the whole film has changed
-	virtual void filmChangedEvent() = 0;
+    /// Called when the whole film has changed
+    virtual void filmChangedEvent() = 0;
 
-	/// Called when rendering is done
-	virtual void finishEvent() = 0;
+    /// Called when rendering is done
+    virtual void finishEvent() = 0;
 protected:
-	virtual ~BlockListener() {}
+    virtual ~BlockListener() {}
 };
 
 /**
@@ -61,54 +61,54 @@ protected:
 
 class MTS_EXPORT_RENDER Spiral : public Object {
 public:
-	/**
-	 * Create a new spiral generator for an image
-	 * of the given width and height.
-	 */
-	Spiral(const Film *film);
+    /**
+     * Create a new spiral generator for an image
+     * of the given width and height.
+     */
+    Spiral(const Film *film);
 
-	/**
-	 * Reset the spiral to its initial state
-	 */
-	void reset();
+    /**
+     * Reset the spiral to its initial state
+     */
+    void reset();
 
-	/**
-	 * Add a block listener, which will be notified
-	 * whenever a block has been acquired or released.
-	 */
-	void addBlockListener(BlockListener *listener);
+    /**
+     * Add a block listener, which will be notified
+     * whenever a block has been acquired or released.
+     */
+    void addBlockListener(BlockListener *listener);
 
-	/// Remove a block listener
-	void removeBlockListener(BlockListener *listener);
+    /// Remove a block listener
+    void removeBlockListener(BlockListener *listener);
 
-	/// Acquire an image block from the spiral (thread-safe)
-	bool acquireBlock(ImageBlock *block);
+    /// Acquire an image block from the spiral (thread-safe)
+    bool acquireBlock(ImageBlock *block);
 
-	/// Release a finished image block (thread-safe)
-	void releaseBlock(ImageBlock *block);
+    /// Release a finished image block (thread-safe)
+    void releaseBlock(ImageBlock *block);
 
-	/// Send the finished event even if not all blocks have been processed yet
-	void finish();
+    /// Send the finished event even if not all blocks have been processed yet
+    void finish();
 
-	/// Send events notifying all listeners that the film has changed
-	void notifyFilmChanged();
+    /// Send events notifying all listeners that the film has changed
+    void notifyFilmChanged();
 
-	/// Return the list blocks, which are currently being worked on
-	std::vector<ImageBlock *> getActiveBlocks() const;
+    /// Return the list blocks, which are currently being worked on
+    std::vector<ImageBlock *> getActiveBlocks() const;
 
-	/// Return the maximum block size
-	int getMaxBlockSize() const;
+    /// Return the maximum block size
+    int getMaxBlockSize() const;
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	/// Virtual destructor
-	virtual ~Spiral();
+    /// Virtual destructor
+    virtual ~Spiral();
 private:
-	int m_activeBlocks;
-	mutable ref<Mutex> m_mutex;
-	std::vector<ImageBlock *> m_openBlocks;
-	std::vector<BlockListener *> m_listeners;
-	ProgressReporter *m_progress;
+    int m_activeBlocks;
+    mutable ref<Mutex> m_mutex;
+    std::vector<ImageBlock *> m_openBlocks;
+    std::vector<BlockListener *> m_listeners;
+    ProgressReporter *m_progress;
 };
 
 MTS_NAMESPACE_END

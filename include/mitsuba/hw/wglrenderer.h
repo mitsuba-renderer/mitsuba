@@ -30,27 +30,27 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_HW WGLRenderer : public GLRenderer {
 public:
-	/// Create a new renderer
-	WGLRenderer(WGLSession *session);
+    /// Create a new renderer
+    WGLRenderer(WGLSession *session);
 
-	/// Return the rendering context
-	inline HGLRC getWGLContext() { return m_context; }
+    /// Return the rendering context
+    inline HGLRC getWGLContext() { return m_context; }
 
-	/// Initialize the renderer
-	void init(Device *device, Renderer *other = NULL);
+    /// Initialize the renderer
+    void init(Device *device, Renderer *other = NULL);
 
-	/// Shut the renderer down
-	void shutdown();
+    /// Shut the renderer down
+    void shutdown();
 
-	/// Lookup an OpenGL extension
-	virtual void *lookupExtension(const std::string &name) const;
+    /// Lookup an OpenGL extension
+    virtual void *lookupExtension(const std::string &name) const;
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	/// Virtual destructor
-	virtual ~WGLRenderer();
+    /// Virtual destructor
+    virtual ~WGLRenderer();
 private:
-	HGLRC m_context;
+    HGLRC m_context;
 };
 
 MTS_NAMESPACE_END

@@ -29,40 +29,40 @@ MTS_NAMESPACE_BEGIN
  * \ingroup libhw
  */
 class MTS_EXPORT_HW GLGeometry : public GPUGeometry {
-	friend class GLRenderer;
+    friend class GLRenderer;
 public:
-	/// Create a new GLGeometry instance for the given mesh
-	GLGeometry(const TriMesh *mesh);
+    /// Create a new GLGeometry instance for the given mesh
+    GLGeometry(const TriMesh *mesh);
 
-	/// Upload the geometry object
-	void init();
+    /// Upload the geometry object
+    void init();
 
-	/// Refresh (re-upload) the geometry object
-	void refresh();
+    /// Refresh (re-upload) the geometry object
+    void refresh();
 
-	/// Bind the geometry object
-	void bind();
+    /// Bind the geometry object
+    void bind();
 
-	/// Unbind the geometry object
-	void unbind();
+    /// Unbind the geometry object
+    void unbind();
 
-	/// Free the geometry object from GPU memory
-	void cleanup();
+    /// Free the geometry object from GPU memory
+    void cleanup();
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	/// Virtual destructor
-	virtual ~GLGeometry();
+    /// Virtual destructor
+    virtual ~GLGeometry();
 protected:
-	enum EIdentifier {
-		EVertexID = 0,
-		EIndexID = 1
-	};
+    enum EIdentifier {
+        EVertexID = 0,
+        EIndexID = 1
+    };
 
-	GLuint m_id[2];
-	GLuint64 m_addr[2];
-	GLuint m_size[2];
-	int m_stride;
+    GLuint m_id[2];
+    GLuint64 m_addr[2];
+    GLuint m_size[2];
+    int m_stride;
 };
 
 MTS_NAMESPACE_END

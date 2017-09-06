@@ -24,39 +24,39 @@ MTS_NAMESPACE_BEGIN
 
 class JoinRGB : public Utility {
 public:
-	void joinRGB(const std::string &s1, const std::string &s2, const std::string &s3, const std::string &s4) {
-		ref<FileStream> rFile   = new FileStream(s1, FileStream::EReadOnly);
-		ref<FileStream> gFile   = new FileStream(s2, FileStream::EReadOnly);
-		ref<FileStream> bFile   = new FileStream(s3, FileStream::EReadOnly);
+    void joinRGB(const std::string &s1, const std::string &s2, const std::string &s3, const std::string &s4) {
+        ref<FileStream> rFile   = new FileStream(s1, FileStream::EReadOnly);
+        ref<FileStream> gFile   = new FileStream(s2, FileStream::EReadOnly);
+        ref<FileStream> bFile   = new FileStream(s3, FileStream::EReadOnly);
 
-		ref<Bitmap> rBitmap = new Bitmap(Bitmap::EOpenEXR, rFile);
-		ref<Bitmap> gBitmap = new Bitmap(Bitmap::EOpenEXR, gFile);
-		ref<Bitmap> bBitmap = new Bitmap(Bitmap::EOpenEXR, bFile);
-		rBitmap = rBitmap->extractChannel(0);
-		gBitmap = gBitmap->extractChannel(0);
-		bBitmap = bBitmap->extractChannel(0);
+        ref<Bitmap> rBitmap = new Bitmap(Bitmap::EOpenEXR, rFile);
+        ref<Bitmap> gBitmap = new Bitmap(Bitmap::EOpenEXR, gFile);
+        ref<Bitmap> bBitmap = new Bitmap(Bitmap::EOpenEXR, bFile);
+        rBitmap = rBitmap->extractChannel(0);
+        gBitmap = gBitmap->extractChannel(0);
+        bBitmap = bBitmap->extractChannel(0);
 
-		std::vector<Bitmap *> sourceBitmaps;
-		sourceBitmaps.push_back(rBitmap);
-		sourceBitmaps.push_back(gBitmap);
-		sourceBitmaps.push_back(bBitmap);
+        std::vector<Bitmap *> sourceBitmaps;
+        sourceBitmaps.push_back(rBitmap);
+        sourceBitmaps.push_back(gBitmap);
+        sourceBitmaps.push_back(bBitmap);
 
-		ref<Bitmap> result = Bitmap::join(Bitmap::ERGBA, sourceBitmaps);
-		ref<FileStream> outFile = new FileStream(s4, FileStream::ETruncReadWrite);
-		result->write(Bitmap::EOpenEXR, outFile);
-	}
+        ref<Bitmap> result = Bitmap::join(Bitmap::ERGBA, sourceBitmaps);
+        ref<FileStream> outFile = new FileStream(s4, FileStream::ETruncReadWrite);
+        result->write(Bitmap::EOpenEXR, outFile);
+    }
 
-	int run(int argc, char **argv) {
-		if (argc < 5) {
-			cout << "Join three monochromatic images into a RGB-valued EXR file" << endl;
-			cout << "joinrgb <red.exr> <green.exr> <blue.exr> <combined.exr>" << endl;
-		} else {
-			joinRGB(argv[1], argv[2], argv[3], argv[4]);
-		}
-		return 0;
-	}
+    int run(int argc, char **argv) {
+        if (argc < 5) {
+            cout << "Join three monochromatic images into a RGB-valued EXR file" << endl;
+            cout << "joinrgb <red.exr> <green.exr> <blue.exr> <combined.exr>" << endl;
+        } else {
+            joinRGB(argv[1], argv[2], argv[3], argv[4]);
+        }
+        return 0;
+    }
 
-	MTS_DECLARE_UTILITY()
+    MTS_DECLARE_UTILITY()
 };
 
 MTS_EXPORT_UTILITY(JoinRGB, "Join three monochromatic EXRs into a colored image");

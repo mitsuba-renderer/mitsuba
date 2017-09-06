@@ -22,6 +22,10 @@
 
 #include <boost/static_assert.hpp>
 
+#if defined(__MSVC__)
+# include <intrin.h>
+#endif
+
 MTS_NAMESPACE_BEGIN
 
 /*! \addtogroup libcore
@@ -37,8 +41,8 @@ MTS_NAMESPACE_BEGIN
  * a std::string into a vector of strings
  */
 extern MTS_EXPORT_CORE std::vector<std::string> tokenize(
-	const std::string &string,
-	const std::string &delim
+    const std::string &string,
+    const std::string &delim
 );
 
 /// Trim spaces (' ', '\\n', '\\r', '\\t') from the ends of a string
@@ -63,28 +67,28 @@ extern MTS_EXPORT_CORE std::string memString(size_t size, bool precise = false);
 
 /// Return a string representation of a list of objects
 template<class Iterator> std::string containerToString(const Iterator &start, const Iterator &end) {
-	std::ostringstream oss;
-	oss << "{" << std::endl;
-	Iterator it = start;
-	while (it != end) {
-		oss << "  " << indent((*it)->toString());
-		++it;
-		if (it != end)
-			oss << "," << std::endl;
-		else
-			oss << std::endl;
-	}
-	oss << "}";
-	return oss.str();
+    std::ostringstream oss;
+    oss << "{" << std::endl;
+    Iterator it = start;
+    while (it != end) {
+        oss << "  " << indent((*it)->toString());
+        ++it;
+        if (it != end)
+            oss << "," << std::endl;
+        else
+            oss << std::endl;
+    }
+    oss << "}";
+    return oss.str();
 }
 
 /// Simple functor for sorting string parameters by length and content
 struct SimpleStringOrdering {
-	bool operator()(const std::string &a, const std::string &b) const {
-		if (a.length() == b.length())
-			return a < b;
-		return a.length() < b.length();
-	}
+    bool operator()(const std::string &a, const std::string &b) const {
+        if (a.length() == b.length())
+            return a < b;
+        return a.length() < b.length();
+    }
 };
 
 //! @}
@@ -144,34 +148,34 @@ extern MTS_EXPORT_CORE void restoreFPExceptions(bool state);
 
 /// Cast between types that have an identical binary representation.
 template<typename T, typename U> inline T union_cast(const U &val) {
-	BOOST_STATIC_ASSERT(sizeof(T) == sizeof(U));
+    BOOST_STATIC_ASSERT(sizeof(T) == sizeof(U));
 
-	union {
-		U u;
-		T t;
-	} caster = {val};
+    union {
+        U u;
+        T t;
+    } caster = {val};
 
-	return caster.t;
+    return caster.t;
 }
 
 /// Swaps the byte order of the underlying representation
 template<typename T> inline T endianness_swap(T value) {
-	union {
-		T value;
-		uint8_t byteValue[sizeof(T)];
-	} u;
+    union {
+        T value;
+        uint8_t byteValue[sizeof(T)];
+    } u;
 
-	u.value = value;
-	std::reverse(&u.byteValue[0], &u.byteValue[sizeof(T)]);
-	return u.value;
+    u.value = value;
+    std::reverse(&u.byteValue[0], &u.byteValue[sizeof(T)]);
+    return u.value;
 }
 
 #ifdef __GNUC__
 #if defined(__i386__)
 static FINLINE uint64_t rdtsc(void) {
   uint64_t x;
-	 __asm__ volatile (".byte 0x0f, 0x31" : "=A" (x));
-	 return x;
+     __asm__ volatile (".byte 0x0f, 0x31" : "=A" (x));
+     return x;
 }
 #elif defined(__x86_64__)
 static FINLINE uint64_t rdtsc(void) {
@@ -181,36 +185,36 @@ static FINLINE uint64_t rdtsc(void) {
 }
 #elif defined(__ARMEL__)
 static FINLINE uint64_t rdtsc(void) {
-	// Code from gperftoos:
-	// https://code.google.com/p/gperftools/source/browse/trunk/src/base/cycleclock.h
-	uint32_t pmccntr;
-	uint32_t pmuseren;
-	uint32_t pmcntenset;
-	// Read the user mode perf monitor counter access permissions.
-	asm volatile ("mrc p15, 0, %0, c9, c14, 0" : "=r" (pmuseren));
-	if (EXPECT_TAKEN(pmuseren & 1)) {  // Allows reading perfmon counters for user mode code.
-		asm volatile ("mrc p15, 0, %0, c9, c12, 1" : "=r" (pmcntenset));
-		if (EXPECT_TAKEN(pmcntenset & 0x80000000ul)) {  // Is it counting?
-			asm volatile ("mrc p15, 0, %0, c9, c13, 0" : "=r" (pmccntr));
-			// The counter is set up to count every 64th cycle
-			return static_cast<uint64_t>(pmccntr) * 64;  // Should optimize to << 6
-		}
-	}
-	// Soft-failover, assuming 1.5GHz CPUs
+    // Code from gperftoos:
+    // https://code.google.com/p/gperftools/source/browse/trunk/src/base/cycleclock.h
+    uint32_t pmccntr;
+    uint32_t pmuseren;
+    uint32_t pmcntenset;
+    // Read the user mode perf monitor counter access permissions.
+    asm volatile ("mrc p15, 0, %0, c9, c14, 0" : "=r" (pmuseren));
+    if (EXPECT_TAKEN(pmuseren & 1)) {  // Allows reading perfmon counters for user mode code.
+        asm volatile ("mrc p15, 0, %0, c9, c12, 1" : "=r" (pmcntenset));
+        if (EXPECT_TAKEN(pmcntenset & 0x80000000ul)) {  // Is it counting?
+            asm volatile ("mrc p15, 0, %0, c9, c13, 0" : "=r" (pmccntr));
+            // The counter is set up to count every 64th cycle
+            return static_cast<uint64_t>(pmccntr) * 64;  // Should optimize to << 6
+        }
+    }
+    // Soft-failover, assuming 1.5GHz CPUs
 #if defined(_POSIX_TIMERS) && (_POSIX_TIMERS > 0) && defined(_POSIX_CPUTIME)
-	timespec ts;
-	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ts);
-	return static_cast<uint64_t>((ts.tv_sec + ts.tv_nsec * 1e-9) * 1.5e9);
+    timespec ts;
+    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ts);
+    return static_cast<uint64_t>((ts.tv_sec + ts.tv_nsec * 1e-9) * 1.5e9);
 #else
-	timeval tv;
-	gettimeofday(&tv, NULL);
-	return static_cast<uint64_t>((tv.tv_sec + tv.tv_usec * 1e-6) * 1.5e9);
+    timeval tv;
+    gettimeofday(&tv, NULL);
+    return static_cast<uint64_t>((tv.tv_sec + tv.tv_usec * 1e-6) * 1.5e9);
 #endif
 }
 #endif
 #elif defined(__MSVC__)
 static FINLINE __int64 rdtsc(void) {
-	return __rdtsc();
+    return __rdtsc();
 }
 #else
 # error "Cannot generate the rdtsc intrinsic."
@@ -236,32 +240,32 @@ static FINLINE __int64 rdtsc(void) {
  *     identity permutation.
  */
 template <typename DataType, typename IndexType> void permute_inplace(
-		DataType *data, std::vector<IndexType> &perm) {
-	for (size_t i=0; i<perm.size(); i++) {
-		if (perm[i] != i) {
-			/* The start of a new cycle has been found. Save
-			   the value at this position, since it will be
-			   overwritten */
-			IndexType j = (IndexType) i;
-			DataType curval = data[i];
+        DataType *data, std::vector<IndexType> &perm) {
+    for (size_t i=0; i<perm.size(); i++) {
+        if (perm[i] != i) {
+            /* The start of a new cycle has been found. Save
+               the value at this position, since it will be
+               overwritten */
+            IndexType j = (IndexType) i;
+            DataType curval = data[i];
 
-			do {
-				/* Shuffle backwards */
-				IndexType k = perm[j];
-				data[j] = data[k];
+            do {
+                /* Shuffle backwards */
+                IndexType k = perm[j];
+                data[j] = data[k];
 
-				/* Also fix the permutations on the way */
-				perm[j] = j;
-				j = k;
+                /* Also fix the permutations on the way */
+                perm[j] = j;
+                j = k;
 
-				/* Until the end of the cycle has been found */
-			} while (perm[j] != i);
+                /* Until the end of the cycle has been found */
+            } while (perm[j] != i);
 
-			/* Fix the final position with the saved value */
-			data[j] = curval;
-			perm[j] = j;
-		}
-	}
+            /* Fix the final position with the saved value */
+            data[j] = curval;
+            perm[j] = j;
+        }
+    }
 }
 
 //! @}
@@ -276,7 +280,7 @@ template <typename DataType, typename IndexType> void permute_inplace(
  * \return \c true if a solution could be found
  */
 extern MTS_EXPORT_CORE bool solveQuadratic(Float a, Float b,
-	Float c, Float &x0, Float &x1);
+    Float c, Float &x0, Float &x1);
 
 /**
  * \brief Solve a double-precision quadratic equation of the
@@ -284,7 +288,7 @@ extern MTS_EXPORT_CORE bool solveQuadratic(Float a, Float b,
  * \return \c true if a solution could be found
  */
 extern MTS_EXPORT_CORE bool solveQuadraticDouble(double a, double b,
-	double c, double &x0, double &x1);
+    double c, double &x0, double &x1);
 
 //// Convert radians to degrees
 inline Float radToDeg(Float value) { return value * (180.0f / M_PI); }
@@ -303,10 +307,10 @@ inline Float degToRad(Float value) { return value * (M_PI / 180.0f); }
  * http://www.plunk.org/~hatch/rightway.php
  */
 template <typename VectorType> inline Float unitAngle(const VectorType &u, const VectorType &v) {
-	if (dot(u, v) < 0)
-		return M_PI - 2 * std::asin(0.5f * (v+u).length());
-	else
-		return 2 * std::asin(0.5f * (v-u).length());
+    if (dot(u, v) < 0)
+        return M_PI - 2 * std::asin(0.5f * (v+u).length());
+    else
+        return 2 * std::asin(0.5f * (v-u).length());
 }
 
 //! @}
@@ -363,8 +367,8 @@ extern MTS_EXPORT_CORE void computeShadingFrame(const Vector &n, const Vector &d
  * \param dv
  *    Used to return the 'v' derivative of the frame
  */
-extern MTS_EXPORT_CORE void computeShadingFrameDerivative(const Vector &n, const Vector &dpdu, 
-		const Vector &dndu, const Vector &dndv, Frame &du, Frame &dv);
+extern MTS_EXPORT_CORE void computeShadingFrameDerivative(const Vector &n, const Vector &dpdu,
+        const Vector &dndu, const Vector &dndv, Frame &du, Frame &dv);
 
 /**
  * \brief Generate (optionally jittered) stratified 1D samples
@@ -375,7 +379,7 @@ extern MTS_EXPORT_CORE void computeShadingFrameDerivative(const Vector &n, const
  * \param jitter Randomly jitter the samples?
  */
 extern MTS_EXPORT_CORE void stratifiedSample1D(Random *random, Float *dest,
-	int count, bool jitter);
+    int count, bool jitter);
 
 /**
  * \brief Generate (optionally jittered) stratified 2D samples
@@ -386,11 +390,11 @@ extern MTS_EXPORT_CORE void stratifiedSample1D(Random *random, Float *dest,
  * \param jitter Randomly jitter the samples?
  */
 extern MTS_EXPORT_CORE void stratifiedSample2D(Random *random, Point2 *dest,
-	int countX, int countY, bool jitter);
+    int countX, int countY, bool jitter);
 
 /// Generate latin hypercube samples
 extern MTS_EXPORT_CORE void latinHypercube(
-		Random *random, Float *dest, size_t nSamples, size_t nDim);
+        Random *random, Float *dest, size_t nSamples, size_t nDim);
 
 /// Convert spherical coordinates to a direction
 extern MTS_EXPORT_CORE Vector sphericalDirection(Float theta, Float phi);
@@ -420,15 +424,15 @@ extern MTS_EXPORT_CORE Point2 toSphericalCoordinates(const Vector &v);
  * total internal reflection or negative direction cosines.
  *
  * \param cosThetaI
- * 		Absolute cosine of the angle between the normal and the incident ray
+ *      Absolute cosine of the angle between the normal and the incident ray
  * \param cosThetaT
- * 		Absolute cosine of the angle between the normal and the transmitted ray
+ *      Absolute cosine of the angle between the normal and the transmitted ray
  * \param eta
- * 		Relative refractive index to the transmitted direction
+ *      Relative refractive index to the transmitted direction
  * \ingroup libpython
  */
 extern MTS_EXPORT_CORE Float fresnelDielectric(Float cosThetaI,
-		Float cosThetaT, Float eta);
+        Float cosThetaT, Float eta);
 
 /**
  * \brief Calculates the unpolarized Fresnel reflection coefficient
@@ -447,17 +451,17 @@ extern MTS_EXPORT_CORE Float fresnelDielectric(Float cosThetaI,
  * "<tt>F, cosThetaT = fresnelDielectricExt(cosThetaI, eta)</tt>".
  *
  * \param cosThetaI
- * 		Cosine of the angle between the normal and the incident ray
- * 		(may be negative)
+ *      Cosine of the angle between the normal and the incident ray
+ *      (may be negative)
  * \param cosThetaT
- * 		Argument used to return the cosine of the angle between the normal
- * 		and the transmitted ray, will have the opposite sign of \c cosThetaI
+ *      Argument used to return the cosine of the angle between the normal
+ *      and the transmitted ray, will have the opposite sign of \c cosThetaI
  * \param eta
- * 		Relative refractive index
+ *      Relative refractive index
  * \ingroup libpython
  */
 extern MTS_EXPORT_CORE Float fresnelDielectricExt(Float cosThetaI,
-	Float &cosThetaT, Float eta);
+    Float &cosThetaT, Float eta);
 
 /**
  * \brief Calculates the unpolarized Fresnel reflection coefficient
@@ -468,12 +472,12 @@ extern MTS_EXPORT_CORE Float fresnelDielectricExt(Float cosThetaI,
  * not needed by the application.
  *
  * \param cosThetaI
- * 		Cosine of the angle between the normal and the incident ray
+ *      Cosine of the angle between the normal and the incident ray
  * \param eta
- * 		Relative refractive index
+ *      Relative refractive index
  */
 inline Float fresnelDielectricExt(Float cosThetaI, Float eta) { Float cosThetaT;
-	return fresnelDielectricExt(cosThetaI, cosThetaT, eta); }
+    return fresnelDielectricExt(cosThetaI, cosThetaT, eta); }
 
 /**
  * \brief Calculates the unpolarized Fresnel reflection coefficient
@@ -488,15 +492,15 @@ inline Float fresnelDielectricExt(Float cosThetaI, Float eta) { Float cosThetaT;
  * (rather than being restricted to conductors)
  *
  * \param cosThetaI
- * 		Cosine of the angle between the normal and the incident ray
+ *      Cosine of the angle between the normal and the incident ray
  * \param eta
- * 		Relative refractive index (real component)
+ *      Relative refractive index (real component)
  * \param k
- * 		Relative refractive index (imaginary component)
+ *      Relative refractive index (imaginary component)
  * \ingroup libpython
  */
 extern MTS_EXPORT_CORE Float fresnelConductorApprox(Float cosThetaI,
-		Float eta, Float k);
+        Float eta, Float k);
 
 /**
  * \brief Calculates the unpolarized Fresnel reflection coefficient
@@ -511,15 +515,15 @@ extern MTS_EXPORT_CORE Float fresnelConductorApprox(Float cosThetaI,
  * (rather than being restricted to conductors)
  *
  * \param cosThetaI
- * 		Cosine of the angle between the normal and the incident ray
+ *      Cosine of the angle between the normal and the incident ray
  * \param eta
- * 		Relative refractive index (real component)
+ *      Relative refractive index (real component)
  * \param k
- * 		Relative refractive index (imaginary component)
+ *      Relative refractive index (imaginary component)
  * \ingroup libpython
  */
 extern MTS_EXPORT_CORE Spectrum fresnelConductorApprox(Float cosThetaI,
-		const Spectrum &eta, const Spectrum &k);
+        const Spectrum &eta, const Spectrum &k);
 
 /**
  * \brief Calculates the unpolarized Fresnel reflection coefficient
@@ -534,15 +538,15 @@ extern MTS_EXPORT_CORE Spectrum fresnelConductorApprox(Float cosThetaI,
  * (rather than being restricted to conductors)
  *
  * \param cosThetaI
- * 		Cosine of the angle between the normal and the incident ray
+ *      Cosine of the angle between the normal and the incident ray
  * \param eta
- * 		Relative refractive index (real component)
+ *      Relative refractive index (real component)
  * \param k
- * 		Relative refractive index (imaginary component)
+ *      Relative refractive index (imaginary component)
  * \ingroup libpython
  */
 extern MTS_EXPORT_CORE Float fresnelConductorExact(Float cosThetaI,
-		Float eta, Float k);
+        Float eta, Float k);
 
 /**
  * \brief Calculates the unpolarized Fresnel reflection coefficient
@@ -557,15 +561,15 @@ extern MTS_EXPORT_CORE Float fresnelConductorExact(Float cosThetaI,
  * (rather than being restricted to conductors)
  *
  * \param cosThetaI
- * 		Cosine of the angle between the normal and the incident ray
+ *      Cosine of the angle between the normal and the incident ray
  * \param eta
- * 		Relative refractive index (real component)
+ *      Relative refractive index (real component)
  * \param k
- * 		Relative refractive index (imaginary component)
+ *      Relative refractive index (imaginary component)
  * \ingroup libpython
  */
 extern MTS_EXPORT_CORE Spectrum fresnelConductorExact(Float cosThetaI,
-		const Spectrum &eta, const Spectrum &k);
+        const Spectrum &eta, const Spectrum &k);
 
 /**
  * \brief Calculates the diffuse unpolarized Fresnel reflectance of
@@ -587,7 +591,7 @@ extern MTS_EXPORT_CORE Spectrum fresnelConductorExact(Float cosThetaI,
  * \ingroup libpython
  */
 extern MTS_EXPORT_CORE Float fresnelDiffuseReflectance(
-	Float eta, bool fast = false);
+    Float eta, bool fast = false);
 
 /**
  * \brief Specularly reflect direction \c wi with respect to the given surface normal
@@ -630,7 +634,7 @@ extern MTS_EXPORT_CORE Vector reflect(const Vector &wi, const Normal &n);
  * \ingroup libpython
  */
 extern MTS_EXPORT_CORE Vector refract(const Vector &wi, const Normal &n,
-	Float eta, Float &cosThetaT, Float &F);
+    Float eta, Float &cosThetaT, Float &F);
 
 /**
  * \brief Specularly refract the direction \c wi into a planar dielectric with
@@ -653,7 +657,7 @@ extern MTS_EXPORT_CORE Vector refract(const Vector &wi, const Normal &n,
  * \ingroup libpython
  */
 extern MTS_EXPORT_CORE Vector refract(const Vector &wi, const Normal &n,
-	Float eta, Float cosThetaT);
+    Float eta, Float cosThetaT);
 
 /**
  * \brief Specularly refract the direction \c wi into a planar dielectric with

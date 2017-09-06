@@ -32,79 +32,79 @@ MTS_NAMESPACE_BEGIN
  */
 struct IsotropicDipoleQuery {
 #if !defined(MTS_SSE) || SPECTRUM_SAMPLES != 3
-	inline IsotropicDipoleQuery(const Spectrum &zr, const Spectrum &zv,
-		const Spectrum &sigmaTr, const Point &p)
-		: zr(zr), zv(zv), sigmaTr(sigmaTr), result(0.0f), p(p) {
-	}
+    inline IsotropicDipoleQuery(const Spectrum &zr, const Spectrum &zv,
+        const Spectrum &sigmaTr, const Point &p)
+        : zr(zr), zv(zv), sigmaTr(sigmaTr), result(0.0f), p(p) {
+    }
 
-	inline void operator()(const IrradianceSample &sample) {
-		Spectrum rSqr = Spectrum((p - sample.p).lengthSquared());
+    inline void operator()(const IrradianceSample &sample) {
+        Spectrum rSqr = Spectrum((p - sample.p).lengthSquared());
 
-		/* Distance to the real source */
-		Spectrum dr = (rSqr + zr*zr).sqrt();
+        /* Distance to the real source */
+        Spectrum dr = (rSqr + zr*zr).sqrt();
 
-		/* Distance to the image point source */
-		Spectrum dv = (rSqr + zv*zv).sqrt();
+        /* Distance to the image point source */
+        Spectrum dv = (rSqr + zv*zv).sqrt();
 
-		Spectrum C1 = zr * (sigmaTr + Spectrum(1.0f) / dr);
-		Spectrum C2 = zv * (sigmaTr + Spectrum(1.0f) / dv);
+        Spectrum C1 = zr * (sigmaTr + Spectrum(1.0f) / dr);
+        Spectrum C2 = zv * (sigmaTr + Spectrum(1.0f) / dv);
 
-		/* Do not include the reduced albedo - will be canceled out later */
-		Spectrum dMo = Spectrum(INV_FOURPI) *
-			 (C1 * ((-sigmaTr * dr).exp()) / (dr * dr)
-			+ C2 * ((-sigmaTr * dv).exp()) / (dv * dv));
+        /* Do not include the reduced albedo - will be canceled out later */
+        Spectrum dMo = Spectrum(INV_FOURPI) *
+             (C1 * ((-sigmaTr * dr).exp()) / (dr * dr)
+            + C2 * ((-sigmaTr * dv).exp()) / (dv * dv));
 
-		result += dMo * sample.E * sample.area;
-	}
+        result += dMo * sample.E * sample.area;
+    }
 
-	inline const Spectrum &getResult() const {
-		return result;
-	}
+    inline const Spectrum &getResult() const {
+        return result;
+    }
 
-	const Spectrum &zr, &zv, &sigmaTr;
-	Spectrum result;
+    const Spectrum &zr, &zv, &sigmaTr;
+    Spectrum result;
 #else
-	inline IsotropicDipoleQuery(const Spectrum &_zr, const Spectrum &_zv,
-		const Spectrum &_sigmaTr, const Point &p) : p(p) {
-		zr = _mm_set_ps(_zr[0], _zr[1], _zr[2], 0);
-		zv = _mm_set_ps(_zv[0], _zv[1], _zv[2], 0);
-		sigmaTr = _mm_set_ps(_sigmaTr[0], _sigmaTr[1], _sigmaTr[2], 0);
-		zrSqr = _mm_mul_ps(zr, zr);
-		zvSqr = _mm_mul_ps(zv, zv);
-		result.ps = _mm_setzero_ps();
-	}
+    inline IsotropicDipoleQuery(const Spectrum &_zr, const Spectrum &_zv,
+        const Spectrum &_sigmaTr, const Point &p) : p(p) {
+        zr = _mm_set_ps(_zr[0], _zr[1], _zr[2], 0);
+        zv = _mm_set_ps(_zv[0], _zv[1], _zv[2], 0);
+        sigmaTr = _mm_set_ps(_sigmaTr[0], _sigmaTr[1], _sigmaTr[2], 0);
+        zrSqr = _mm_mul_ps(zr, zr);
+        zvSqr = _mm_mul_ps(zv, zv);
+        result.ps = _mm_setzero_ps();
+    }
 
-	inline void operator()(const IrradianceSample &sample) {
-		/* Distance to the positive point source of the dipole */
-		const __m128 lengthSquared = _mm_set1_ps((p - sample.p).lengthSquared()),
-			drSqr = _mm_add_ps(zrSqr, lengthSquared),
-			dvSqr = _mm_add_ps(zvSqr, lengthSquared),
-			dr = _mm_sqrt_ps(drSqr), dv = _mm_sqrt_ps(dvSqr),
-			one = _mm_set1_ps(1.0f),
-			factor = _mm_mul_ps(_mm_set1_ps(INV_FOURPI*sample.area),
-				_mm_set_ps(sample.E[0], sample.E[1], sample.E[2], 0)),
-			C1fac = _mm_div_ps(_mm_mul_ps(zr, _mm_add_ps(sigmaTr, _mm_div_ps(one, dr))), drSqr),
-			C2fac = _mm_div_ps(_mm_mul_ps(zv, _mm_add_ps(sigmaTr, _mm_div_ps(one, dv))), dvSqr),
-			sigmaTrNeg = negate_ps(sigmaTr),
-			exp1 = math::exp_ps(_mm_mul_ps(dr, sigmaTrNeg)),
-			exp2 = math::exp_ps(_mm_mul_ps(dv, sigmaTrNeg));
+    inline void operator()(const IrradianceSample &sample) {
+        /* Distance to the positive point source of the dipole */
+        const __m128 lengthSquared = _mm_set1_ps((p - sample.p).lengthSquared()),
+            drSqr = _mm_add_ps(zrSqr, lengthSquared),
+            dvSqr = _mm_add_ps(zvSqr, lengthSquared),
+            dr = _mm_sqrt_ps(drSqr), dv = _mm_sqrt_ps(dvSqr),
+            one = _mm_set1_ps(1.0f),
+            factor = _mm_mul_ps(_mm_set1_ps(INV_FOURPI*sample.area),
+                _mm_set_ps(sample.E[0], sample.E[1], sample.E[2], 0)),
+            C1fac = _mm_div_ps(_mm_mul_ps(zr, _mm_add_ps(sigmaTr, _mm_div_ps(one, dr))), drSqr),
+            C2fac = _mm_div_ps(_mm_mul_ps(zv, _mm_add_ps(sigmaTr, _mm_div_ps(one, dv))), dvSqr),
+            sigmaTrNeg = negate_ps(sigmaTr),
+            exp1 = math::exp_ps(_mm_mul_ps(dr, sigmaTrNeg)),
+            exp2 = math::exp_ps(_mm_mul_ps(dv, sigmaTrNeg));
 
-		result.ps = _mm_add_ps(result.ps, _mm_mul_ps(factor, _mm_add_ps(
-			_mm_mul_ps(C1fac, exp1), _mm_mul_ps(C2fac, exp2))));
-	}
+        result.ps = _mm_add_ps(result.ps, _mm_mul_ps(factor, _mm_add_ps(
+            _mm_mul_ps(C1fac, exp1), _mm_mul_ps(C2fac, exp2))));
+    }
 
-	Spectrum getResult() {
-		Spectrum value;
-		for (int i=0; i<3; ++i)
-			value[i] = result.f[3-i];
-		return value;
-	}
+    Spectrum getResult() {
+        Spectrum value;
+        for (int i=0; i<3; ++i)
+            value[i] = result.f[3-i];
+        return value;
+    }
 
-	__m128 zr, zv, zrSqr, zvSqr, sigmaTr;
-	SSEVector result;
+    __m128 zr, zv, zrSqr, zvSqr, sigmaTr;
+    SSEVector result;
 #endif
 
-	Point p;
+    Point p;
 };
 
 static ref<Mutex> irrOctreeMutex = new Mutex();
@@ -267,211 +267,211 @@ static int irrOctreeIndex = 0;
 
 class IsotropicDipole : public Subsurface {
 public:
-	IsotropicDipole(const Properties &props)
-		: Subsurface(props) {
-		{
-			LockGuard lock(irrOctreeMutex);
-			m_octreeIndex = irrOctreeIndex++;
-		}
+    IsotropicDipole(const Properties &props)
+        : Subsurface(props) {
+        {
+            LockGuard lock(irrOctreeMutex);
+            m_octreeIndex = irrOctreeIndex++;
+        }
 
-		/* How many samples should be taken when estimating
-		   the irradiance at a given point in the scene? */
-		m_irrSamples = props.getInteger("irrSamples", 16);
+        /* How many samples should be taken when estimating
+           the irradiance at a given point in the scene? */
+        m_irrSamples = props.getInteger("irrSamples", 16);
 
-		/* When estimating the irradiance at a given point,
-		   should indirect illumination be included in the final estimate? */
-		m_irrIndirect = props.getBoolean("irrIndirect", true);
+        /* When estimating the irradiance at a given point,
+           should indirect illumination be included in the final estimate? */
+        m_irrIndirect = props.getBoolean("irrIndirect", true);
 
-		/* Multiplicative factor, which can be used to adjust the number of
-		   irradiance samples */
-		m_sampleMultiplier = props.getFloat("sampleMultiplier", 1.0f);
+        /* Multiplicative factor, which can be used to adjust the number of
+           irradiance samples */
+        m_sampleMultiplier = props.getFloat("sampleMultiplier", 1.0f);
 
-		/* Error threshold - lower means better quality */
-		m_quality = props.getFloat("quality", 0.2f);
+        /* Error threshold - lower means better quality */
+        m_quality = props.getFloat("quality", 0.2f);
 
-		/* Asymmetry parameter of the phase function */
-		m_octreeResID = -1;
+        /* Asymmetry parameter of the phase function */
+        m_octreeResID = -1;
 
-		lookupMaterial(props, m_sigmaS, m_sigmaA, m_g, &m_eta);
-	}
+        lookupMaterial(props, m_sigmaS, m_sigmaA, m_g, &m_eta);
+    }
 
-	IsotropicDipole(Stream *stream, InstanceManager *manager)
-	 : Subsurface(stream, manager) {
-		m_sigmaS = Spectrum(stream);
-		m_sigmaA = Spectrum(stream);
-		m_g = Spectrum(stream);
-		m_eta = stream->readFloat();
-		m_sampleMultiplier = stream->readFloat();
-		m_quality = stream->readFloat();
-		m_octreeIndex = stream->readInt();
-		m_irrSamples = stream->readInt();
-		m_irrIndirect = stream->readBool();
-		m_octreeResID = -1;
-		configure();
-	}
+    IsotropicDipole(Stream *stream, InstanceManager *manager)
+     : Subsurface(stream, manager) {
+        m_sigmaS = Spectrum(stream);
+        m_sigmaA = Spectrum(stream);
+        m_g = Spectrum(stream);
+        m_eta = stream->readFloat();
+        m_sampleMultiplier = stream->readFloat();
+        m_quality = stream->readFloat();
+        m_octreeIndex = stream->readInt();
+        m_irrSamples = stream->readInt();
+        m_irrIndirect = stream->readBool();
+        m_octreeResID = -1;
+        configure();
+    }
 
-	virtual ~IsotropicDipole() {
-		if (m_octreeResID != -1)
-			Scheduler::getInstance()->unregisterResource(m_octreeResID);
-	}
+    virtual ~IsotropicDipole() {
+        if (m_octreeResID != -1)
+            Scheduler::getInstance()->unregisterResource(m_octreeResID);
+    }
 
-	void bindUsedResources(ParallelProcess *proc) const {
-		if (m_octreeResID != -1)
-			proc->bindResource(formatString("irrOctree%i", m_octreeIndex), m_octreeResID);
-	}
+    void bindUsedResources(ParallelProcess *proc) const {
+        if (m_octreeResID != -1)
+            proc->bindResource(formatString("irrOctree%i", m_octreeIndex), m_octreeResID);
+    }
 
-	void serialize(Stream *stream, InstanceManager *manager) const {
-		Subsurface::serialize(stream, manager);
-		m_sigmaS.serialize(stream);
-		m_sigmaA.serialize(stream);
-		m_g.serialize(stream);
-		stream->writeFloat(m_eta);
-		stream->writeFloat(m_sampleMultiplier);
-		stream->writeFloat(m_quality);
-		stream->writeInt(m_octreeIndex);
-		stream->writeInt(m_irrSamples);
-		stream->writeBool(m_irrIndirect);
-	}
+    void serialize(Stream *stream, InstanceManager *manager) const {
+        Subsurface::serialize(stream, manager);
+        m_sigmaS.serialize(stream);
+        m_sigmaA.serialize(stream);
+        m_g.serialize(stream);
+        stream->writeFloat(m_eta);
+        stream->writeFloat(m_sampleMultiplier);
+        stream->writeFloat(m_quality);
+        stream->writeInt(m_octreeIndex);
+        stream->writeInt(m_irrSamples);
+        stream->writeBool(m_irrIndirect);
+    }
 
-	Spectrum Lo(const Scene *scene, Sampler *sampler,
-			const Intersection &its, const Vector &d, int depth) const {
-		if (!m_active || dot(its.shFrame.n, d) < 0)
-			return Spectrum(0.0f);
-		IsotropicDipoleQuery query(m_zr, m_zv, m_sigmaTr, its.p);
+    Spectrum Lo(const Scene *scene, Sampler *sampler,
+            const Intersection &its, const Vector &d, int depth) const {
+        if (!m_active || dot(its.shFrame.n, d) < 0)
+            return Spectrum(0.0f);
+        IsotropicDipoleQuery query(m_zr, m_zv, m_sigmaTr, its.p);
 
-		m_octree->performQuery(query);
-		Spectrum result(query.getResult() * INV_PI);
+        m_octree->performQuery(query);
+        Spectrum result(query.getResult() * INV_PI);
 
-		if (m_eta != 1.0f)
-			result *= 1.0f - fresnelDielectricExt(dot(its.shFrame.n, d), m_eta);
+        if (m_eta != 1.0f)
+            result *= 1.0f - fresnelDielectricExt(dot(its.shFrame.n, d), m_eta);
 
-		return result;
-	}
+        return result;
+    }
 
-	void configure() {
-		m_sigmaSPrime = m_sigmaS * (Spectrum(1.0f) - m_g);
-		m_sigmaTPrime = m_sigmaSPrime + m_sigmaA;
+    void configure() {
+        m_sigmaSPrime = m_sigmaS * (Spectrum(1.0f) - m_g);
+        m_sigmaTPrime = m_sigmaSPrime + m_sigmaA;
 
-		/* Find the smallest mean-free path over all wavelengths */
-		Spectrum mfp = Spectrum(1.0f) / m_sigmaTPrime;
-		m_radius = std::numeric_limits<Float>::max();
-		for (int lambda=0; lambda<SPECTRUM_SAMPLES; lambda++)
-			m_radius = std::min(m_radius, mfp[lambda]);
+        /* Find the smallest mean-free path over all wavelengths */
+        Spectrum mfp = Spectrum(1.0f) / m_sigmaTPrime;
+        m_radius = std::numeric_limits<Float>::max();
+        for (int lambda=0; lambda<SPECTRUM_SAMPLES; lambda++)
+            m_radius = std::min(m_radius, mfp[lambda]);
 
-		/* Average diffuse reflectance due to mismatched indices of refraction */
-		m_Fdr = fresnelDiffuseReflectance(1 / m_eta);
+        /* Average diffuse reflectance due to mismatched indices of refraction */
+        m_Fdr = fresnelDiffuseReflectance(1 / m_eta);
 
-		/* Dipole boundary condition distance term */
-		Float A = (1 + m_Fdr) / (1 - m_Fdr);
+        /* Dipole boundary condition distance term */
+        Float A = (1 + m_Fdr) / (1 - m_Fdr);
 
-		/* Effective transport extinction coefficient */
-		m_sigmaTr = (m_sigmaA * m_sigmaTPrime * 3.0f).sqrt();
+        /* Effective transport extinction coefficient */
+        m_sigmaTr = (m_sigmaA * m_sigmaTPrime * 3.0f).sqrt();
 
-		/* Distance of the two dipole point sources to the surface */
-		m_zr = mfp;
-		m_zv = mfp * (1.0f + 4.0f/3.0f * A);
-	}
+        /* Distance of the two dipole point sources to the surface */
+        m_zr = mfp;
+        m_zv = mfp * (1.0f + 4.0f/3.0f * A);
+    }
 
-	bool preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job,
-		int sceneResID, int cameraResID, int _samplerResID) {
-		if (m_octree)
-			return true;
+    bool preprocess(const Scene *scene, RenderQueue *queue, const RenderJob *job,
+        int sceneResID, int cameraResID, int _samplerResID) {
+        if (m_octree)
+            return true;
 
-		if (!scene->getIntegrator()->getClass()
-				->derivesFrom(MTS_CLASS(SamplingIntegrator)))
-			Log(EError, "The dipole subsurface scattering model requires "
-				"a sampling-based surface integrator!");
+        if (!scene->getIntegrator()->getClass()
+                ->derivesFrom(MTS_CLASS(SamplingIntegrator)))
+            Log(EError, "The dipole subsurface scattering model requires "
+                "a sampling-based surface integrator!");
 
-		ref<Scheduler> sched = Scheduler::getInstance();
-		ref<Timer> timer = new Timer();
+        ref<Scheduler> sched = Scheduler::getInstance();
+        ref<Timer> timer = new Timer();
 
-		AABB aabb;
-		Float sa;
+        AABB aabb;
+        Float sa;
 
-		ref<PositionSampleVector> points = new PositionSampleVector();
-		/* It is necessary to increase the sampling resolution to
-		   prevent low-frequency noise in the output */
-		Float actualRadius = m_radius / std::sqrt(m_sampleMultiplier * 20);
-		blueNoisePointSet(scene, m_shapes, actualRadius, points, sa, aabb, job);
+        ref<PositionSampleVector> points = new PositionSampleVector();
+        /* It is necessary to increase the sampling resolution to
+           prevent low-frequency noise in the output */
+        Float actualRadius = m_radius / std::sqrt(m_sampleMultiplier * 20);
+        blueNoisePointSet(scene, m_shapes, actualRadius, points, sa, aabb, job);
 
-		/* 2. Gather irradiance in parallel */
-		const Sensor *sensor = scene->getSensor();
-		ref<IrradianceSamplingProcess> proc = new IrradianceSamplingProcess(
-			points, 1024, m_irrSamples, m_irrIndirect,
-			sensor->getShutterOpen() + 0.5f * sensor->getShutterOpenTime(), job);
+        /* 2. Gather irradiance in parallel */
+        const Sensor *sensor = scene->getSensor();
+        ref<IrradianceSamplingProcess> proc = new IrradianceSamplingProcess(
+            points, 1024, m_irrSamples, m_irrIndirect,
+            sensor->getShutterOpen() + 0.5f * sensor->getShutterOpenTime(), job);
 
-		/* Create a sampler instance for every core */
-		ref<Sampler> sampler = static_cast<Sampler *> (PluginManager::getInstance()->
-			createObject(MTS_CLASS(Sampler), Properties("independent")));
-		std::vector<SerializableObject *> samplers(sched->getCoreCount());
-		for (size_t i=0; i<sched->getCoreCount(); ++i) {
-			ref<Sampler> clonedSampler = sampler->clone();
-			clonedSampler->incRef();
-			samplers[i] = clonedSampler.get();
-		}
+        /* Create a sampler instance for every core */
+        ref<Sampler> sampler = static_cast<Sampler *> (PluginManager::getInstance()->
+            createObject(MTS_CLASS(Sampler), Properties("independent")));
+        std::vector<SerializableObject *> samplers(sched->getCoreCount());
+        for (size_t i=0; i<sched->getCoreCount(); ++i) {
+            ref<Sampler> clonedSampler = sampler->clone();
+            clonedSampler->incRef();
+            samplers[i] = clonedSampler.get();
+        }
 
-		int samplerResID = sched->registerMultiResource(samplers);
-		int integratorResID = sched->registerResource(
-			const_cast<Integrator *>(scene->getIntegrator()));
+        int samplerResID = sched->registerMultiResource(samplers);
+        int integratorResID = sched->registerResource(
+            const_cast<Integrator *>(scene->getIntegrator()));
 
-		proc->bindResource("scene", sceneResID);
-		proc->bindResource("integrator", integratorResID);
-		proc->bindResource("sampler", samplerResID);
-		scene->bindUsedResources(proc);
-		m_proc = proc;
-		sched->schedule(proc);
-		sched->wait(proc);
-		m_proc = NULL;
-		for (size_t i=0; i<samplers.size(); ++i)
-			samplers[i]->decRef();
+        proc->bindResource("scene", sceneResID);
+        proc->bindResource("integrator", integratorResID);
+        proc->bindResource("sampler", samplerResID);
+        scene->bindUsedResources(proc);
+        m_proc = proc;
+        sched->schedule(proc);
+        sched->wait(proc);
+        m_proc = NULL;
+        for (size_t i=0; i<samplers.size(); ++i)
+            samplers[i]->decRef();
 
-		sched->unregisterResource(samplerResID);
-		sched->unregisterResource(integratorResID);
-		if (proc->getReturnStatus() != ParallelProcess::ESuccess)
-			return false;
+        sched->unregisterResource(samplerResID);
+        sched->unregisterResource(integratorResID);
+        if (proc->getReturnStatus() != ParallelProcess::ESuccess)
+            return false;
 
-		Log(EDebug, "Done gathering (took %i ms), clustering ..", timer->getMilliseconds());
-		timer->reset();
+        Log(EDebug, "Done gathering (took %i ms), clustering ..", timer->getMilliseconds());
+        timer->reset();
 
-		std::vector<IrradianceSample> &samples = proc->getIrradianceSampleVector()->get();
-		sa /= samples.size();
+        std::vector<IrradianceSample> &samples = proc->getIrradianceSampleVector()->get();
+        sa /= samples.size();
 
-		for (size_t i=0; i<samples.size(); ++i)
-			samples[i].area = sa;
+        for (size_t i=0; i<samples.size(); ++i)
+            samples[i].area = sa;
 
-		m_octree = new IrradianceOctree(aabb, m_quality, samples);
+        m_octree = new IrradianceOctree(aabb, m_quality, samples);
 
-		Log(EDebug, "Done clustering (took %i ms).", timer->getMilliseconds());
-		m_octreeResID = Scheduler::getInstance()->registerResource(m_octree);
+        Log(EDebug, "Done clustering (took %i ms).", timer->getMilliseconds());
+        m_octreeResID = Scheduler::getInstance()->registerResource(m_octree);
 
-		return true;
-	}
+        return true;
+    }
 
-	void wakeup(ConfigurableObject *parent,
-		std::map<std::string, SerializableObject *> &params) {
-		std::string octreeName = formatString("irrOctree%i", m_octreeIndex);
-		if (!m_octree.get() && params.find(octreeName) != params.end()) {
-			m_octree = static_cast<IrradianceOctree *>(params[octreeName]);
-			m_active = true;
-		}
-	}
+    void wakeup(ConfigurableObject *parent,
+        std::map<std::string, SerializableObject *> &params) {
+        std::string octreeName = formatString("irrOctree%i", m_octreeIndex);
+        if (!m_octree.get() && params.find(octreeName) != params.end()) {
+            m_octree = static_cast<IrradianceOctree *>(params[octreeName]);
+            m_active = true;
+        }
+    }
 
-	void cancel() {
-		Scheduler::getInstance()->cancel(m_proc);
-	}
+    void cancel() {
+        Scheduler::getInstance()->cancel(m_proc);
+    }
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 private:
-	Float m_radius, m_sampleMultiplier;
-	Float m_Fdr, m_quality, m_eta;
-	Spectrum m_sigmaS, m_sigmaA, m_g;
-	Spectrum m_sigmaTr, m_zr, m_zv;
-	Spectrum m_sigmaSPrime, m_sigmaTPrime;
-	ref<IrradianceOctree> m_octree;
-	ref<ParallelProcess> m_proc;
-	int m_octreeResID, m_octreeIndex;
-	int m_irrSamples;
-	bool m_irrIndirect;
+    Float m_radius, m_sampleMultiplier;
+    Float m_Fdr, m_quality, m_eta;
+    Spectrum m_sigmaS, m_sigmaA, m_g;
+    Spectrum m_sigmaTr, m_zr, m_zv;
+    Spectrum m_sigmaSPrime, m_sigmaTPrime;
+    ref<IrradianceOctree> m_octree;
+    ref<ParallelProcess> m_proc;
+    int m_octreeResID, m_octreeIndex;
+    int m_irrSamples;
+    bool m_irrIndirect;
 };
 
 MTS_IMPLEMENT_CLASS_S(IsotropicDipole, false, Subsurface)

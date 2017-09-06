@@ -5,16 +5,16 @@
 import sys
 
 def append(fname):
-	f = open(fname)
-	sys.stdout.write('static const char *' + fname.replace('.', '_') + ' MAYBE_UNUSED = ')
-	lineIndex = 0
-	for line in f:
-		lineIndex = lineIndex + 1
-		if lineIndex < 19:
-			continue
-		sys.stdout.write('\n\t\"' + line[:-1] + '\\n\"')
-	sys.stdout.write(';\n\n')
-	f.close()
+        f = open(fname)
+        sys.stdout.write('static const char *' + fname.replace('.', '_') + ' MAYBE_UNUSED = ')
+        lineIndex = 0
+        for line in f:
+                lineIndex = lineIndex + 1
+                if lineIndex < 19:
+                        continue
+                sys.stdout.write('\n\t\"' + line[:-1] + '\\n\"')
+        sys.stdout.write(';\n\n')
+        f.close()
 
 print("/*")
 print("    This file is part of Mitsuba, a physically based rendering system.")

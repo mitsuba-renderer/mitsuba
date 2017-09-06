@@ -46,154 +46,154 @@ MTS_NAMESPACE_BEGIN
  */
 class DiffuseTransmitter : public BSDF {
 public:
-	DiffuseTransmitter(const Properties &props)
-		: BSDF(props) {
-		/* For better compatibility with other models, support both
-		   'transmittance' and 'diffuseTransmittance' as parameter names */
-		m_transmittance = new ConstantSpectrumTexture(props.getSpectrum(
-			props.hasProperty("transmittance") ? "transmittance"
-				: "diffuseTransmittance", Spectrum(.5f)));
-		m_usesRayDifferentials = false;
-	}
+    DiffuseTransmitter(const Properties &props)
+        : BSDF(props) {
+        /* For better compatibility with other models, support both
+           'transmittance' and 'diffuseTransmittance' as parameter names */
+        m_transmittance = new ConstantSpectrumTexture(props.getSpectrum(
+            props.hasProperty("transmittance") ? "transmittance"
+                : "diffuseTransmittance", Spectrum(.5f)));
+        m_usesRayDifferentials = false;
+    }
 
-	DiffuseTransmitter(Stream *stream, InstanceManager *manager)
-		: BSDF(stream, manager) {
-		m_transmittance = static_cast<Texture *>(manager->getInstance(stream));
-		m_usesRayDifferentials = m_transmittance->usesRayDifferentials();
-		configure();
-	}
+    DiffuseTransmitter(Stream *stream, InstanceManager *manager)
+        : BSDF(stream, manager) {
+        m_transmittance = static_cast<Texture *>(manager->getInstance(stream));
+        m_usesRayDifferentials = m_transmittance->usesRayDifferentials();
+        configure();
+    }
 
-	void configure() {
-		/* Verify the input parameters and fix them if necessary */
-		m_transmittance = ensureEnergyConservation(m_transmittance, "transmittance", 1.0f);
+    void configure() {
+        /* Verify the input parameters and fix them if necessary */
+        m_transmittance = ensureEnergyConservation(m_transmittance, "transmittance", 1.0f);
 
-		m_components.clear();
-		m_components.push_back(EDiffuseTransmission | EFrontSide | EBackSide
-			| (m_transmittance->isConstant() ? 0 : ESpatiallyVarying));
-		BSDF::configure();
-	}
+        m_components.clear();
+        m_components.push_back(EDiffuseTransmission | EFrontSide | EBackSide
+            | (m_transmittance->isConstant() ? 0 : ESpatiallyVarying));
+        BSDF::configure();
+    }
 
-	Spectrum eval(const BSDFSamplingRecord &bRec, EMeasure measure) const {
-		if (!(bRec.typeMask & EDiffuseTransmission) || measure != ESolidAngle
-			|| Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo) >= 0)
-			return Spectrum(0.0f);
+    Spectrum eval(const BSDFSamplingRecord &bRec, EMeasure measure) const {
+        if (!(bRec.typeMask & EDiffuseTransmission) || measure != ESolidAngle
+            || Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo) >= 0)
+            return Spectrum(0.0f);
 
-		return m_transmittance->eval(bRec.its)
-			* (INV_PI * std::abs(Frame::cosTheta(bRec.wo)));
-	}
+        return m_transmittance->eval(bRec.its)
+            * (INV_PI * std::abs(Frame::cosTheta(bRec.wo)));
+    }
 
-	Float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const {
-		if (!(bRec.typeMask & EDiffuseTransmission) || measure != ESolidAngle
-			|| Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo) >= 0)
-			return 0.0f;
+    Float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const {
+        if (!(bRec.typeMask & EDiffuseTransmission) || measure != ESolidAngle
+            || Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo) >= 0)
+            return 0.0f;
 
-		return std::abs(Frame::cosTheta(bRec.wo)) * INV_PI;
-	}
+        return std::abs(Frame::cosTheta(bRec.wo)) * INV_PI;
+    }
 
-	Spectrum sample(BSDFSamplingRecord &bRec, const Point2 &sample) const {
-		if (!(bRec.typeMask & EDiffuseTransmission))
-			return Spectrum(0.0f);
-		bRec.wo = warp::squareToCosineHemisphere(sample);
-		if (Frame::cosTheta(bRec.wi) > 0)
-			bRec.wo.z *= -1;
-		bRec.eta = 1.0f;
-		bRec.sampledComponent = 0;
-		bRec.sampledType = EDiffuseTransmission;
-		return m_transmittance->eval(bRec.its);
-	}
+    Spectrum sample(BSDFSamplingRecord &bRec, const Point2 &sample) const {
+        if (!(bRec.typeMask & EDiffuseTransmission))
+            return Spectrum(0.0f);
+        bRec.wo = warp::squareToCosineHemisphere(sample);
+        if (Frame::cosTheta(bRec.wi) > 0)
+            bRec.wo.z *= -1;
+        bRec.eta = 1.0f;
+        bRec.sampledComponent = 0;
+        bRec.sampledType = EDiffuseTransmission;
+        return m_transmittance->eval(bRec.its);
+    }
 
-	Spectrum sample(BSDFSamplingRecord &bRec, Float &pdf, const Point2 &sample) const {
-		if (!(bRec.typeMask & m_combinedType))
-			return Spectrum(0.0f);
-		bRec.wo = warp::squareToCosineHemisphere(sample);
-		if (Frame::cosTheta(bRec.wi) > 0)
-			bRec.wo.z *= -1;
-		bRec.eta = 1.0f;
-		bRec.sampledComponent = 0;
-		bRec.sampledType = EDiffuseTransmission;
-		pdf = std::abs(Frame::cosTheta(bRec.wo)) * INV_PI;
-		return m_transmittance->eval(bRec.its);
-	}
+    Spectrum sample(BSDFSamplingRecord &bRec, Float &pdf, const Point2 &sample) const {
+        if (!(bRec.typeMask & m_combinedType))
+            return Spectrum(0.0f);
+        bRec.wo = warp::squareToCosineHemisphere(sample);
+        if (Frame::cosTheta(bRec.wi) > 0)
+            bRec.wo.z *= -1;
+        bRec.eta = 1.0f;
+        bRec.sampledComponent = 0;
+        bRec.sampledType = EDiffuseTransmission;
+        pdf = std::abs(Frame::cosTheta(bRec.wo)) * INV_PI;
+        return m_transmittance->eval(bRec.its);
+    }
 
-	void addChild(const std::string &name, ConfigurableObject *child) {
-		if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) &&
-			 	(name == "transmittance" || name == "diffuseTransmittance")) {
-			m_transmittance = static_cast<Texture *>(child);
-			m_usesRayDifferentials |= m_transmittance->usesRayDifferentials();
-		} else {
-			BSDF::addChild(name, child);
-		}
-	}
+    void addChild(const std::string &name, ConfigurableObject *child) {
+        if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) &&
+                (name == "transmittance" || name == "diffuseTransmittance")) {
+            m_transmittance = static_cast<Texture *>(child);
+            m_usesRayDifferentials |= m_transmittance->usesRayDifferentials();
+        } else {
+            BSDF::addChild(name, child);
+        }
+    }
 
-	void serialize(Stream *stream, InstanceManager *manager) const {
-		BSDF::serialize(stream, manager);
+    void serialize(Stream *stream, InstanceManager *manager) const {
+        BSDF::serialize(stream, manager);
 
-		manager->serialize(stream, m_transmittance.get());
-	}
+        manager->serialize(stream, m_transmittance.get());
+    }
 
-	Float getRoughness(const Intersection &its, int component) const {
-		return std::numeric_limits<Float>::infinity();
-	}
+    Float getRoughness(const Intersection &its, int component) const {
+        return std::numeric_limits<Float>::infinity();
+    }
 
-	std::string toString() const {
-		std::ostringstream oss;
-		oss << "DiffuseTransmitter[" << endl
-			<< "  id = \"" << getID() << "\"," << endl
-			<< "  transmittance = " << indent(m_transmittance->toString()) << endl
-			<< "]";
-		return oss.str();
-	}
+    std::string toString() const {
+        std::ostringstream oss;
+        oss << "DiffuseTransmitter[" << endl
+            << "  id = \"" << getID() << "\"," << endl
+            << "  transmittance = " << indent(m_transmittance->toString()) << endl
+            << "]";
+        return oss.str();
+    }
 
-	Shader *createShader(Renderer *renderer) const;
+    Shader *createShader(Renderer *renderer) const;
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 private:
-	ref<Texture> m_transmittance;
+    ref<Texture> m_transmittance;
 };
 
 // ================ Hardware shader implementation ================
 
 class DiffuseTransmitterShader : public Shader {
 public:
-	DiffuseTransmitterShader(Renderer *renderer, const Texture *reflectance)
-		: Shader(renderer, EBSDFShader), m_transmittance(reflectance) {
-		m_transmittanceShader = renderer->registerShaderForResource(m_transmittance.get());
-	}
+    DiffuseTransmitterShader(Renderer *renderer, const Texture *reflectance)
+        : Shader(renderer, EBSDFShader), m_transmittance(reflectance) {
+        m_transmittanceShader = renderer->registerShaderForResource(m_transmittance.get());
+    }
 
-	bool isComplete() const {
-		return m_transmittanceShader.get() != NULL;
-	}
+    bool isComplete() const {
+        return m_transmittanceShader.get() != NULL;
+    }
 
-	void cleanup(Renderer *renderer) {
-		renderer->unregisterShaderForResource(m_transmittance.get());
-	}
+    void cleanup(Renderer *renderer) {
+        renderer->unregisterShaderForResource(m_transmittance.get());
+    }
 
-	void putDependencies(std::vector<Shader *> &deps) {
-		deps.push_back(m_transmittanceShader.get());
-	}
+    void putDependencies(std::vector<Shader *> &deps) {
+        deps.push_back(m_transmittanceShader.get());
+    }
 
-	void generateCode(std::ostringstream &oss,
-			const std::string &evalName,
-			const std::vector<std::string> &depNames) const {
-		oss << "vec3 " << evalName << "(vec2 uv, vec3 wi, vec3 wo) {" << endl
-			<< "    if (cosTheta(wi) * cosTheta(wo) >= 0.0)" << endl
-			<< "    	return vec3(0.0);" << endl
-			<< "    return " << depNames[0] << "(uv) * inv_pi * abs(cosTheta(wo));" << endl
-			<< "}" << endl
-			<< endl
-			<< "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
-			<< "    return " << evalName << "(uv, wi, wo);" << endl
-			<< "}" << endl;
-	}
+    void generateCode(std::ostringstream &oss,
+            const std::string &evalName,
+            const std::vector<std::string> &depNames) const {
+        oss << "vec3 " << evalName << "(vec2 uv, vec3 wi, vec3 wo) {" << endl
+            << "    if (cosTheta(wi) * cosTheta(wo) >= 0.0)" << endl
+            << "        return vec3(0.0);" << endl
+            << "    return " << depNames[0] << "(uv) * inv_pi * abs(cosTheta(wo));" << endl
+            << "}" << endl
+            << endl
+            << "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
+            << "    return " << evalName << "(uv, wi, wo);" << endl
+            << "}" << endl;
+    }
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 private:
-	ref<const Texture> m_transmittance;
-	ref<Shader> m_transmittanceShader;
+    ref<const Texture> m_transmittance;
+    ref<Shader> m_transmittanceShader;
 };
 
 Shader *DiffuseTransmitter::createShader(Renderer *renderer) const {
-	return new DiffuseTransmitterShader(renderer, m_transmittance.get());
+    return new DiffuseTransmitterShader(renderer, m_transmittance.get());
 }
 
 MTS_IMPLEMENT_CLASS(DiffuseTransmitterShader, false, Shader)

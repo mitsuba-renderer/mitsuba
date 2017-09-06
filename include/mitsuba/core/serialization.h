@@ -34,19 +34,19 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_CORE SerializableObject : public Object {
 public:
-	/// Unserialize a serializable object
-	SerializableObject(Stream *stream, InstanceManager *manager);
+    /// Unserialize a serializable object
+    SerializableObject(Stream *stream, InstanceManager *manager);
 
-	/// Serialize this object to a stream
-	virtual void serialize(Stream *stream, InstanceManager *manager) const = 0;
+    /// Serialize this object to a stream
+    virtual void serialize(Stream *stream, InstanceManager *manager) const = 0;
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	/// Construct a serializable object
-	inline SerializableObject() { }
+    /// Construct a serializable object
+    inline SerializableObject() { }
 
-	/// Virtual deconstructor
-	virtual ~SerializableObject() { }
+    /// Virtual deconstructor
+    virtual ~SerializableObject() { }
 };
 
 /** \brief Coordinates the serialization and unserialization of object graphs
@@ -63,29 +63,29 @@ protected:
  * \ingroup libpython
  */
 class MTS_EXPORT_CORE InstanceManager : public Object {
-	friend class SerializableObject;
+    friend class SerializableObject;
 public:
-	/// \brief Construct a new instance manager
-	InstanceManager();
+    /// \brief Construct a new instance manager
+    InstanceManager();
 
-	/// Retrieve an instance from the given stream
-	SerializableObject *getInstance(Stream *stream);
+    /// Retrieve an instance from the given stream
+    SerializableObject *getInstance(Stream *stream);
 
-	/// Store an instance to the given stream
-	void serialize(Stream *stream, const SerializableObject *inst);
+    /// Store an instance to the given stream
+    void serialize(Stream *stream, const SerializableObject *inst);
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 private:
-	/// Virtual destructor
-	virtual ~InstanceManager();
+    /// Virtual destructor
+    virtual ~InstanceManager();
 
-	/// Called from the unserialization constructor of SerializableObject
-	void registerInstance(SerializableObject *object);
+    /// Called from the unserialization constructor of SerializableObject
+    void registerInstance(SerializableObject *object);
 private:
-	unsigned int m_counter, m_lastID;
-	std::vector<SerializableObject *> m_fullyAllocated;
-	std::map<unsigned int, SerializableObject *> m_idToObj;
-	std::map<const SerializableObject *, unsigned int> m_objToId;
+    unsigned int m_counter, m_lastID;
+    std::vector<SerializableObject *> m_fullyAllocated;
+    std::map<unsigned int, SerializableObject *> m_idToObj;
+    std::map<const SerializableObject *, unsigned int> m_objToId;
 };
 
 MTS_NAMESPACE_END

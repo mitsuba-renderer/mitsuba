@@ -3,63 +3,63 @@ Import('env', 'sys', 'os')
 # Core library environment with OpenEXR, libpng and libjpeg
 coreEnv = env.Clone()
 if coreEnv.has_key('OEXRLIBDIR'):
-	coreEnv.Prepend(LIBPATH=env['OEXRLIBDIR'])
+        coreEnv.Prepend(LIBPATH=env['OEXRLIBDIR'])
 if coreEnv.has_key('OEXRINCLUDE'):
-	coreEnv.Prepend(CPPPATH=env['OEXRINCLUDE'])
+        coreEnv.Prepend(CPPPATH=env['OEXRINCLUDE'])
 if coreEnv.has_key('OEXRFLAGS'):
-	coreEnv.Prepend(CPPFLAGS=env['OEXRFLAGS'])
+        coreEnv.Prepend(CPPFLAGS=env['OEXRFLAGS'])
 if coreEnv.has_key('OEXRLIB'):
-	coreEnv.Prepend(LIBS=env['OEXRLIB'])
+        coreEnv.Prepend(LIBS=env['OEXRLIB'])
 if coreEnv.has_key('PNGLIBDIR'):
-	coreEnv.Prepend(LIBPATH=env['PNGLIBDIR'])
+        coreEnv.Prepend(LIBPATH=env['PNGLIBDIR'])
 if coreEnv.has_key('PNGINCLUDE'):
-	coreEnv.Prepend(CPPPATH=env['PNGINCLUDE'])
+        coreEnv.Prepend(CPPPATH=env['PNGINCLUDE'])
 if coreEnv.has_key('PNGLIB'):
-	coreEnv.Prepend(LIBS=env['PNGLIB'])
+        coreEnv.Prepend(LIBS=env['PNGLIB'])
 if coreEnv.has_key('JPEGLIBDIR'):
-	coreEnv.Prepend(LIBPATH=env['JPEGLIBDIR'])
+        coreEnv.Prepend(LIBPATH=env['JPEGLIBDIR'])
 if coreEnv.has_key('JPEGINCLUDE'):
-	coreEnv.Prepend(CPPPATH=env['JPEGINCLUDE'])
+        coreEnv.Prepend(CPPPATH=env['JPEGINCLUDE'])
 if coreEnv.has_key('JPEGLIB'):
-	coreEnv.Prepend(LIBS=env['JPEGLIB'])
+        coreEnv.Prepend(LIBS=env['JPEGLIB'])
 if coreEnv.has_key('FFTWLIBDIR'):
-	coreEnv.Prepend(LIBPATH=env['FFTWLIBDIR'])
+        coreEnv.Prepend(LIBPATH=env['FFTWLIBDIR'])
 if coreEnv.has_key('FFTWINCLUDE'):
-	coreEnv.Prepend(CPPPATH=env['FFTWINCLUDE'])
+        coreEnv.Prepend(CPPPATH=env['FFTWINCLUDE'])
 if coreEnv.has_key('FFTWLIB'):
-	coreEnv.Prepend(LIBS=env['FFTWLIB'])
+        coreEnv.Prepend(LIBS=env['FFTWLIB'])
 
 coreEnv.Prepend(CPPDEFINES = [['MTS_BUILD_MODULE', 'MTS_MODULE_CORE']])
 
 
 if sys.platform == 'win32':
-	coreEnv.Append(LIBS=['psapi'])
+        coreEnv.Append(LIBS=['psapi'])
 
 libcore_objects = [
-	'class.cpp', 'object.cpp', 'statistics.cpp', 'thread.cpp', 'brent.cpp',
-	'logger.cpp', 'appender.cpp', 'formatter.cpp', 'lock.cpp', 'qmc.cpp',
-	'random.cpp', 'timer.cpp',  'util.cpp', 'properties.cpp', 'half.cpp',
-	'transform.cpp', 'spectrum.cpp', 'aabb.cpp', 'stream.cpp', 'math.cpp',
-	'fstream.cpp', 'plugin.cpp', 'triangle.cpp', 'bitmap.cpp',
-	'fmtconv.cpp', 'serialization.cpp', 'sstream.cpp', 'cstream.cpp',
-	'mstream.cpp', 'sched.cpp', 'sched_remote.cpp', 'sshstream.cpp',
-	'zstream.cpp', 'shvector.cpp', 'fresolver.cpp', 'rfilter.cpp',
-	'quad.cpp', 'mmap.cpp', 'chisquare.cpp', 'warp.cpp', 'vmf.cpp',
-	'tls.cpp', 'ssemath.cpp', 'spline.cpp', 'track.cpp'
+        'class.cpp', 'object.cpp', 'statistics.cpp', 'thread.cpp', 'brent.cpp',
+        'logger.cpp', 'appender.cpp', 'formatter.cpp', 'lock.cpp', 'qmc.cpp',
+        'random.cpp', 'timer.cpp',  'util.cpp', 'properties.cpp', 'half.cpp',
+        'transform.cpp', 'spectrum.cpp', 'aabb.cpp', 'stream.cpp', 'math.cpp',
+        'fstream.cpp', 'plugin.cpp', 'triangle.cpp', 'bitmap.cpp',
+        'fmtconv.cpp', 'serialization.cpp', 'sstream.cpp', 'cstream.cpp',
+        'mstream.cpp', 'sched.cpp', 'sched_remote.cpp', 'sshstream.cpp',
+        'zstream.cpp', 'shvector.cpp', 'fresolver.cpp', 'rfilter.cpp',
+        'quad.cpp', 'mmap.cpp', 'chisquare.cpp', 'warp.cpp', 'vmf.cpp',
+        'tls.cpp', 'ssemath.cpp', 'spline.cpp', 'track.cpp'
 ]
 
 # Add some platform-specific components
 if sys.platform == 'darwin':
-	coreEnv_osx = coreEnv.Clone()
-	coreEnv_osx.ConfigureForObjectiveCPP()
-	libcore_objects += coreEnv_osx.SharedObject('platform_darwin.mm')
+        coreEnv_osx = coreEnv.Clone()
+        coreEnv_osx.ConfigureForObjectiveCPP()
+        libcore_objects += coreEnv_osx.SharedObject('platform_darwin.mm')
 elif sys.platform == 'win32':
-	libcore_objects += coreEnv.SharedObject('getopt.c')
+        libcore_objects += coreEnv.SharedObject('getopt.c')
 
 libcore = coreEnv.SharedLibrary('mitsuba-core', libcore_objects)
 
 if sys.platform == "darwin":
-	coreEnv.AddPostAction(libcore, 'install_name_tool -id @rpath/libmitsuba-core.dylib $TARGET')
+        coreEnv.AddPostAction(libcore, 'install_name_tool -id @rpath/libmitsuba-core.dylib $TARGET')
 
 env.Append(LIBS=['mitsuba-core'])
 env.Append(LIBPATH=[os.path.join(env['BUILDDIR'], 'libcore')])

@@ -47,83 +47,83 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_CORE SSHStream : public Stream {
 public:
-	// =============================================================
-	//! @{ \name Constructors
-	// =============================================================
+    // =============================================================
+    //! @{ \name Constructors
+    // =============================================================
 
-	/**
-	 * \brief Create a new SSH stream.
-	 *
-	 * The timeout parameter specifies specifies the maximum amount of
-	 * time that can be spent before failing to create the initial
-	 * connection. This feature is unsupported (and ignored) on Windows.
-	 *
-	 * \param userName Username to use for the authentication
-	 * \param hostName Destination host name
-	 * \param cmdLine  Command (with arguments) to be executed on the remote side
-	 * \param port     Destination port
-	 * \param timeout  Maximum time to use for the connection attempt (in seconds)
-	 */
-	SSHStream(const std::string &userName,
-		const std::string &hostName,
-		const std::vector<std::string> &cmdLine,
-		int port = 22, int timeout = 10
-	);
+    /**
+     * \brief Create a new SSH stream.
+     *
+     * The timeout parameter specifies specifies the maximum amount of
+     * time that can be spent before failing to create the initial
+     * connection. This feature is unsupported (and ignored) on Windows.
+     *
+     * \param userName Username to use for the authentication
+     * \param hostName Destination host name
+     * \param cmdLine  Command (with arguments) to be executed on the remote side
+     * \param port     Destination port
+     * \param timeout  Maximum time to use for the connection attempt (in seconds)
+     */
+    SSHStream(const std::string &userName,
+        const std::string &hostName,
+        const std::vector<std::string> &cmdLine,
+        int port = 22, int timeout = 10
+    );
 
-	//! @}
-	// =============================================================
+    //! @}
+    // =============================================================
 
-	// =============================================================
-	//! @{ \name SSH stream-specific features
-	// =============================================================
+    // =============================================================
+    //! @{ \name SSH stream-specific features
+    // =============================================================
 
-	/// Return the destination machine's host name
-	const std::string &getHostName() const;
+    /// Return the destination machine's host name
+    const std::string &getHostName() const;
 
-	/// Return the user name used for authentication
-	const std::string &getUserName() const;
+    /// Return the user name used for authentication
+    const std::string &getUserName() const;
 
-	/// Return the number of received bytes
-	size_t getReceivedBytes() const;
+    /// Return the number of received bytes
+    size_t getReceivedBytes() const;
 
-	/// Return the number of sent bytes
-	size_t getSentBytes() const;
+    /// Return the number of sent bytes
+    size_t getSentBytes() const;
 
-	//! @}
-	// =============================================================
+    //! @}
+    // =============================================================
 
-	// =============================================================
-	//! @{ \name Implementation of the Stream interface
-	// =============================================================
+    // =============================================================
+    //! @{ \name Implementation of the Stream interface
+    // =============================================================
 
-	void read(void *ptr, size_t size);
-	void write(const void *ptr, size_t size);
-	void seek(size_t pos);
-	size_t getPos() const;
-	size_t getSize() const;
-	void truncate(size_t size);
-	void flush();
-	bool canWrite() const;
-	bool canRead() const;
+    void read(void *ptr, size_t size);
+    void write(const void *ptr, size_t size);
+    void seek(size_t pos);
+    size_t getPos() const;
+    size_t getSize() const;
+    void truncate(size_t size);
+    void flush();
+    bool canWrite() const;
+    bool canRead() const;
 
-	//! @}
-	// =============================================================
+    //! @}
+    // =============================================================
 
 
-	/// Return a string representation
-	std::string toString() const;
+    /// Return a string representation
+    std::string toString() const;
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	/** \brief Virtual destructor
-	 *
-	 * The destructor frees all resources and closes
-	 * the socket if it is still open
-	 */
-	virtual ~SSHStream();
+    /** \brief Virtual destructor
+     *
+     * The destructor frees all resources and closes
+     * the socket if it is still open
+     */
+    virtual ~SSHStream();
 private:
-	struct SSHStreamPrivate;
-	boost::scoped_ptr<SSHStreamPrivate> d;
+    struct SSHStreamPrivate;
+    boost::scoped_ptr<SSHStreamPrivate> d;
 };
 
 MTS_NAMESPACE_END

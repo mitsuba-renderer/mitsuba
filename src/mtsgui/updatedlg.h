@@ -23,27 +23,27 @@
 #include <QtNetwork/QtNetwork>
 
 namespace Ui {
-	class UpdateDialog;
+    class UpdateDialog;
 }
 
 class UpdateDialog : public QDialog {
     Q_OBJECT
 public:
-	UpdateDialog(QWidget *parent, const Version &local,
-			const Version &remote);
-	~UpdateDialog();
+    UpdateDialog(QWidget *parent, const Version &local,
+            const Version &remote);
+    ~UpdateDialog();
 protected slots:
-	void on_skipButton_clicked();
-	void on_remindButton_clicked();
-	void on_downloadButton_clicked();
-	void onNetworkFinished(QNetworkReply *reply);
+    void on_skipButton_clicked();
+    void on_remindButton_clicked();
+    void on_downloadButton_clicked();
+    void onNetworkFinished(QNetworkReply *reply);
 protected:
     void changeEvent(QEvent *e);
 private:
-	Ui::UpdateDialog *ui;
-	QNetworkAccessManager *m_networkManager;
-	QNetworkReply *m_networkReply;
-	QString m_remoteVersion;
+    Ui::UpdateDialog *ui;
+    QNetworkAccessManager *m_networkManager;
+    QNetworkReply *m_networkReply;
+    QString m_remoteVersion;
 };
 
 #endif // __UPDATEDLG_H

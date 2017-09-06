@@ -21,56 +21,56 @@ uniform mat4 vplTransform;
 uniform mat4 instanceTransform;
 
 #ifndef FACE_NORMALS
-	/* -> Fragment program */
-	varying vec3 posInVPLSpace;
-	varying vec3 posInWorldSpace;
-	varying vec2 uv;
-	varying vec3 normal;
+    /* -> Fragment program */
+    varying vec3 posInVPLSpace;
+    varying vec3 posInWorldSpace;
+    varying vec2 uv;
+    varying vec3 normal;
 #else
-	/* -> Geometry program */
-	varying vec3 posInVPLSpace_vertex;
-	varying vec3 posInWorldSpace_vertex;
-	varying vec2 uv_vertex;
+    /* -> Geometry program */
+    varying vec3 posInVPLSpace_vertex;
+    varying vec3 posInWorldSpace_vertex;
+    varying vec2 uv_vertex;
 #endif
 
 #ifdef ANISOTROPIC
-	varying vec3 tangent;
+    varying vec3 tangent;
 #endif
 
 #ifdef VERTEX_COLORS
-	#ifndef FACE_NORMALS
-		varying vec3 vertexColor;
-	#else
-		varying vec3 vertexColor_vertex;
-	#endif
+    #ifndef FACE_NORMALS
+        varying vec3 vertexColor;
+    #else
+        varying vec3 vertexColor_vertex;
+    #endif
 #endif
 
 void main() {
-	vec4 pos = instanceTransform * gl_Vertex;
-	gl_Position = gl_ModelViewProjectionMatrix * pos;
+    vec4 pos = instanceTransform * gl_Vertex;
+    gl_Position = gl_ModelViewProjectionMatrix * pos;
 
-	#ifndef FACE_NORMALS
-		posInWorldSpace = pos.xyz;
-		posInVPLSpace   = (vplTransform * pos).xyz;
-		uv = gl_MultiTexCoord0.xy;
+    #ifndef FACE_NORMALS
+        posInWorldSpace = pos.xyz;
+        posInVPLSpace   = (vplTransform * pos).xyz;
+        uv = gl_MultiTexCoord0.xy;
 
-		/* Multiply by instanceTransform (only rigid transformations allowed) */
-		normal = (instanceTransform * vec4(gl_Normal, 0.0)).xyz;
+        /* Multiply by instanceTransform (only rigid transformations allowed) */
+        normal = (instanceTransform * vec4(gl_Normal, 0.0)).xyz;
 
-		#ifdef VERTEX_COLORS
-			vertexColor = gl_Color.rgb;
-		#endif
-	#else
-		posInWorldSpace_vertex = pos.xyz;
-		posInVPLSpace_vertex   = (vplTransform * pos).xyz;
-		uv_vertex = gl_MultiTexCoord0.xy;
+        #ifdef VERTEX_COLORS
+            vertexColor = gl_Color.rgb;
+        #endif
+    #else
+        posInWorldSpace_vertex = pos.xyz;
+        posInVPLSpace_vertex   = (vplTransform * pos).xyz;
+        uv_vertex = gl_MultiTexCoord0.xy;
 
-		#ifdef VERTEX_COLORS
-			vertexColor_vertex = gl_Color.rgb;
-		#endif
-	#endif
+        #ifdef VERTEX_COLORS
+            vertexColor_vertex = gl_Color.rgb;
+        #endif
+    #endif
 
-	#ifdef ANISOTROPIC
-		tangent = gl_MultiTexCoord1.xyz;
-	#endif
+    #ifdef ANISOTROPIC
+        tangent = gl_MultiTexCoord1.xyz;
+    #endif
 }

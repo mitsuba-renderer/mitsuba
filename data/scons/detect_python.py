@@ -57,7 +57,7 @@ def find_boost_python(version):
     return None
 
 def detect_python():
-    pyver = ['2.6', '2.7', '3.0', '3.1', '3.2', '3.3', '3.4']
+    pyver = ['2.6', '2.7', '3.0', '3.1', '3.2', '3.3', '3.4', '3.5', '3.6']
     pyenv = {}
 
     for version in pyver:

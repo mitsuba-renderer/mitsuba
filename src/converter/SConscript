@@ -4,26 +4,26 @@ Import('mainEnv', 'hasCollada', 'stubs', 'winstubs')
 converter_objects = []
 
 if hasCollada:
-	import platform
+        import platform
 
-	colladaEnv = mainEnv.Clone()
-	colladaEnv.Prepend(CXXFLAGS=['-DCOLLADA_DOM_2_4'])
+        colladaEnv = mainEnv.Clone()
+        colladaEnv.Prepend(CXXFLAGS=['-DCOLLADA_DOM_2_4'])
 
-	# Build the COLLADA importer if COLLADA-DOM is vailable
-	colladaEnv.Append(LIBS=['mitsuba-hw'])
-	colladaEnv.Append(LIBPATH=['#src/libhw'])
-	if colladaEnv.has_key('COLLADAINCLUDE'):
-		colladaEnv.Prepend(CPPPATH=colladaEnv['COLLADAINCLUDE'])
-	if colladaEnv.has_key('COLLADALIBDIR'):
-		colladaEnv.Prepend(LIBPATH=colladaEnv['COLLADALIBDIR'])
-	if colladaEnv.has_key('COLLADALIB'):
-		colladaEnv.Prepend(LIBS=colladaEnv['COLLADALIB'])
-	converter_objects += [
-		colladaEnv.StaticObject('collada.cpp'),
-		colladaEnv.StaticObject('obj.cpp'),
-		colladaEnv.StaticObject('converter.cpp')
-	]
-	colladaEnv.Program('mtsimport', stubs + winstubs + ['mtsimport.cpp'] 
-		+ converter_objects)
+        # Build the COLLADA importer if COLLADA-DOM is vailable
+        colladaEnv.Append(LIBS=['mitsuba-hw'])
+        colladaEnv.Append(LIBPATH=['#src/libhw'])
+        if colladaEnv.has_key('COLLADAINCLUDE'):
+                colladaEnv.Prepend(CPPPATH=colladaEnv['COLLADAINCLUDE'])
+        if colladaEnv.has_key('COLLADALIBDIR'):
+                colladaEnv.Prepend(LIBPATH=colladaEnv['COLLADALIBDIR'])
+        if colladaEnv.has_key('COLLADALIB'):
+                colladaEnv.Prepend(LIBS=colladaEnv['COLLADALIB'])
+        converter_objects += [
+                colladaEnv.StaticObject('collada.cpp'),
+                colladaEnv.StaticObject('obj.cpp'),
+                colladaEnv.StaticObject('converter.cpp')
+        ]
+        colladaEnv.Program('mtsimport', stubs + winstubs + ['mtsimport.cpp']
+                + converter_objects)
 
 Return('converter_objects')

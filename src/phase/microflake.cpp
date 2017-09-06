@@ -32,7 +32,7 @@ MTS_NAMESPACE_BEGIN
 
 #if defined(MICROFLAKE_STATISTICS)
 static StatsCounter avgSampleIterations("Micro-flake model",
-		"Average rejection sampling iterations", EAverage);
+        "Average rejection sampling iterations", EAverage);
 #endif
 
 /*!\plugin{microflake}{Micro-flake phase function}
@@ -79,129 +79,129 @@ static StatsCounter avgSampleIterations("Micro-flake model",
  */
 class MicroflakePhaseFunction : public PhaseFunction {
 public:
-	MicroflakePhaseFunction(const Properties &props) : PhaseFunction(props) {
-		/// Standard deviation of the flake distribution
-		m_fiberDistr = GaussianFiberDistribution(props.getFloat("stddev"));
-	}
+    MicroflakePhaseFunction(const Properties &props) : PhaseFunction(props) {
+        /// Standard deviation of the flake distribution
+        m_fiberDistr = GaussianFiberDistribution(props.getFloat("stddev"));
+    }
 
-	MicroflakePhaseFunction(Stream *stream, InstanceManager *manager)
-		: PhaseFunction(stream, manager) {
-		m_fiberDistr = GaussianFiberDistribution(stream->readFloat());
-		configure();
-	}
+    MicroflakePhaseFunction(Stream *stream, InstanceManager *manager)
+        : PhaseFunction(stream, manager) {
+        m_fiberDistr = GaussianFiberDistribution(stream->readFloat());
+        configure();
+    }
 
-	virtual ~MicroflakePhaseFunction() { }
+    virtual ~MicroflakePhaseFunction() { }
 
-	void configure() {
-		PhaseFunction::configure();
-		m_type = EAnisotropic | ENonSymmetric;
-	}
+    void configure() {
+        PhaseFunction::configure();
+        m_type = EAnisotropic | ENonSymmetric;
+    }
 
-	void serialize(Stream *stream, InstanceManager *manager) const {
-		PhaseFunction::serialize(stream, manager);
-		stream->writeFloat(m_fiberDistr.getStdDev());
-	}
+    void serialize(Stream *stream, InstanceManager *manager) const {
+        PhaseFunction::serialize(stream, manager);
+        stream->writeFloat(m_fiberDistr.getStdDev());
+    }
 
-	Float eval(const PhaseFunctionSamplingRecord &pRec) const {
-		if (pRec.mRec.orientation.isZero()) {
-			/* What to do when the local orientation is undefined */
-			#if 0
-				return 1.0f / (4 * M_PI);
-			#else
-				return 0.0f;
-			#endif
-		}
+    Float eval(const PhaseFunctionSamplingRecord &pRec) const {
+        if (pRec.mRec.orientation.isZero()) {
+            /* What to do when the local orientation is undefined */
+            #if 0
+                return 1.0f / (4 * M_PI);
+            #else
+                return 0.0f;
+            #endif
+        }
 
-		Frame frame(pRec.mRec.orientation);
-		Vector wi = frame.toLocal(pRec.wi);
-		Vector wo = frame.toLocal(pRec.wo);
-		Vector H = wi + wo;
-		Float length = H.length();
+        Frame frame(pRec.mRec.orientation);
+        Vector wi = frame.toLocal(pRec.wi);
+        Vector wo = frame.toLocal(pRec.wo);
+        Vector H = wi + wo;
+        Float length = H.length();
 
-		if (length == 0)
-			return 0.0f;
+        if (length == 0)
+            return 0.0f;
 
-		return 0.5f * m_fiberDistr.pdfCosTheta(Frame::cosTheta(H)/length)
-				/ m_fiberDistr.sigmaT(Frame::cosTheta(wi));
-	}
+        return 0.5f * m_fiberDistr.pdfCosTheta(Frame::cosTheta(H)/length)
+                / m_fiberDistr.sigmaT(Frame::cosTheta(wi));
+    }
 
-	inline Float sample(PhaseFunctionSamplingRecord &pRec, Sampler *sampler) const {
-		if (pRec.mRec.orientation.isZero()) {
-			/* What to do when the local orientation is undefined */
-			#if 0
-				pRec.wo = warp::squareToUniformSphere(sampler->next2D());
-				return 1.0f;
-			#else
-				return 0.0f;
-			#endif
-		}
+    inline Float sample(PhaseFunctionSamplingRecord &pRec, Sampler *sampler) const {
+        if (pRec.mRec.orientation.isZero()) {
+            /* What to do when the local orientation is undefined */
+            #if 0
+                pRec.wo = warp::squareToUniformSphere(sampler->next2D());
+                return 1.0f;
+            #else
+                return 0.0f;
+            #endif
+        }
 
-		Frame frame(pRec.mRec.orientation);
-		Vector wi = frame.toLocal(pRec.wi);
+        Frame frame(pRec.mRec.orientation);
+        Vector wi = frame.toLocal(pRec.wi);
 
-		#if defined(MICROFLAKE_STATISTICS)
-			avgSampleIterations.incrementBase();
-		#endif
+        #if defined(MICROFLAKE_STATISTICS)
+            avgSampleIterations.incrementBase();
+        #endif
 
-		int iterations = 0, maxIterations = 1000;
-		while (true) {
-			Vector H = m_fiberDistr.sample(sampler->next2D());
-			#if defined(MICROFLAKE_STATISTICS)
-				++avgSampleIterations;
-			#endif
-			++iterations;
+        int iterations = 0, maxIterations = 1000;
+        while (true) {
+            Vector H = m_fiberDistr.sample(sampler->next2D());
+            #if defined(MICROFLAKE_STATISTICS)
+                ++avgSampleIterations;
+            #endif
+            ++iterations;
 
-			if (sampler->next1D() < absDot(wi, H)) {
-				Vector wo = H*(2*dot(wi, H)) - wi;
-				pRec.wo = frame.toWorld(wo);
-				break;
-			}
+            if (sampler->next1D() < absDot(wi, H)) {
+                Vector wo = H*(2*dot(wi, H)) - wi;
+                pRec.wo = frame.toWorld(wo);
+                break;
+            }
 
-			if (iterations >= maxIterations) {
-				Log(EWarn, "Sample generation unsuccessful after %i iterations"
-					" (dp=%f, fiberOrientation=%s, wi=%s)", iterations,
-					absDot(pRec.wi, pRec.mRec.orientation),
-					pRec.mRec.orientation.toString().c_str(),
-					pRec.wi.toString().c_str());
-				return 0.0f;
-			}
-		}
+            if (iterations >= maxIterations) {
+                Log(EWarn, "Sample generation unsuccessful after %i iterations"
+                    " (dp=%f, fiberOrientation=%s, wi=%s)", iterations,
+                    absDot(pRec.wi, pRec.mRec.orientation),
+                    pRec.mRec.orientation.toString().c_str(),
+                    pRec.wi.toString().c_str());
+                return 0.0f;
+            }
+        }
 
-		return 1.0f;
-	}
+        return 1.0f;
+    }
 
-	Float sample(PhaseFunctionSamplingRecord &pRec,
-			Float &pdf, Sampler *sampler) const {
-		if (sample(pRec, sampler) == 0) {
-			pdf = 0; return 0.0f;
-		}
-		pdf = eval(pRec);
-		return 1.0f;
-	}
+    Float sample(PhaseFunctionSamplingRecord &pRec,
+            Float &pdf, Sampler *sampler) const {
+        if (sample(pRec, sampler) == 0) {
+            pdf = 0; return 0.0f;
+        }
+        pdf = eval(pRec);
+        return 1.0f;
+    }
 
-	bool needsDirectionallyVaryingCoefficients() const { return true; }
+    bool needsDirectionallyVaryingCoefficients() const { return true; }
 
-	Float sigmaDir(Float cosTheta) const {
-		// Scaled such that replacing an isotropic phase function with an
-		// isotropic microflake distribution does not cause changes
-		return 2 * m_fiberDistr.sigmaT(cosTheta);
-	}
+    Float sigmaDir(Float cosTheta) const {
+        // Scaled such that replacing an isotropic phase function with an
+        // isotropic microflake distribution does not cause changes
+        return 2 * m_fiberDistr.sigmaT(cosTheta);
+    }
 
-	Float sigmaDirMax() const {
-		return sigmaDir(0);
-	}
+    Float sigmaDirMax() const {
+        return sigmaDir(0);
+    }
 
-	std::string toString() const {
-		std::ostringstream oss;
-		oss << "MicroflakePhaseFunction[" << endl
-			<< "   fiberDistr = " << indent(m_fiberDistr.toString()) << endl
-			<< "]";
-		return oss.str();
-	}
+    std::string toString() const {
+        std::ostringstream oss;
+        oss << "MicroflakePhaseFunction[" << endl
+            << "   fiberDistr = " << indent(m_fiberDistr.toString()) << endl
+            << "]";
+        return oss.str();
+    }
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 private:
-	GaussianFiberDistribution m_fiberDistr;
+    GaussianFiberDistribution m_fiberDistr;
 };
 
 MTS_IMPLEMENT_CLASS_S(MicroflakePhaseFunction, false, PhaseFunction)

@@ -37,17 +37,17 @@ extern MTS_EXPORT_RENDER void pushSceneCleanupHandler(void (*cleanup)());
  * \order{7}
  * \parameters{
  *     \parameter{filename}{\String}{
- *	     Filename of the geometry file that should be loaded
- *	   }
- *	   \parameter{shapeIndex}{\Integer}{
- *	       A \code{.serialized} file may contain several separate meshes. This parameter
- *	       specifies which one should be loaded. \default{\code{0}, i.e. the first one}
- *	   }
+ *       Filename of the geometry file that should be loaded
+ *     }
+ *     \parameter{shapeIndex}{\Integer}{
+ *         A \code{.serialized} file may contain several separate meshes. This parameter
+ *         specifies which one should be loaded. \default{\code{0}, i.e. the first one}
+ *     }
  *     \parameter{faceNormals}{\Boolean}{
  *       When set to \code{true}, any existing or computed vertex normals are
  *       discarded and \emph{face normals} will instead be used during rendering.
  *       This gives the rendered object a faceted appearance.\default{\code{false}}
- *	   }
+ *     }
  *     \parameter{maxSmoothAngle}{\Float}{
  *       When specified, Mitsuba will discard all vertex normals in the input mesh and rebuild
  *       them in a way that is sensitive to the presence of creases and corners. For more
@@ -56,9 +56,9 @@ extern MTS_EXPORT_RENDER void pushSceneCleanupHandler(void (*cleanup)());
  *     \parameter{flipNormals}{\Boolean}{
  *       Optional flag to flip all normals. \default{\code{false}, i.e.
  *       the normals are left unchanged}.
- *	   }
+ *     }
  *     \parameter{toWorld}{\Transform\Or\Animation}{
- *	      Specifies an optional linear object-to-world transformation.
+ *        Specifies an optional linear object-to-world transformation.
  *        \default{none (i.e. object space $=$ world space)}
  *     }
  * }
@@ -89,13 +89,13 @@ extern MTS_EXPORT_RENDER void pushSceneCleanupHandler(void (*cleanup)());
  * \code{uint32}&An 32-bit integer whose bits can be used
  * to specify the following flags:\\[-4mm]
  * &\begin{description}
- *	\item[\code{0x0001}] The mesh data includes per-vertex normals\vspace{-2mm}
- *	\item[\code{0x0002}] The mesh data includes texture coordinates\vspace{-2mm}
- *	\item[\code{0x0008}] The mesh data includes vertex colors\vspace{-2mm}
- *	\item[\code{0x0010}] Use face normals instead of smothly interpolated vertex
- *	normals. Equivalent to specifying \code{faceNormals=true} to the plugin. \vspace{-6mm}
- *	\item[\code{0x1000}] The subsequent content is represented in single precision\vspace{-2mm}
- *	\item[\code{0x2000}] The subsequent content is represented in double precision
+ *  \item[\code{0x0001}] The mesh data includes per-vertex normals\vspace{-2mm}
+ *  \item[\code{0x0002}] The mesh data includes texture coordinates\vspace{-2mm}
+ *  \item[\code{0x0008}] The mesh data includes vertex colors\vspace{-2mm}
+ *  \item[\code{0x0010}] Use face normals instead of smothly interpolated vertex
+ *  normals. Equivalent to specifying \code{faceNormals=true} to the plugin. \vspace{-6mm}
+ *  \item[\code{0x1000}] The subsequent content is represented in single precision\vspace{-2mm}
+ *  \item[\code{0x2000}] The subsequent content is represented in double precision
  * \end{description}\\[-4mm]
  * \code{string}&A null-terminated string (utf-8), which denotes the name of the shape.\\
  * \code{uint64}&Number of vertices in the mesh\\
@@ -145,163 +145,163 @@ extern MTS_EXPORT_RENDER void pushSceneCleanupHandler(void (*cleanup)());
  */
 class SerializedMesh : public TriMesh {
 public:
-	SerializedMesh(const Properties &props) : TriMesh(props) {
-		fs::path filePath = Thread::getThread()->getFileResolver()->resolve(
-			props.getString("filename"));
+    SerializedMesh(const Properties &props) : TriMesh(props) {
+        fs::path filePath = Thread::getThread()->getFileResolver()->resolve(
+            props.getString("filename"));
 
-		/* Object-space -> World-space transformation */
-		Transform objectToWorld = props.getTransform("toWorld", Transform());
+        /* Object-space -> World-space transformation */
+        Transform objectToWorld = props.getTransform("toWorld", Transform());
 
-		/// When the file contains multiple meshes, this index specifies which one to load
-		int shapeIndex = props.getInteger("shapeIndex", 0);
-		AssertEx(shapeIndex >= 0, "Shape index must be nonnegative!");
+        /// When the file contains multiple meshes, this index specifies which one to load
+        int shapeIndex = props.getInteger("shapeIndex", 0);
+        AssertEx(shapeIndex >= 0, "Shape index must be nonnegative!");
 
-		std::string name = (props.getID() != "unnamed") ? props.getID()
-			: formatString("%s@%i", filePath.stem().string().c_str(), shapeIndex);
+        std::string name = (props.getID() != "unnamed") ? props.getID()
+            : formatString("%s@%i", filePath.stem().string().c_str(), shapeIndex);
 
-		/* Load the geometry */
-		Log(EInfo, "Loading shape %i from \"%s\" ..", shapeIndex, filePath.filename().string().c_str());
-		ref<Timer> timer = new Timer();
-		loadCompressed(filePath, shapeIndex);
-		Log(EDebug, "Done (" SIZE_T_FMT " triangles, " SIZE_T_FMT " vertices, %i ms)",
-			m_triangleCount, m_vertexCount, timer->getMilliseconds());
+        /* Load the geometry */
+        Log(EInfo, "Loading shape %i from \"%s\" ..", shapeIndex, filePath.filename().string().c_str());
+        ref<Timer> timer = new Timer();
+        loadCompressed(filePath, shapeIndex);
+        Log(EDebug, "Done (" SIZE_T_FMT " triangles, " SIZE_T_FMT " vertices, %i ms)",
+            m_triangleCount, m_vertexCount, timer->getMilliseconds());
 
-		if (m_name.empty())
-			m_name = name;
+        if (m_name.empty())
+            m_name = name;
 
-		/* By default, any existing normals will be used for
-		   rendering. If no normals are found, Mitsuba will
-		   automatically generate smooth vertex normals.
-		   Setting the 'faceNormals' parameter instead forces
-		   the use of face normals, which will result in a faceted
-		   appearance.
-		*/
-		m_faceNormals = props.getBoolean("faceNormals", false);
+        /* By default, any existing normals will be used for
+           rendering. If no normals are found, Mitsuba will
+           automatically generate smooth vertex normals.
+           Setting the 'faceNormals' parameter instead forces
+           the use of face normals, which will result in a faceted
+           appearance.
+        */
+        m_faceNormals = props.getBoolean("faceNormals", false);
 
-		/* Causes all normals to be flipped */
-		m_flipNormals = props.getBoolean("flipNormals", false);
+        /* Causes all normals to be flipped */
+        m_flipNormals = props.getBoolean("flipNormals", false);
 
-		if (!objectToWorld.isIdentity()) {
-			m_aabb.reset();
-			for (size_t i=0; i<m_vertexCount; ++i) {
-				Point p = objectToWorld(m_positions[i]);
-				m_positions[i] = p;
-				m_aabb.expandBy(p);
-			}
-			if (m_normals) {
-				for (size_t i=0; i<m_vertexCount; ++i)
-					m_normals[i] = normalize(objectToWorld(m_normals[i]));
-			}
-		}
+        if (!objectToWorld.isIdentity()) {
+            m_aabb.reset();
+            for (size_t i=0; i<m_vertexCount; ++i) {
+                Point p = objectToWorld(m_positions[i]);
+                m_positions[i] = p;
+                m_aabb.expandBy(p);
+            }
+            if (m_normals) {
+                for (size_t i=0; i<m_vertexCount; ++i)
+                    m_normals[i] = normalize(objectToWorld(m_normals[i]));
+            }
+        }
 
-		if (objectToWorld.det3x3() < 0) {
-			for (size_t i=0; i<m_triangleCount; ++i) {
-				Triangle &t = m_triangles[i];
-				std::swap(t.idx[0], t.idx[1]);
-			}
-		}
+        if (objectToWorld.det3x3() < 0) {
+            for (size_t i=0; i<m_triangleCount; ++i) {
+                Triangle &t = m_triangles[i];
+                std::swap(t.idx[0], t.idx[1]);
+            }
+        }
 
-		if (props.hasProperty("maxSmoothAngle")) {
-			if (m_faceNormals)
-				Log(EError, "The properties 'maxSmoothAngle' and 'faceNormals' "
-				"can't be specified at the same time!");
-			rebuildTopology(props.getFloat("maxSmoothAngle"));
-		}
-	}
+        if (props.hasProperty("maxSmoothAngle")) {
+            if (m_faceNormals)
+                Log(EError, "The properties 'maxSmoothAngle' and 'faceNormals' "
+                "can't be specified at the same time!");
+            rebuildTopology(props.getFloat("maxSmoothAngle"));
+        }
+    }
 
-	SerializedMesh(Stream *stream, InstanceManager *manager)
-		: TriMesh(stream, manager) { }
+    SerializedMesh(Stream *stream, InstanceManager *manager)
+        : TriMesh(stream, manager) { }
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 
 private:
 
-	/**
-	 * Helper class for loading serialized meshes from the same file
-	 * repeatedly: it is common for scene to load multiple meshes from the same
-	 * file, most times even in ascending order. This class loads the mesh
-	 * offsets dictionary only once and keeps the stream open.
-	 *
-	 * Instances of this class are not thread safe.
-	 */
-	class MeshLoader {
-	public:
-		MeshLoader(const fs::path& filePath) {
-			m_fstream = new FileStream(filePath, FileStream::EReadOnly);
-			m_fstream->setByteOrder(Stream::ELittleEndian);
-			const short version = SerializedMesh::readHeader(m_fstream);
-			if (SerializedMesh::readOffsetDictionary(m_fstream,
-				version, m_offsets) < 0) {
-				// Assume there is a single mesh in the file at offset 0
-				m_offsets.resize(1, 0);
-			}
-		}
+    /**
+     * Helper class for loading serialized meshes from the same file
+     * repeatedly: it is common for scene to load multiple meshes from the same
+     * file, most times even in ascending order. This class loads the mesh
+     * offsets dictionary only once and keeps the stream open.
+     *
+     * Instances of this class are not thread safe.
+     */
+    class MeshLoader {
+    public:
+        MeshLoader(const fs::path& filePath) {
+            m_fstream = new FileStream(filePath, FileStream::EReadOnly);
+            m_fstream->setByteOrder(Stream::ELittleEndian);
+            const short version = SerializedMesh::readHeader(m_fstream);
+            if (SerializedMesh::readOffsetDictionary(m_fstream,
+                version, m_offsets) < 0) {
+                // Assume there is a single mesh in the file at offset 0
+                m_offsets.resize(1, 0);
+            }
+        }
 
-		/**
-		 * Positions the stream at the location for the given shape index.
-		 * Returns the modified stream.
-		 */
-		inline FileStream* seekStream(size_t shapeIndex) {
-			if (shapeIndex > m_offsets.size()) {
-				SLog(EError, "Unable to unserialize mesh, "
-					"shape index is out of range! (requested %i out of 0..%i)",
-					shapeIndex, (int) (m_offsets.size()-1));
-			}
-			const size_t pos = m_offsets[shapeIndex];
-			m_fstream->seek(pos);
-			return m_fstream;
-		}
+        /**
+         * Positions the stream at the location for the given shape index.
+         * Returns the modified stream.
+         */
+        inline FileStream* seekStream(size_t shapeIndex) {
+            if (shapeIndex > m_offsets.size()) {
+                SLog(EError, "Unable to unserialize mesh, "
+                    "shape index is out of range! (requested %i out of 0..%i)",
+                    shapeIndex, (int) (m_offsets.size()-1));
+            }
+            const size_t pos = m_offsets[shapeIndex];
+            m_fstream->seek(pos);
+            return m_fstream;
+        }
 
-	private:
-		std::vector<size_t> m_offsets;
-		ref<FileStream> m_fstream;
-	};
+    private:
+        std::vector<size_t> m_offsets;
+        ref<FileStream> m_fstream;
+    };
 
-	typedef LRUCache<fs::path, std::less<fs::path>,
-		boost::shared_ptr<MeshLoader> > MeshLoaderCache;
+    typedef LRUCache<fs::path, std::less<fs::path>,
+        boost::shared_ptr<MeshLoader> > MeshLoaderCache;
 
-	class FileStreamCache : MeshLoaderCache {
-	public:
-		inline boost::shared_ptr<MeshLoader> get(const fs::path& path) {
-			bool dummy;
-			return MeshLoaderCache::get(path, dummy);
-		}
+    class FileStreamCache : MeshLoaderCache {
+    public:
+        inline boost::shared_ptr<MeshLoader> get(const fs::path& path) {
+            bool dummy;
+            return MeshLoaderCache::get(path, dummy);
+        }
 
-		FileStreamCache() : MeshLoaderCache(MTS_SERIALIZED_CACHE_SIZE,
-			&FileStreamCache::create) { }
+        FileStreamCache() : MeshLoaderCache(MTS_SERIALIZED_CACHE_SIZE,
+            &FileStreamCache::create) { }
 
-	private:
-		inline static boost::shared_ptr<MeshLoader> create(const fs::path &path) {
-			return boost::make_shared<MeshLoader>(path);
-		}
-	};
+    private:
+        inline static boost::shared_ptr<MeshLoader> create(const fs::path &path) {
+            return boost::make_shared<MeshLoader>(path);
+        }
+    };
 
-	/// Release all currently held offset caches / file streams
-	static void flushCache() {
-		m_cache.set(NULL);
-	}
+    /// Release all currently held offset caches / file streams
+    static void flushCache() {
+        m_cache.set(NULL);
+    }
 
-	/// Loads the mesh from the thread-local file stream cache
-	void loadCompressed(const fs::path& filePath, const int idx) {
-		if (EXPECT_NOT_TAKEN(idx < 0)) {
-			Log(EError, "Unable to unserialize mesh, "
-				"shape index is negative! (requested %i out of 0..%i)", idx);
-		}
+    /// Loads the mesh from the thread-local file stream cache
+    void loadCompressed(const fs::path& filePath, const int idx) {
+        if (EXPECT_NOT_TAKEN(idx < 0)) {
+            Log(EError, "Unable to unserialize mesh, "
+                "shape index is negative! (requested %i out of 0..%i)", idx);
+        }
 
-		// Get the thread local cache; create it if this is the first time
-		FileStreamCache* cache = m_cache.get();
-		if (EXPECT_NOT_TAKEN(cache == NULL)) {
-			cache = new FileStreamCache();
-			m_cache.set(cache);
-			mitsuba::pushSceneCleanupHandler(&SerializedMesh::flushCache);
-		}
+        // Get the thread local cache; create it if this is the first time
+        FileStreamCache* cache = m_cache.get();
+        if (EXPECT_NOT_TAKEN(cache == NULL)) {
+            cache = new FileStreamCache();
+            m_cache.set(cache);
+            mitsuba::pushSceneCleanupHandler(&SerializedMesh::flushCache);
+        }
 
-		boost::shared_ptr<MeshLoader> meshLoader = cache->get(filePath);
-		Assert(meshLoader != NULL);
-		TriMesh::loadCompressed(meshLoader->seekStream((size_t) idx));
-	}
+        boost::shared_ptr<MeshLoader> meshLoader = cache->get(filePath);
+        Assert(meshLoader != NULL);
+        TriMesh::loadCompressed(meshLoader->seekStream((size_t) idx));
+    }
 
-	static ThreadLocal<FileStreamCache> m_cache;
+    static ThreadLocal<FileStreamCache> m_cache;
 };
 
 ThreadLocal<SerializedMesh::FileStreamCache> SerializedMesh::m_cache;

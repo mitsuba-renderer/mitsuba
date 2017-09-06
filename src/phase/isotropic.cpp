@@ -39,53 +39,53 @@ MTS_NAMESPACE_BEGIN
  */
 class IsotropicPhaseFunction : public PhaseFunction {
 public:
-	IsotropicPhaseFunction(const Properties &props)
-		: PhaseFunction(props) {
-	}
+    IsotropicPhaseFunction(const Properties &props)
+        : PhaseFunction(props) {
+    }
 
-	IsotropicPhaseFunction(Stream *stream, InstanceManager *manager)
-		: PhaseFunction(stream, manager) {
-		configure();
-	}
+    IsotropicPhaseFunction(Stream *stream, InstanceManager *manager)
+        : PhaseFunction(stream, manager) {
+        configure();
+    }
 
-	virtual ~IsotropicPhaseFunction() { }
+    virtual ~IsotropicPhaseFunction() { }
 
-	void configure() {
-		PhaseFunction::configure();
-		m_type = EIsotropic | EAngleDependence;
-	}
+    void configure() {
+        PhaseFunction::configure();
+        m_type = EIsotropic | EAngleDependence;
+    }
 
-	void serialize(Stream *stream, InstanceManager *manager) const {
-		PhaseFunction::serialize(stream, manager);
-	}
+    void serialize(Stream *stream, InstanceManager *manager) const {
+        PhaseFunction::serialize(stream, manager);
+    }
 
-	Float sample(PhaseFunctionSamplingRecord &pRec,
-			Sampler *sampler) const {
-		Point2 sample(sampler->next2D());
-		pRec.wo = warp::squareToUniformSphere(sample);
-		return 1.0f;
-	}
+    Float sample(PhaseFunctionSamplingRecord &pRec,
+            Sampler *sampler) const {
+        Point2 sample(sampler->next2D());
+        pRec.wo = warp::squareToUniformSphere(sample);
+        return 1.0f;
+    }
 
-	Float sample(PhaseFunctionSamplingRecord &pRec,
-			Float &pdf, Sampler *sampler) const {
-		pRec.wo = warp::squareToUniformSphere(sampler->next2D());
-		pdf = warp::squareToUniformSpherePdf();
-		return 1.0f;
-	}
+    Float sample(PhaseFunctionSamplingRecord &pRec,
+            Float &pdf, Sampler *sampler) const {
+        pRec.wo = warp::squareToUniformSphere(sampler->next2D());
+        pdf = warp::squareToUniformSpherePdf();
+        return 1.0f;
+    }
 
-	Float eval(const PhaseFunctionSamplingRecord &pRec) const {
-		return warp::squareToUniformSpherePdf();
-	}
+    Float eval(const PhaseFunctionSamplingRecord &pRec) const {
+        return warp::squareToUniformSpherePdf();
+    }
 
-	Float getMeanCosine() const {
-		return 0.0f;
-	}
+    Float getMeanCosine() const {
+        return 0.0f;
+    }
 
-	std::string toString() const {
-		return "IsotropicPhaseFunction[]";
-	}
+    std::string toString() const {
+        return "IsotropicPhaseFunction[]";
+    }
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 };
 
 

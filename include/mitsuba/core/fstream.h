@@ -37,100 +37,100 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_CORE FileStream : public Stream {
 public:
-	/// Supported file opening modes
-	enum EFileMode {
-		EReadOnly = 0,   ///< rb
-		EReadWrite,      ///< rb+
-		ETruncWrite,     ///< wb
-		ETruncReadWrite, ///< wb+
-		EAppendWrite,    ///< ab
-		EAppendReadWrite ///< ab+
-	};
+    /// Supported file opening modes
+    enum EFileMode {
+        EReadOnly = 0,   ///< rb
+        EReadWrite,      ///< rb+
+        ETruncWrite,     ///< wb
+        ETruncReadWrite, ///< wb+
+        EAppendWrite,    ///< ab
+        EAppendReadWrite ///< ab+
+    };
 
-	// =============================================================
-	//! @{ \name Constructors
-	// =============================================================
+    // =============================================================
+    //! @{ \name Constructors
+    // =============================================================
 
-	/// Create a file stream class with no file open
-	FileStream();
+    /// Create a file stream class with no file open
+    FileStream();
 
-	/// Create a file stream class and open a file with a given EFileMode
-	explicit FileStream(const fs::path &path, EFileMode mode = EReadOnly);
+    /// Create a file stream class and open a file with a given EFileMode
+    explicit FileStream(const fs::path &path, EFileMode mode = EReadOnly);
 
-	//! @}
-	// =============================================================
+    //! @}
+    // =============================================================
 
-	// =============================================================
-	//! @{ \name File-specific features
-	// =============================================================
+    // =============================================================
+    //! @{ \name File-specific features
+    // =============================================================
 
-	/// Return the file path
-	const fs::path &getPath() const;
+    /// Return the file path
+    const fs::path &getPath() const;
 
-	/// Open a file with a given open mode
-	void open(const fs::path &filename, EFileMode mode = EReadOnly);
+    /// Open a file with a given open mode
+    void open(const fs::path &filename, EFileMode mode = EReadOnly);
 
-	/// Close the current file
-	void close();
+    /// Close the current file
+    void close();
 
-	/// Remove the current file
-	void remove();
+    /// Remove the current file
+    void remove();
 
-	/// Return a string representation
-	std::string toString() const;
+    /// Return a string representation
+    std::string toString() const;
 
-	//! @}
-	// =============================================================
+    //! @}
+    // =============================================================
 
-	// =============================================================
-	//! @{ \name Stream interface
-	// =============================================================
+    // =============================================================
+    //! @{ \name Stream interface
+    // =============================================================
 
-	void read(void *ptr, size_t size);
-	void write(const void *ptr, size_t size);
-	void seek(size_t pos);
-	size_t getPos() const;
-	size_t getSize() const;
-	void truncate(size_t size);
-	void flush();
-	bool canWrite() const;
-	bool canRead() const;
+    void read(void *ptr, size_t size);
+    void write(const void *ptr, size_t size);
+    void seek(size_t pos);
+    size_t getPos() const;
+    size_t getSize() const;
+    void truncate(size_t size);
+    void flush();
+    bool canWrite() const;
+    bool canRead() const;
 
-	//! @}
-	// =============================================================
+    //! @}
+    // =============================================================
 
-	// =============================================================
-	//! @{ \name Miscellaneous
-	// =============================================================
+    // =============================================================
+    //! @{ \name Miscellaneous
+    // =============================================================
 
-	/**
-	 * \brief Create a temporary file and return an associated FileStream
-	 *
-	 * \remark When closing the file stream, the file is automatically
-	 * deleted.
-	 */
-	static ref<FileStream> createTemporary();
+    /**
+     * \brief Create a temporary file and return an associated FileStream
+     *
+     * \remark When closing the file stream, the file is automatically
+     * deleted.
+     */
+    static ref<FileStream> createTemporary();
 
-	/// Initialize the file I/O layer (unicode conversions etc.)
-	static void staticInitialization();
+    /// Initialize the file I/O layer (unicode conversions etc.)
+    static void staticInitialization();
 
-	/// Release resources taken up by staticInitialization()
-	static void staticShutdown();
+    /// Release resources taken up by staticInitialization()
+    static void staticShutdown();
 
-	//! @}
-	// =============================================================
+    //! @}
+    // =============================================================
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	/** \brief Virtual destructor
-	 *
-	 * The destructor frees all resources and closes
-	 * the file if it is still open
-	 */
-	virtual ~FileStream();
+    /** \brief Virtual destructor
+     *
+     * The destructor frees all resources and closes
+     * the file if it is still open
+     */
+    virtual ~FileStream();
 private:
-	struct FileStreamPrivate;
-	boost::scoped_ptr<FileStreamPrivate> d;
+    struct FileStreamPrivate;
+    boost::scoped_ptr<FileStreamPrivate> d;
 };
 
 MTS_NAMESPACE_END

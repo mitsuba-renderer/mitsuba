@@ -37,63 +37,63 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_CORE Object {
 public:
-	/// Construct a new object
-	Object();
+    /// Construct a new object
+    Object();
 
-	/// Return the current reference count
-	inline int getRefCount() const;
+    /// Return the current reference count
+    inline int getRefCount() const;
 
-	/** \brief Increase the reference count of the
-	 * object by one.
-	 */
-	void incRef() const;
+    /** \brief Increase the reference count of the
+     * object by one.
+     */
+    void incRef() const;
 
-	/** \brief Decrease the reference count of
-	 * the object and possibly deallocate it.
-	 *
-	 * The object will automatically be deallocated once
-	 * the reference count reaches zero.
-	 */
-	void decRef(bool autoDeallocate = true) const;
+    /** \brief Decrease the reference count of
+     * the object and possibly deallocate it.
+     *
+     * The object will automatically be deallocated once
+     * the reference count reaches zero.
+     */
+    void decRef(bool autoDeallocate = true) const;
 
-	/// Retrieve this object's class
-	virtual const Class *getClass() const;
+    /// Retrieve this object's class
+    virtual const Class *getClass() const;
 
-	/**
-	 * \brief Return a human-readable string representation
-	 * of the object's contents.
-	 *
-	 * This function is mainly useful for debugging purposes
-	 * and should ideally be implemented by all subclasses.
-	 * The default implementation simply returns <tt>MyObject[unknown]</tt>,
-	 * where <tt>MyObject</tt> is the name of the subclass.
-	 */
-	virtual std::string toString() const;
+    /**
+     * \brief Return a human-readable string representation
+     * of the object's contents.
+     *
+     * This function is mainly useful for debugging purposes
+     * and should ideally be implemented by all subclasses.
+     * The default implementation simply returns <tt>MyObject[unknown]</tt>,
+     * where <tt>MyObject</tt> is the name of the subclass.
+     */
+    virtual std::string toString() const;
 
-	/** \brief Initializes the built-in reference count
-	 * debugger (if enabled)
-	 */
-	static void staticInitialization();
+    /** \brief Initializes the built-in reference count
+     * debugger (if enabled)
+     */
+    static void staticInitialization();
 
-	/// Free the memory taken by staticInitialization()
-	static void staticShutdown();
+    /// Free the memory taken by staticInitialization()
+    static void staticShutdown();
 protected:
-	/** \brief Virtual private deconstructor.
-	 * (Will only be called by \ref ref)
-	 */
-	virtual ~Object();
+    /** \brief Virtual private deconstructor.
+     * (Will only be called by \ref ref)
+     */
+    virtual ~Object();
 public:
-	static Class *m_theClass; ///< Pointer to the object's class descriptor
+    static Class *m_theClass; ///< Pointer to the object's class descriptor
 private:
 #if !defined(_MSC_VER)
-	volatile mutable int m_refCount;
+    volatile mutable int m_refCount;
 #else
-	volatile mutable long m_refCount;
+    volatile mutable long m_refCount;
 #endif
 };
 
 inline int Object::getRefCount() const {
-	return m_refCount;
+    return m_refCount;
 }
 
 MTS_NAMESPACE_END

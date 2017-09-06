@@ -29,29 +29,29 @@ MTS_NAMESPACE_BEGIN
  */
 class BoxFilter : public ReconstructionFilter {
 public:
-	BoxFilter(const Properties &props)
-		: ReconstructionFilter(props) {
-		/* Filter radius in pixels. A tiny epsilon is added, since some
-		   samplers (Hammersley and Halton in particular) place samples
-		   at positions like (0, 0). Without such an epsilon and rounding
-		   errors, samples may end up not contributing to any pixel. */
-		m_radius = props.getFloat("radius", 0.5f) + 1e-5f;
-	}
+    BoxFilter(const Properties &props)
+        : ReconstructionFilter(props) {
+        /* Filter radius in pixels. A tiny epsilon is added, since some
+           samplers (Hammersley and Halton in particular) place samples
+           at positions like (0, 0). Without such an epsilon and rounding
+           errors, samples may end up not contributing to any pixel. */
+        m_radius = props.getFloat("radius", 0.5f) + 1e-5f;
+    }
 
-	BoxFilter(Stream *stream, InstanceManager *manager)
-		: ReconstructionFilter(stream, manager) {
-		configure();
-	}
+    BoxFilter(Stream *stream, InstanceManager *manager)
+        : ReconstructionFilter(stream, manager) {
+        configure();
+    }
 
-	Float eval(Float x) const {
-		return std::abs(x) <= m_radius ? 1.0f : 0.0f;
-	}
+    Float eval(Float x) const {
+        return std::abs(x) <= m_radius ? 1.0f : 0.0f;
+    }
 
-	std::string toString() const {
-		return formatString("BoxFilter[radius=%f]", m_radius);
-	}
+    std::string toString() const {
+        return formatString("BoxFilter[radius=%f]", m_radius);
+    }
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 };
 
 MTS_IMPLEMENT_CLASS_S(BoxFilter, false, ReconstructionFilter);

@@ -17,9 +17,9 @@
 */
 
 #if defined(__GXX_EXPERIMENTAL_CXX0X__)
-	/* Needed to prevent a segmentation fault in the Intel C++
-	   compiler on Linux (as of Nov 2012) */
-	#undef __GXX_EXPERIMENTAL_CXX0X__
+    /* Needed to prevent a segmentation fault in the Intel C++
+       compiler on Linux (as of Nov 2012) */
+    #undef __GXX_EXPERIMENTAL_CXX0X__
 #endif
 
 #if MTS_SSE
@@ -68,76 +68,76 @@ const MM_ALIGN16 SSEVector SSEConstants::negation_mask = SSEVector(0x80000000);
 */
 namespace math {
 namespace constants {
-	static const MM_ALIGN16 SSEVector ps_1(  1.0f);
-	static const MM_ALIGN16 SSEVector ps_0p5(0.5f);
-	/// 0x00800000 - smallest non denormalized float number  (~1.17549435E-38)
-	static const MM_ALIGN16 SSEVector min_norm_pos( 0x00800000);
-	static const MM_ALIGN16 SSEVector mant_mask(    0x7f800000);
-	static const MM_ALIGN16 SSEVector inv_mant_mask(~0x7f800000);
+    static const MM_ALIGN16 SSEVector ps_1(  1.0f);
+    static const MM_ALIGN16 SSEVector ps_0p5(0.5f);
+    /// 0x00800000 - smallest non denormalized float number  (~1.17549435E-38)
+    static const MM_ALIGN16 SSEVector min_norm_pos( 0x00800000);
+    static const MM_ALIGN16 SSEVector mant_mask(    0x7f800000);
+    static const MM_ALIGN16 SSEVector inv_mant_mask(~0x7f800000);
 
-	static const MM_ALIGN16 SSEVector sign_mask(     0x80000000);
-	static const MM_ALIGN16 SSEVector inv_sign_mask(~0x80000000);
+    static const MM_ALIGN16 SSEVector sign_mask(     0x80000000);
+    static const MM_ALIGN16 SSEVector inv_sign_mask(~0x80000000);
 
-	static const MM_ALIGN16 SSEVector pi32_1(1);
-	static const MM_ALIGN16 SSEVector pi32_inv1(~1);
-	static const MM_ALIGN16 SSEVector pi32_2(2);
-	static const MM_ALIGN16 SSEVector pi32_4(4);
-	static const MM_ALIGN16 SSEVector pi32_0x7f(0x7f);
+    static const MM_ALIGN16 SSEVector pi32_1(1);
+    static const MM_ALIGN16 SSEVector pi32_inv1(~1);
+    static const MM_ALIGN16 SSEVector pi32_2(2);
+    static const MM_ALIGN16 SSEVector pi32_4(4);
+    static const MM_ALIGN16 SSEVector pi32_0x7f(0x7f);
 
-	static const MM_ALIGN16 SSEVector cephes_SQRTHF(  0.707106781186547524f);
-	static const MM_ALIGN16 SSEVector cephes_log_p0(  7.0376836292E-2f);
-	static const MM_ALIGN16 SSEVector cephes_log_p1(- 1.1514610310E-1f);
-	static const MM_ALIGN16 SSEVector cephes_log_p2(  1.1676998740E-1f);
-	static const MM_ALIGN16 SSEVector cephes_log_p3(- 1.2420140846E-1f);
-	static const MM_ALIGN16 SSEVector cephes_log_p4(+ 1.4249322787E-1f);
-	static const MM_ALIGN16 SSEVector cephes_log_p5(- 1.6668057665E-1f);
-	static const MM_ALIGN16 SSEVector cephes_log_p6(+ 2.0000714765E-1f);
-	static const MM_ALIGN16 SSEVector cephes_log_p7(- 2.4999993993E-1f);
-	static const MM_ALIGN16 SSEVector cephes_log_p8(+ 3.3333331174E-1f);
-	static const MM_ALIGN16 SSEVector cephes_log_q1(- 2.12194440e-4f);
-	static const MM_ALIGN16 SSEVector cephes_log_q2(  0.693359375f);
+    static const MM_ALIGN16 SSEVector cephes_SQRTHF(  0.707106781186547524f);
+    static const MM_ALIGN16 SSEVector cephes_log_p0(  7.0376836292E-2f);
+    static const MM_ALIGN16 SSEVector cephes_log_p1(- 1.1514610310E-1f);
+    static const MM_ALIGN16 SSEVector cephes_log_p2(  1.1676998740E-1f);
+    static const MM_ALIGN16 SSEVector cephes_log_p3(- 1.2420140846E-1f);
+    static const MM_ALIGN16 SSEVector cephes_log_p4(+ 1.4249322787E-1f);
+    static const MM_ALIGN16 SSEVector cephes_log_p5(- 1.6668057665E-1f);
+    static const MM_ALIGN16 SSEVector cephes_log_p6(+ 2.0000714765E-1f);
+    static const MM_ALIGN16 SSEVector cephes_log_p7(- 2.4999993993E-1f);
+    static const MM_ALIGN16 SSEVector cephes_log_p8(+ 3.3333331174E-1f);
+    static const MM_ALIGN16 SSEVector cephes_log_q1(- 2.12194440e-4f);
+    static const MM_ALIGN16 SSEVector cephes_log_q2(  0.693359375f);
 
-	static const MM_ALIGN16 SSEVector exp_hi( 88.3762626647949f);
-	static const MM_ALIGN16 SSEVector exp_lo(-88.3762626647949f);
+    static const MM_ALIGN16 SSEVector exp_hi( 88.3762626647949f);
+    static const MM_ALIGN16 SSEVector exp_lo(-88.3762626647949f);
 
-	static const MM_ALIGN16 SSEVector cephes_LOG2EF( 1.44269504088896341f);
-	static const MM_ALIGN16 SSEVector cephes_exp_C1( 0.693359375f);
-	static const MM_ALIGN16 SSEVector cephes_exp_C2(-2.12194440e-4f);
+    static const MM_ALIGN16 SSEVector cephes_LOG2EF( 1.44269504088896341f);
+    static const MM_ALIGN16 SSEVector cephes_exp_C1( 0.693359375f);
+    static const MM_ALIGN16 SSEVector cephes_exp_C2(-2.12194440e-4f);
 
-	static const MM_ALIGN16 SSEVector cephes_exp_p0(1.9875691500E-4f);
-	static const MM_ALIGN16 SSEVector cephes_exp_p1(1.3981999507E-3f);
-	static const MM_ALIGN16 SSEVector cephes_exp_p2(8.3334519073E-3f);
-	static const MM_ALIGN16 SSEVector cephes_exp_p3(4.1665795894E-2f);
-	static const MM_ALIGN16 SSEVector cephes_exp_p4(1.6666665459E-1f);
-	static const MM_ALIGN16 SSEVector cephes_exp_p5(5.0000001201E-1f);
+    static const MM_ALIGN16 SSEVector cephes_exp_p0(1.9875691500E-4f);
+    static const MM_ALIGN16 SSEVector cephes_exp_p1(1.3981999507E-3f);
+    static const MM_ALIGN16 SSEVector cephes_exp_p2(8.3334519073E-3f);
+    static const MM_ALIGN16 SSEVector cephes_exp_p3(4.1665795894E-2f);
+    static const MM_ALIGN16 SSEVector cephes_exp_p4(1.6666665459E-1f);
+    static const MM_ALIGN16 SSEVector cephes_exp_p5(5.0000001201E-1f);
 
-	static const MM_ALIGN16 SSEVector minus_cephes_DP1(-0.78515625f);
-	static const MM_ALIGN16 SSEVector minus_cephes_DP2(-2.4187564849853515625e-4f);
-	static const MM_ALIGN16 SSEVector minus_cephes_DP3(-3.77489497744594108e-8f);
-	static const MM_ALIGN16 SSEVector sincof_p0(-1.9515295891E-4f);
-	static const MM_ALIGN16 SSEVector sincof_p1( 8.3321608736E-3f);
-	static const MM_ALIGN16 SSEVector sincof_p2(-1.6666654611E-1f);
-	static const MM_ALIGN16 SSEVector coscof_p0( 2.443315711809948E-005f);
-	static const MM_ALIGN16 SSEVector coscof_p1(-1.388731625493765E-003f);
-	static const MM_ALIGN16 SSEVector coscof_p2(4.166664568298827E-002f);
-	static const MM_ALIGN16 SSEVector cephes_FOPI(1.27323954473516f);
+    static const MM_ALIGN16 SSEVector minus_cephes_DP1(-0.78515625f);
+    static const MM_ALIGN16 SSEVector minus_cephes_DP2(-2.4187564849853515625e-4f);
+    static const MM_ALIGN16 SSEVector minus_cephes_DP3(-3.77489497744594108e-8f);
+    static const MM_ALIGN16 SSEVector sincof_p0(-1.9515295891E-4f);
+    static const MM_ALIGN16 SSEVector sincof_p1( 8.3321608736E-3f);
+    static const MM_ALIGN16 SSEVector sincof_p2(-1.6666654611E-1f);
+    static const MM_ALIGN16 SSEVector coscof_p0( 2.443315711809948E-005f);
+    static const MM_ALIGN16 SSEVector coscof_p1(-1.388731625493765E-003f);
+    static const MM_ALIGN16 SSEVector coscof_p2(4.166664568298827E-002f);
+    static const MM_ALIGN16 SSEVector cephes_FOPI(1.27323954473516f);
 
-	static const MM_ALIGN16 SSEVector am_log_p0(-7.89580278884799154124e-1f);
-	static const MM_ALIGN16 SSEVector am_log_p1( 1.63866645699558079767e1f);
-	static const MM_ALIGN16 SSEVector am_log_p2(-6.41409952958715622951e1f);
-	static const MM_ALIGN16 SSEVector am_log_q0(-3.56722798256324312549e1f);
-	static const MM_ALIGN16 SSEVector am_log_q1( 3.12093766372244180303e2f);
-	static const MM_ALIGN16 SSEVector am_log_q2(-7.69691943550460008604e2f);
-	static const MM_ALIGN16 SSEVector am_log_c0( 0.693147180559945f);
-	static const MM_ALIGN16 SSEVector am_log2_c0(1.44269504088896340735992f);
+    static const MM_ALIGN16 SSEVector am_log_p0(-7.89580278884799154124e-1f);
+    static const MM_ALIGN16 SSEVector am_log_p1( 1.63866645699558079767e1f);
+    static const MM_ALIGN16 SSEVector am_log_p2(-6.41409952958715622951e1f);
+    static const MM_ALIGN16 SSEVector am_log_q0(-3.56722798256324312549e1f);
+    static const MM_ALIGN16 SSEVector am_log_q1( 3.12093766372244180303e2f);
+    static const MM_ALIGN16 SSEVector am_log_q2(-7.69691943550460008604e2f);
+    static const MM_ALIGN16 SSEVector am_log_c0( 0.693147180559945f);
+    static const MM_ALIGN16 SSEVector am_log2_c0(1.44269504088896340735992f);
 
-	static const MM_ALIGN16 SSEVector am_exp2_hi( 127.4999961853f);
-	static const MM_ALIGN16 SSEVector am_exp2_lo(-127.4999961853f);
-	static const MM_ALIGN16 SSEVector am_exp2_p0(2.30933477057345225087e-2f);
-	static const MM_ALIGN16 SSEVector am_exp2_p1(2.02020656693165307700e1f);
-	static const MM_ALIGN16 SSEVector am_exp2_p2(1.51390680115615096133e3f);
-	static const MM_ALIGN16 SSEVector am_exp2_q0(2.33184211722314911771e2f);
-	static const MM_ALIGN16 SSEVector am_exp2_q1(4.36821166879210612817e3f);
+    static const MM_ALIGN16 SSEVector am_exp2_hi( 127.4999961853f);
+    static const MM_ALIGN16 SSEVector am_exp2_lo(-127.4999961853f);
+    static const MM_ALIGN16 SSEVector am_exp2_p0(2.30933477057345225087e-2f);
+    static const MM_ALIGN16 SSEVector am_exp2_p1(2.02020656693165307700e1f);
+    static const MM_ALIGN16 SSEVector am_exp2_p2(1.51390680115615096133e3f);
+    static const MM_ALIGN16 SSEVector am_exp2_q0(2.33184211722314911771e2f);
+    static const MM_ALIGN16 SSEVector am_exp2_q1(4.36821166879210612817e3f);
 };
 
 /* natural logarithm computed for 4 simultaneous float
@@ -165,7 +165,7 @@ __m128 log_ps(__m128 x) {
     e = _mm_add_ps(e, one);
 
     /* part2:
-       if( x < SQRTHF ) {
+       if (x < SQRTHF) {
          e -= 1;
          x = x + x - 1.0;
        } else { x = x - 1.0; }
@@ -556,161 +556,161 @@ void sincos_ps(__m128 x, __m128* s, __m128* c) {
 }
 
 __m128 fastlog_ps(__m128 x) {
-	typedef SSEVector4f V4f;
-	typedef SSEVector4i V4i;
+    typedef SSEVector4f V4f;
+    typedef SSEVector4i V4i;
 
-	// Constants
-	const V4f min_normal(constants::min_norm_pos.ps);
-	const V4f inv_mantissa_mask(constants::inv_mant_mask.ps);
-	const V4f const_1(constants::ps_1.ps);
-	const V4i const_127(constants::pi32_0x7f.pi);
+    // Constants
+    const V4f min_normal(constants::min_norm_pos.ps);
+    const V4f inv_mantissa_mask(constants::inv_mant_mask.ps);
+    const V4f const_1(constants::ps_1.ps);
+    const V4i const_127(constants::pi32_0x7f.pi);
 
-	const V4f log_p0(constants::am_log_p0.ps);
-	const V4f log_p1(constants::am_log_p1.ps);
-	const V4f log_p2(constants::am_log_p2.ps);
+    const V4f log_p0(constants::am_log_p0.ps);
+    const V4f log_p1(constants::am_log_p1.ps);
+    const V4f log_p2(constants::am_log_p2.ps);
 
-	const V4f log_q0(constants::am_log_q0.ps);
-	const V4f log_q1(constants::am_log_q1.ps);
-	const V4f log_q2(constants::am_log_q2.ps);
+    const V4f log_q0(constants::am_log_q0.ps);
+    const V4f log_q1(constants::am_log_q1.ps);
+    const V4f log_q2(constants::am_log_q2.ps);
 
-	const V4f log_c0(constants::am_log_c0.ps);
+    const V4f log_c0(constants::am_log_c0.ps);
 
 
-	// Kill invalid values (ignoring NaN and Inf)
-	const V4f x0 = max(x, min_normal);
+    // Kill invalid values (ignoring NaN and Inf)
+    const V4f x0 = max(x, min_normal);
 
-	// Kill the exponent and combine with the exponent of 1.0f to get the
-	// actual embedded mantissa as a valid floating point value:
-	// a value in the range [1.0, 2.0)
-	const V4f mantissa = (x0 & inv_mantissa_mask) | const_1;
+    // Kill the exponent and combine with the exponent of 1.0f to get the
+    // actual embedded mantissa as a valid floating point value:
+    // a value in the range [1.0, 2.0)
+    const V4f mantissa = (x0 & inv_mantissa_mask) | const_1;
 
-	const V4f v_min1  = mantissa - const_1;
-	const V4f v_plus1 = mantissa + const_1;
+    const V4f v_min1  = mantissa - const_1;
+    const V4f v_plus1 = mantissa + const_1;
 
-	// Extract the original exponent and undo the bias
-	const V4i biasedExponent = srl(castAsInt(x0), 23);
-	const V4f origExponent = toFloat(biasedExponent - const_127);
+    // Extract the original exponent and undo the bias
+    const V4i biasedExponent = srl(castAsInt(x0), 23);
+    const V4f origExponent = toFloat(biasedExponent - const_127);
 
-	V4f vFrac = v_min1 * rcp(v_plus1); // Is it worth it to use rcp_nr?
-	vFrac += vFrac;
-	const V4f vFracSqr = vFrac * vFrac;
+    V4f vFrac = v_min1 * rcp(v_plus1); // Is it worth it to use rcp_nr?
+    vFrac += vFrac;
+    const V4f vFracSqr = vFrac * vFrac;
 
-	// Evaluate the polynomial
-	const V4f polyP = ((((log_p0 * vFracSqr) + log_p1) * vFracSqr)
-											 + log_p2) * vFracSqr;
-	const V4f polyQ =  (((log_q0 * vFracSqr) + log_q1) * vFracSqr) + log_q2;
+    // Evaluate the polynomial
+    const V4f polyP = ((((log_p0 * vFracSqr) + log_p1) * vFracSqr)
+                                             + log_p2) * vFracSqr;
+    const V4f polyQ =  (((log_q0 * vFracSqr) + log_q1) * vFracSqr) + log_q2;
 
-	const V4f poly = polyP * rcp(polyQ); // Use rcp_nr?
-	const V4f logApprox = poly * vFrac;
+    const V4f poly = polyP * rcp(polyQ); // Use rcp_nr?
+    const V4f logApprox = poly * vFrac;
 
-	// Scale by log(2) to get the natural logarithm of the exponent part
-	const V4f logExpPart = origExponent * log_c0;
+    // Scale by log(2) to get the natural logarithm of the exponent part
+    const V4f logExpPart = origExponent * log_c0;
 
-	// Combine the different parts
-	const V4f result = logApprox + vFrac + logExpPart;
+    // Combine the different parts
+    const V4f result = logApprox + vFrac + logExpPart;
 
-	return result;
+    return result;
 }
 
 __m128 fastpow_ps(__m128 x, __m128 y) {
-	typedef SSEVector4f V4f;
-	typedef SSEVector4i V4i;
+    typedef SSEVector4f V4f;
+    typedef SSEVector4i V4i;
 
-	// Constants
-	const V4f min_normal(constants::min_norm_pos.ps);
-	const V4f inv_mantissa_mask(constants::inv_mant_mask.ps);
-	const V4f const_1(constants::ps_1.ps);
-	const V4i const_127(constants::pi32_0x7f.pi);
+    // Constants
+    const V4f min_normal(constants::min_norm_pos.ps);
+    const V4f inv_mantissa_mask(constants::inv_mant_mask.ps);
+    const V4f const_1(constants::ps_1.ps);
+    const V4i const_127(constants::pi32_0x7f.pi);
 
-	const V4f log_p0(constants::am_log_p0.ps);
-	const V4f log_p1(constants::am_log_p1.ps);
-	const V4f log_p2(constants::am_log_p2.ps);
+    const V4f log_p0(constants::am_log_p0.ps);
+    const V4f log_p1(constants::am_log_p1.ps);
+    const V4f log_p2(constants::am_log_p2.ps);
 
-	const V4f log_q0(constants::am_log_q0.ps);
-	const V4f log_q1(constants::am_log_q1.ps);
-	const V4f log_q2(constants::am_log_q2.ps);
+    const V4f log_q0(constants::am_log_q0.ps);
+    const V4f log_q1(constants::am_log_q1.ps);
+    const V4f log_q2(constants::am_log_q2.ps);
 
-	const V4f log2_c0(constants::am_log2_c0.ps);
-
-
-	// Remember negative values
-	const V4f negative_mask(V4f::zero() < V4f(x));
-
-	// Cutoff denormalized stuff (preserving NaN and Infinity)
-	const V4f x0 = max(x, min_normal);
-
-	// First step: compute log(x)
-
-	// Kill the exponent and combine with the exponent of 1.0f to get the
-	// actual embedded mantissa as a valid floating point value:
-	// a value in the range [1.0, 2.0)
-	const V4f mantissa = (x0 & inv_mantissa_mask) | const_1;
-
-	const V4f v_min1  = mantissa - const_1;
-	const V4f v_plus1 = mantissa + const_1;
-
-	// Extract the original exponent and undo the bias
-	const V4i biasedExponent = srl(castAsInt(x0), 23);
-	const V4f origExponent = toFloat(biasedExponent - const_127);
-
-	V4f vFrac = v_min1 * rcp(v_plus1); // Is it worth it to use rcp_nr?
-	vFrac += vFrac;
-	const V4f vFracSqr = vFrac * vFrac;
-
-	// Evaluate the polynomial
-	const V4f polyP = ((((log_p0 * vFracSqr) + log_p1) *
-								   vFracSqr) + log_p2) * vFracSqr;
-	const V4f polyQ =  (((log_q0 * vFracSqr) + log_q1) *
-								   vFracSqr) + log_q2;
-	const V4f logApprox = (polyP * rcp(polyQ)) * vFrac;
-
-	// y * log2(x)
-	V4f exponent = (logApprox * log2_c0) + ((vFrac * log2_c0) + origExponent);
-	exponent *= y;
+    const V4f log2_c0(constants::am_log2_c0.ps);
 
 
-	// Constants for the exponential
-	const V4f const_0p5(constants::ps_0p5.ps);
+    // Remember negative values
+    const V4f negative_mask(V4f::zero() < V4f(x));
 
-	const V4f exp2_hi(constants::am_exp2_hi.ps);
-	const V4f exp2_lo(constants::am_exp2_lo.ps);
+    // Cutoff denormalized stuff (preserving NaN and Infinity)
+    const V4f x0 = max(x, min_normal);
 
-	const V4f exp2_p0(constants::am_exp2_p0.ps);
-	const V4f exp2_p1(constants::am_exp2_p1.ps);
-	const V4f exp2_p2(constants::am_exp2_p2.ps);
+    // First step: compute log(x)
 
-	const V4f exp2_q0(constants::am_exp2_q0.ps);
-	const V4f exp2_q1(constants::am_exp2_q1.ps);
+    // Kill the exponent and combine with the exponent of 1.0f to get the
+    // actual embedded mantissa as a valid floating point value:
+    // a value in the range [1.0, 2.0)
+    const V4f mantissa = (x0 & inv_mantissa_mask) | const_1;
 
-	// Clamp the exponent
-	exponent = max(min(exponent, exp2_hi), exp2_lo);
+    const V4f v_min1  = mantissa - const_1;
+    const V4f v_plus1 = mantissa + const_1;
 
-	// More floating point tricks: normalize the mantissa to [1.0 - 1.5]
-	const V4f normExponent = exponent + const_0p5;
+    // Extract the original exponent and undo the bias
+    const V4i biasedExponent = srl(castAsInt(x0), 23);
+    const V4f origExponent = toFloat(biasedExponent - const_127);
 
-	// Build the biased exponent
-	const V4f expNegExponentMask = cmpnlt(V4f::zero(), normExponent);
-	const V4f expNormalization = expNegExponentMask & const_1;
-	const V4f truncExp = roundTruncate(normExponent);
-	const V4f resExp = truncExp - expNormalization;
-	V4i biasedExp = toInt(resExp) + const_127;
-	biasedExp = sll(biasedExp, 23);
-	const V4f exponentPart = castAsFloat(biasedExp) & negative_mask;
+    V4f vFrac = v_min1 * rcp(v_plus1); // Is it worth it to use rcp_nr?
+    vFrac += vFrac;
+    const V4f vFracSqr = vFrac * vFrac;
 
-	// Get the fractional part of the exponent
-	exponent -= resExp;
-	const V4f exponentSqr = exponent * exponent;
+    // Evaluate the polynomial
+    const V4f polyP = ((((log_p0 * vFracSqr) + log_p1) *
+                                   vFracSqr) + log_p2) * vFracSqr;
+    const V4f polyQ =  (((log_q0 * vFracSqr) + log_q1) *
+                                   vFracSqr) + log_q2;
+    const V4f logApprox = (polyP * rcp(polyQ)) * vFrac;
 
-	// Exp polynomial
-	const V4f EPolyP = ((((exp2_p0 * exponentSqr) + exp2_p1) *
-									 exponentSqr) + exp2_p2) * exponent;
-	const V4f EPolyQ =   ((exp2_q0 * exponentSqr) + exp2_q1) - EPolyP;
-	V4f expApprox = EPolyP * rcp(EPolyQ);
-	expApprox += expApprox;
-	expApprox += const_1;
+    // y * log2(x)
+    V4f exponent = (logApprox * log2_c0) + ((vFrac * log2_c0) + origExponent);
+    exponent *= y;
 
-	V4f result = expApprox * exponentPart;
-	return result;
+
+    // Constants for the exponential
+    const V4f const_0p5(constants::ps_0p5.ps);
+
+    const V4f exp2_hi(constants::am_exp2_hi.ps);
+    const V4f exp2_lo(constants::am_exp2_lo.ps);
+
+    const V4f exp2_p0(constants::am_exp2_p0.ps);
+    const V4f exp2_p1(constants::am_exp2_p1.ps);
+    const V4f exp2_p2(constants::am_exp2_p2.ps);
+
+    const V4f exp2_q0(constants::am_exp2_q0.ps);
+    const V4f exp2_q1(constants::am_exp2_q1.ps);
+
+    // Clamp the exponent
+    exponent = max(min(exponent, exp2_hi), exp2_lo);
+
+    // More floating point tricks: normalize the mantissa to [1.0 - 1.5]
+    const V4f normExponent = exponent + const_0p5;
+
+    // Build the biased exponent
+    const V4f expNegExponentMask = cmpnlt(V4f::zero(), normExponent);
+    const V4f expNormalization = expNegExponentMask & const_1;
+    const V4f truncExp = roundTruncate(normExponent);
+    const V4f resExp = truncExp - expNormalization;
+    V4i biasedExp = toInt(resExp) + const_127;
+    biasedExp = sll(biasedExp, 23);
+    const V4f exponentPart = castAsFloat(biasedExp) & negative_mask;
+
+    // Get the fractional part of the exponent
+    exponent -= resExp;
+    const V4f exponentSqr = exponent * exponent;
+
+    // Exp polynomial
+    const V4f EPolyP = ((((exp2_p0 * exponentSqr) + exp2_p1) *
+                                     exponentSqr) + exp2_p2) * exponent;
+    const V4f EPolyQ =   ((exp2_q0 * exponentSqr) + exp2_q1) - EPolyP;
+    V4f expApprox = EPolyP * rcp(EPolyQ);
+    expApprox += expApprox;
+    expApprox += const_1;
+
+    V4f result = expApprox * exponentPart;
+    return result;
 }
 
 }

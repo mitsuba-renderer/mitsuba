@@ -23,69 +23,69 @@ MTS_NAMESPACE_BEGIN
 
 class Null : public BSDF {
 public:
-	Null(const Properties &props)
-		: BSDF(props) { }
+    Null(const Properties &props)
+        : BSDF(props) { }
 
-	Null(Stream *stream, InstanceManager *manager)
-		: BSDF(stream, manager) {
-		configure();
-	}
+    Null(Stream *stream, InstanceManager *manager)
+        : BSDF(stream, manager) {
+        configure();
+    }
 
-	void serialize(Stream *stream, InstanceManager *manager) const {
-		BSDF::serialize(stream, manager);
-	}
+    void serialize(Stream *stream, InstanceManager *manager) const {
+        BSDF::serialize(stream, manager);
+    }
 
-	void configure() {
-		m_components.clear();
-		m_components.push_back(ENull | EFrontSide | EBackSide);
-		m_usesRayDifferentials = false;
-		BSDF::configure();
-	}
+    void configure() {
+        m_components.clear();
+        m_components.push_back(ENull | EFrontSide | EBackSide);
+        m_usesRayDifferentials = false;
+        BSDF::configure();
+    }
 
-	Spectrum eval(const BSDFSamplingRecord &bRec, EMeasure measure) const {
-		return Spectrum(((bRec.typeMask & ENull) && measure == EDiscrete) ? 1.0f : 0.0f);
-	}
+    Spectrum eval(const BSDFSamplingRecord &bRec, EMeasure measure) const {
+        return Spectrum(((bRec.typeMask & ENull) && measure == EDiscrete) ? 1.0f : 0.0f);
+    }
 
-	Float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const {
-		return ((bRec.typeMask & ENull) && measure == EDiscrete) ? 1.0f : 0.0f;
-	}
+    Float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const {
+        return ((bRec.typeMask & ENull) && measure == EDiscrete) ? 1.0f : 0.0f;
+    }
 
-	Spectrum sample(BSDFSamplingRecord &bRec, const Point2 &_sample) const {
-		if (bRec.typeMask & ENull) {
-			bRec.wo = -bRec.wi;
-			bRec.sampledComponent = 0;
-			bRec.sampledType = ENull;
-			bRec.eta = 1.0f;
-			return Spectrum(1.0f);
-		} else {
-			return Spectrum(0.0f);
-		}
-	}
+    Spectrum sample(BSDFSamplingRecord &bRec, const Point2 &_sample) const {
+        if (bRec.typeMask & ENull) {
+            bRec.wo = -bRec.wi;
+            bRec.sampledComponent = 0;
+            bRec.sampledType = ENull;
+            bRec.eta = 1.0f;
+            return Spectrum(1.0f);
+        } else {
+            return Spectrum(0.0f);
+        }
+    }
 
-	Spectrum sample(BSDFSamplingRecord &bRec, Float &pdf, const Point2 &_sample) const {
-		if (bRec.typeMask & ENull) {
-			bRec.wo = -bRec.wi;
-			bRec.sampledComponent = 0;
-			bRec.sampledType = ENull;
-			bRec.eta = 1.0f;
-			pdf = 1;
-			return Spectrum(1.0f);
-		} else {
-			return Spectrum(0.0f);
-		}
-	}
+    Spectrum sample(BSDFSamplingRecord &bRec, Float &pdf, const Point2 &_sample) const {
+        if (bRec.typeMask & ENull) {
+            bRec.wo = -bRec.wi;
+            bRec.sampledComponent = 0;
+            bRec.sampledType = ENull;
+            bRec.eta = 1.0f;
+            pdf = 1;
+            return Spectrum(1.0f);
+        } else {
+            return Spectrum(0.0f);
+        }
+    }
 
-	Float getRoughness(const Intersection &its, int component) const {
-		return 0.0f;
-	}
+    Float getRoughness(const Intersection &its, int component) const {
+        return 0.0f;
+    }
 
-	std::string toString() const {
-		return "Null[]";
-	}
+    std::string toString() const {
+        return "Null[]";
+    }
 
-	Shader *createShader(Renderer *renderer) const;
+    Shader *createShader(Renderer *renderer) const;
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 };
 
 // ================ Hardware shader implementation ================
@@ -93,26 +93,26 @@ public:
 /* Null shader-- render as a 'black box' */
 class NullShader : public Shader {
 public:
-	NullShader(Renderer *renderer) :
-		Shader(renderer, EBSDFShader) {
-		m_flags = ETransparent;
-	}
+    NullShader(Renderer *renderer) :
+        Shader(renderer, EBSDFShader) {
+        m_flags = ETransparent;
+    }
 
-	void generateCode(std::ostringstream &oss,
-			const std::string &evalName,
-			const std::vector<std::string> &depNames) const {
-		oss << "vec3 " << evalName << "(vec2 uv, vec3 wi, vec3 wo) {" << endl
-			<< "    return vec3(0.0);" << endl
-			<< "}" << endl;
-		oss << "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
-			<< "    return vec3(0.0);" << endl
-			<< "}" << endl;
-	}
-	MTS_DECLARE_CLASS()
+    void generateCode(std::ostringstream &oss,
+            const std::string &evalName,
+            const std::vector<std::string> &depNames) const {
+        oss << "vec3 " << evalName << "(vec2 uv, vec3 wi, vec3 wo) {" << endl
+            << "    return vec3(0.0);" << endl
+            << "}" << endl;
+        oss << "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
+            << "    return vec3(0.0);" << endl
+            << "}" << endl;
+    }
+    MTS_DECLARE_CLASS()
 };
 
 Shader *Null::createShader(Renderer *renderer) const {
-	return new NullShader(renderer);
+    return new NullShader(renderer);
 }
 
 MTS_IMPLEMENT_CLASS(NullShader, false, Shader)

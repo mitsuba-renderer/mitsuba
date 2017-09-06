@@ -22,18 +22,18 @@
 #include "common.h"
 
 namespace Ui {
-	class AcknowledgmentDialog;
+    class AcknowledgmentDialog;
 }
 
 class AcknowledgmentDialog : public QDialog {
     Q_OBJECT
 public:
-	AcknowledgmentDialog(QWidget *parent);
-	~AcknowledgmentDialog();
+    AcknowledgmentDialog(QWidget *parent);
+    ~AcknowledgmentDialog();
 protected:
     void changeEvent(QEvent *e);
 private:
-	Ui::AcknowledgmentDialog *ui;
+    Ui::AcknowledgmentDialog *ui;
 };
 
 #endif // __ACKNOWLEDGEMENTDLG_H

@@ -23,7 +23,7 @@ MTS_NAMESPACE_BEGIN
 MemoryStream::MemoryStream(size_t initialSize)
  : Stream(), m_capacity(0), m_size(0), m_pos(0),
    m_ownsBuffer(true), m_data(NULL) {
-	resize(initialSize);
+    resize(initialSize);
 }
 
 MemoryStream::MemoryStream(void *ptr, size_t size)
@@ -33,96 +33,96 @@ MemoryStream::MemoryStream(void *ptr, size_t size)
 
 
 MemoryStream::~MemoryStream() {
-	if (m_data != NULL && m_ownsBuffer)
-		free(m_data);
+    if (m_data != NULL && m_ownsBuffer)
+        free(m_data);
 }
 
 void MemoryStream::reset() {
-	m_size = m_pos = 0;
+    m_size = m_pos = 0;
 }
 
 void MemoryStream::resize(size_t size) {
-	if (!m_ownsBuffer)
-		Log(EError, "Tried to resize a buffer, which doesn't "
-			"belong to this MemoryStream instance!");
+    if (!m_ownsBuffer)
+        Log(EError, "Tried to resize a buffer, which doesn't "
+            "belong to this MemoryStream instance!");
 
-	if (m_data == NULL)
-		m_data = (uint8_t *) malloc(size);
-	else
-		m_data = (uint8_t *) realloc(m_data, size);
+    if (m_data == NULL)
+        m_data = (uint8_t *) malloc(size);
+    else
+        m_data = (uint8_t *) realloc(m_data, size);
 
-	if (size > m_capacity)
-		memset(m_data + m_capacity, 0, size - m_capacity);
+    if (size > m_capacity)
+        memset(m_data + m_capacity, 0, size - m_capacity);
 
-	m_capacity = size;
+    m_capacity = size;
 }
 
 void MemoryStream::flush() {
-	/* Ignore */
+    /* Ignore */
 }
 
 size_t MemoryStream::getPos() const {
-	return m_pos;
+    return m_pos;
 }
 
 size_t MemoryStream::getSize() const {
-	return m_size;
+    return m_size;
 }
 
 void MemoryStream::seek(size_t pPos) {
-	m_pos = pPos;
-	if (m_pos >= m_size) {
-		m_size = pPos;
-		if (m_size > m_capacity)
-			resize(m_size);
-	}
+    m_pos = pPos;
+    if (m_pos >= m_size) {
+        m_size = pPos;
+        if (m_size > m_capacity)
+            resize(m_size);
+    }
 }
 
 void MemoryStream::truncate(size_t size) {
-	m_size = size;
-	resize(size);
-	if (m_pos > size)
-		m_pos = size;
+    m_size = size;
+    resize(size);
+    if (m_pos > size)
+        m_pos = size;
 }
 
 void MemoryStream::read(void *ptr, size_t size) {
-	if (m_pos + size > m_size) {
-		size_t sizeRead = m_size - m_pos;
-		memcpy(ptr, m_data + m_pos, sizeRead);
-		m_pos += sizeRead;
-		throw EOFException(formatString("Reading over the end of a memory stream  (amount requested=" SIZE_T_FMT
-			", amount read=" SIZE_T_FMT ")!", size, sizeRead), sizeRead);
-	}
-	memcpy(ptr, m_data + m_pos, size);
-	m_pos += size;
+    if (m_pos + size > m_size) {
+        size_t sizeRead = m_size - m_pos;
+        memcpy(ptr, m_data + m_pos, sizeRead);
+        m_pos += sizeRead;
+        throw EOFException(formatString("Reading over the end of a memory stream  (amount requested=" SIZE_T_FMT
+            ", amount read=" SIZE_T_FMT ")!", size, sizeRead), sizeRead);
+    }
+    memcpy(ptr, m_data + m_pos, size);
+    m_pos += size;
 }
 
 
 void MemoryStream::write(const void *ptr, size_t size) {
-	size_t endPos = m_pos + size;
-	if (endPos > m_size) {
-		if (endPos > m_capacity)
-			resize(endPos);
-		m_size = endPos;
-	}
-	memcpy(m_data + m_pos, ptr, size);
-	m_pos += size;
+    size_t endPos = m_pos + size;
+    if (endPos > m_size) {
+        if (endPos > m_capacity)
+            resize(endPos);
+        m_size = endPos;
+    }
+    memcpy(m_data + m_pos, ptr, size);
+    m_pos += size;
 }
 
 bool MemoryStream::canRead() const {
-	return true;
+    return true;
 }
 
 bool MemoryStream::canWrite() const {
-	return true;
+    return true;
 }
 
 std::string MemoryStream::toString() const {
-	std::ostringstream oss;
-	oss << "MemoryStream[" << Stream::toString()
-		<< ", size=" << m_size << ", pos=" << m_pos
-		<< ", capacity=" << m_capacity << "]";
-	return oss.str();
+    std::ostringstream oss;
+    oss << "MemoryStream[" << Stream::toString()
+        << ", size=" << m_size << ", pos=" << m_pos
+        << ", capacity=" << m_capacity << "]";
+    return oss.str();
 }
 
 MTS_IMPLEMENT_CLASS(MemoryStream, false, Stream)

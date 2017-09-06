@@ -17,7 +17,7 @@
 */
 
 void main() {
-	float depth = gl_FragCoord.z,
-	      dx = dFdx(depth), dy = dFdy(depth);
-	gl_FragDepth = depth + sqrt(dx*dx+dy*dy);
+    float depth = gl_FragCoord.z,
+          dx = dFdx(depth), dy = dFdy(depth);
+    gl_FragDepth = depth + sqrt(dx*dx+dy*dy);
 }

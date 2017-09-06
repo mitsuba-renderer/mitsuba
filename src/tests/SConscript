@@ -8,13 +8,13 @@ bidirEnv.Append(LIBS=['mitsuba-bidir'])
 bidirEnv.Append(LIBPATH=['#src/libbidir'])
 
 for plugin in glob.glob(GetBuildPath('test_*.cpp')):
-	name = os.path.basename(plugin)
-	if "bidir" in name:
-		lib = bidirEnv.SharedLibrary(name[0:len(name)-4], name)
-	else:
-		lib = testEnv.SharedLibrary(name[0:len(name)-4], name)
-	if isinstance(lib, SCons.Node.NodeList):
-		lib = lib[0]
-	plugins += [ lib ]
+        name = os.path.basename(plugin)
+        if "bidir" in name:
+                lib = bidirEnv.SharedLibrary(name[0:len(name)-4], name)
+        else:
+                lib = testEnv.SharedLibrary(name[0:len(name)-4], name)
+        if isinstance(lib, SCons.Node.NodeList):
+                lib = lib[0]
+        plugins += [ lib ]
 
 Export('plugins')

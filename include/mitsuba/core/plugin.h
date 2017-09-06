@@ -37,37 +37,37 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_CORE Plugin {
 public:
-	/// Load a plugin from the supplied path
-	Plugin(const std::string &shortName, const fs::path &path);
+    /// Load a plugin from the supplied path
+    Plugin(const std::string &shortName, const fs::path &path);
 
-	/// Virtual destructor
-	virtual ~Plugin();
+    /// Virtual destructor
+    virtual ~Plugin();
 
-	/// Is this a configurable object plugin or an utility plugin?
-	bool isUtility() const;
+    /// Is this a configurable object plugin or an utility plugin?
+    bool isUtility() const;
 
-	/// Return an instance of the class implemented by this plugin
-	ConfigurableObject *createInstance(const Properties &props) const;
+    /// Return an instance of the class implemented by this plugin
+    ConfigurableObject *createInstance(const Properties &props) const;
 
-	/// Return an utility instance (if this is an utility plugin)
-	Utility *createUtility() const;
+    /// Return an utility instance (if this is an utility plugin)
+    Utility *createUtility() const;
 
-	/// Return a description of this plugin
-	std::string getDescription() const;
+    /// Return a description of this plugin
+    std::string getDescription() const;
 
-	/// Return the path of this plugin
-	const fs::path &getPath() const;
+    /// Return the path of this plugin
+    const fs::path &getPath() const;
 
-	/// Return a short name of this plugin
-	const std::string &getShortName() const;
+    /// Return a short name of this plugin
+    const std::string &getShortName() const;
 protected:
-	/// Resolve the given symbol and return a pointer
-	void *getSymbol(const std::string &sym);
-	/// Check whether a certain symbol is provided by the plugin
-	bool hasSymbol(const std::string &sym) const;
+    /// Resolve the given symbol and return a pointer
+    void *getSymbol(const std::string &sym);
+    /// Check whether a certain symbol is provided by the plugin
+    bool hasSymbol(const std::string &sym) const;
 private:
-	struct PluginPrivate;
-	boost::scoped_ptr<PluginPrivate> d;
+    struct PluginPrivate;
+    boost::scoped_ptr<PluginPrivate> d;
 };
 
 /**
@@ -117,61 +117,61 @@ private:
  */
 class MTS_EXPORT_CORE PluginManager : public Object {
 public:
-	/// Return the global plugin manager
-	inline static PluginManager *getInstance() {
-		return m_instance;
-	}
+    /// Return the global plugin manager
+    inline static PluginManager *getInstance() {
+        return m_instance;
+    }
 
-	/// Ensure that a plugin is loaded and ready
-	void ensurePluginLoaded(const std::string &name);
+    /// Ensure that a plugin is loaded and ready
+    void ensurePluginLoaded(const std::string &name);
 
-	/// Return the list of loaded plugins
-	std::vector<std::string> getLoadedPlugins() const;
+    /// Return the list of loaded plugins
+    std::vector<std::string> getLoadedPlugins() const;
 
-	/**
-	 * \brief Instantiate a plugin, verify its type,
-	 * and return the newly created instance.
-	 *
-	 * \param classType Expected type of the plugin. An
-	 *    exception will be thrown if it turns out not
-	 *    to derive from this class.
-	 * \param props A \ref Properties instance containing
-	 *    all information required to find and construct
-	 *    the plugin.
-	 */
-	ConfigurableObject *createObject(
-		const Class *classType,
-		const Properties &props
-	);
+    /**
+     * \brief Instantiate a plugin, verify its type,
+     * and return the newly created instance.
+     *
+     * \param classType Expected type of the plugin. An
+     *    exception will be thrown if it turns out not
+     *    to derive from this class.
+     * \param props A \ref Properties instance containing
+     *    all information required to find and construct
+     *    the plugin.
+     */
+    ConfigurableObject *createObject(
+        const Class *classType,
+        const Properties &props
+    );
 
-	/**
-	 * \brief Instantiate a plugin and return the new
-	 * instance (without verifying its type).
-	 *
-	 * \param props A \ref Properties instance containing
-	 *    all information required to find and construct
-	 *    the plugin.
-	 */
-	ConfigurableObject *createObject(
-		const Properties &props
-	);
+    /**
+     * \brief Instantiate a plugin and return the new
+     * instance (without verifying its type).
+     *
+     * \param props A \ref Properties instance containing
+     *    all information required to find and construct
+     *    the plugin.
+     */
+    ConfigurableObject *createObject(
+        const Properties &props
+    );
 
-	/// Initializes the global plugin manager instance
-	static void staticInitialization();
+    /// Initializes the global plugin manager instance
+    static void staticInitialization();
 
-	/// Free the memory taken by staticInitialization()
-	static void staticShutdown();
+    /// Free the memory taken by staticInitialization()
+    static void staticShutdown();
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	PluginManager();
+    PluginManager();
 
-	/// Destruct and unload all plugins
-	~PluginManager();
+    /// Destruct and unload all plugins
+    ~PluginManager();
 private:
-	std::map<std::string, Plugin *> m_plugins;
-	mutable ref<Mutex> m_mutex;
-	static ref<PluginManager> m_instance;
+    std::map<std::string, Plugin *> m_plugins;
+    mutable ref<Mutex> m_mutex;
+    static ref<PluginManager> m_instance;
 };
 
 MTS_NAMESPACE_END

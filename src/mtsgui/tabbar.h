@@ -19,13 +19,13 @@
 #if !defined(__TABBAR_H)
 #define __TABBAR_H
 
-#include <QtGui/QtGui>
+#include <QtWidgets/QtWidgets>
 
 class CustomTabBar : public QTabBar {
     Q_OBJECT
 public:
-	CustomTabBar(QWidget *parent);
-	virtual ~CustomTabBar();
+    CustomTabBar(QWidget *parent);
+    virtual ~CustomTabBar();
 };
 
 #endif // __TABBAR_H

@@ -20,11 +20,11 @@
 varying float depth;
 
 void main() {
-	float dx = dFdx(depth), dy = dFdy(depth);
+    float dx = dFdx(depth), dy = dFdy(depth);
 
-	#ifndef DEPTH_CUBEMAPS_UNSUPPORTED
-		gl_FragDepth = depth + sqrt(dx*dx+dy*dy);
-	#else
-		gl_FragDepth = gl_FragColor.r = depth + sqrt(dx*dx+dy*dy);
-	#endif
+    #ifndef DEPTH_CUBEMAPS_UNSUPPORTED
+        gl_FragDepth = depth + sqrt(dx*dx+dy*dy);
+    #else
+        gl_FragDepth = gl_FragColor.r = depth + sqrt(dx*dx+dy*dy);
+    #endif
 }

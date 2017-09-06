@@ -42,82 +42,82 @@ MTS_NAMESPACE_BEGIN
  */
 class VertexColors : public Texture {
 public:
-	VertexColors(const Properties &props) : Texture(props) {
-	}
+    VertexColors(const Properties &props) : Texture(props) {
+    }
 
-	VertexColors(Stream *stream, InstanceManager *manager)
-	 : Texture(stream, manager) {
-	}
+    VertexColors(Stream *stream, InstanceManager *manager)
+     : Texture(stream, manager) {
+    }
 
-	void serialize(Stream *stream, InstanceManager *manager) const {
-		Texture::serialize(stream, manager);
-	}
+    void serialize(Stream *stream, InstanceManager *manager) const {
+        Texture::serialize(stream, manager);
+    }
 
-	Spectrum eval(const Intersection &its, bool /* unused */) const {
-		return its.color;
-	}
+    Spectrum eval(const Intersection &its, bool /* unused */) const {
+        return its.color;
+    }
 
-	bool usesRayDifferentials() const {
-		return false;
-	}
+    bool usesRayDifferentials() const {
+        return false;
+    }
 
-	Spectrum getAverage() const {
-		// For lack of having a better estimate
-		return Spectrum(0.5f);
-	}
+    Spectrum getAverage() const {
+        // For lack of having a better estimate
+        return Spectrum(0.5f);
+    }
 
-	Spectrum getMinimum() const {
-		// For lack of having a better estimate
-		return Spectrum(0.0f);
-	}
+    Spectrum getMinimum() const {
+        // For lack of having a better estimate
+        return Spectrum(0.0f);
+    }
 
-	Spectrum getMaximum() const {
-		// For lack of having a better estimate
-		return Spectrum(1.0f);
-	}
+    Spectrum getMaximum() const {
+        // For lack of having a better estimate
+        return Spectrum(1.0f);
+    }
 
-	bool isConstant() const {
-		return false;
-	}
+    bool isConstant() const {
+        return false;
+    }
 
-	bool isMonochromatic() const {
-		return false; /* No way to tell from here, really .. */
-	}
+    bool isMonochromatic() const {
+        return false; /* No way to tell from here, really .. */
+    }
 
-	std::string toString() const {
-		return "VertexColors[]";
-	}
+    std::string toString() const {
+        return "VertexColors[]";
+    }
 
-	Shader *createShader(Renderer *renderer) const;
+    Shader *createShader(Renderer *renderer) const;
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	Spectrum m_reflectance;
+    Spectrum m_reflectance;
 };
 
 // ================ Hardware shader implementation ================
 
 class VertexColorShader : public Shader {
 public:
-	VertexColorShader(Renderer *renderer) : Shader(renderer, ETextureShader) {
-	}
+    VertexColorShader(Renderer *renderer) : Shader(renderer, ETextureShader) {
+    }
 
-	void generateCode(std::ostringstream &oss,
-			const std::string &evalName,
-			const std::vector<std::string> &depNames) const {
-		oss << "vec3 " << evalName << "(vec2 uv) {" << endl
-			<< "    return vertexColor;" << endl
-			<< "}" << endl;
-	}
+    void generateCode(std::ostringstream &oss,
+            const std::string &evalName,
+            const std::vector<std::string> &depNames) const {
+        oss << "vec3 " << evalName << "(vec2 uv) {" << endl
+            << "    return vertexColor;" << endl
+            << "}" << endl;
+    }
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 private:
-	Spectrum m_brightReflectance;
-	Spectrum m_darkReflectance;
+    Spectrum m_brightReflectance;
+    Spectrum m_darkReflectance;
 };
 
 Shader *VertexColors::createShader(Renderer *renderer) const {
-	return new VertexColorShader(renderer);
+    return new VertexColorShader(renderer);
 }
 
 MTS_IMPLEMENT_CLASS(VertexColorShader, false, Shader)

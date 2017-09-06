@@ -40,54 +40,54 @@ MTS_NAMESPACE_BEGIN
  * bidirectional path tracer
  */
 struct BDPTConfiguration {
-	int maxDepth, blockSize, borderSize;
-	bool lightImage;
-	bool sampleDirect;
-	bool showWeighted;
-	size_t sampleCount;
-	Vector2i cropSize;
-	int rrDepth;
+    int maxDepth, blockSize, borderSize;
+    bool lightImage;
+    bool sampleDirect;
+    bool showWeighted;
+    size_t sampleCount;
+    Vector2i cropSize;
+    int rrDepth;
 
-	inline BDPTConfiguration() { }
+    inline BDPTConfiguration() { }
 
-	inline BDPTConfiguration(Stream *stream) {
-		maxDepth = stream->readInt();
-		blockSize = stream->readInt();
-		lightImage = stream->readBool();
-		sampleDirect = stream->readBool();
-		showWeighted = stream->readBool();
-		sampleCount = stream->readSize();
-		cropSize = Vector2i(stream);
-		rrDepth = stream->readInt();
-	}
+    inline BDPTConfiguration(Stream *stream) {
+        maxDepth = stream->readInt();
+        blockSize = stream->readInt();
+        lightImage = stream->readBool();
+        sampleDirect = stream->readBool();
+        showWeighted = stream->readBool();
+        sampleCount = stream->readSize();
+        cropSize = Vector2i(stream);
+        rrDepth = stream->readInt();
+    }
 
-	inline void serialize(Stream *stream) const {
-		stream->writeInt(maxDepth);
-		stream->writeInt(blockSize);
-		stream->writeBool(lightImage);
-		stream->writeBool(sampleDirect);
-		stream->writeBool(showWeighted);
-		stream->writeSize(sampleCount);
-		cropSize.serialize(stream);
-		stream->writeInt(rrDepth);
-	}
+    inline void serialize(Stream *stream) const {
+        stream->writeInt(maxDepth);
+        stream->writeInt(blockSize);
+        stream->writeBool(lightImage);
+        stream->writeBool(sampleDirect);
+        stream->writeBool(showWeighted);
+        stream->writeSize(sampleCount);
+        cropSize.serialize(stream);
+        stream->writeInt(rrDepth);
+    }
 
-	void dump() const {
-		SLog(EDebug, "Bidirectional path tracer configuration:");
-		SLog(EDebug, "   Maximum path depth          : %i", maxDepth);
-		SLog(EDebug, "   Image size                  : %ix%i",
-			cropSize.x, cropSize.y);
-		SLog(EDebug, "   Direct sampling strategies  : %s",
-			sampleDirect ? "yes" : "no");
-		SLog(EDebug, "   Generate light image        : %s",
-			lightImage ? "yes" : "no");
-		SLog(EDebug, "   Russian roulette depth      : %i", rrDepth);
-		SLog(EDebug, "   Block size                  : %i", blockSize);
-		SLog(EDebug, "   Number of samples           : " SIZE_T_FMT, sampleCount);
-		#if BDPT_DEBUG == 1
-			SLog(EDebug, "   Show weighted contributions : %s", showWeighted ? "yes" : "no");
-		#endif
-	}
+    void dump() const {
+        SLog(EDebug, "Bidirectional path tracer configuration:");
+        SLog(EDebug, "   Maximum path depth          : %i", maxDepth);
+        SLog(EDebug, "   Image size                  : %ix%i",
+            cropSize.x, cropSize.y);
+        SLog(EDebug, "   Direct sampling strategies  : %s",
+            sampleDirect ? "yes" : "no");
+        SLog(EDebug, "   Generate light image        : %s",
+            lightImage ? "yes" : "no");
+        SLog(EDebug, "   Russian roulette depth      : %i", rrDepth);
+        SLog(EDebug, "   Block size                  : %i", blockSize);
+        SLog(EDebug, "   Number of samples           : " SIZE_T_FMT, sampleCount);
+        #if BDPT_DEBUG == 1
+            SLog(EDebug, "   Show weighted contributions : %s", showWeighted ? "yes" : "no");
+        #endif
+    }
 };
 
 MTS_NAMESPACE_END

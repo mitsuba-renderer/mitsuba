@@ -1,19 +1,19 @@
 /*
-	This file is part of Mitsuba, a physically based rendering system.
+    This file is part of Mitsuba, a physically based rendering system.
 
-	Copyright (c) 2007-2014 by Wenzel Jakob and others.
+    Copyright (c) 2007-2014 by Wenzel Jakob and others.
 
-	Mitsuba is free software; you can redistribute it and/or modify
-	it under the terms of the GNU General Public License Version 3
-	as published by the Free Software Foundation.
+    Mitsuba is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License Version 3
+    as published by the Free Software Foundation.
 
-	Mitsuba is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-	GNU General Public License for more details.
+    Mitsuba is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+    GNU General Public License for more details.
 
-	You should have received a copy of the GNU General Public License
-	along with this program. If not, see <http://www.gnu.org/licenses/>.
+    You should have received a copy of the GNU General Public License
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <mitsuba/render/scene.h>
@@ -102,171 +102,171 @@ MTS_NAMESPACE_BEGIN
  */
 class SunEmitter : public Emitter {
 public:
-	SunEmitter(const Properties &props)
-			: Emitter(props) {
-		m_scale = props.getFloat("scale", 1.0f);
-		m_resolution = props.getInteger("resolution", 512);
-		m_sun = computeSunCoordinates(props);
-		m_sunRadiusScale = props.getFloat("sunRadiusScale", 1.0f);
-		m_turbidity = props.getFloat("turbidity", 3.0f);
-		m_stretch = props.getFloat("stretch", 1.0f);
-	}
+    SunEmitter(const Properties &props)
+            : Emitter(props) {
+        m_scale = props.getFloat("scale", 1.0f);
+        m_resolution = props.getInteger("resolution", 512);
+        m_sun = computeSunCoordinates(props);
+        m_sunRadiusScale = props.getFloat("sunRadiusScale", 1.0f);
+        m_turbidity = props.getFloat("turbidity", 3.0f);
+        m_stretch = props.getFloat("stretch", 1.0f);
+    }
 
-	SunEmitter(Stream *stream, InstanceManager *manager)
-		    : Emitter(stream, manager) {
-		m_scale = stream->readFloat();
-		m_sunRadiusScale = stream->readFloat();
-		m_turbidity = stream->readFloat();
-		m_resolution = stream->readInt();
-		m_sun = SphericalCoordinates(stream);
-		configure();
-	}
+    SunEmitter(Stream *stream, InstanceManager *manager)
+            : Emitter(stream, manager) {
+        m_scale = stream->readFloat();
+        m_sunRadiusScale = stream->readFloat();
+        m_turbidity = stream->readFloat();
+        m_resolution = stream->readInt();
+        m_sun = SphericalCoordinates(stream);
+        configure();
+    }
 
-	void serialize(Stream *stream, InstanceManager *manager) const {
-		Emitter::serialize(stream, manager);
-		stream->writeFloat(m_scale);
-		stream->writeFloat(m_sunRadiusScale);
-		stream->writeFloat(m_turbidity);
-		stream->writeInt(m_resolution);
-		m_sun.serialize(stream);
-	}
+    void serialize(Stream *stream, InstanceManager *manager) const {
+        Emitter::serialize(stream, manager);
+        stream->writeFloat(m_scale);
+        stream->writeFloat(m_sunRadiusScale);
+        stream->writeFloat(m_turbidity);
+        stream->writeInt(m_resolution);
+        m_sun.serialize(stream);
+    }
 
-	void configure() {
-		SphericalCoordinates sun(m_sun);
-		sun.elevation *= m_stretch;
-		m_sunDir = toSphere(sun);
+    void configure() {
+        SphericalCoordinates sun(m_sun);
+        sun.elevation *= m_stretch;
+        m_sunDir = toSphere(sun);
 
-		/* Solid angle covered by the sun */
-		m_theta = degToRad(SUN_APP_RADIUS * 0.5f);
-		m_solidAngle = 2 * M_PI * (1 - std::cos(m_theta));
-		m_radiance = computeSunRadiance(m_sun.elevation, m_turbidity) * m_scale;
-	}
+        /* Solid angle covered by the sun */
+        m_theta = degToRad(SUN_APP_RADIUS * 0.5f);
+        m_solidAngle = 2 * M_PI * (1 - std::cos(m_theta));
+        m_radiance = computeSunRadiance(m_sun.elevation, m_turbidity) * m_scale;
+    }
 
-	bool isCompound() const {
-		return true;
-	}
+    bool isCompound() const {
+        return true;
+    }
 
-	Emitter *getElement(size_t i) {
-		if (i != 0)
-			return NULL;
+    Emitter *getElement(size_t i) {
+        if (i != 0)
+            return NULL;
 
-		if (m_sunRadiusScale == 0) {
-			Properties props("directional");
-			const Transform &trafo = m_worldTransform->eval(0);
-			props.setVector("direction", -trafo(m_sunDir));
-			props.setFloat("samplingWeight", m_samplingWeight);
+        if (m_sunRadiusScale == 0) {
+            Properties props("directional");
+            const Transform &trafo = m_worldTransform->eval(0);
+            props.setVector("direction", -trafo(m_sunDir));
+            props.setFloat("samplingWeight", m_samplingWeight);
 
-			props.setSpectrum("irradiance", m_radiance * m_solidAngle);
+            props.setSpectrum("irradiance", m_radiance * m_solidAngle);
 
-			Emitter *emitter = static_cast<Emitter *>(
-				PluginManager::getInstance()->createObject(
-				MTS_CLASS(Emitter), props));
+            Emitter *emitter = static_cast<Emitter *>(
+                PluginManager::getInstance()->createObject(
+                MTS_CLASS(Emitter), props));
 
-			emitter->configure();
-			return emitter;
-		}
+            emitter->configure();
+            return emitter;
+        }
 
-		/* Rasterizing the sphere to an environment map and checking the
-		   individual pixels for coverage (which is what Mitsuba 0.3.0 did)
-		   was slow and not very effective; for instance the power varied
-		   dramatically with resolution changes. Since the sphere generally
-		   just covers a few pixels, the code below rasterizes it much more
-		   efficiently by generating a few thousand QMC samples.
+        /* Rasterizing the sphere to an environment map and checking the
+           individual pixels for coverage (which is what Mitsuba 0.3.0 did)
+           was slow and not very effective; for instance the power varied
+           dramatically with resolution changes. Since the sphere generally
+           just covers a few pixels, the code below rasterizes it much more
+           efficiently by generating a few thousand QMC samples.
 
-		   Step 1: compute a *very* rough estimate of how many
-		   pixel in the output environment map will be covered
-		   by the sun */
-		size_t pixelCount = m_resolution*m_resolution/2;
-		Float cosTheta = std::cos(m_theta * m_sunRadiusScale);
+           Step 1: compute a *very* rough estimate of how many
+           pixel in the output environment map will be covered
+           by the sun */
+        size_t pixelCount = m_resolution*m_resolution/2;
+        Float cosTheta = std::cos(m_theta * m_sunRadiusScale);
 
-		/* Ratio of the sphere that is covered by the sun */
-		Float coveredPortion = 0.5f * (1 - cosTheta);
+        /* Ratio of the sphere that is covered by the sun */
+        Float coveredPortion = 0.5f * (1 - cosTheta);
 
-		/* Approx. number of samples that need to be generated,
-		   be very conservative */
-		size_t nSamples = (size_t) std::max((Float) 100,
-			(pixelCount * coveredPortion * 1000));
+        /* Approx. number of samples that need to be generated,
+           be very conservative */
+        size_t nSamples = (size_t) std::max((Float) 100,
+            (pixelCount * coveredPortion * 1000));
 
-		ref<Bitmap> bitmap = new Bitmap(SUN_PIXELFORMAT, Bitmap::EFloat,
-			Vector2i(m_resolution, m_resolution/2));
-		bitmap->clear();
-		Frame frame(m_sunDir);
+        ref<Bitmap> bitmap = new Bitmap(SUN_PIXELFORMAT, Bitmap::EFloat,
+            Vector2i(m_resolution, m_resolution/2));
+        bitmap->clear();
+        Frame frame(m_sunDir);
 
-		Point2 factor(bitmap->getWidth() / (2*M_PI),
-			bitmap->getHeight() / M_PI);
+        Point2 factor(bitmap->getWidth() / (2*M_PI),
+            bitmap->getHeight() / M_PI);
 
-		Spectrum *target = (Spectrum *) bitmap->getFloatData();
-		Spectrum value =
-			m_radiance * (2 * M_PI * (1-std::cos(m_theta))) *
-			static_cast<Float>(bitmap->getWidth() * bitmap->getHeight())
-			/ (2 * M_PI * M_PI * nSamples);
+        Spectrum *target = (Spectrum *) bitmap->getFloatData();
+        Spectrum value =
+            m_radiance * (2 * M_PI * (1-std::cos(m_theta))) *
+            static_cast<Float>(bitmap->getWidth() * bitmap->getHeight())
+            / (2 * M_PI * M_PI * nSamples);
 
-		for (size_t i=0; i<nSamples; ++i) {
-			Vector dir = frame.toWorld(
-				warp::squareToUniformCone(cosTheta, sample02(i)));
+        for (size_t i=0; i<nSamples; ++i) {
+            Vector dir = frame.toWorld(
+                warp::squareToUniformCone(cosTheta, sample02(i)));
 
-			Float sinTheta = math::safe_sqrt(1-dir.y*dir.y);
-			SphericalCoordinates sphCoords = fromSphere(dir);
+            Float sinTheta = math::safe_sqrt(1-dir.y*dir.y);
+            SphericalCoordinates sphCoords = fromSphere(dir);
 
-			Point2i pos(
-				std::min(std::max(0, (int) (sphCoords.azimuth * factor.x)), bitmap->getWidth()-1),
-				std::min(std::max(0, (int) (sphCoords.elevation * factor.y)), bitmap->getHeight()-1));
+            Point2i pos(
+                std::min(std::max(0, (int) (sphCoords.azimuth * factor.x)), bitmap->getWidth()-1),
+                std::min(std::max(0, (int) (sphCoords.elevation * factor.y)), bitmap->getHeight()-1));
 
-			target[pos.x + pos.y * bitmap->getWidth()] += value / std::max((Float) 1e-3f, sinTheta);
-		}
+            target[pos.x + pos.y * bitmap->getWidth()] += value / std::max((Float) 1e-3f, sinTheta);
+        }
 
-		/* Instantiate a nested envmap plugin */
-		Properties props("envmap");
-		Properties::Data bitmapData;
-		bitmapData.ptr = (uint8_t *) bitmap.get();
-		bitmapData.size = sizeof(Bitmap);
-		props.setData("bitmap", bitmapData);
-		props.setAnimatedTransform("toWorld", m_worldTransform);
-		props.setFloat("samplingWeight", m_samplingWeight);
-		Emitter *emitter = static_cast<Emitter *>(
-			PluginManager::getInstance()->createObject(
-			MTS_CLASS(Emitter), props));
-		emitter->configure();
-		return emitter;
-	}
+        /* Instantiate a nested envmap plugin */
+        Properties props("envmap");
+        Properties::Data bitmapData;
+        bitmapData.ptr = (uint8_t *) bitmap.get();
+        bitmapData.size = sizeof(Bitmap);
+        props.setData("bitmap", bitmapData);
+        props.setAnimatedTransform("toWorld", m_worldTransform);
+        props.setFloat("samplingWeight", m_samplingWeight);
+        Emitter *emitter = static_cast<Emitter *>(
+            PluginManager::getInstance()->createObject(
+            MTS_CLASS(Emitter), props));
+        emitter->configure();
+        return emitter;
+    }
 
-	AABB getAABB() const {
-		NotImplementedError("getAABB");
-	}
+    AABB getAABB() const {
+        NotImplementedError("getAABB");
+    }
 
-	std::string toString() const {
-		std::ostringstream oss;
-		oss << "SunEmitter[" << endl
-			<< "  sunDir = " << m_sunDir.toString() << "," << endl
-			<< "  sunRadiusScale = " << m_sunRadiusScale << "," << endl
-			<< "  turbidity = " << m_turbidity << "," << endl
-			<< "  scale = " << m_scale << endl
-			<< "]";
-		return oss.str();
-	}
+    std::string toString() const {
+        std::ostringstream oss;
+        oss << "SunEmitter[" << endl
+            << "  sunDir = " << m_sunDir.toString() << "," << endl
+            << "  sunRadiusScale = " << m_sunRadiusScale << "," << endl
+            << "  turbidity = " << m_turbidity << "," << endl
+            << "  scale = " << m_scale << endl
+            << "]";
+        return oss.str();
+    }
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	/// Environment map resolution
-	int m_resolution;
-	/// Constant scale factor applied to the model
-	Float m_scale;
-	/// Scale factor that can be applied to the sun radius
-	Float m_sunRadiusScale;
-	/// Angle cutoff for the sun disk (w/o scaling)
-	Float m_theta;
-	/// Solid angle covered by the sun (w/o scaling)
-	Float m_solidAngle;
-	/// Position of the sun in spherical coordinates
-	SphericalCoordinates m_sun;
-	/// Direction of the sun (untransformed)
-	Vector m_sunDir;
-	/// Turbidity of the atmosphere
-	Float m_turbidity;
-	/// Radiance arriving from the sun disk
-	Spectrum m_radiance;
-	/// Stretch factor to extend to the bottom hemisphere
-	Float m_stretch;
+    /// Environment map resolution
+    int m_resolution;
+    /// Constant scale factor applied to the model
+    Float m_scale;
+    /// Scale factor that can be applied to the sun radius
+    Float m_sunRadiusScale;
+    /// Angle cutoff for the sun disk (w/o scaling)
+    Float m_theta;
+    /// Solid angle covered by the sun (w/o scaling)
+    Float m_solidAngle;
+    /// Position of the sun in spherical coordinates
+    SphericalCoordinates m_sun;
+    /// Direction of the sun (untransformed)
+    Vector m_sunDir;
+    /// Turbidity of the atmosphere
+    Float m_turbidity;
+    /// Radiance arriving from the sun disk
+    Spectrum m_radiance;
+    /// Stretch factor to extend to the bottom hemisphere
+    Float m_stretch;
 };
 
 MTS_IMPLEMENT_CLASS_S(SunEmitter, false, Emitter)

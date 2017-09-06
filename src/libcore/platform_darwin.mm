@@ -25,51 +25,51 @@ static pthread_key_t __mts_autorelease_key;
 static bool __mts_cocoa_initialized = false;
 
 void __mts_autorelease_init() {
-	pthread_key_create(&__mts_autorelease_key, NULL);
+    pthread_key_create(&__mts_autorelease_key, NULL);
 }
 
 void __mts_autorelease_shutdown() {
-	pthread_key_delete(__mts_autorelease_key);
+    pthread_key_delete(__mts_autorelease_key);
 }
 
 void __mts_autorelease_begin() {
-	NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-	pthread_setspecific(__mts_autorelease_key, pool);
+    NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+    pthread_setspecific(__mts_autorelease_key, pool);
 }
 
 void __mts_autorelease_end() {
-	NSAutoreleasePool *pool =
-		static_cast<NSAutoreleasePool *>(pthread_getspecific(__mts_autorelease_key));
-	[pool release];
+    NSAutoreleasePool *pool =
+        static_cast<NSAutoreleasePool *>(pthread_getspecific(__mts_autorelease_key));
+    [pool release];
 }
 
 void __mts_chdir_to_bundlepath() {
-	chdir([[[NSBundle mainBundle] bundlePath] fileSystemRepresentation]);
+    chdir([[[NSBundle mainBundle] bundlePath] fileSystemRepresentation]);
 }
 
 std::string __mts_bundlepath() {
-	return [[[NSBundle mainBundle] bundlePath] fileSystemRepresentation];
+    return [[[NSBundle mainBundle] bundlePath] fileSystemRepresentation];
 }
 
 void __mts_init_cocoa() {
-	if (!__mts_cocoa_initialized) {
-		[NSApplication sharedApplication]; /* Creates a connection to the windowing environment */
-		[NSApp activateIgnoringOtherApps:YES]; /* Pop to front */
-		__mts_cocoa_initialized = true;
-	}
+    if (!__mts_cocoa_initialized) {
+        [NSApplication sharedApplication]; /* Creates a connection to the windowing environment */
+        [NSApp activateIgnoringOtherApps:YES]; /* Pop to front */
+        __mts_cocoa_initialized = true;
+    }
 }
 
 void __mts_set_appdefaults() {
-	if ([NSApp respondsToSelector:@selector(invalidateRestorableState)])
-		[NSApp invalidateRestorableState];
+    if ([NSApp respondsToSelector:@selector(invalidateRestorableState)])
+        [NSApp invalidateRestorableState];
 #if 0
 
-	/* Disable annoying OSX synchronization feature. It's not supported by Qt in any case.. */
-	NSUserDefaults *prefs = [NSUserDefaults standardUserDefaults];
-	if (![prefs boolForKey: @"ApplePersistenceIgnoreState"]) {
-		[prefs setBool: YES forKey: @"ApplePersistenceIgnoreState"];
-		[prefs synchronize];
-	}
+    /* Disable annoying OSX synchronization feature. It's not supported by Qt in any case.. */
+    NSUserDefaults *prefs = [NSUserDefaults standardUserDefaults];
+    if (![prefs boolForKey: @"ApplePersistenceIgnoreState"]) {
+        [prefs setBool: YES forKey: @"ApplePersistenceIgnoreState"];
+        [prefs synchronize];
+    }
 #endif
 }
 

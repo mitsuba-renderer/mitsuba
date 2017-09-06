@@ -113,331 +113,331 @@ MTS_NAMESPACE_BEGIN
  */
 class HanrahanKrueger : public BSDF {
 public:
-	HanrahanKrueger(const Properties &props) : BSDF(props) {
-		Spectrum sigmaS, sigmaA, g;
-		lookupMaterial(props, sigmaS, sigmaA, g, NULL);
-		sigmaS *= Spectrum(1.0f) - g;
+    HanrahanKrueger(const Properties &props) : BSDF(props) {
+        Spectrum sigmaS, sigmaA, g;
+        lookupMaterial(props, sigmaS, sigmaA, g, NULL);
+        sigmaS *= Spectrum(1.0f) - g;
 
-		/* Scattering coefficient of the layer */
-		m_sigmaS = new ConstantSpectrumTexture(
-			props.getSpectrum("sigmaS", sigmaS));
+        /* Scattering coefficient of the layer */
+        m_sigmaS = new ConstantSpectrumTexture(
+            props.getSpectrum("sigmaS", sigmaS));
 
-		/* Absorption coefficient of the layer */
-		m_sigmaA = new ConstantSpectrumTexture(
-			props.getSpectrum("sigmaA", sigmaA));
+        /* Absorption coefficient of the layer */
+        m_sigmaA = new ConstantSpectrumTexture(
+            props.getSpectrum("sigmaA", sigmaA));
 
-		/* Slab thickness in inverse units of sigmaS and sigmaA */
-		m_thickness = props.getFloat("thickness", 1);
+        /* Slab thickness in inverse units of sigmaS and sigmaA */
+        m_thickness = props.getFloat("thickness", 1);
 
-		if (props.hasProperty("sigmaT"))
-			m_sigmaT = new ConstantSpectrumTexture(
-				props.getSpectrum("sigmaT"));
-		if (props.hasProperty("albedo"))
-			m_albedo = new ConstantSpectrumTexture(
-				props.getSpectrum("albedo"));
-	}
+        if (props.hasProperty("sigmaT"))
+            m_sigmaT = new ConstantSpectrumTexture(
+                props.getSpectrum("sigmaT"));
+        if (props.hasProperty("albedo"))
+            m_albedo = new ConstantSpectrumTexture(
+                props.getSpectrum("albedo"));
+    }
 
-	HanrahanKrueger(Stream *stream, InstanceManager *manager)
-	 : BSDF(stream, manager) {
-		m_phase = static_cast<PhaseFunction *>(manager->getInstance(stream));
-		m_sigmaS = static_cast<Texture *>(manager->getInstance(stream));
-		m_sigmaA = static_cast<Texture *>(manager->getInstance(stream));
-		m_thickness = stream->readFloat();
-		configure();
-	}
+    HanrahanKrueger(Stream *stream, InstanceManager *manager)
+     : BSDF(stream, manager) {
+        m_phase = static_cast<PhaseFunction *>(manager->getInstance(stream));
+        m_sigmaS = static_cast<Texture *>(manager->getInstance(stream));
+        m_sigmaA = static_cast<Texture *>(manager->getInstance(stream));
+        m_thickness = stream->readFloat();
+        configure();
+    }
 
-	void configure() {
-		if (m_phase == NULL)
-			m_phase = static_cast<PhaseFunction *> (PluginManager::getInstance()->
-					createObject(MTS_CLASS(PhaseFunction), Properties("isotropic")));
+    void configure() {
+        if (m_phase == NULL)
+            m_phase = static_cast<PhaseFunction *> (PluginManager::getInstance()->
+                    createObject(MTS_CLASS(PhaseFunction), Properties("isotropic")));
 
-		if (m_sigmaT != NULL || m_albedo != NULL) {
-			/* Support for the alternative scattering/absorption
-			 * coefficient parameter passing convention */
-			if (m_sigmaT == NULL || m_albedo == NULL)
-				SLog(EError, "Please provide *both* sigmaT & albedo!");
+        if (m_sigmaT != NULL || m_albedo != NULL) {
+            /* Support for the alternative scattering/absorption
+             * coefficient parameter passing convention */
+            if (m_sigmaT == NULL || m_albedo == NULL)
+                SLog(EError, "Please provide *both* sigmaT & albedo!");
 
-			m_sigmaS = new SpectrumProductTexture(m_sigmaT, m_albedo);
-			m_sigmaA = new SpectrumSubtractionTexture(m_sigmaT, m_sigmaS);
-			m_sigmaT = NULL;
-			m_albedo = NULL;
-		}
+            m_sigmaS = new SpectrumProductTexture(m_sigmaT, m_albedo);
+            m_sigmaA = new SpectrumSubtractionTexture(m_sigmaT, m_sigmaS);
+            m_sigmaT = NULL;
+            m_albedo = NULL;
+        }
 
-		int extraFlags = m_sigmaS->isConstant() && m_sigmaA->isConstant() ? 0 : ESpatiallyVarying;
-		m_components.clear();
-		m_components.push_back(EGlossyReflection   | EFrontSide | EBackSide | EUsesSampler | extraFlags);
+        int extraFlags = m_sigmaS->isConstant() && m_sigmaA->isConstant() ? 0 : ESpatiallyVarying;
+        m_components.clear();
+        m_components.push_back(EGlossyReflection   | EFrontSide | EBackSide | EUsesSampler | extraFlags);
 
-		if (m_thickness != std::numeric_limits<Float>::infinity()) {
-			m_components.push_back(EGlossyTransmission | EFrontSide | EBackSide | EUsesSampler | extraFlags);
-			m_components.push_back(EDeltaTransmission  | EFrontSide | EBackSide | EUsesSampler | extraFlags);
-		}
+        if (m_thickness != std::numeric_limits<Float>::infinity()) {
+            m_components.push_back(EGlossyTransmission | EFrontSide | EBackSide | EUsesSampler | extraFlags);
+            m_components.push_back(EDeltaTransmission  | EFrontSide | EBackSide | EUsesSampler | extraFlags);
+        }
 
-		m_usesRayDifferentials = m_sigmaS->usesRayDifferentials()
-			|| m_sigmaA->usesRayDifferentials();
+        m_usesRayDifferentials = m_sigmaS->usesRayDifferentials()
+            || m_sigmaA->usesRayDifferentials();
 
-		BSDF::configure();
-	}
+        BSDF::configure();
+    }
 
-	Spectrum getDiffuseReflectance(const Intersection &its) const {
-		Spectrum sigmaA = m_sigmaA->eval(its),
-				 sigmaS = m_sigmaS->eval(its),
-				 sigmaT = sigmaA + sigmaS,
-				 albedo;
-		for (int i = 0; i < SPECTRUM_SAMPLES; i++)
-			albedo[i] = sigmaT[i] > 0 ? (sigmaS[i]/sigmaT[i]) : (Float) 0;
-		return albedo; /* Very approximate .. */
-	}
+    Spectrum getDiffuseReflectance(const Intersection &its) const {
+        Spectrum sigmaA = m_sigmaA->eval(its),
+                 sigmaS = m_sigmaS->eval(its),
+                 sigmaT = sigmaA + sigmaS,
+                 albedo;
+        for (int i = 0; i < SPECTRUM_SAMPLES; i++)
+            albedo[i] = sigmaT[i] > 0 ? (sigmaS[i]/sigmaT[i]) : (Float) 0;
+        return albedo; /* Very approximate .. */
+    }
 
-	Spectrum eval(const BSDFSamplingRecord &bRec, EMeasure measure) const {
-		Spectrum sigmaA = m_sigmaA->eval(bRec.its),
-				 sigmaS = m_sigmaS->eval(bRec.its),
-				 sigmaT = sigmaA + sigmaS,
-				 tauD = sigmaT * m_thickness,
-				 result(0.0f);
+    Spectrum eval(const BSDFSamplingRecord &bRec, EMeasure measure) const {
+        Spectrum sigmaA = m_sigmaA->eval(bRec.its),
+                 sigmaS = m_sigmaS->eval(bRec.its),
+                 sigmaT = sigmaA + sigmaS,
+                 tauD = sigmaT * m_thickness,
+                 result(0.0f);
 
-		if (measure == EDiscrete) {
-			/* Figure out if the specular transmission is specifically requested */
-			bool hasSpecularTransmission = (bRec.typeMask & EDeltaTransmission)
-				&& (bRec.component == -1 || bRec.component == 2);
+        if (measure == EDiscrete) {
+            /* Figure out if the specular transmission is specifically requested */
+            bool hasSpecularTransmission = (bRec.typeMask & EDeltaTransmission)
+                && (bRec.component == -1 || bRec.component == 2);
 
-			/* Return the attenuated light if requested */
-			if (hasSpecularTransmission &&
-				std::abs(1+dot(bRec.wi, bRec.wo)) < DeltaEpsilon)
-				result = (-tauD/std::abs(Frame::cosTheta(bRec.wi))).exp();
-		} else if (measure == ESolidAngle) {
-			/* Sample single scattering events */
-			bool hasGlossyReflection = (bRec.typeMask & EGlossyReflection)
-				&& (bRec.component == -1 || bRec.component == 0);
-			bool hasGlossyTransmission = (bRec.typeMask & EGlossyTransmission)
-				&& (bRec.component == -1 || bRec.component == 1);
+            /* Return the attenuated light if requested */
+            if (hasSpecularTransmission &&
+                std::abs(1+dot(bRec.wi, bRec.wo)) < DeltaEpsilon)
+                result = (-tauD/std::abs(Frame::cosTheta(bRec.wi))).exp();
+        } else if (measure == ESolidAngle) {
+            /* Sample single scattering events */
+            bool hasGlossyReflection = (bRec.typeMask & EGlossyReflection)
+                && (bRec.component == -1 || bRec.component == 0);
+            bool hasGlossyTransmission = (bRec.typeMask & EGlossyTransmission)
+                && (bRec.component == -1 || bRec.component == 1);
 
-			Spectrum albedo;
-			for (int i = 0; i < SPECTRUM_SAMPLES; i++)
-				albedo[i] = sigmaT[i] > 0 ? (sigmaS[i]/sigmaT[i]) : (Float) 0;
+            Spectrum albedo;
+            for (int i = 0; i < SPECTRUM_SAMPLES; i++)
+                albedo[i] = sigmaT[i] > 0 ? (sigmaS[i]/sigmaT[i]) : (Float) 0;
 
-			const Float cosThetaI = Frame::cosTheta(bRec.wi),
-				        cosThetaO = Frame::cosTheta(bRec.wo),
-				        dp = cosThetaI*cosThetaO;
+            const Float cosThetaI = Frame::cosTheta(bRec.wi),
+                        cosThetaO = Frame::cosTheta(bRec.wo),
+                        dp = cosThetaI*cosThetaO;
 
-			bool reflection = dp > 0, transmission = dp < 0;
+            bool reflection = dp > 0, transmission = dp < 0;
 
-			/* ==================================================================== */
-			/*                        Reflection component                          */
-			/* ==================================================================== */
+            /* ==================================================================== */
+            /*                        Reflection component                          */
+            /* ==================================================================== */
 
-			if (hasGlossyReflection && reflection) {
-				MediumSamplingRecord dummy;
-				PhaseFunctionSamplingRecord pRec(dummy,bRec.wi,bRec.wo);
-				const Float phaseVal = m_phase->eval(pRec);
+            if (hasGlossyReflection && reflection) {
+                MediumSamplingRecord dummy;
+                PhaseFunctionSamplingRecord pRec(dummy,bRec.wi,bRec.wo);
+                const Float phaseVal = m_phase->eval(pRec);
 
-				result = albedo * (phaseVal*cosThetaI/(cosThetaI+cosThetaO)) *
-					(Spectrum(1.0f)-((-1.0f/std::abs(cosThetaI)-1.0f/std::abs(cosThetaO)) * tauD).exp());
-			}
+                result = albedo * (phaseVal*cosThetaI/(cosThetaI+cosThetaO)) *
+                    (Spectrum(1.0f)-((-1.0f/std::abs(cosThetaI)-1.0f/std::abs(cosThetaO)) * tauD).exp());
+            }
 
-			/* ==================================================================== */
-			/*                       Transmission component                         */
-			/* ==================================================================== */
+            /* ==================================================================== */
+            /*                       Transmission component                         */
+            /* ==================================================================== */
 
-			if (hasGlossyTransmission && transmission
-					&& m_thickness < std::numeric_limits<Float>::infinity()) {
-				MediumSamplingRecord dummy;
-				PhaseFunctionSamplingRecord pRec(dummy,bRec.wi,bRec.wo);
-				const Float phaseVal = m_phase->eval(pRec);
+            if (hasGlossyTransmission && transmission
+                    && m_thickness < std::numeric_limits<Float>::infinity()) {
+                MediumSamplingRecord dummy;
+                PhaseFunctionSamplingRecord pRec(dummy,bRec.wi,bRec.wo);
+                const Float phaseVal = m_phase->eval(pRec);
 
-				/* Hanrahan etal 93 Single Scattering transmission term */
-				if (std::abs(cosThetaI + cosThetaO) < Epsilon) {
-					/* avoid division by zero */
-					result += albedo * phaseVal*tauD/std::abs(cosThetaO) *
-								((-tauD/std::abs(cosThetaO)).exp());
-				} else {
-					/* Guaranteed to be positive even if |cosThetaO| > |cosThetaI| */
-					result += albedo * phaseVal*std::abs(cosThetaI)/(std::abs(cosThetaI)-std::abs(cosThetaO)) *
-						((-tauD/std::abs(cosThetaI)).exp() - (-tauD/std::abs(cosThetaO)).exp());
-				}
-			}
-			return result * std::abs(cosThetaO);
-		}
-		return result;
-	}
+                /* Hanrahan etal 93 Single Scattering transmission term */
+                if (std::abs(cosThetaI + cosThetaO) < Epsilon) {
+                    /* avoid division by zero */
+                    result += albedo * phaseVal*tauD/std::abs(cosThetaO) *
+                                ((-tauD/std::abs(cosThetaO)).exp());
+                } else {
+                    /* Guaranteed to be positive even if |cosThetaO| > |cosThetaI| */
+                    result += albedo * phaseVal*std::abs(cosThetaI)/(std::abs(cosThetaI)-std::abs(cosThetaO)) *
+                        ((-tauD/std::abs(cosThetaI)).exp() - (-tauD/std::abs(cosThetaO)).exp());
+                }
+            }
+            return result * std::abs(cosThetaO);
+        }
+        return result;
+    }
 
-	Float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const {
-		bool hasSingleScattering = (bRec.typeMask & EGlossy)
-			&& (bRec.component == -1 || bRec.component == 0 || bRec.component == 1);
-		bool hasSpecularTransmission = (bRec.typeMask & EDeltaTransmission)
-			&& (bRec.component == -1 || bRec.component == 2);
+    Float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const {
+        bool hasSingleScattering = (bRec.typeMask & EGlossy)
+            && (bRec.component == -1 || bRec.component == 0 || bRec.component == 1);
+        bool hasSpecularTransmission = (bRec.typeMask & EDeltaTransmission)
+            && (bRec.component == -1 || bRec.component == 2);
 
-		const Spectrum sigmaA = m_sigmaA->eval(bRec.its),
-				 sigmaS = m_sigmaS->eval(bRec.its),
-				 sigmaT = sigmaA + sigmaS,
-				 tauD = sigmaT * m_thickness;
+        const Spectrum sigmaA = m_sigmaA->eval(bRec.its),
+                 sigmaS = m_sigmaS->eval(bRec.its),
+                 sigmaT = sigmaA + sigmaS,
+                 tauD = sigmaT * m_thickness;
 
-		Float probSpecularTransmission = (-tauD/std::abs(Frame::cosTheta(bRec.wi))).exp().average();
+        Float probSpecularTransmission = (-tauD/std::abs(Frame::cosTheta(bRec.wi))).exp().average();
 
-		if (measure == EDiscrete) {
-			bool hasSpecularTransmission = (bRec.typeMask & EDeltaTransmission)
-				&& (bRec.component == -1 || bRec.component == 2);
-			/* Return the attenuated light if requested */
-			if (hasSpecularTransmission &&
-				std::abs(1+dot(bRec.wi, bRec.wo)) < DeltaEpsilon)
-				return hasSingleScattering ? probSpecularTransmission : 1.0f;
-		} else if (hasSingleScattering && measure == ESolidAngle) {
-			bool hasGlossyReflection = (bRec.typeMask & EGlossyReflection)
-				&& (bRec.component == -1 || bRec.component == 0);
-			bool hasGlossyTransmission = (bRec.typeMask & EGlossyTransmission)
-				&& (bRec.component == -1 || bRec.component == 1);
-			bool reflection = Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo) >= 0;
+        if (measure == EDiscrete) {
+            bool hasSpecularTransmission = (bRec.typeMask & EDeltaTransmission)
+                && (bRec.component == -1 || bRec.component == 2);
+            /* Return the attenuated light if requested */
+            if (hasSpecularTransmission &&
+                std::abs(1+dot(bRec.wi, bRec.wo)) < DeltaEpsilon)
+                return hasSingleScattering ? probSpecularTransmission : 1.0f;
+        } else if (hasSingleScattering && measure == ESolidAngle) {
+            bool hasGlossyReflection = (bRec.typeMask & EGlossyReflection)
+                && (bRec.component == -1 || bRec.component == 0);
+            bool hasGlossyTransmission = (bRec.typeMask & EGlossyTransmission)
+                && (bRec.component == -1 || bRec.component == 1);
+            bool reflection = Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo) >= 0;
 
-			if ((!hasGlossyReflection && reflection) ||
-				(!hasGlossyTransmission && !reflection))
-				return 0.0f;
+            if ((!hasGlossyReflection && reflection) ||
+                (!hasGlossyTransmission && !reflection))
+                return 0.0f;
 
-			/* Sampled according to the phase function lobe(s) */
-			MediumSamplingRecord dummy;
-			PhaseFunctionSamplingRecord pRec(dummy, bRec.wi, bRec.wo);
-			Float pdf = m_phase->pdf(pRec);
-			if (hasSpecularTransmission)
-				pdf *= 1-probSpecularTransmission;
-			return pdf;
-		}
-		return 0.0f;
-	}
+            /* Sampled according to the phase function lobe(s) */
+            MediumSamplingRecord dummy;
+            PhaseFunctionSamplingRecord pRec(dummy, bRec.wi, bRec.wo);
+            Float pdf = m_phase->pdf(pRec);
+            if (hasSpecularTransmission)
+                pdf *= 1-probSpecularTransmission;
+            return pdf;
+        }
+        return 0.0f;
+    }
 
-	inline Spectrum sample(BSDFSamplingRecord &bRec, Float &_pdf, const Point2 &_sample) const {
-		AssertEx(bRec.sampler != NULL, "The BSDFSamplingRecord needs to have a sampler!");
+    inline Spectrum sample(BSDFSamplingRecord &bRec, Float &_pdf, const Point2 &_sample) const {
+        AssertEx(bRec.sampler != NULL, "The BSDFSamplingRecord needs to have a sampler!");
 
-		bool hasSpecularTransmission = (bRec.typeMask & EDeltaTransmission)
-			&& (bRec.component == -1 || bRec.component == 2);
-		bool hasSingleScattering = (bRec.typeMask & EGlossy)
-			&& (bRec.component == -1 || bRec.component == 0 || bRec.component == 1);
+        bool hasSpecularTransmission = (bRec.typeMask & EDeltaTransmission)
+            && (bRec.component == -1 || bRec.component == 2);
+        bool hasSingleScattering = (bRec.typeMask & EGlossy)
+            && (bRec.component == -1 || bRec.component == 0 || bRec.component == 1);
 
-		const Spectrum sigmaA = m_sigmaA->eval(bRec.its),
-				 sigmaS = m_sigmaS->eval(bRec.its),
-				 sigmaT = sigmaA + sigmaS,
-				 tauD = sigmaT * m_thickness;
+        const Spectrum sigmaA = m_sigmaA->eval(bRec.its),
+                 sigmaS = m_sigmaS->eval(bRec.its),
+                 sigmaT = sigmaA + sigmaS,
+                 tauD = sigmaT * m_thickness;
 
-		/* Probability for a specular transmission is approximated by the average (per wavelength)
-		 * probability of a photon exiting without a scattering event or an absorption event */
-		Float probSpecularTransmission = (-tauD/std::abs(Frame::cosTheta(bRec.wi))).exp().average();
+        /* Probability for a specular transmission is approximated by the average (per wavelength)
+         * probability of a photon exiting without a scattering event or an absorption event */
+        Float probSpecularTransmission = (-tauD/std::abs(Frame::cosTheta(bRec.wi))).exp().average();
 
-		bool choseSpecularTransmission = hasSpecularTransmission;
+        bool choseSpecularTransmission = hasSpecularTransmission;
 
-		Point2 sample(_sample);
-		if (hasSpecularTransmission && hasSingleScattering) {
-			if (sample.x > probSpecularTransmission) {
-				sample.x = (sample.x - probSpecularTransmission) / (1 - probSpecularTransmission);
-				choseSpecularTransmission = false;
-			}
-		}
+        Point2 sample(_sample);
+        if (hasSpecularTransmission && hasSingleScattering) {
+            if (sample.x > probSpecularTransmission) {
+                sample.x = (sample.x - probSpecularTransmission) / (1 - probSpecularTransmission);
+                choseSpecularTransmission = false;
+            }
+        }
 
-		bRec.eta = 1.0f;
-		if (choseSpecularTransmission) {
-			/* The specular transmission component was sampled */
-			bRec.sampledComponent = 2;
-			bRec.sampledType = EDeltaTransmission;
+        bRec.eta = 1.0f;
+        if (choseSpecularTransmission) {
+            /* The specular transmission component was sampled */
+            bRec.sampledComponent = 2;
+            bRec.sampledType = EDeltaTransmission;
 
-			bRec.wo = -bRec.wi;
+            bRec.wo = -bRec.wi;
 
-			_pdf = hasSingleScattering ? probSpecularTransmission : 1.0f;
-			return eval(bRec, EDiscrete) / _pdf;
-		} else {
-			/* The glossy transmission/scattering component should be sampled */
-			bool hasGlossyReflection = (bRec.typeMask & EGlossyReflection)
-				&& (bRec.component == -1 || bRec.component == 0);
-			bool hasGlossyTransmission = (bRec.typeMask & EGlossyTransmission)
-				&& (bRec.component == -1 || bRec.component == 1);
+            _pdf = hasSingleScattering ? probSpecularTransmission : 1.0f;
+            return eval(bRec, EDiscrete) / _pdf;
+        } else {
+            /* The glossy transmission/scattering component should be sampled */
+            bool hasGlossyReflection = (bRec.typeMask & EGlossyReflection)
+                && (bRec.component == -1 || bRec.component == 0);
+            bool hasGlossyTransmission = (bRec.typeMask & EGlossyTransmission)
+                && (bRec.component == -1 || bRec.component == 1);
 
-			/* Sample According to the phase function lobes */
-			PhaseFunctionSamplingRecord pRec(MediumSamplingRecord(), bRec.wi, bRec.wo);
-			m_phase->sample(pRec, _pdf, bRec.sampler);
+            /* Sample According to the phase function lobes */
+            PhaseFunctionSamplingRecord pRec(MediumSamplingRecord(), bRec.wi, bRec.wo);
+            m_phase->sample(pRec, _pdf, bRec.sampler);
 
-			/* Store the sampled direction */
-			bRec.wo = pRec.wo;
+            /* Store the sampled direction */
+            bRec.wo = pRec.wo;
 
-			bool reflection = Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo) >= 0;
-			if ((!hasGlossyReflection && reflection) ||
-				(!hasGlossyTransmission && !reflection))
-				return Spectrum(0.0f);
+            bool reflection = Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo) >= 0;
+            if ((!hasGlossyReflection && reflection) ||
+                (!hasGlossyTransmission && !reflection))
+                return Spectrum(0.0f);
 
-			/* Notify that the scattering component was sampled */
-			bRec.sampledComponent = reflection ? 0 : 1;
-			bRec.sampledType = EGlossy;
+            /* Notify that the scattering component was sampled */
+            bRec.sampledComponent = reflection ? 0 : 1;
+            bRec.sampledType = EGlossy;
 
-			_pdf *= (hasSpecularTransmission ? (1 - probSpecularTransmission) : 1.0f);
+            _pdf *= (hasSpecularTransmission ? (1 - probSpecularTransmission) : 1.0f);
 
-			/* Guard against numerical imprecisions */
-			if (_pdf == 0)
-				return Spectrum(0.0f);
-			else
-				return eval(bRec, ESolidAngle) / _pdf;
+            /* Guard against numerical imprecisions */
+            if (_pdf == 0)
+                return Spectrum(0.0f);
+            else
+                return eval(bRec, ESolidAngle) / _pdf;
 
-		}
-	}
+        }
+    }
 
-	Spectrum sample(BSDFSamplingRecord &bRec, const Point2 &sample) const {
-		Float pdf;
-		return HanrahanKrueger::sample(bRec, pdf, sample);
-	}
+    Spectrum sample(BSDFSamplingRecord &bRec, const Point2 &sample) const {
+        Float pdf;
+        return HanrahanKrueger::sample(bRec, pdf, sample);
+    }
 
-	void serialize(Stream *stream, InstanceManager *manager) const {
-		BSDF::serialize(stream, manager);
+    void serialize(Stream *stream, InstanceManager *manager) const {
+        BSDF::serialize(stream, manager);
 
-		manager->serialize(stream, m_phase.get());
-		manager->serialize(stream, m_sigmaS.get());
-		manager->serialize(stream, m_sigmaA.get());
-		stream->writeFloat(m_thickness);
-	}
+        manager->serialize(stream, m_phase.get());
+        manager->serialize(stream, m_sigmaS.get());
+        manager->serialize(stream, m_sigmaA.get());
+        stream->writeFloat(m_thickness);
+    }
 
-	void addChild(const std::string &name, ConfigurableObject *child) {
-		const Class *cClass = child->getClass();
+    void addChild(const std::string &name, ConfigurableObject *child) {
+        const Class *cClass = child->getClass();
 
-		if (cClass->derivesFrom(MTS_CLASS(PhaseFunction))) {
-			Assert(m_phase == NULL);
-			m_phase = static_cast<PhaseFunction *>(child);
-		} else if (cClass->derivesFrom(MTS_CLASS(Texture))) {
-			if (name == "sigmaS")
-				m_sigmaS = static_cast<Texture *>(child);
-			else if (name == "sigmaA")
-				m_sigmaA = static_cast<Texture *>(child);
-			else if (name == "sigmaT")
-				m_sigmaT = static_cast<Texture *>(child);
-			else if (name == "albedo")
-				m_albedo = static_cast<Texture *>(child);
-			else
-				BSDF::addChild(name, child);
-		} else {
-			BSDF::addChild(name, child);
-		}
-	}
+        if (cClass->derivesFrom(MTS_CLASS(PhaseFunction))) {
+            Assert(m_phase == NULL);
+            m_phase = static_cast<PhaseFunction *>(child);
+        } else if (cClass->derivesFrom(MTS_CLASS(Texture))) {
+            if (name == "sigmaS")
+                m_sigmaS = static_cast<Texture *>(child);
+            else if (name == "sigmaA")
+                m_sigmaA = static_cast<Texture *>(child);
+            else if (name == "sigmaT")
+                m_sigmaT = static_cast<Texture *>(child);
+            else if (name == "albedo")
+                m_albedo = static_cast<Texture *>(child);
+            else
+                BSDF::addChild(name, child);
+        } else {
+            BSDF::addChild(name, child);
+        }
+    }
 
-	Float getRoughness(const Intersection &its, int component) const {
-		/* For lack of a better value, treat this material as diffuse
-		   in Manifold Exploration */
-		return std::numeric_limits<Float>::infinity();
-	}
+    Float getRoughness(const Intersection &its, int component) const {
+        /* For lack of a better value, treat this material as diffuse
+           in Manifold Exploration */
+        return std::numeric_limits<Float>::infinity();
+    }
 
-	std::string toString() const {
-		std::ostringstream oss;
-		oss << "HanrahanKrueger[" << endl
-   			<< "  id = \"" << getID() << "\"," << endl
-   			<< "  sigmaS = " << indent(m_sigmaS->toString()) << "," << endl
-   			<< "  sigmaA = " << indent(m_sigmaA->toString()) << "," << endl
-   			<< "  phase = " << indent(m_phase->toString()) << "," << endl
-   			<< "  thickness = " << m_thickness << endl
-			<< "]";
-		return oss.str();
-	}
+    std::string toString() const {
+        std::ostringstream oss;
+        oss << "HanrahanKrueger[" << endl
+            << "  id = \"" << getID() << "\"," << endl
+            << "  sigmaS = " << indent(m_sigmaS->toString()) << "," << endl
+            << "  sigmaA = " << indent(m_sigmaA->toString()) << "," << endl
+            << "  phase = " << indent(m_phase->toString()) << "," << endl
+            << "  thickness = " << m_thickness << endl
+            << "]";
+        return oss.str();
+    }
 
-	Shader *createShader(Renderer *renderer) const;
+    Shader *createShader(Renderer *renderer) const;
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 private:
-	ref<PhaseFunction> m_phase;
-	ref<Texture> m_sigmaS;
-	ref<Texture> m_sigmaA;
-	Float m_thickness;
-	/* Temporary fields */
-	ref<Texture> m_sigmaT;
-	ref<Texture> m_albedo;
+    ref<PhaseFunction> m_phase;
+    ref<Texture> m_sigmaS;
+    ref<Texture> m_sigmaA;
+    Float m_thickness;
+    /* Temporary fields */
+    ref<Texture> m_sigmaT;
+    ref<Texture> m_albedo;
 };
 
 
@@ -450,58 +450,58 @@ private:
  */
 class HanrahanKruegerShader : public Shader {
 public:
-	HanrahanKruegerShader(Renderer *renderer, const Texture *sigmaS, const Texture *sigmaA)
-		: Shader(renderer, EBSDFShader), m_sigmaS(sigmaS), m_sigmaA(sigmaA) {
-		m_sigmaSShader = renderer->registerShaderForResource(m_sigmaS.get());
-		m_sigmaAShader = renderer->registerShaderForResource(m_sigmaA.get());
-	}
+    HanrahanKruegerShader(Renderer *renderer, const Texture *sigmaS, const Texture *sigmaA)
+        : Shader(renderer, EBSDFShader), m_sigmaS(sigmaS), m_sigmaA(sigmaA) {
+        m_sigmaSShader = renderer->registerShaderForResource(m_sigmaS.get());
+        m_sigmaAShader = renderer->registerShaderForResource(m_sigmaA.get());
+    }
 
-	bool isComplete() const {
-		return m_sigmaSShader.get() != NULL
-			&& m_sigmaAShader.get() != NULL;
-	}
+    bool isComplete() const {
+        return m_sigmaSShader.get() != NULL
+            && m_sigmaAShader.get() != NULL;
+    }
 
-	void cleanup(Renderer *renderer) {
-		renderer->unregisterShaderForResource(m_sigmaS.get());
-		renderer->unregisterShaderForResource(m_sigmaA.get());
-	}
+    void cleanup(Renderer *renderer) {
+        renderer->unregisterShaderForResource(m_sigmaS.get());
+        renderer->unregisterShaderForResource(m_sigmaA.get());
+    }
 
-	void putDependencies(std::vector<Shader *> &deps) {
-		deps.push_back(m_sigmaSShader.get());
-		deps.push_back(m_sigmaAShader.get());
-	}
+    void putDependencies(std::vector<Shader *> &deps) {
+        deps.push_back(m_sigmaSShader.get());
+        deps.push_back(m_sigmaAShader.get());
+    }
 
-	void generateCode(std::ostringstream &oss,
-			const std::string &evalName,
-			const std::vector<std::string> &depNames) const {
-		oss << "vec3 " << evalName << "(vec2 uv, vec3 wi, vec3 wo) {" << endl
-			<< "    vec3 sigmaS = " << depNames[0] << "(uv);" << endl
-			<< "    vec3 sigmaA = " << depNames[1] << "(uv);" << endl
-			<< "    vec3 albedo = sigmaS/(sigmaS + sigmaA);" << endl
-			<< "    float cosThetaI = abs(cosTheta(wi));" << endl
-			<< "    float cosThetaO = abs(cosTheta(wo));" << endl
-			<< "    return albedo * (0.079577*cosThetaI*cosThetaO/(cosThetaI + cosThetaO));" << endl
-			<< "}" << endl
-			<< endl
-			<< "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
-			<< "    vec3 sigmaS = " << depNames[0] << "(uv);" << endl
-			<< "    vec3 sigmaA = " << depNames[1] << "(uv);" << endl
-			<< "    vec3 albedo = sigmaS/(sigmaS + sigmaA);" << endl
-			<< "    float cosThetaO = abs(cosTheta(wo));" << endl
-			<< "    return albedo * 0.079577 * cosThetaO;" << endl
-			<< "}" << endl;
-	}
+    void generateCode(std::ostringstream &oss,
+            const std::string &evalName,
+            const std::vector<std::string> &depNames) const {
+        oss << "vec3 " << evalName << "(vec2 uv, vec3 wi, vec3 wo) {" << endl
+            << "    vec3 sigmaS = " << depNames[0] << "(uv);" << endl
+            << "    vec3 sigmaA = " << depNames[1] << "(uv);" << endl
+            << "    vec3 albedo = sigmaS/(sigmaS + sigmaA);" << endl
+            << "    float cosThetaI = abs(cosTheta(wi));" << endl
+            << "    float cosThetaO = abs(cosTheta(wo));" << endl
+            << "    return albedo * (0.079577*cosThetaI*cosThetaO/(cosThetaI + cosThetaO));" << endl
+            << "}" << endl
+            << endl
+            << "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
+            << "    vec3 sigmaS = " << depNames[0] << "(uv);" << endl
+            << "    vec3 sigmaA = " << depNames[1] << "(uv);" << endl
+            << "    vec3 albedo = sigmaS/(sigmaS + sigmaA);" << endl
+            << "    float cosThetaO = abs(cosTheta(wo));" << endl
+            << "    return albedo * 0.079577 * cosThetaO;" << endl
+            << "}" << endl;
+    }
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 private:
-	ref<const Texture> m_sigmaS;
-	ref<const Texture> m_sigmaA;
-	ref<Shader> m_sigmaSShader;
-	ref<Shader> m_sigmaAShader;
+    ref<const Texture> m_sigmaS;
+    ref<const Texture> m_sigmaA;
+    ref<Shader> m_sigmaSShader;
+    ref<Shader> m_sigmaAShader;
 };
 
 Shader *HanrahanKrueger::createShader(Renderer *renderer) const {
-	return new HanrahanKruegerShader(renderer, m_sigmaS.get(), m_sigmaA.get());
+    return new HanrahanKruegerShader(renderer, m_sigmaS.get(), m_sigmaA.get());
 }
 
 MTS_IMPLEMENT_CLASS(HanrahanKruegerShader, false, Shader)

@@ -150,162 +150,162 @@ MTS_NAMESPACE_BEGIN
  */
 class SmoothConductor : public BSDF {
 public:
-	SmoothConductor(const Properties &props) : BSDF(props) {
-		ref<FileResolver> fResolver = Thread::getThread()->getFileResolver();
+    SmoothConductor(const Properties &props) : BSDF(props) {
+        ref<FileResolver> fResolver = Thread::getThread()->getFileResolver();
 
-		m_specularReflectance = new ConstantSpectrumTexture(
-			props.getSpectrum("specularReflectance", Spectrum(1.0f)));
+        m_specularReflectance = new ConstantSpectrumTexture(
+            props.getSpectrum("specularReflectance", Spectrum(1.0f)));
 
-		std::string materialName = props.getString("material", "Cu");
+        std::string materialName = props.getString("material", "Cu");
 
-		Spectrum intEta, intK;
-		if (boost::to_lower_copy(materialName) == "none") {
-			intEta = Spectrum(0.0f);
-			intK = Spectrum(1.0f);
-		} else {
-			intEta.fromContinuousSpectrum(InterpolatedSpectrum(
-				fResolver->resolve("data/ior/" + materialName + ".eta.spd")));
-			intK.fromContinuousSpectrum(InterpolatedSpectrum(
-				fResolver->resolve("data/ior/" + materialName + ".k.spd")));
-		}
+        Spectrum intEta, intK;
+        if (boost::to_lower_copy(materialName) == "none") {
+            intEta = Spectrum(0.0f);
+            intK = Spectrum(1.0f);
+        } else {
+            intEta.fromContinuousSpectrum(InterpolatedSpectrum(
+                fResolver->resolve("data/ior/" + materialName + ".eta.spd")));
+            intK.fromContinuousSpectrum(InterpolatedSpectrum(
+                fResolver->resolve("data/ior/" + materialName + ".k.spd")));
+        }
 
-		Float extEta = lookupIOR(props, "extEta", "air");
+        Float extEta = lookupIOR(props, "extEta", "air");
 
-		m_eta = props.getSpectrum("eta", intEta) / extEta;
-		m_k   = props.getSpectrum("k", intK) / extEta;
-	}
+        m_eta = props.getSpectrum("eta", intEta) / extEta;
+        m_k   = props.getSpectrum("k", intK) / extEta;
+    }
 
-	SmoothConductor(Stream *stream, InstanceManager *manager)
-			: BSDF(stream, manager) {
-		m_specularReflectance = static_cast<Texture *>(manager->getInstance(stream));
-		m_eta = Spectrum(stream);
-		m_k = Spectrum(stream);
+    SmoothConductor(Stream *stream, InstanceManager *manager)
+            : BSDF(stream, manager) {
+        m_specularReflectance = static_cast<Texture *>(manager->getInstance(stream));
+        m_eta = Spectrum(stream);
+        m_k = Spectrum(stream);
 
-		configure();
-	}
+        configure();
+    }
 
-	void configure() {
-		/* Verify the input parameters and fix them if necessary */
-		m_specularReflectance = ensureEnergyConservation(
-			m_specularReflectance, "specularReflectance", 1.0f);
+    void configure() {
+        /* Verify the input parameters and fix them if necessary */
+        m_specularReflectance = ensureEnergyConservation(
+            m_specularReflectance, "specularReflectance", 1.0f);
 
-		m_usesRayDifferentials =
-			m_specularReflectance->usesRayDifferentials();
+        m_usesRayDifferentials =
+            m_specularReflectance->usesRayDifferentials();
 
-		m_components.clear();
-		m_components.push_back(EDeltaReflection | EFrontSide
-			| (m_specularReflectance->isConstant() ? 0 : ESpatiallyVarying));
+        m_components.clear();
+        m_components.push_back(EDeltaReflection | EFrontSide
+            | (m_specularReflectance->isConstant() ? 0 : ESpatiallyVarying));
 
-		BSDF::configure();
-	}
+        BSDF::configure();
+    }
 
-	void serialize(Stream *stream, InstanceManager *manager) const {
-		BSDF::serialize(stream, manager);
-		manager->serialize(stream, m_specularReflectance.get());
-		m_eta.serialize(stream);
-		m_k.serialize(stream);
-	}
+    void serialize(Stream *stream, InstanceManager *manager) const {
+        BSDF::serialize(stream, manager);
+        manager->serialize(stream, m_specularReflectance.get());
+        m_eta.serialize(stream);
+        m_k.serialize(stream);
+    }
 
-	void addChild(const std::string &name, ConfigurableObject *child) {
-		if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "specularReflectance") {
-			m_specularReflectance = static_cast<Texture *>(child);
-			m_usesRayDifferentials |= m_specularReflectance->usesRayDifferentials();
-		} else {
-			BSDF::addChild(name, child);
-		}
-	}
+    void addChild(const std::string &name, ConfigurableObject *child) {
+        if (child->getClass()->derivesFrom(MTS_CLASS(Texture)) && name == "specularReflectance") {
+            m_specularReflectance = static_cast<Texture *>(child);
+            m_usesRayDifferentials |= m_specularReflectance->usesRayDifferentials();
+        } else {
+            BSDF::addChild(name, child);
+        }
+    }
 
-	/// Reflection in local coordinates
-	inline Vector reflect(const Vector &wi) const {
-		return Vector(-wi.x, -wi.y, wi.z);
-	}
+    /// Reflection in local coordinates
+    inline Vector reflect(const Vector &wi) const {
+        return Vector(-wi.x, -wi.y, wi.z);
+    }
 
-	Spectrum eval(const BSDFSamplingRecord &bRec, EMeasure measure) const {
-		bool sampleReflection   = (bRec.typeMask & EDeltaReflection)
-				&& (bRec.component == -1 || bRec.component == 0);
+    Spectrum eval(const BSDFSamplingRecord &bRec, EMeasure measure) const {
+        bool sampleReflection   = (bRec.typeMask & EDeltaReflection)
+                && (bRec.component == -1 || bRec.component == 0);
 
-		/* Verify that the provided direction pair matches an ideal
-		   specular reflection; tolerate some roundoff errors */
-		if (!sampleReflection || measure != EDiscrete ||
-			Frame::cosTheta(bRec.wi) <= 0 ||
-			Frame::cosTheta(bRec.wo) <= 0 ||
-			std::abs(dot(reflect(bRec.wi), bRec.wo)-1) > DeltaEpsilon)
-			return Spectrum(0.0f);
+        /* Verify that the provided direction pair matches an ideal
+           specular reflection; tolerate some roundoff errors */
+        if (!sampleReflection || measure != EDiscrete ||
+            Frame::cosTheta(bRec.wi) <= 0 ||
+            Frame::cosTheta(bRec.wo) <= 0 ||
+            std::abs(dot(reflect(bRec.wi), bRec.wo)-1) > DeltaEpsilon)
+            return Spectrum(0.0f);
 
-		return m_specularReflectance->eval(bRec.its) *
-			fresnelConductorExact(Frame::cosTheta(bRec.wi), m_eta, m_k);
-	}
+        return m_specularReflectance->eval(bRec.its) *
+            fresnelConductorExact(Frame::cosTheta(bRec.wi), m_eta, m_k);
+    }
 
-	Float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const {
-		bool sampleReflection   = (bRec.typeMask & EDeltaReflection)
-				&& (bRec.component == -1 || bRec.component == 0);
+    Float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const {
+        bool sampleReflection   = (bRec.typeMask & EDeltaReflection)
+                && (bRec.component == -1 || bRec.component == 0);
 
-		/* Verify that the provided direction pair matches an ideal
-		   specular reflection; tolerate some roundoff errors */
-		if (!sampleReflection || measure != EDiscrete ||
-			Frame::cosTheta(bRec.wi) <= 0 ||
-			Frame::cosTheta(bRec.wo) <= 0 ||
-			std::abs(dot(reflect(bRec.wi), bRec.wo)-1) > DeltaEpsilon)
-			return 0.0f;
+        /* Verify that the provided direction pair matches an ideal
+           specular reflection; tolerate some roundoff errors */
+        if (!sampleReflection || measure != EDiscrete ||
+            Frame::cosTheta(bRec.wi) <= 0 ||
+            Frame::cosTheta(bRec.wo) <= 0 ||
+            std::abs(dot(reflect(bRec.wi), bRec.wo)-1) > DeltaEpsilon)
+            return 0.0f;
 
-		return 1.0f;
-	}
+        return 1.0f;
+    }
 
-	Spectrum sample(BSDFSamplingRecord &bRec, const Point2 &sample) const {
-		bool sampleReflection   = (bRec.typeMask & EDeltaReflection)
-				&& (bRec.component == -1 || bRec.component == 0);
+    Spectrum sample(BSDFSamplingRecord &bRec, const Point2 &sample) const {
+        bool sampleReflection   = (bRec.typeMask & EDeltaReflection)
+                && (bRec.component == -1 || bRec.component == 0);
 
-		if (!sampleReflection || Frame::cosTheta(bRec.wi) <= 0)
-			return Spectrum(0.0f);
+        if (!sampleReflection || Frame::cosTheta(bRec.wi) <= 0)
+            return Spectrum(0.0f);
 
-		bRec.sampledComponent = 0;
-		bRec.sampledType = EDeltaReflection;
-		bRec.wo = reflect(bRec.wi);
-		bRec.eta = 1.0f;
+        bRec.sampledComponent = 0;
+        bRec.sampledType = EDeltaReflection;
+        bRec.wo = reflect(bRec.wi);
+        bRec.eta = 1.0f;
 
-		return m_specularReflectance->eval(bRec.its) *
-			fresnelConductorExact(Frame::cosTheta(bRec.wi), m_eta, m_k);
-	}
+        return m_specularReflectance->eval(bRec.its) *
+            fresnelConductorExact(Frame::cosTheta(bRec.wi), m_eta, m_k);
+    }
 
-	Spectrum sample(BSDFSamplingRecord &bRec, Float &pdf, const Point2 &sample) const {
-		bool sampleReflection   = (bRec.typeMask & EDeltaReflection)
-				&& (bRec.component == -1 || bRec.component == 0);
+    Spectrum sample(BSDFSamplingRecord &bRec, Float &pdf, const Point2 &sample) const {
+        bool sampleReflection   = (bRec.typeMask & EDeltaReflection)
+                && (bRec.component == -1 || bRec.component == 0);
 
-		if (!sampleReflection || Frame::cosTheta(bRec.wi) <= 0)
-			return Spectrum(0.0f);
+        if (!sampleReflection || Frame::cosTheta(bRec.wi) <= 0)
+            return Spectrum(0.0f);
 
-		bRec.sampledComponent = 0;
-		bRec.sampledType = EDeltaReflection;
-		bRec.wo = reflect(bRec.wi);
-		bRec.eta = 1.0f;
-		pdf = 1;
+        bRec.sampledComponent = 0;
+        bRec.sampledType = EDeltaReflection;
+        bRec.wo = reflect(bRec.wi);
+        bRec.eta = 1.0f;
+        pdf = 1;
 
-		return m_specularReflectance->eval(bRec.its) *
-			fresnelConductorExact(Frame::cosTheta(bRec.wi), m_eta, m_k);
-	}
+        return m_specularReflectance->eval(bRec.its) *
+            fresnelConductorExact(Frame::cosTheta(bRec.wi), m_eta, m_k);
+    }
 
-	Float getRoughness(const Intersection &its, int component) const {
-		return 0.0f;
-	}
+    Float getRoughness(const Intersection &its, int component) const {
+        return 0.0f;
+    }
 
-	std::string toString() const {
-		std::ostringstream oss;
-		oss << "SmoothConductor[" << endl
-			<< "  id = \"" << getID() << "\"," << endl
-			<< "  eta = " << m_eta.toString() << "," << endl
-			<< "  k = " << m_k.toString() << "," << endl
-			<< "  specularReflectance = " << indent(m_specularReflectance->toString()) << endl
-			<< "]";
-		return oss.str();
-	}
+    std::string toString() const {
+        std::ostringstream oss;
+        oss << "SmoothConductor[" << endl
+            << "  id = \"" << getID() << "\"," << endl
+            << "  eta = " << m_eta.toString() << "," << endl
+            << "  k = " << m_k.toString() << "," << endl
+            << "  specularReflectance = " << indent(m_specularReflectance->toString()) << endl
+            << "]";
+        return oss.str();
+    }
 
-	Shader *createShader(Renderer *renderer) const;
+    Shader *createShader(Renderer *renderer) const;
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 private:
-	ref<Texture> m_specularReflectance;
-	Spectrum m_eta;
-	Spectrum m_k;
+    ref<Texture> m_specularReflectance;
+    Spectrum m_eta;
+    Spectrum m_k;
 };
 
 /* Smooth conductor shader -- it is really hopeless to visualize
@@ -318,90 +318,90 @@ private:
 */
 class SmoothConductorShader : public Shader {
 public:
-	SmoothConductorShader(Renderer *renderer, const Texture *specularReflectance,
-			const Spectrum &eta, const Spectrum &k) : Shader(renderer, EBSDFShader),
-			m_specularReflectance(specularReflectance) {
-		m_specularReflectanceShader = renderer->registerShaderForResource(m_specularReflectance.get());
+    SmoothConductorShader(Renderer *renderer, const Texture *specularReflectance,
+            const Spectrum &eta, const Spectrum &k) : Shader(renderer, EBSDFShader),
+            m_specularReflectance(specularReflectance) {
+        m_specularReflectanceShader = renderer->registerShaderForResource(m_specularReflectance.get());
 
-		/* Compute the reflectance at perpendicular incidence */
-		m_R0 = fresnelConductorExact(1.0f, eta, k);
+        /* Compute the reflectance at perpendicular incidence */
+        m_R0 = fresnelConductorExact(1.0f, eta, k);
 
-		m_alpha = 0.4f;
-	}
+        m_alpha = 0.4f;
+    }
 
-	bool isComplete() const {
-		return m_specularReflectanceShader.get() != NULL;
-	}
+    bool isComplete() const {
+        return m_specularReflectanceShader.get() != NULL;
+    }
 
-	void putDependencies(std::vector<Shader *> &deps) {
-		deps.push_back(m_specularReflectanceShader.get());
-	}
+    void putDependencies(std::vector<Shader *> &deps) {
+        deps.push_back(m_specularReflectanceShader.get());
+    }
 
-	void cleanup(Renderer *renderer) {
-		renderer->unregisterShaderForResource(m_specularReflectance.get());
-	}
+    void cleanup(Renderer *renderer) {
+        renderer->unregisterShaderForResource(m_specularReflectance.get());
+    }
 
-	void resolve(const GPUProgram *program, const std::string &evalName, std::vector<int> &parameterIDs) const {
-		parameterIDs.push_back(program->getParameterID(evalName + "_R0", false));
-	}
+    void resolve(const GPUProgram *program, const std::string &evalName, std::vector<int> &parameterIDs) const {
+        parameterIDs.push_back(program->getParameterID(evalName + "_R0", false));
+    }
 
-	void bind(GPUProgram *program, const std::vector<int> &parameterIDs, int &textureUnitOffset) const {
-		program->setParameter(parameterIDs[0], m_R0);
-	}
+    void bind(GPUProgram *program, const std::vector<int> &parameterIDs, int &textureUnitOffset) const {
+        program->setParameter(parameterIDs[0], m_R0);
+    }
 
-	void generateCode(std::ostringstream &oss,
-			const std::string &evalName,
-			const std::vector<std::string> &depNames) const {
-		oss << "uniform vec3 " << evalName << "_R0;" << endl
-			<< endl
-			<< "float " << evalName << "_D(vec3 m, float alpha) {" << endl
-			<< "    alpha = 2 / (alpha * alpha) - 2;" << endl
-			<< "    return (alpha + 2) * 0.15915 * pow(cosTheta(m), alpha);" << endl
-			<< "}" << endl
-			<< endl
-			<< "float " << evalName << "_G(vec3 m, vec3 wi, vec3 wo) {" << endl
-			<< "    if ((dot(wi, m) * cosTheta(wi)) <= 0 || " << endl
-			<< "        (dot(wo, m) * cosTheta(wo)) <= 0)" << endl
-			<< "        return 0.0;" << endl
-			<< "    float nDotM = cosTheta(m);" << endl
-			<< "    return min(1.0, min(" << endl
-			<< "        abs(2 * nDotM * cosTheta(wo) / dot(wo, m))," << endl
-			<< "        abs(2 * nDotM * cosTheta(wi) / dot(wi, m))));" << endl
-			<< "}" << endl
-			<< endl
-			<< "vec3 " << evalName << "_schlick(float ct) {" << endl
-			<< "    float ctSqr = ct*ct, ct5 = ctSqr*ctSqr*ct;" << endl
-			<< "    return " << evalName << "_R0 + (vec3(1.0) - " << evalName << "_R0) * ct5;" << endl
-			<< "}" << endl
-			<< endl
-			<< "vec3 " << evalName << "(vec2 uv, vec3 wi, vec3 wo) {" << endl
-			<< "   if (cosTheta(wi) <= 0 || cosTheta(wo) <= 0)" << endl
-			<< "    	return vec3(0.0);" << endl
-			<< "   vec3 H = normalize(wi + wo);" << endl
-			<< "   vec3 reflectance = " << depNames[0] << "(uv);" << endl
-			<< "   float D = " << evalName << "_D(H, " << m_alpha << ")" << ";" << endl
-			<< "   float G = " << evalName << "_G(H, wi, wo);" << endl
-			<< "   vec3 F = " << evalName << "_schlick(1-dot(wi, H));" << endl
-			<< "   return reflectance * F * (D * G / (4*cosTheta(wi)));" << endl
-			<< "}" << endl
-			<< endl
-			<< "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
-			<< "    if (cosTheta(wi) < 0.0 || cosTheta(wo) < 0.0)" << endl
-			<< "    	return vec3(0.0);" << endl
-			<< "    return " << evalName << "_R0 * inv_pi * inv_pi * cosTheta(wo);"<< endl
-			<< "}" << endl;
-	}
-	MTS_DECLARE_CLASS()
+    void generateCode(std::ostringstream &oss,
+            const std::string &evalName,
+            const std::vector<std::string> &depNames) const {
+        oss << "uniform vec3 " << evalName << "_R0;" << endl
+            << endl
+            << "float " << evalName << "_D(vec3 m, float alpha) {" << endl
+            << "    alpha = 2 / (alpha * alpha) - 2;" << endl
+            << "    return (alpha + 2) * 0.15915 * pow(cosTheta(m), alpha);" << endl
+            << "}" << endl
+            << endl
+            << "float " << evalName << "_G(vec3 m, vec3 wi, vec3 wo) {" << endl
+            << "    if ((dot(wi, m) * cosTheta(wi)) <= 0 || " << endl
+            << "        (dot(wo, m) * cosTheta(wo)) <= 0)" << endl
+            << "        return 0.0;" << endl
+            << "    float nDotM = cosTheta(m);" << endl
+            << "    return min(1.0, min(" << endl
+            << "        abs(2 * nDotM * cosTheta(wo) / dot(wo, m))," << endl
+            << "        abs(2 * nDotM * cosTheta(wi) / dot(wi, m))));" << endl
+            << "}" << endl
+            << endl
+            << "vec3 " << evalName << "_schlick(float ct) {" << endl
+            << "    float ctSqr = ct*ct, ct5 = ctSqr*ctSqr*ct;" << endl
+            << "    return " << evalName << "_R0 + (vec3(1.0) - " << evalName << "_R0) * ct5;" << endl
+            << "}" << endl
+            << endl
+            << "vec3 " << evalName << "(vec2 uv, vec3 wi, vec3 wo) {" << endl
+            << "   if (cosTheta(wi) <= 0 || cosTheta(wo) <= 0)" << endl
+            << "        return vec3(0.0);" << endl
+            << "   vec3 H = normalize(wi + wo);" << endl
+            << "   vec3 reflectance = " << depNames[0] << "(uv);" << endl
+            << "   float D = " << evalName << "_D(H, " << m_alpha << ")" << ";" << endl
+            << "   float G = " << evalName << "_G(H, wi, wo);" << endl
+            << "   vec3 F = " << evalName << "_schlick(1-dot(wi, H));" << endl
+            << "   return reflectance * F * (D * G / (4*cosTheta(wi)));" << endl
+            << "}" << endl
+            << endl
+            << "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
+            << "    if (cosTheta(wi) < 0.0 || cosTheta(wo) < 0.0)" << endl
+            << "        return vec3(0.0);" << endl
+            << "    return " << evalName << "_R0 * inv_pi * inv_pi * cosTheta(wo);"<< endl
+            << "}" << endl;
+    }
+    MTS_DECLARE_CLASS()
 private:
-	ref<const Texture> m_specularReflectance;
-	ref<Shader> m_specularReflectanceShader;
-	Spectrum m_R0;
-	Float m_alpha;
+    ref<const Texture> m_specularReflectance;
+    ref<Shader> m_specularReflectanceShader;
+    Spectrum m_R0;
+    Float m_alpha;
 };
 
 Shader *SmoothConductor::createShader(Renderer *renderer) const {
-	return new SmoothConductorShader(renderer,
-		m_specularReflectance.get(), m_eta, m_k);
+    return new SmoothConductorShader(renderer,
+        m_specularReflectance.get(), m_eta, m_k);
 }
 
 MTS_IMPLEMENT_CLASS(SmoothConductorShader, false, Shader)

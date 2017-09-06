@@ -30,14 +30,14 @@ MTS_NAMESPACE_END
 #include <Cocoa/Cocoa.h>
 
 @interface CustomView : NSView < NSWindowDelegate > {
-	mitsuba::NSGLDevice *m_device;
-	unsigned int m_keymap[0xFF];
-	unsigned int m_modifiers;
-	unsigned int m_buttonMask;
-	bool m_mouseInWindow;
-	bool m_firstMouseMotion;
-	bool m_focused;
-	bool m_ignoreNextMouseEvent;
+    mitsuba::NSGLDevice *m_device;
+    unsigned int m_keymap[0xFF];
+    unsigned int m_modifiers;
+    unsigned int m_buttonMask;
+    bool m_mouseInWindow;
+    bool m_firstMouseMotion;
+    bool m_focused;
+    bool m_ignoreNextMouseEvent;
 }
 
 - (BOOL) focused;
@@ -55,84 +55,84 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_HW NSGLDevice : public Device {
 public:
-	/// Create a new device
-	NSGLDevice(NSGLSession *session);
+    /// Create a new device
+    NSGLDevice(NSGLSession *session);
 
-	/// Initialize the device
-	void init(Device *other = NULL);
+    /// Initialize the device
+    void init(Device *other = NULL);
 
-	/// Shut the device down
-	void shutdown();
+    /// Shut the device down
+    void shutdown();
 
-	/// Flip the buffers
-	void flip();
+    /// Flip the buffers
+    void flip();
 
-	/// Only applies in windowed mode
-	void setVisible(bool enabled);
+    /// Only applies in windowed mode
+    void setVisible(bool enabled);
 
-	/// Only applies in windowed mode
-	void setPosition(const Point2i &position);
+    /// Only applies in windowed mode
+    void setPosition(const Point2i &position);
 
-	/// Set the window title
-	void setTitle(const std::string &title);
+    /// Set the window title
+    void setTitle(const std::string &title);
 
-	/// Display the NSGL cursor?
-	void showCursor(bool enabled);
+    /// Display the NSGL cursor?
+    void showCursor(bool enabled);
 
-	/// Move the mouse to another position
-	void warpMouse(const Point2i &position);
+    /// Move the mouse to another position
+    void warpMouse(const Point2i &position);
 
-	/// Associate a renderer with this device
-	void makeCurrent(Renderer *renderer);
+    /// Associate a renderer with this device
+    void makeCurrent(Renderer *renderer);
 
-	/// Set the cursor grab state
-	void setGrab(bool grab);
+    /// Set the cursor grab state
+    void setGrab(bool grab);
 
-	// *************************************
-	// ************* INTERNAL **************
-	// *************************************
+    // *************************************
+    // ************* INTERNAL **************
+    // *************************************
 
-	/// Is the NSGL cursor shown?
-	inline bool getCursor() const { return m_cursor; }
+    /// Is the NSGL cursor shown?
+    inline bool getCursor() const { return m_cursor; }
 
-	/// Is the mouse inside the window?
-	bool isMouseInWindow();
+    /// Is the mouse inside the window?
+    bool isMouseInWindow();
 
-	/// Push a device event onto the stack
-	void pushEvent(const DeviceEvent &event);
+    /// Push a device event onto the stack
+    void pushEvent(const DeviceEvent &event);
 
-	/**
-	 * Deliver all events which have been
-	 * received asynchronously
-	 */
-	void processEvents();
+    /**
+     * Deliver all events which have been
+     * received asynchronously
+     */
+    void processEvents();
 
-	/// Return the NSWindow
-	inline void *getWindow() { return m_window; }
+    /// Return the NSWindow
+    inline void *getWindow() { return m_window; }
 
-	/// Return the pixel format
-	inline void *getPixelFormat() { return m_fmt; }
+    /// Return the pixel format
+    inline void *getPixelFormat() { return m_fmt; }
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	/// Virtual destructor
-	virtual ~NSGLDevice();
+    /// Virtual destructor
+    virtual ~NSGLDevice();
 private:
 #ifdef __OBJC__
-	NSWindow *m_window;
-	CustomView *m_view;
-	NSOpenGLPixelFormat *m_fmt;
-	NSOpenGLContext *m_currentContext;
+    NSWindow *m_window;
+    CustomView *m_view;
+    NSOpenGLPixelFormat *m_fmt;
+    NSOpenGLContext *m_currentContext;
 #else
-	void *m_window;
-	void *m_view;
-	void *m_fmt;
-	void *m_currentContext;
+    void *m_window;
+    void *m_view;
+    void *m_fmt;
+    void *m_currentContext;
 #endif
-	bool m_visible;
-	bool m_cursor;
-	std::vector<DeviceEvent> m_deviceEvents;
-	ref<Mutex> m_mutex;
+    bool m_visible;
+    bool m_cursor;
+    std::vector<DeviceEvent> m_deviceEvents;
+    ref<Mutex> m_mutex;
 };
 
 MTS_NAMESPACE_END

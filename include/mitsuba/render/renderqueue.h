@@ -32,25 +32,25 @@ MTS_NAMESPACE_BEGIN
  */
 class MTS_EXPORT_RENDER RenderListener : public Object {
 public:
-	/// Called when work has begun in a rectangular image region
-	virtual void workBeginEvent(const RenderJob *job, const RectangularWorkUnit *wu, int worker);
+    /// Called when work has begun in a rectangular image region
+    virtual void workBeginEvent(const RenderJob *job, const RectangularWorkUnit *wu, int worker);
 
-	/// Called when work has finished in a rectangular image region
-	virtual void workEndEvent(const RenderJob *job, const ImageBlock *wr, bool cancelled);
+    /// Called when work has finished in a rectangular image region
+    virtual void workEndEvent(const RenderJob *job, const ImageBlock *wr, bool cancelled);
 
-	/// Called when work has been canceled in a rectangular image region
-	virtual void workCanceledEvent(const RenderJob *job, const Point2i &offset,
-			const Vector2i &size);
+    /// Called when work has been canceled in a rectangular image region
+    virtual void workCanceledEvent(const RenderJob *job, const Point2i &offset,
+            const Vector2i &size);
 
-	/// Called when the whole target image has been altered in some way.
-	virtual void refreshEvent(const RenderJob *job);
+    /// Called when the whole target image has been altered in some way.
+    virtual void refreshEvent(const RenderJob *job);
 
-	/// Called when a render job has completed successfully or unsuccessfully
-	virtual void finishJobEvent(const RenderJob *job, bool cancelled);
+    /// Called when a render job has completed successfully or unsuccessfully
+    virtual void finishJobEvent(const RenderJob *job, bool cancelled);
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 protected:
-	virtual ~RenderListener() { }
+    virtual ~RenderListener() { }
 };
 
 /**
@@ -64,67 +64,67 @@ protected:
  */
 class MTS_EXPORT_RENDER RenderQueue : public Object {
 public:
-	/// Create a new render queue
-	RenderQueue();
+    /// Create a new render queue
+    RenderQueue();
 
-	/// Return the current number of jobs in the queue
-	inline size_t getJobCount() const { return m_jobs.size(); }
+    /// Return the current number of jobs in the queue
+    inline size_t getJobCount() const { return m_jobs.size(); }
 
-	/// Add a render job to the queue
-	void addJob(RenderJob *thr);
+    /// Add a render job to the queue
+    void addJob(RenderJob *thr);
 
-	/// Remove a (finished) render job from the queue
-	void removeJob(RenderJob *thr, bool wasCancelled);
+    /// Remove a (finished) render job from the queue
+    void removeJob(RenderJob *thr, bool wasCancelled);
 
-	/// Return the amount of time spent rendering the given job (in seconds)
-	Float getRenderTime(const RenderJob *job) const;
+    /// Return the amount of time spent rendering the given job (in seconds)
+    Float getRenderTime(const RenderJob *job) const;
 
-	/// Register a render listener
-	void registerListener(RenderListener *listener);
+    /// Register a render listener
+    void registerListener(RenderListener *listener);
 
-	/// Unregister a render listener
-	void unregisterListener(RenderListener *listener);
+    /// Unregister a render listener
+    void unregisterListener(RenderListener *listener);
 
-	/**
-	 * Wait until the queue contains a certain number
-	 * of scenes (or less).
-	 */
-	void waitLeft(size_t njobs) const;
+    /**
+     * Wait until the queue contains a certain number
+     * of scenes (or less).
+     */
+    void waitLeft(size_t njobs) const;
 
-	/// Releases resources held by recently finished jobs
-	void join() const;
+    /// Releases resources held by recently finished jobs
+    void join() const;
 
-	/// Cause all render jobs to write out the current image
-	void flush();
+    /// Cause all render jobs to write out the current image
+    void flush();
 
-	/* Event distribution */
-	void signalWorkBegin(const RenderJob *job, const RectangularWorkUnit *wu, int worker);
-	void signalWorkEnd(const RenderJob *job, const ImageBlock *block, bool cancelled);
-	void signalWorkCanceled(const RenderJob *job, const Point2i &offset, const Vector2i &size);
-	void signalFinishJob(const RenderJob *job, bool cancelled);
-	void signalRefresh(const RenderJob *job);
+    /* Event distribution */
+    void signalWorkBegin(const RenderJob *job, const RectangularWorkUnit *wu, int worker);
+    void signalWorkEnd(const RenderJob *job, const ImageBlock *block, bool cancelled);
+    void signalWorkCanceled(const RenderJob *job, const Point2i &offset, const Vector2i &size);
+    void signalFinishJob(const RenderJob *job, bool cancelled);
+    void signalRefresh(const RenderJob *job);
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 private:
-	/// Virtual destructor
-	virtual ~RenderQueue();
+    /// Virtual destructor
+    virtual ~RenderQueue();
 private:
-	struct JobRecord {
-		/* Only starting time for now */
-		unsigned int startTime;
+    struct JobRecord {
+        /* Only starting time for now */
+        unsigned int startTime;
 
-		inline JobRecord() { }
-		inline JobRecord(unsigned int startTime)
-			: startTime(startTime) {
-		}
-	};
+        inline JobRecord() { }
+        inline JobRecord(unsigned int startTime)
+            : startTime(startTime) {
+        }
+    };
 
-	std::map<RenderJob *, JobRecord> m_jobs;
-	mutable std::vector<RenderJob *> m_joinList;
-	mutable ref<Mutex> m_mutex, m_joinMutex;
-	mutable ref<ConditionVariable> m_cond;
-	ref<Timer> m_timer;
-	std::vector<RenderListener *> m_listeners;
+    std::map<RenderJob *, JobRecord> m_jobs;
+    mutable std::vector<RenderJob *> m_joinList;
+    mutable ref<Mutex> m_mutex, m_joinMutex;
+    mutable ref<ConditionVariable> m_cond;
+    ref<Timer> m_timer;
+    std::vector<RenderListener *> m_listeners;
 };
 
 MTS_NAMESPACE_END

@@ -20,6 +20,6 @@
 uniform mat4 instanceTransform;
 
 void main() {
-	vec4 pos = instanceTransform * gl_Vertex;
-	gl_Position = gl_ModelViewProjectionMatrix * pos;
+    vec4 pos = instanceTransform * gl_Vertex;
+    gl_Position = gl_ModelViewProjectionMatrix * pos;
 }

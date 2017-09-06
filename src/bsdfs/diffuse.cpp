@@ -74,159 +74,159 @@ MTS_NAMESPACE_BEGIN
  */
 class SmoothDiffuse : public BSDF {
 public:
-	SmoothDiffuse(const Properties &props)
-		: BSDF(props) {
-		/* For better compatibility with other models, support both
-		   'reflectance' and 'diffuseReflectance' as parameter names */
-		m_reflectance = new ConstantSpectrumTexture(props.getSpectrum(
-			props.hasProperty("reflectance") ? "reflectance"
-				: "diffuseReflectance", Spectrum(.5f)));
-	}
+    SmoothDiffuse(const Properties &props)
+        : BSDF(props) {
+        /* For better compatibility with other models, support both
+           'reflectance' and 'diffuseReflectance' as parameter names */
+        m_reflectance = new ConstantSpectrumTexture(props.getSpectrum(
+            props.hasProperty("reflectance") ? "reflectance"
+                : "diffuseReflectance", Spectrum(.5f)));
+    }
 
-	SmoothDiffuse(Stream *stream, InstanceManager *manager)
-		: BSDF(stream, manager) {
-		m_reflectance = static_cast<Texture *>(manager->getInstance(stream));
+    SmoothDiffuse(Stream *stream, InstanceManager *manager)
+        : BSDF(stream, manager) {
+        m_reflectance = static_cast<Texture *>(manager->getInstance(stream));
 
-		configure();
-	}
+        configure();
+    }
 
-	void configure() {
-		/* Verify the input parameter and fix them if necessary */
-		m_reflectance = ensureEnergyConservation(m_reflectance, "reflectance", 1.0f);
+    void configure() {
+        /* Verify the input parameter and fix them if necessary */
+        m_reflectance = ensureEnergyConservation(m_reflectance, "reflectance", 1.0f);
 
-		m_components.clear();
-		if (m_reflectance->getMaximum().max() > 0)
-			m_components.push_back(EDiffuseReflection | EFrontSide
-				| (m_reflectance->isConstant() ? 0 : ESpatiallyVarying));
-			m_usesRayDifferentials = m_reflectance->usesRayDifferentials();
+        m_components.clear();
+        if (m_reflectance->getMaximum().max() > 0)
+            m_components.push_back(EDiffuseReflection | EFrontSide
+                | (m_reflectance->isConstant() ? 0 : ESpatiallyVarying));
+            m_usesRayDifferentials = m_reflectance->usesRayDifferentials();
 
-		BSDF::configure();
-	}
+        BSDF::configure();
+    }
 
-	Spectrum getDiffuseReflectance(const Intersection &its) const {
-		return m_reflectance->eval(its);
-	}
+    Spectrum getDiffuseReflectance(const Intersection &its) const {
+        return m_reflectance->eval(its);
+    }
 
-	Spectrum eval(const BSDFSamplingRecord &bRec, EMeasure measure) const {
-		if (!(bRec.typeMask & EDiffuseReflection) || measure != ESolidAngle
-			|| Frame::cosTheta(bRec.wi) <= 0
-			|| Frame::cosTheta(bRec.wo) <= 0)
-			return Spectrum(0.0f);
+    Spectrum eval(const BSDFSamplingRecord &bRec, EMeasure measure) const {
+        if (!(bRec.typeMask & EDiffuseReflection) || measure != ESolidAngle
+            || Frame::cosTheta(bRec.wi) <= 0
+            || Frame::cosTheta(bRec.wo) <= 0)
+            return Spectrum(0.0f);
 
-		return m_reflectance->eval(bRec.its)
-			* (INV_PI * Frame::cosTheta(bRec.wo));
-	}
+        return m_reflectance->eval(bRec.its)
+            * (INV_PI * Frame::cosTheta(bRec.wo));
+    }
 
-	Float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const {
-		if (!(bRec.typeMask & EDiffuseReflection) || measure != ESolidAngle
-			|| Frame::cosTheta(bRec.wi) <= 0
-			|| Frame::cosTheta(bRec.wo) <= 0)
-			return 0.0f;
+    Float pdf(const BSDFSamplingRecord &bRec, EMeasure measure) const {
+        if (!(bRec.typeMask & EDiffuseReflection) || measure != ESolidAngle
+            || Frame::cosTheta(bRec.wi) <= 0
+            || Frame::cosTheta(bRec.wo) <= 0)
+            return 0.0f;
 
-		return warp::squareToCosineHemispherePdf(bRec.wo);
-	}
+        return warp::squareToCosineHemispherePdf(bRec.wo);
+    }
 
-	Spectrum sample(BSDFSamplingRecord &bRec, const Point2 &sample) const {
-		if (!(bRec.typeMask & EDiffuseReflection) || Frame::cosTheta(bRec.wi) <= 0)
-			return Spectrum(0.0f);
+    Spectrum sample(BSDFSamplingRecord &bRec, const Point2 &sample) const {
+        if (!(bRec.typeMask & EDiffuseReflection) || Frame::cosTheta(bRec.wi) <= 0)
+            return Spectrum(0.0f);
 
-		bRec.wo = warp::squareToCosineHemisphere(sample);
-		bRec.eta = 1.0f;
-		bRec.sampledComponent = 0;
-		bRec.sampledType = EDiffuseReflection;
-		return m_reflectance->eval(bRec.its);
-	}
+        bRec.wo = warp::squareToCosineHemisphere(sample);
+        bRec.eta = 1.0f;
+        bRec.sampledComponent = 0;
+        bRec.sampledType = EDiffuseReflection;
+        return m_reflectance->eval(bRec.its);
+    }
 
-	Spectrum sample(BSDFSamplingRecord &bRec, Float &pdf, const Point2 &sample) const {
-		if (!(bRec.typeMask & EDiffuseReflection) || Frame::cosTheta(bRec.wi) <= 0)
-			return Spectrum(0.0f);
+    Spectrum sample(BSDFSamplingRecord &bRec, Float &pdf, const Point2 &sample) const {
+        if (!(bRec.typeMask & EDiffuseReflection) || Frame::cosTheta(bRec.wi) <= 0)
+            return Spectrum(0.0f);
 
-		bRec.wo = warp::squareToCosineHemisphere(sample);
-		bRec.eta = 1.0f;
-		bRec.sampledComponent = 0;
-		bRec.sampledType = EDiffuseReflection;
-		pdf = warp::squareToCosineHemispherePdf(bRec.wo);
-		return m_reflectance->eval(bRec.its);
-	}
+        bRec.wo = warp::squareToCosineHemisphere(sample);
+        bRec.eta = 1.0f;
+        bRec.sampledComponent = 0;
+        bRec.sampledType = EDiffuseReflection;
+        pdf = warp::squareToCosineHemispherePdf(bRec.wo);
+        return m_reflectance->eval(bRec.its);
+    }
 
-	void addChild(const std::string &name, ConfigurableObject *child) {
-		if (child->getClass()->derivesFrom(MTS_CLASS(Texture))
-				&& (name == "reflectance" || name == "diffuseReflectance")) {
-			m_reflectance = static_cast<Texture *>(child);
-		} else {
-			BSDF::addChild(name, child);
-		}
-	}
+    void addChild(const std::string &name, ConfigurableObject *child) {
+        if (child->getClass()->derivesFrom(MTS_CLASS(Texture))
+                && (name == "reflectance" || name == "diffuseReflectance")) {
+            m_reflectance = static_cast<Texture *>(child);
+        } else {
+            BSDF::addChild(name, child);
+        }
+    }
 
-	void serialize(Stream *stream, InstanceManager *manager) const {
-		BSDF::serialize(stream, manager);
+    void serialize(Stream *stream, InstanceManager *manager) const {
+        BSDF::serialize(stream, manager);
 
-		manager->serialize(stream, m_reflectance.get());
-	}
+        manager->serialize(stream, m_reflectance.get());
+    }
 
-	Float getRoughness(const Intersection &its, int component) const {
-		return std::numeric_limits<Float>::infinity();
-	}
+    Float getRoughness(const Intersection &its, int component) const {
+        return std::numeric_limits<Float>::infinity();
+    }
 
-	std::string toString() const {
-		std::ostringstream oss;
-		oss << "SmoothDiffuse[" << endl
-			<< "  id = \"" << getID() << "\"," << endl
-			<< "  reflectance = " << indent(m_reflectance->toString()) << endl
-			<< "]";
-		return oss.str();
-	}
+    std::string toString() const {
+        std::ostringstream oss;
+        oss << "SmoothDiffuse[" << endl
+            << "  id = \"" << getID() << "\"," << endl
+            << "  reflectance = " << indent(m_reflectance->toString()) << endl
+            << "]";
+        return oss.str();
+    }
 
-	Shader *createShader(Renderer *renderer) const;
+    Shader *createShader(Renderer *renderer) const;
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 private:
-	ref<Texture> m_reflectance;
+    ref<Texture> m_reflectance;
 };
 
 // ================ Hardware shader implementation ================
 
 class SmoothDiffuseShader : public Shader {
 public:
-	SmoothDiffuseShader(Renderer *renderer, const Texture *reflectance)
-		: Shader(renderer, EBSDFShader), m_reflectance(reflectance) {
-		m_reflectanceShader = renderer->registerShaderForResource(m_reflectance.get());
-	}
+    SmoothDiffuseShader(Renderer *renderer, const Texture *reflectance)
+        : Shader(renderer, EBSDFShader), m_reflectance(reflectance) {
+        m_reflectanceShader = renderer->registerShaderForResource(m_reflectance.get());
+    }
 
-	bool isComplete() const {
-		return m_reflectanceShader.get() != NULL;
-	}
+    bool isComplete() const {
+        return m_reflectanceShader.get() != NULL;
+    }
 
-	void cleanup(Renderer *renderer) {
-		renderer->unregisterShaderForResource(m_reflectance.get());
-	}
+    void cleanup(Renderer *renderer) {
+        renderer->unregisterShaderForResource(m_reflectance.get());
+    }
 
-	void putDependencies(std::vector<Shader *> &deps) {
-		deps.push_back(m_reflectanceShader.get());
-	}
+    void putDependencies(std::vector<Shader *> &deps) {
+        deps.push_back(m_reflectanceShader.get());
+    }
 
-	void generateCode(std::ostringstream &oss,
-			const std::string &evalName,
-			const std::vector<std::string> &depNames) const {
-		oss << "vec3 " << evalName << "(vec2 uv, vec3 wi, vec3 wo) {" << endl
-			<< "    if (cosTheta(wi) < 0.0 || cosTheta(wo) < 0.0)" << endl
-			<< "    	return vec3(0.0);" << endl
-			<< "    return " << depNames[0] << "(uv) * inv_pi * cosTheta(wo);" << endl
-			<< "}" << endl
-			<< endl
-			<< "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
-			<< "    return " << evalName << "(uv, wi, wo);" << endl
-			<< "}" << endl;
-	}
+    void generateCode(std::ostringstream &oss,
+            const std::string &evalName,
+            const std::vector<std::string> &depNames) const {
+        oss << "vec3 " << evalName << "(vec2 uv, vec3 wi, vec3 wo) {" << endl
+            << "    if (cosTheta(wi) < 0.0 || cosTheta(wo) < 0.0)" << endl
+            << "        return vec3(0.0);" << endl
+            << "    return " << depNames[0] << "(uv) * inv_pi * cosTheta(wo);" << endl
+            << "}" << endl
+            << endl
+            << "vec3 " << evalName << "_diffuse(vec2 uv, vec3 wi, vec3 wo) {" << endl
+            << "    return " << evalName << "(uv, wi, wo);" << endl
+            << "}" << endl;
+    }
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 private:
-	ref<const Texture> m_reflectance;
-	ref<Shader> m_reflectanceShader;
+    ref<const Texture> m_reflectance;
+    ref<Shader> m_reflectanceShader;
 };
 
 Shader *SmoothDiffuse::createShader(Renderer *renderer) const {
-	return new SmoothDiffuseShader(renderer, m_reflectance.get());
+    return new SmoothDiffuseShader(renderer, m_reflectance.get());
 }
 
 MTS_IMPLEMENT_CLASS(SmoothDiffuseShader, false, Shader)

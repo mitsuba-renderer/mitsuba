@@ -28,69 +28,69 @@ MTS_NAMESPACE_BEGIN
 
 class MemoryPool {
 public:
-	/// Create a new memory pool with aninitial set of 128 entries
-	MemoryPool(size_t nEntries = 128)
-		: m_vertexPool(nEntries), m_edgePool(nEntries) { }
+    /// Create a new memory pool with aninitial set of 128 entries
+    MemoryPool(size_t nEntries = 128)
+        : m_vertexPool(nEntries), m_edgePool(nEntries) { }
 
-	/// Destruct the memory pool and release all entries
-	~MemoryPool() { }
+    /// Destruct the memory pool and release all entries
+    ~MemoryPool() { }
 
-	/// Acquire an edge
-	inline PathEdge *allocEdge() {
-		PathEdge *edge = m_edgePool.alloc();
-		#if defined(MTS_BD_DEBUG_HEAVY)
-		memset(edge, 0xFF, sizeof(PathEdge));
-		#endif
-		return edge;
-	}
+    /// Acquire an edge
+    inline PathEdge *allocEdge() {
+        PathEdge *edge = m_edgePool.alloc();
+        #if defined(MTS_BD_DEBUG_HEAVY)
+        memset(edge, 0xFF, sizeof(PathEdge));
+        #endif
+        return edge;
+    }
 
-	/// Acquire an vertex
-	inline PathVertex *allocVertex() {
-		PathVertex *vertex = m_vertexPool.alloc();
-		#if defined(MTS_BD_DEBUG_HEAVY)
-		memset(vertex, 0xFF, sizeof(PathVertex));
-		#endif
-		return vertex;
-	}
+    /// Acquire an vertex
+    inline PathVertex *allocVertex() {
+        PathVertex *vertex = m_vertexPool.alloc();
+        #if defined(MTS_BD_DEBUG_HEAVY)
+        memset(vertex, 0xFF, sizeof(PathVertex));
+        #endif
+        return vertex;
+    }
 
-	/// Release an edge
-	inline void release(PathEdge *edge) {
-		m_edgePool.release(edge);
-	}
+    /// Release an edge
+    inline void release(PathEdge *edge) {
+        m_edgePool.release(edge);
+    }
 
-	/// Release an entry
-	inline void release(PathVertex *vertex) {
-		m_vertexPool.release(vertex);
-	}
+    /// Release an entry
+    inline void release(PathVertex *vertex) {
+        m_vertexPool.release(vertex);
+    }
 
-	/// Check if every entry has been released
-	bool unused() const {
-		return m_vertexPool.unused() && m_edgePool.unused();
-	}
+    /// Check if every entry has been released
+    bool unused() const {
+        return m_vertexPool.unused() && m_edgePool.unused();
+    }
 
-	/// Return the currently allocated amount of storage for edges
-	inline size_t edgeSize() {
-		return m_edgePool.size();
-	}
+    /// Return the currently allocated amount of storage for edges
+    inline size_t edgeSize() {
+        return m_edgePool.size();
+    }
 
-	/// Return the currently allocated amount of storage for vertices
-	inline size_t vertexSize() {
-		return m_vertexPool.size();
-	}
+    /// Return the currently allocated amount of storage for vertices
+    inline size_t vertexSize() {
+        return m_vertexPool.size();
+    }
 
-	/// Return a human-readable description
-	std::string toString() const {
-		std::ostringstream oss;
-		oss << "MemoryPool[" << endl
-			<< "  vertexPool = " << m_vertexPool.toString() << "," << endl
-			<< "  edgePool = " << m_edgePool.toString() << endl
-			<< "]";
-		return oss.str();
-	}
+    /// Return a human-readable description
+    std::string toString() const {
+        std::ostringstream oss;
+        oss << "MemoryPool[" << endl
+            << "  vertexPool = " << m_vertexPool.toString() << "," << endl
+            << "  edgePool = " << m_edgePool.toString() << endl
+            << "]";
+        return oss.str();
+    }
 
 private:
-	BasicMemoryPool<PathVertex> m_vertexPool;
-	BasicMemoryPool<PathEdge> m_edgePool;
+    BasicMemoryPool<PathVertex> m_vertexPool;
+    BasicMemoryPool<PathEdge> m_edgePool;
 };
 
 MTS_NAMESPACE_END

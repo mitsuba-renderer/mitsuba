@@ -2,7 +2,7 @@ Import('env', 'plugins')
 
 plugins += env.SharedLibrary('obj', ['obj.cpp'])
 plugins += env.SharedLibrary('ply', ['ply.cpp', 'ply/ply_parser.cpp'],
-	CPPPATH = env['CPPPATH'] + ['#src/shapes'])
+        CPPPATH = env['CPPPATH'] + ['#src/shapes'])
 plugins += env.SharedLibrary('serialized', ['serialized.cpp'])
 plugins += env.SharedLibrary('rectangle', ['rectangle.cpp'])
 plugins += env.SharedLibrary('disk', ['disk.cpp'])

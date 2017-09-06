@@ -50,69 +50,69 @@ MTS_NAMESPACE_BEGIN
  */
 class IndependentSampler : public Sampler {
 public:
-	IndependentSampler() : Sampler(Properties()) { }
+    IndependentSampler() : Sampler(Properties()) { }
 
-	IndependentSampler(const Properties &props) : Sampler(props) {
-		/* Number of samples per pixel when used with a sampling-based integrator */
-		m_sampleCount = props.getSize("sampleCount", 4);
-		m_random = new Random();
-	}
+    IndependentSampler(const Properties &props) : Sampler(props) {
+        /* Number of samples per pixel when used with a sampling-based integrator */
+        m_sampleCount = props.getSize("sampleCount", 4);
+        m_random = new Random();
+    }
 
-	IndependentSampler(Stream *stream, InstanceManager *manager)
-	 : Sampler(stream, manager) {
-		m_random = static_cast<Random *>(manager->getInstance(stream));
-	}
+    IndependentSampler(Stream *stream, InstanceManager *manager)
+     : Sampler(stream, manager) {
+        m_random = static_cast<Random *>(manager->getInstance(stream));
+    }
 
-	void serialize(Stream *stream, InstanceManager *manager) const {
-		Sampler::serialize(stream, manager);
-		manager->serialize(stream, m_random.get());
-	}
+    void serialize(Stream *stream, InstanceManager *manager) const {
+        Sampler::serialize(stream, manager);
+        manager->serialize(stream, m_random.get());
+    }
 
-	ref<Sampler> clone() {
-		ref<IndependentSampler> sampler = new IndependentSampler();
-		sampler->m_sampleCount = m_sampleCount;
-		sampler->m_random = new Random(m_random);
-		for (size_t i=0; i<m_req1D.size(); ++i)
-			sampler->request1DArray(m_req1D[i]);
-		for (size_t i=0; i<m_req2D.size(); ++i)
-			sampler->request2DArray(m_req2D[i]);
-		return sampler.get();
-	}
+    ref<Sampler> clone() {
+        ref<IndependentSampler> sampler = new IndependentSampler();
+        sampler->m_sampleCount = m_sampleCount;
+        sampler->m_random = new Random(m_random);
+        for (size_t i=0; i<m_req1D.size(); ++i)
+            sampler->request1DArray(m_req1D[i]);
+        for (size_t i=0; i<m_req2D.size(); ++i)
+            sampler->request2DArray(m_req2D[i]);
+        return sampler.get();
+    }
 
-	void generate(const Point2i &) {
-		for (size_t i=0; i<m_req1D.size(); i++)
-			for (size_t j=0; j<m_sampleCount * m_req1D[i]; ++j)
-				m_sampleArrays1D[i][j] = m_random->nextFloat();
-		for (size_t i=0; i<m_req2D.size(); i++)
-			for (size_t j=0; j<m_sampleCount * m_req2D[i]; ++j)
-				m_sampleArrays2D[i][j] = Point2(
-					m_random->nextFloat(),
-					m_random->nextFloat());
-		m_sampleIndex = 0;
-		m_dimension1DArray = m_dimension2DArray = 0;
-	}
+    void generate(const Point2i &) {
+        for (size_t i=0; i<m_req1D.size(); i++)
+            for (size_t j=0; j<m_sampleCount * m_req1D[i]; ++j)
+                m_sampleArrays1D[i][j] = m_random->nextFloat();
+        for (size_t i=0; i<m_req2D.size(); i++)
+            for (size_t j=0; j<m_sampleCount * m_req2D[i]; ++j)
+                m_sampleArrays2D[i][j] = Point2(
+                    m_random->nextFloat(),
+                    m_random->nextFloat());
+        m_sampleIndex = 0;
+        m_dimension1DArray = m_dimension2DArray = 0;
+    }
 
-	Float next1D() {
-		return m_random->nextFloat();
-	}
+    Float next1D() {
+        return m_random->nextFloat();
+    }
 
-	Point2 next2D() {
-		Float value1 = m_random->nextFloat();
-		Float value2 = m_random->nextFloat();
-		return Point2(value1, value2);
-	}
+    Point2 next2D() {
+        Float value1 = m_random->nextFloat();
+        Float value2 = m_random->nextFloat();
+        return Point2(value1, value2);
+    }
 
-	std::string toString() const {
-		std::ostringstream oss;
-		oss << "IndependentSampler[" << endl
-			<< "  sampleCount = " << m_sampleCount << endl
-			<< "]";
-		return oss.str();
-	}
+    std::string toString() const {
+        std::ostringstream oss;
+        oss << "IndependentSampler[" << endl
+            << "  sampleCount = " << m_sampleCount << endl
+            << "]";
+        return oss.str();
+    }
 
-	MTS_DECLARE_CLASS()
+    MTS_DECLARE_CLASS()
 private:
-	ref<Random> m_random;
+    ref<Random> m_random;
 };
 
 MTS_IMPLEMENT_CLASS_S(IndependentSampler, false, Sampler)
