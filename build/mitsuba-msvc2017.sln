@@ -1,9 +1,9 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.26730.12
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mitsuba-vs2017", "mitsuba-vs2017.vcxproj", "{14BF8B5B-8DCA-4A28-83CA-CE9962153946}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mitsuba-msvc2017", "mitsuba-msvc2017.vcxproj", "{14BF8B5B-8DCA-4A28-83CA-CE9962153946}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
