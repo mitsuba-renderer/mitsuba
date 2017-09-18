@@ -20,9 +20,10 @@ config.log
 *.pyc
 
 # MSVC++-related
-build/mitsuba-msvc2010.sdf
-build/mitsuba-msvc2010.suo
-build/mitsuba-msvc2010.vcxproj.user
+build/mitsuba-msvc2017.sdf
+build/mitsuba-msvc2017.suo
+build/mitsuba-msvc2017.vcxproj.user
+build/.vs/**/*
 data/windows/mitsuba_res.res
 dist
 
