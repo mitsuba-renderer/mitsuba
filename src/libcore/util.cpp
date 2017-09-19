@@ -601,8 +601,7 @@ void coordinateSystem(const Vector &a, Vector &b, Vector &c) {
 }
 
 void computeShadingFrame(const Vector &n, const Vector &dpdu, Frame &frame) {
-	const Vector fail(0, 0, 0);
-	SAssertEx(dpdu != fail, "Cannot compute a shading frame without dpdu!");
+    SAssertEx(!dpdu.isZero(), "Cannot compute a shading frame without dpdu!");
 
     frame.n = n;
     frame.s = normalize(dpdu - frame.n
@@ -611,8 +610,7 @@ void computeShadingFrame(const Vector &n, const Vector &dpdu, Frame &frame) {
 }
 
 void computeShadingFrameDerivative(const Vector &n, const Vector &dpdu, const Vector &dndu, const Vector &dndv, Frame &du, Frame &dv) {
-	const Vector fail(0, 0, 0);
-	SAssertEx(dpdu != fail, "Cannot compute a shading frame derivative without dpdu!");
+    SAssertEx(!dpdu.isZero(), "Cannot compute a shading frame derivative without dpdu!");
 
     Vector s = dpdu - n * dot(n, dpdu);
     Float invLen_s = 1.0f / s.length();
