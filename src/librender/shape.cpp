@@ -205,6 +205,11 @@ void Shape::fillIntersectionRecord(const Ray &ray,
         const void *temp, Intersection &its) const {
     NotImplementedError("fillIntersectionRecord"); }
 
+void Shape::fillShadingFrame(Intersection &its) const
+{
+   computeShadingFrame(its.shFrame.n, its.dpdu, its.shFrame);
+}
+
 void Shape::getCurvature(const Intersection &its, Float &H, Float &K,
         bool shadingFrame) const {
     Vector dndu, dndv;

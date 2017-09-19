@@ -71,6 +71,8 @@ public:
     void fillIntersectionRecord(const Ray &ray,
         const void *temp, Intersection &its) const;
 
+    void fillShadingFrame(Intersection &its) const;
+
     ref<TriMesh> createTriMesh();
 
     const KDTreeBase<AABB> *getKDTree() const;

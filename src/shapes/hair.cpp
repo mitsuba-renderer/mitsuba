@@ -851,6 +851,12 @@ void HairShape::fillIntersectionRecord(const Ray &ray,
     its.time = ray.time;
 }
 
+void HairShape::fillShadingFrame(Intersection & its) const
+{
+    // Since dpdu is NOT initialized, use the geometry frame instead
+    its.shFrame = its.geoFrame;
+}
+
 ref<TriMesh> HairShape::createTriMesh() {
     size_t nSegments = m_kdtree->getSegmentCount();
     /// Use very approximate geometry for large hair meshes

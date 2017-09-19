@@ -278,6 +278,15 @@ public:
             const void *temp, Intersection &its) const;
 
     /**
+     * \brief Complete the given shading frame
+     *
+     * \remark This function should implicitly call
+     * \c computeShadingFrame, unless the shape
+     * needs a different initialization
+     */
+    virtual void fillShadingFrame(Intersection &its) const;
+
+    /**
      * \brief Return the derivative of the normal vector with
      * respect to the UV parameterization
      *
@@ -530,5 +539,3 @@ protected:
 MTS_NAMESPACE_END
 
 #endif /* __MITSUBA_RENDER_SHAPE_H_ */
-
-

@@ -418,12 +418,13 @@ protected:
             its.primIndex = cache->primIndex;
             its.instance = NULL;
             its.time = ray.time;
+            its.shape->fillShadingFrame(its);
         } else {
             shape->fillIntersectionRecord(ray,
                 reinterpret_cast<const uint8_t*>(temp) + 2*sizeof(IndexType), its);
+            shape->fillShadingFrame(its);
         }
 
-        computeShadingFrame(its.shFrame.n, its.dpdu, its.shFrame);
         its.wi = its.toLocal(-ray.d);
     }
 
