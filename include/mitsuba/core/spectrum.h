@@ -688,6 +688,13 @@ public:
     }
 #endif
 
+    inline bool hasNan()
+    {
+        for (int i = 0; i<SPECTRUM_SAMPLES; i++)
+            if (s[i] != s[i]) return true;
+        return false;
+    }
+
     /// Construct from a TSpectrum instance
     inline Spectrum(const Parent &s) : Parent(s) { }
 

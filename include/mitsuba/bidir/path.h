@@ -44,6 +44,7 @@ MTS_NAMESPACE_BEGIN
  * \ingroup libbidir
  */
 struct MTS_EXPORT_BIDIR Path {
+    friend struct CompactBlockPathPool;
 public:
     typedef PathEdge *          PathEdgePtr;
     typedef PathVertex *        PathVertexPtr;
@@ -419,6 +420,63 @@ public:
             const Path &sensorSubpath, int s, int t,
             bool direct, bool lightImage);
 
+    static Float miWeightVCM(const Scene *scene,
+        const Path &emitterSubpath,
+        const PathEdge *connectionEdge,
+        const Path &sensorSubpath, int s, int t,
+        bool direct, bool lightImage, Float exponent,
+        Float radius, size_t nEmitterPaths, bool merge, bool mergeOnly);
+
+    // decide adaptive radius
+
+    static Float estimateSensorMergingRadius(const Scene *scene,
+        const Path& emitterSubpath, const Path& sensorSubpath,
+        int s, int t, size_t nPixels, Float defaultRadius) {
+        const Float D_EPSILON = std::numeric_limits<Float>::min();
+        if (defaultRadius > 0.f) return defaultRadius;
+        defaultRadius = -defaultRadius;
+        Float surface_pdf = 0.f;
+        Float cos_theta = 1.f;
+        PathVertex* vt = sensorSubpath.vertexOrNull(t);
+        PathVertex* vs = emitterSubpath.vertexOrNull(s);
+        if (t >= 2) {
+            PathVertex* v = sensorSubpath.vertexOrNull(1);
+            if (!v) return Float(0.f);
+            surface_pdf = v->pdf[ERadiance];
+
+            if (sensorSubpath.vertexCount() > 2) {
+                const Vector& d = sensorSubpath.edge(1)->d;
+                cos_theta = absDot(sensorSubpath.vertex(2)->getGeometricNormal(), d);
+            }
+        }
+        else if (vt && vs && vt->isSensorSample()) {
+            surface_pdf = vt->evalPdf(scene, sensorSubpath.vertex(0), vs, ERadiance);
+            const Vector& d = normalize(vs->getPosition() - vt->getPosition());
+            cos_theta = absDot(vs->getGeometricNormal(), d);
+        }
+        Float r = sqrt(cos_theta) * sqrt(Float(1.f) / (surface_pdf * nPixels + D_EPSILON) * INV_PI);
+        return std::min(defaultRadius, r);
+    }
+
+    static Float getRoughness(const PathVertex *va) {
+        if (!va->isConnectable())
+            return Float(0.f);
+
+        //supernodes have no Intersection record and emitter have no BRDF components (why?)
+        if (va->type & (PathVertex::ESupernode | PathVertex::ESensorSample | PathVertex::EEmitterSample))
+            return Float(1.f);
+
+        const Intersection& its = va->getIntersection();
+
+        const BSDF* bsdf = its.getBSDF();
+        Float roughness = std::numeric_limits<Float>::infinity();
+
+        roughness = bsdf->getRoughness(its, va->sampledComponentIndex);
+        return roughness;
+    }
+
+    static void adjustRadius(const PathVertex *va, Float& radius, bool first_merge_only = false, Float th = 0.f);
+
     /**
      * \brief Collapse a path into an entire edge that summarizes the aggregate
      * transport and sampling densities
@@ -515,6 +573,63 @@ private:
     std::vector<PathVertexPtr> m_vertices;
     std::vector<PathEdgePtr>   m_edges;
 };
+
+struct MTS_EXPORT_BIDIR CompactBlockPathPool {
+
+    struct PathItem {
+        size_t vStartIndex;
+        size_t eStartIndex;
+        size_t nVertices;
+        size_t nEdges;
+
+        PathItem(size_t nv, size_t ne) {
+            vStartIndex = eStartIndex = 0;
+            nVertices = nv;
+            nEdges = ne;
+        }
+    };
+
+    std::vector<PathVertex> vertices;
+    std::vector<PathEdge> edges;
+    std::vector<PathItem> pathItems;
+
+    void clear() {
+        vertices.clear();
+        edges.clear();
+        pathItems.clear();
+    }
+
+    void addPathItem(const Path& path) {
+        pathItems.push_back(PathItem(path.vertexCount(), path.m_edges.size()));
+        for (size_t i = 0; i < path.vertexCount(); i++) {
+            vertices.push_back(*path.m_vertices[i]);
+        }
+        for (size_t i = 0; i < path.m_edges.size(); i++) {
+            edges.push_back(*path.m_edges[i]);
+        }
+    }
+
+    void buildIndex() {
+        for (size_t i = 1; i < pathItems.size(); i++) {
+            pathItems[i].vStartIndex = pathItems[i - 1].vStartIndex + pathItems[i - 1].nVertices;
+            pathItems[i].eStartIndex = pathItems[i - 1].eStartIndex + pathItems[i - 1].nEdges;
+        }
+    }
+
+    void extractPathItem(Path& path, size_t index) {
+        if (index >= pathItems.size()) return;
+        PathItem &item = pathItems[index];
+        path.m_vertices.clear();
+        for (size_t i = 0; i < item.nVertices; i++)
+            path.m_vertices.push_back(&vertices[item.vStartIndex + i]);
+        path.m_edges.clear();
+        for (size_t i = 0; i < item.nEdges; i++)
+            path.m_edges.push_back(&edges[item.eStartIndex + i]);
+
+    }
+
+};
+
 
 MTS_NAMESPACE_END
 

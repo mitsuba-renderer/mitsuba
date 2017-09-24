@@ -441,7 +441,7 @@ bool PathEdge::pathConnect(const Scene *scene, const PathEdge *predEdge,
 
 bool PathEdge::pathConnectAndCollapse(const Scene *scene, const PathEdge *predEdge,
         const PathVertex *vs, const PathVertex *vt,
-        const PathEdge *succEdge, int &interactions) {
+        const PathEdge *succEdge, int &interactions, bool ignore_visibility) {
     if (vs->isEmitterSupernode() || vt->isSensorSupernode()) {
         Float radianceTransport   = vt->isSensorSupernode() ? 1.0f : 0.0f,
               importanceTransport = 1-radianceTransport;
@@ -481,7 +481,7 @@ bool PathEdge::pathConnectAndCollapse(const Scene *scene, const PathEdge *predEd
         Float remaining = length;
         medium = vt->getTargetMedium(succEdge, d);
 
-        while (true) {
+        while (true && !ignore_visibility) {
             bool surface = scene->rayIntersectAll(ray, its);
 
             if (surface && (interactions == maxInteractions ||

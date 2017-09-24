@@ -142,6 +142,16 @@ struct MTS_EXPORT_BIDIR PathVertex {
     uint16_t componentType;
 
     /**
+    * \brief Marco: Stores the index of the component of the BRDF that was
+    * sampled. Note that this is different from what componentType stores;
+    * component Type stores the type of interaction while samplesBRDF Index
+    * stores the index of the sampled component of the intersected material.
+    *
+    * For materials with one component only it will be zero.
+    */
+    uint16_t sampledComponentIndex;
+
+    /**
      * \brief Measurement contribution weight
      *
      * This field stores the terms of the path-space measurement contribution
@@ -506,6 +516,9 @@ struct MTS_EXPORT_BIDIR PathVertex {
      */
     Float evalPdf(const Scene *scene, const PathVertex *pred,
         const PathVertex *succ, ETransportMode mode, EMeasure measure = EArea) const;
+
+    // evaluate the probability of selecting connectable components
+    Float evalSelectionProb(const Scene *scene, const PathVertex *pred, ETransportMode mode, Float th) const;
 
     /**
      * \brief Compute the area density of a provided emitter or sensor

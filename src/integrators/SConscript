@@ -40,4 +40,8 @@ plugins += bidirEnv.SharedLibrary('erpt',
         ['erpt/erpt.cpp', 'erpt/erpt_proc.cpp']
 )
 
+plugins += bidirEnv.SharedLibrary('vcm',
+        ['vcm/vcm.cpp', 'vcm/vcm_wr.cpp', 'vcm/vcm_proc.cpp']
+)
+
 Export('plugins')

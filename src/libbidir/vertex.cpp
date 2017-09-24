@@ -1020,6 +1020,50 @@ Float PathVertex::evalPdf(const Scene *scene, const PathVertex *pred,
     return result;
 }
 
+Float PathVertex::evalSelectionProb(const Scene *scene, const PathVertex *pred, ETransportMode mode, Float th) const {
+    Vector wo(0.0f);
+    Float result = 0.0f;
+
+    switch (type) {
+    case EEmitterSupernode:
+    case ESensorSupernode:
+    case EEmitterSample:
+    case ESensorSample:
+        return 1.f;
+
+    case ESurfaceInteraction:
+    {
+        const Intersection &its = getIntersection();
+        const BSDF *bsdf = its.getBSDF();
+
+        Point predP = pred->getPosition();
+        Vector wi = normalize(predP - its.p);
+
+        BSDFSamplingRecord bRec(its, its.toLocal(wi), its.toLocal(wo), mode);
+        int nc = bsdf->getComponentCount();
+        if (nc == 0) return 1.f;
+        for (int c = 0; c < nc; c++) {
+            if (bsdf->getRoughness(its, c) < th)
+                continue;
+            bRec.component = c;
+            result += bsdf->selectionProb(bRec);
+        }
+    }
+    break;
+
+    case EMediumInteraction:
+        return 1.f;
+
+    default:
+        SLog(EError, "PathVertex::evalPdf(): Encountered an "
+            "unsupported vertex type (%i)!", type);
+        return 0.0f;
+    }
+
+    return result;
+}
+
+
 Spectrum PathVertex::sampleDirect(const Scene *scene, Sampler *sampler,
         PathVertex *endpoint, PathEdge *edge, PathVertex *sample, ETransportMode mode) const {
     if (isDegenerate() || isAbsorbing())

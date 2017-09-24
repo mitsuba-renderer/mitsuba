@@ -408,7 +408,7 @@ struct MTS_EXPORT_BIDIR PathEdge {
      */
     bool pathConnectAndCollapse(const Scene *scene, const PathEdge *predEdge,
         const PathVertex *vs, const PathVertex *vt,
-        const PathEdge *succEdge, int &interactions);
+        const PathEdge *succEdge, int &interactions, bool ignore_visibility = false);
 
     /// Create a deep copy of this edge
     PathEdge *clone(MemoryPool &pool) const;

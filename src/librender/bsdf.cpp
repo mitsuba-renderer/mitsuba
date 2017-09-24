@@ -59,6 +59,10 @@ void BSDF::configure() {
         m_combinedType |= m_components[i];
 }
 
+Float BSDF::selectionProb(const BSDFSamplingRecord &bRec) const {
+    return 1.0f / getComponentCount();
+}
+
 Float BSDF::getEta() const {
     return 1.0f;
 }

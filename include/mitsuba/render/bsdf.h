@@ -440,6 +440,9 @@ public:
     virtual Float pdf(const BSDFSamplingRecord &bRec,
         EMeasure measure = ESolidAngle) const = 0;
 
+    /// For given wi and component in bRec, return the probability of selecting the component
+    virtual Float selectionProb(const BSDFSamplingRecord &bRec) const;
+
     /**
      * \brief For transmissive BSDFs: return the material's
      * relative index of refraction
