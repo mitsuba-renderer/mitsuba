@@ -744,6 +744,49 @@
         </param>
     </plugin>
 
+    <plugin type="integrator" name="vcm" readableName="Vertex Connection and Merging" show="true" className="VCMIntegrator" extends="Integrator">
+      <descr>
+        <p>DEMO: Vertex Connection and Merging </p>
+      </descr>
+      <param name="maxDepth" readableName="Maximum depth" type="integer" default="-1">
+        Specifies the longest path depth in the generated output image (where <tt>-1</tt>
+        corresponds to ∞). A value of 1 will only render directly visible light sources.
+        2 will lead to single-bounce (direct-only) illumination, and so on.
+      </param>
+      <param name="lightImage" readableName="Create light image" type="boolean" default="true">
+        Include sampling strategies that connect
+        paths traced from emitters directly to the camera? (i.e. what the adjoint particle tracer does)
+        This improves the effectiveness of bidirectional path tracing
+        but severely increases the local and remote communication
+        overhead, since large <em>light images</em> must be transferred between threads
+        or over the network. See the main documentation for a more detailed explanation.
+      </param>
+      <param name="sampleDirect" readableName="Use direct sampling methods" type="boolean" default="false">
+        Direct sampling is not yet supported in VCM.
+      </param>
+      <param name="rrDepth" readableName="Russian Roulette starting depth" type="integer" default="5" importance="1">
+        Specifies the minimum path depth, after which the implementation will start to use the
+        "russian roulette" path termination criterion (set to <tt>-1</tt> to disable).
+      </param>
+      <param name="showWeighted" readableName="showWeight (TODO)" type="boolean" default="false">
+        
+      </param>
+      <param name="initialRadius" readableName="initialRadius (TODO)" type="float" default="0">
+        
+      </param>
+      <param name="radiusReductionAlpha" readableName="radiusReductionAlpha (TODO)" type="float" default="0.95">
+        
+      </param>
+      <param name="phExponent" readableName ="phExponent (TODO)" type="float" default="1.0">
+      </param>
+      <param name="mergeOnly" readableName="mergeOnly (TODO)" type="boolean" default="false">
+
+      </param>
+      <param name="metropolis" readableName="metropolis (TODO)" type="boolean" default="false">
+        
+      </param>
+    </plugin>
+  
     <plugin type="rfilter" readableName="Box filter" name="box" show="true" className="BoxFilter" extends="ReconstructionFilter">
         <descr>Box filter: the fastest, but also about the worst possible
             reconstruction filter, since it is extremely prone to aliasing.
