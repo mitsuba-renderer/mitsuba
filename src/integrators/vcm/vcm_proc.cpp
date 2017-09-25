@@ -715,6 +715,10 @@ void VCMProcess::bindResource(const std::string &name, int id) {
             m_result = new VCMWorkResult(m_config, NULL, m_film->getCropSize());
             m_result->clear();
         }
+        // The original progress calculator is wrong - VCM needs blocks * samples instead
+        if (m_progress)
+            delete m_progress;
+        m_progress = new ProgressReporter("Rendering", m_numBlocksTotal * m_config.sampleCount, m_parent);
     }
 }
 
