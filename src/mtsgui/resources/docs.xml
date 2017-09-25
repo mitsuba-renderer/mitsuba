@@ -237,8 +237,7 @@
         </descr>
     </plugin>
 
-    <plugin type="integrator" name="ptracer" readableName="Adjoint particle tracer" show="true"
-            className="ParticleTracer" extends="ImageBasedIntegrator">
+    <plugin type="integrator" name="ptracer" readableName="Adjoint particle tracer" show="true" className="ParticleTracer" extends="ImageBasedIntegrator">
     <descr>
             <p>This plugin implements a simple adjoint particle tracer. It does
             essentially the exact opposite of the simple volumetric path tracer:
@@ -761,32 +760,27 @@
         overhead, since large <em>light images</em> must be transferred between threads
         or over the network. See the main documentation for a more detailed explanation.
       </param>
-      <param name="sampleDirect" readableName="Use direct sampling methods" type="boolean" default="false">
-        Direct sampling is not yet supported in VCM.
-      </param>
       <param name="rrDepth" readableName="Russian Roulette starting depth" type="integer" default="5" importance="1">
         Specifies the minimum path depth, after which the implementation will start to use the
         "russian roulette" path termination criterion (set to <tt>-1</tt> to disable).
       </param>
-      <param name="showWeighted" readableName="showWeight (TODO)" type="boolean" default="false">
-        
+      <param name="initialRadius" readableName="Initial radius" type="float" default="0">
+        Initial photon query radius (<tt>0</tt> = infer based on scene size and camera resolution)
       </param>
-      <param name="initialRadius" readableName="initialRadius (TODO)" type="float" default="0">
-        
-      </param>
-      <param name="radiusReductionAlpha" readableName="radiusReductionAlpha (TODO)" type="float" default="0.95">
-        
+      <param name="radiusReductionAlpha" readableName="Size reduction parameter" type="float" default="0.95">
+        Alpha parameter from PPM (influences the speed, at which the photon radius is reduced)
       </param>
       <param name="phExponent" readableName ="phExponent (TODO)" type="float" default="1.0">
       </param>
-      <param name="mergeOnly" readableName="mergeOnly (TODO)" type="boolean" default="false">
-
+      <param name="mergeOnly" readableName="Merge vertices only" type="boolean" default="false">
+        Only merge vertices instead of both vertices and paths? If this is enabled, it will disable Light Image.
       </param>
-      <param name="metropolis" readableName="metropolis (TODO)" type="boolean" default="false">
-        
+      <param name="metropolis" readableName="Use PSSMLT sampling" type="boolean" default="false">
+        Instead of random walking light paths à la BDPT, allow VCM to enhance sampling by using a subset of Primary Sample Space Metropolis Light Transport (PSSMLT).
+        This option requires Light Image and will enable it if it is not set.
       </param>
     </plugin>
-  
+
     <plugin type="rfilter" readableName="Box filter" name="box" show="true" className="BoxFilter" extends="ReconstructionFilter">
         <descr>Box filter: the fastest, but also about the worst possible
             reconstruction filter, since it is extremely prone to aliasing.
