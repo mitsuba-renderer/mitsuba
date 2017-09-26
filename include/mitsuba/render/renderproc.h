@@ -90,6 +90,7 @@ protected:
     Bitmap::EPixelFormat m_pixelFormat;
     int m_channelCount;
     bool m_warnInvalid;
+    bool m_preserveProgress;
 };
 
 MTS_NAMESPACE_END

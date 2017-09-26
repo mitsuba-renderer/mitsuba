@@ -121,6 +121,7 @@ BlockedRenderProcess::BlockedRenderProcess(const RenderJob *parent, RenderQueue 
     m_pixelFormat = Bitmap::ESpectrumAlphaWeight;
     m_channelCount = -1;
     m_warnInvalid = true;
+    m_preserveProgress = false;
 }
 
 BlockedRenderProcess::~BlockedRenderProcess() {
@@ -174,9 +175,12 @@ void BlockedRenderProcess::bindResource(const std::string &name, int id) {
             Log(EError, "The block size must be larger than the image reconstruction filter radius!");
 
         BlockedImageProcess::init(offset, size, m_blockSize);
-        if (m_progress)
-            delete m_progress;
-        m_progress = new ProgressReporter("Rendering", m_numBlocksTotal, m_parent);
+        if (!m_preserveProgress) {
+          // If this flag is set, the integrator will create its own progress bar - do not do anything
+          if (m_progress)
+              delete m_progress;
+          m_progress = new ProgressReporter("Rendering", m_numBlocksTotal, m_parent);
+        }
     }
     BlockedImageProcess::bindResource(name, id);
 }

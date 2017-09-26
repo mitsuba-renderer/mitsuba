@@ -625,6 +625,8 @@ VCMProcess::VCMProcess(const RenderJob *parent, RenderQueue *queue,
 VCMProcessBase(parent, queue, config.blockSize), m_config(config) {
     m_refreshTimer = new Timer();
     m_weight = 1.f;
+    // Prevent the base class from initializing the progress bar
+    m_preserveProgress = true;
 }
 
 ref<WorkProcessor> VCMProcess::createWorkProcessor() const {
@@ -716,9 +718,8 @@ void VCMProcess::bindResource(const std::string &name, int id) {
             m_result->clear();
         }
         // The original progress calculator is wrong - VCM needs blocks * samples instead
-        if (m_progress)
-            delete m_progress;
-        m_progress = new ProgressReporter("Rendering", m_numBlocksTotal * m_config.sampleCount, m_parent);
+        if (!m_progress)
+          m_progress = new ProgressReporter("Rendering", m_numBlocksTotal * m_config.sampleCount, m_parent);
     }
 }
 
