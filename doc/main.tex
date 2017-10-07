@@ -1,4 +1,6 @@
-\documentclass[footinclude=false,11pt,DIV11]{scrartcl}
+% !TEX engine = pdflatex
+% In case one tries to compile from within atom instead of gendoc.py
+\documentclass[footinclude=false,11pt,DIV=11]{scrartcl}
 
 % Wenzel's standard prelude
 % ----- 8< ----- 8< ------
@@ -40,8 +42,8 @@
 \setcounter{secnumdepth}{3}
 \setcounter{tocdepth}{3}
 
-\newcommand{\MitsubaVersion}{0.5.0}
-\newcommand{\MitsubaYear}{2014}
+\newcommand{\MitsubaVersion}{0.6.0}
+\newcommand{\MitsubaYear}{2017}
 
 \typearea[current]{last}
 \raggedbottom
@@ -60,6 +62,11 @@
 \addtokomafont{descriptionlabel}{\rmfamily}
 \pagestyle{scrheadings}
 
+% Section and subsubsection numbers in TOC need more numwidth
+\DeclareTOCStyleEntry[numwidth=3em]{default}{section}
+\DeclareTOCStyleEntry[numwidth=4em]{default}{subsection}
+\DeclareTOCStyleEntry[numwidth=5em]{default}{subsubsection}
+
 \usepackage[
     bookmarks,
     bookmarksnumbered,
@@ -75,6 +82,11 @@
     pdfauthor={Wenzel Jakob},
     pdfstartview=FitH
 ]{hyperref}
+
+% Bibliography
+\usepackage{csquotes}
+\usepackage[backend=bibtex,style=numeric,uniquename=init]{biblatex}
+\addbibresource{main.bib}
 
 \definecolor{myblue}{rgb}{0,.1,.6}
 \definecolor{myred}{rgb}{0.63,.16,.16}
@@ -181,7 +193,6 @@
 \include{acknowledgements}
 \include{gpl-v3}
 
-\bibliographystyle{acm}
-\bibliography{main}
+\printbibliography[heading=bibintoc]
 
 \end{document}

@@ -70,7 +70,6 @@ static ref<Mutex> mutex = new Mutex;
  *
  * \renderings{
  *    \rendering{The bumpy sphere test scene rendered with amber material}{bumpy_sphere.jpg}
- *    \rendering{The Stanford Bunny rendered with a translucent material}{bunny_single.jpg}
  * }
 
  * This plugin implements the single scattering model in participating media

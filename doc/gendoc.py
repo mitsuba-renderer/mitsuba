@@ -78,8 +78,8 @@ def texify(texfile):
 	else:
 		check_call(['pdflatex', texfile])
 		check_call(['bibtex',   texfile.replace('.tex', '.aux')])
-		#check_call(['pdflatex', texfile])
-		#check_call(['pdflatex', texfile])
+		check_call(['pdflatex', texfile])
+		check_call(['pdflatex', texfile])
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 with open('plugins_generated.tex', 'w') as f:
