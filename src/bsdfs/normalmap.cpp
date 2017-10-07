@@ -34,7 +34,7 @@ MTS_NAMESPACE_BEGIN
  *     be affected by the normal map}
  * }
  *
- * This plugin is conceptually similar to the \pluginref{bump} map plugin
+ * This plugin is conceptually similar to the \pluginref{bumpmap} plugin
  * but uses a normal map instead of a bump map. A normal map is a RGB texture, whose color channels
  * encode the XYZ coordinates of the desired surface normals.
  * These are specified \emph{relative} to the local shading frame,
