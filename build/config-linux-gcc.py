@@ -19,8 +19,8 @@ XERCESLIB      = ['xerces-c']
 GLLIB          = ['GL', 'GLU', 'GLEWmx', 'Xxf86vm', 'X11']
 GLFLAGS        = ['-DGLEW_MX']
 BOOSTLIB       = ['boost_system', 'boost_filesystem', 'boost_thread']
-COLLADAINCLUDE = ['/usr/include/collada-dom', '/usr/include/collada-dom/1.4']
-COLLADALIB     = ['collada14dom', 'xml2']
+COLLADAINCLUDE = ['/usr/include/collada-dom2.4', '/usr/include/collada-dom2.4/1.4']
+COLLADALIB     = ['collada-dom2.4-dp']
 FFTWLIB        = ['fftw3_threads', 'fftw3']
 
 # The following runs a helper script to search for installed Python
@@ -33,4 +33,3 @@ import sys, os
 sys.path.append(os.path.abspath('../data/scons'))
 from detect_python import detect_python
 locals().update(detect_python())
-
