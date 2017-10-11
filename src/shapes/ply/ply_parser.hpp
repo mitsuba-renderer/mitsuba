@@ -66,7 +66,12 @@ public:
 
   class scalar_property_definition_callbacks_type
   {
+  #if defined(__MSVC__)
+  #pragma message("TODO: check your MSVC version if it still needs this workaround, @ply_parser.hpp")
+  public:
+  #else
   private:
+  #endif
     template <typename T>
     struct callbacks_element
     {
@@ -81,7 +86,9 @@ public:
       >
     >::type callbacks;
     callbacks callbacks_;
+  #if !defined(__MSVC__)
   public:
+  #endif
     template <typename ScalarType>
     const typename scalar_property_definition_callback_type<ScalarType>::type& get() const
     {
@@ -142,7 +149,12 @@ public:
 
   class list_property_definition_callbacks_type
   {
+  #if defined(__MSVC__)
+  #pragma message("TODO: check your MSVC version if it still needs this workaround too, @ply_parser.hpp")
+  public:
+  #else
   private:
+  #endif
     template <typename T> struct pair_with : boost::mpl::pair<T,boost::mpl::_> {};
     template<typename Sequence1, typename Sequence2>
     struct sequence_product :
@@ -173,7 +185,9 @@ public:
       >
     >::type callbacks;
     callbacks callbacks_;
+  #if !defined(__MSVC__)
   public:
+  #endif
     template <typename SizeType, typename ScalarType>
     typename list_property_definition_callback_type<SizeType, ScalarType>::type& get()
     {

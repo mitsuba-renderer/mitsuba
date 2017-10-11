@@ -71,9 +71,9 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <NMakePreprocessorDefinitions>WIN32;_DEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
-    <NMakeBuildCommandLine>cd .. &amp;&amp; scons --parallelize --cfg=build\config-win64-msvc2017-debug.py</NMakeBuildCommandLine>
-    <NMakeReBuildCommandLine>cd .. &amp;&amp; scons --parallelize --cfg=build\config-win64-msvc2017-debug.py -c &amp;&amp; scons --parallelize --cfg=build\config-win64-msvc201-debug.py</NMakeReBuildCommandLine>
-    <NMakeCleanCommandLine>cd .. &amp;&amp; scons --parallelize --cfg=build\config-win64-msvc2017-debug.py -c</NMakeCleanCommandLine>
+    <NMakeBuildCommandLine>cd .. &amp;&amp; scons --parallelize --cfg=build\config-win64-msvc2017-debug.py --debug=stacktrace</NMakeBuildCommandLine>
+    <NMakeReBuildCommandLine>cd .. &amp;&amp; scons --parallelize --cfg=build\config-win64-msvc2017-debug.py --debug=stacktrace -c &amp;&amp; scons --parallelize --cfg=build\config-win64-msvc2017-debug.py --debug=stacktrace</NMakeReBuildCommandLine>
+    <NMakeCleanCommandLine>cd .. &amp;&amp; scons --parallelize --cfg=build\config-win64-msvc2017-debug.py --debug=stacktrace -c</NMakeCleanCommandLine>
     <NMakeOutput>..\dist\mtsgui.exe</NMakeOutput>
     <NMakeIncludeSearchPath>..\include;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
     <NMakeForcedIncludes>$(NMakeForcedIncludes)</NMakeForcedIncludes>
@@ -85,9 +85,9 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)$(Configuration)\</IntDir>
-    <NMakeBuildCommandLine>cd .. &amp;&amp; scons --parallelize --cfg=build\config-win64-msvc2017.py</NMakeBuildCommandLine>
-    <NMakeReBuildCommandLine>cd .. &amp;&amp; scons --parallelize --cfg=build\config-win64-msvc2017.py -c &amp;&amp; scons --parallelize --cfg=build\config-win64-msvc2017.py</NMakeReBuildCommandLine>
-    <NMakeCleanCommandLine>cd .. &amp;&amp; scons --parallelize --cfg=build\config-win64-msvc2017.py -c</NMakeCleanCommandLine>
+    <NMakeBuildCommandLine>cd .. &amp;&amp; scons --parallelize --cfg=build\config-win64-msvc2017.py --debug=stacktrace</NMakeBuildCommandLine>
+    <NMakeReBuildCommandLine>cd .. &amp;&amp; scons --parallelize --cfg=build\config-win64-msvc2017.py --debug=stacktrace -c &amp;&amp; scons --parallelize --cfg=build\config-win64-msvc2017.py --debug=stacktrace</NMakeReBuildCommandLine>
+    <NMakeCleanCommandLine>cd .. &amp;&amp; scons --parallelize --cfg=build\config-win64-msvc2017.py --debug=stacktrace -c</NMakeCleanCommandLine>
     <NMakeOutput>..\dist\mtsgui.exe</NMakeOutput>
     <NMakePreprocessorDefinitions>WIN32;NDEBUG;SINGLE_PRECISION;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <NMakeIncludeSearchPath>..\include;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
@@ -115,9 +115,6 @@
   </ItemGroup>
   <ItemGroup Label="Source Files">
   </ItemGroup>
-  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <ImportGroup Label="ExtensionTargets">
-  </ImportGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
