@@ -6,6 +6,10 @@ doc/*.out
 doc/*.toc
 doc/*.bbl
 doc/*.blg
+doc/*-blx.bib
+doc/*.fdb_latexmk
+doc/*.fls
+doc/*.run.xml
 doc/main.pdf
 doc/plugins_generated.tex
 

@@ -324,17 +324,16 @@ configuration file from the \texttt{build} directory.
     to run single-threaded: bitmap resampling (i.e. MIP map generation),
     blue noise point generation in the \pluginref{dipole}
     plugin, as well as the \pluginref{ppm} and \pluginref{sppm} plugins.
-    \item The pre-compiled dependencies do not include the \code{collada-dom}
-    library.
+    \item \leavevmode The pre-compiled dependencies do not include the \code{collada-dom} library.
     It is possible to install it with Homebrew (\url{https://brew.sh/},
     then run \code{brew install collada-dom})
     and then adding the \code{include} folder paths and library name to \code{config.py}.
-    By default, they should look like this:
-    \begin{python}
-      COLLADAINCLUDE = ['/usr/local/include/collada-dom2.4', '/usr/local/include/collada-dom2.4/1.4']
-      COLLADALIBDIR  = ['/usr/local/Cellar/collada-dom/2.4.4/lib']
-      COLLADALIB     = ['collada-dom2.4-dp']
-    \end{python}
+    By default, they should be:
+    \begin{itemize}
+      \item \code{COLLADAINCLUDE = ['/usr/local/include/collada-dom2.4', '/usr/local/include/collada-dom2.4/1.4']}
+      \item \code{COLLADALIBDIR  = ['/usr/local/Cellar/collada-dom/2.4.4/lib']}
+      \item \code{COLLADALIB     = ['collada-dom2.4-dp']}.
+    \end{itemize}
     \item To build the Mitsuba GUI, you need a working Qt 5 installation.
     You may install it with Homebrew (\code{brew install qt}) or by downloading
     the appropriate package from \url{https://qt.io}.
