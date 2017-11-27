@@ -456,7 +456,7 @@ def enable_modules(self, modules, debug=False, crosscompiling=False) :
                         self.AppendUnique(LIBPATH=[os.path.join("$QTDIR","lib")])
                         self.AppendUnique(CPPPATH=[os.path.join("$QTDIR","include","qt5")])
                         self.AppendUnique(CPPPATH=[os.path.join("$QTDIR","include","qt5",module)])
-                pcmodules = [module+debugSuffix for module in modules if module not in pclessModules ]
+                pcmodules = [module.replace('Qt','Qt5')+debugSuffix for module in modules if module not in pclessModules ]
                 if 'QtDBus' in pcmodules:
                         self.AppendUnique(CPPPATH=[os.path.join("$QTDIR","include","qt5","QtDBus")])
                 if "QtAssistant" in pcmodules:
