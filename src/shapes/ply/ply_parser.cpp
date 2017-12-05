@@ -142,7 +142,7 @@ bool ply::ply_parser::parse(std::istream& istream)
           std::string& type = type_or_list;
           char space_type_name;
           stringstream >> space_type_name >> std::ws >> name >> std::ws;
-          if (!stringstream || !std::isspace(space_type_name)) {
+          if (!stringstream.eof() || !std::isspace(space_type_name)) {
             if (error_callback_) {
               error_callback_(line_number_, "parse error");
             }
