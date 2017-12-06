@@ -55,7 +55,7 @@ void TestCase::assertEqualsImpl(const Spectrum &actual, const Spectrum &expected
             match = false;
     if (!match)
         Thread::getThread()->getLogger()->log(EError, NULL, file, line, "Assertion failure: "
-            "expected vector %s, got %s.", expected.toString().c_str(), actual.toString().c_str());
+            "expected spectrum %s, got %s.", expected.toString().c_str(), actual.toString().c_str());
 }
 
 void TestCase::assertEqualsImpl(const Vector2 &actual, const Vector2 &expected, Float epsilon, const char *file, int line) {
