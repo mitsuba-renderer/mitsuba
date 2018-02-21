@@ -89,6 +89,7 @@ namespace {
         #elif defined(__OSX__)
             return mach_absolute_time() * __resolution;
         #else
+            (void) __resolution; // avoid unused warning
             timespec tspec;
             clock_gettime(TIMER_CLOCK, &tspec);
             return timespecToNano(tspec);
