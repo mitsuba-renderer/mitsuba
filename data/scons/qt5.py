@@ -255,8 +255,6 @@ def generate(env):
                 QT5_MOC = locateQt5Command(env,'moc', env['QTDIR']),
                 QT5_UIC = locateQt5Command(env,'uic', env['QTDIR']),
                 QT5_RCC = locateQt5Command(env,'rcc', env['QTDIR']),
-                QT5_LUPDATE = locateQt5Command(env,'lupdate', env['QTDIR']),
-                QT5_LRELEASE = locateQt5Command(env,'lrelease', env['QTDIR']),
 
                 QT5_AUTOSCAN = 1, # Should the qt tool try to figure out, which sources are to be moc'ed?
 
@@ -288,24 +286,8 @@ def generate(env):
                 QT5_MOCFROMCXXCOM = [
                         '$QT5_MOC $QT5_MOCFROMCXXFLAGS $QT5_MOCINCFLAGS -o $TARGET $SOURCE',
                         Action(checkMocIncluded,None)],
-                QT5_LUPDATECOM = '"$QT5_LUPDATE" $SOURCE -ts $TARGET',
-                QT5_LRELEASECOM = '"$QT5_LRELEASE" $SOURCE',
                 QT5_RCCCOM = '"$QT5_RCC" $QT5_QRCFLAGS $SOURCE -o $TARGET',
-                )
-
-        # Translation builder
-        tsbuilder = Builder(
-                action = SCons.Action.Action('$QT5_LUPDATECOM'), #,'$QT5_LUPDATECOMSTR'),
-                multi=1
-                )
-        env.Append( BUILDERS = { 'Ts': tsbuilder } )
-        qmbuilder = Builder(
-                action = SCons.Action.Action('$QT5_LRELEASECOM'),# , '$QT5_LRELEASECOMSTR'),
-                src_suffix = '.ts',
-                suffix = '.qm',
-                single_source = True
-                )
-        env.Append( BUILDERS = { 'Qm': qmbuilder } )
+        )
 
         # Resource builder
         def scanResources(node, env, path, arg):
