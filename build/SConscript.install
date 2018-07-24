@@ -1,3 +1,4 @@
+from __future__ import print_function
 import fnmatch
 
 Import('env', 'os', 'sys', 'plugins', 'dist',
@@ -27,7 +28,7 @@ def installAs(target, path, prefix = None):
         return result
 
 if not 'DISTDIR' in env:
-        print 'The \"DISTDIR\" variable is missing. Please update your configuration file!'
+        print('The \"DISTDIR\" variable is missing. Please update your configuration file!')
         Exit(1)
 
 distDir = env.GetBuildPath(env['DISTDIR'])
