@@ -1,3 +1,4 @@
+from __future__ import print_function
 import re, multiprocessing
 
 Import('sys', 'os', 'SCons', 'resources')
@@ -20,14 +21,14 @@ if parallelize == True:
         SetOption('num_jobs', multiprocessing.cpu_count())
 
 if not os.path.exists(configFile):
-        print '\nA configuration file must be selected! Have a look at http://www.mitsuba-renderer.org/docs.html'
+        print('\nA configuration file must be selected! Have a look at http://www.mitsuba-renderer.org/docs.html')
         Exit(1)
 
 needsBuildDependencies = (sys.platform == 'win32' or sys.platform == 'darwin')
 
 if needsBuildDependencies and not os.path.exists(GetBuildPath('#dependencies')):
-        print '\nThe required build dependency files are missing. Please see the documentation'
-        print 'at http://www.mitsuba-renderer.org/docs.html for details on how to get them.\n'
+        print('\nThe required build dependency files are missing. Please see the documentation')
+        print('at http://www.mitsuba-renderer.org/docs.html for details on how to get them.\n')
         Exit(1)
 
 python_versions = ["2.6", "2.7", "3.0", "3.1", "3.2", "3.3", "3.4", "3.5", "3.6", "3.7"]
@@ -94,11 +95,11 @@ vars.Add('INTEL_COMPILER',  'Should the Intel C++ compiler be used?')
 
 try:
         env = Environment(options=vars, ENV = os.environ, tools=['default', 'qt5'], toolpath=['#data/scons'])
-        print 'Checking for Qt 5.x... yes'
+        print('Checking for Qt 5.x... yes')
         hasQt = True
 except Exception:
         env = Environment(options=vars, ENV = os.environ, tools=['default'], toolpath=['#data/scons'])
-        print 'Unable to detect a Qt installation -- not building the GUI!'
+        print('Unable to detect a Qt installation -- not building the GUI!')
         hasQt = False
 
 hasCollada=True
@@ -108,19 +109,19 @@ env.Append(CPPPATH=env['BASEINCLUDE'])
 env.Append(CPPFLAGS=[])
 env.Append(LIBPATH=[])
 env.Append(LIBS=env['BASELIB'])
-if env.has_key('BOOSTINCLUDE'):
+if 'BOOSTINCLUDE' in env:
         env.Prepend(CPPPATH=env['BOOSTINCLUDE'])
-if env.has_key('BOOSTLIBDIR'):
+if 'BOOSTLIBDIR' in env:
         env.Prepend(LIBPATH=env['BOOSTLIBDIR'])
-if env.has_key('BOOSTLIB'):
+if 'BOOSTLIB' in env:
         env.Prepend(LIBS=env['BOOSTLIB'])
-if env.has_key('BASELIBDIR'):
+if 'BASELIBDIR' in env:
         env.Append(LIBPATH=env['BASELIBDIR'])
-if env.has_key('OEXRINCLUDE'):
+if 'OEXRINCLUDE' in env:
         env.Prepend(CPPPATH=env['OEXRINCLUDE'])
-if env.has_key('OEXRLIBDIR'):
+if 'OEXRLIBDIR' in env:
         env.Prepend(LIBPATH=env['OEXRLIBDIR'])
-if env.has_key('EIGENINCLUDE'):
+if 'EIGENINCLUDE' in env:
         env.Prepend(CPPPATH=env['EIGENINCLUDE'])
 
 env.Decider('MD5-timestamp')
@@ -140,64 +141,64 @@ libPathPrevious = SCons.Util.semi_deepcopy(env['LIBPATH'])
 cppFlagsPrevious = SCons.Util.semi_deepcopy(env['CPPFLAGS'])
 cxxFlagsPrevious = SCons.Util.semi_deepcopy(env['CXXFLAGS'])
 
-if env.has_key('PNGINCLUDE'):
+if 'PNGINCLUDE' in env:
         env.Prepend(CPPPATH=env['PNGINCLUDE'])
-if env.has_key('PNGLIBDIR'):
+if 'PNGLIBDIR' in env:
         env.Prepend(LIBPATH=env['PNGLIBDIR'])
-if env.has_key('JPEGINCLUDE'):
+if 'JPEGINCLUDE' in env:
         env.Prepend(CPPPATH=env['JPEGINCLUDE'])
-if env.has_key('JPEGLIBDIR'):
+if 'JPEGLIBDIR' in env:
         env.Prepend(LIBPATH=env['JPEGLIBDIR'])
-if env.has_key('OEXRFLAGS'):
+if 'OEXRFLAGS' in env:
         env.Prepend(CPPFLAGS=env['OEXRFLAGS'])
-if env.has_key('OEXRINCLUDE'):
+if 'OEXRINCLUDE' in env:
         env.Prepend(CPPPATH=env['OEXRINCLUDE'])
-if env.has_key('OEXRLIBDIR'):
+if 'OEXRLIBDIR' in env:
         env.Prepend(LIBPATH=env['OEXRLIBDIR'])
-if env.has_key('XERCESINCLUDE'):
+if 'XERCESINCLUDE' in env:
         env.Prepend(CPPPATH=env['XERCESINCLUDE'])
-if env.has_key('XERCESLIBDIR'):
+if 'XERCESLIBDIR' in env:
         env.Prepend(LIBPATH=env['XERCESLIBDIR'])
-if env.has_key('GLINCLUDE'):
+if 'GLINCLUDE' in env:
         env.Prepend(CPPPATH=env['GLINCLUDE'])
-if env.has_key('GLFLAGS'):
+if 'GLFLAGS' in env:
         env.Prepend(CPPFLAGS=env['GLFLAGS'])
-if env.has_key('COLLADAINCLUDE'):
+if 'COLLADAINCLUDE' in env:
         env.Prepend(CPPPATH=env['COLLADAINCLUDE'])
-if env.has_key('COLLADALIBDIR'):
+if 'COLLADALIBDIR' in env:
         env.Prepend(LIBPATH=env['COLLADALIBDIR'])
-if env.has_key('FFTWINCLUDE'):
+if 'FFTWINCLUDE' in env:
         env.Prepend(CPPPATH=env['FFTWINCLUDE'])
-if env.has_key('FFTWLIBDIR'):
+if 'FFTWLIBDIR' in env:
         env.Prepend(LIBPATH=env['FFTWLIBDIR'])
 
 if not conf.CheckCXX():
-        print 'Could not compile a simple C++ fragment, verify that ' + \
+        print('Could not compile a simple C++ fragment, verify that ' + \
                 env['CXX'] + ' is installed! This could also mean that the ' + \
                 'Boost libraries are missing. The file "config.log" should ' + \
-                'contain more information.'
+                'contain more information.')
         Exit(1)
 if not conf.CheckCHeader(['png.h']):
-        print 'libpng is missing (install libpng12-dev for PNG I/O support)'
+        print('libpng is missing (install libpng12-dev for PNG I/O support)')
 else:
         env.Append(CPPDEFINES = [['MTS_HAS_LIBPNG', 1]] )
 
 if not conf.CheckCHeader(['stdio.h', 'jpeglib.h']):
-        print 'libjpeg is missing (install libjpeg62-dev for JPEG I/O support)'
+        print('libjpeg is missing (install libjpeg62-dev for JPEG I/O support)')
 else:
         env.Append(CPPDEFINES = [['MTS_HAS_LIBJPEG', 1]] )
 
 if not conf.CheckCXXHeader('ImfRgba.h'):
-        print 'OpenEXR is missing (install libopenexr-dev for OpenEXR I/O support)'
+        print('OpenEXR is missing (install libopenexr-dev for OpenEXR I/O support)')
 else:
         env.Append(CPPDEFINES = [['MTS_HAS_OPENEXR', 1]] )
 
 if not conf.CheckCXXHeader('xercesc/dom/DOMLSParser.hpp'):
-        print 'Xerces-C++ 3.x must be installed (install libxerces-c-dev)!'
+        print('Xerces-C++ 3.x must be installed (install libxerces-c-dev)!')
         Exit(1)
 if not conf.CheckCXXHeader('dae.h'):
         hasCollada = False
-        print 'COLLADA DOM is missing: not building the COLLADA importer'
+        print('COLLADA DOM is missing: not building the COLLADA importer')
 
 hasBreakpad = '-DMTS_HAS_BREAKPAD' in env['CCFLAGS'] or 'MTS_HAS_BREAKPAD' in env['CXXFLAGS']
 
@@ -211,54 +212,54 @@ for ver in python_versions:
         if conf.CheckCXXHeader('pyconfig.h'):
                 hasPython += [ ver ]
         else:
-                print 'Python ' + ver + ' is missing: not building wrappers'
+                print('Python ' + ver + ' is missing: not building wrappers')
         env['CPPPATH'][:] = [ x for x in env['CPPPATH'] if x not in includePath ]
 
 if not conf.CheckCXXHeader('boost/version.hpp'):
-        print 'Boost is missing (install libboost-all-dev)!'
+        print('Boost is missing (install libboost-all-dev)!')
         Exit(1)
 if not conf.TryCompile("#include <boost/version.hpp>\n#if BOOST_VERSION < 104400\n#error Boost is outdated!\n#endif", ".cpp"):
-        print 'Boost is outdated (you will need version 1.44 or newer)!'
+        print('Boost is outdated (you will need version 1.44 or newer)!')
         Exit(1)
 if not conf.CheckCXXHeader('Eigen/Core'):
-        print 'Eigen 3.x is missing (install libeigen3-dev)!'
+        print('Eigen 3.x is missing (install libeigen3-dev)!')
         Exit(1)
 if not conf.CheckCXXHeader('fftw3.h'):
-    print 'FFTW3 not found (install for fast image convolution support)'
+    print('FFTW3 not found (install for fast image convolution support)')
 else:
         env.Append(CPPDEFINES = [['MTS_HAS_FFTW', 1]] )
 if sys.platform == 'win32':
         if not (conf.CheckCHeader(['windows.h', 'GL/gl.h']) \
                         and conf.CheckCHeader(['windows.h', 'GL/glu.h']) \
                         and conf.CheckCHeader(['windows.h', 'GL/gl.h', 'GL/glext.h'])):
-                print 'OpenGL headers are missing!'
+                print('OpenGL headers are missing!')
                 Exit(1)
         if not conf.CheckCHeader('GL/glew.h'):
-                print 'GLEW headers are missing!'
+                print('GLEW headers are missing!')
                 Exit(1)
 elif sys.platform == 'linux2':
         if not (conf.CheckCHeader('GL/gl.h') and conf.CheckCHeader('GL/glu.h') and conf.CheckCHeader(['GL/gl.h', 'GL/glext.h'])):
-                print 'OpenGL headers are missing!'
+                print('OpenGL headers are missing!')
                 Exit(1)
         if not conf.CheckCHeader('GL/glew.h'):
-                print 'GLEW headers are missing (install libglewmx1.5-dev)!'
+                print('GLEW headers are missing (install libglewmx1.5-dev)!')
                 Exit(1)
         if not conf.CheckType('GLEWContext', '#include <GL/glew.h>'):
-                print 'GLEW-MX must be present!'
+                print('GLEW-MX must be present!')
                 Exit(1)
         if not conf.TryCompile("#include <GL/glew.h>\n int i = GL_VERTEX_ATTRIB_ARRAY_UNIFIED_NV;", '.cpp'):
-                print 'Your version of GLEW-MX seems to be outdated!'
+                print('Your version of GLEW-MX seems to be outdated!')
                 Exit(1)
 elif sys.platform == 'darwin':
         if not (conf.CheckCHeader('OpenGL/gl.h') and conf.CheckCHeader('OpenGL/glu.h') and conf.CheckCHeader(['OpenGL/gl.h', 'OpenGL/glext.h'])):
-                print 'OpenGL headers are missing!'
+                print('OpenGL headers are missing!')
                 Exit(1)
         if not conf.CheckCHeader('OpenGL/glew.h'):
-                print 'GLEW headers are missing!'
+                print('GLEW headers are missing!')
                 Exit(1)
 if sys.platform == 'linux2':
         if not (conf.CheckCHeader(['X11/Xlib.h', 'X11/extensions/xf86vmode.h'])):
-                print 'X Video Mode selection library headers are missing! (Install libxxf86vm-dev)'
+                print('X Video Mode selection library headers are missing! (Install libxxf86vm-dev)')
                 Exit(1)
 
 env.Replace(CPPPATH=cppPathPrevious)
@@ -273,10 +274,10 @@ for line in file:
         if line.startswith("#define MTS_VERSION "):
                 MTS_VERSION = line[21:len(line)-2]
 if MTS_VERSION == "":
-        print 'could not be determined!'
+        print('could not be determined!')
         Exit(1)
 else:
-        print MTS_VERSION
+        print(MTS_VERSION)
 Export('MTS_VERSION')
 
 if needsBuildDependencies:
@@ -293,14 +294,14 @@ if needsBuildDependencies:
                                 versionMismatch = True
 
         if versionMismatch:
-                        print '\nThe dependency directory and your Mitsuba codebase have different version'
-                        print 'numbers! Your copy of Mitsuba has version %s, whereas the dependencies ' % MTS_VERSION
-                        print 'have version %s. Please bring them into sync, either by running\n' % depVersion
-                        print '$ hg update -r v%s\n' % depVersion
-                        print 'in the Mitsuba directory, or by running\n'
-                        print '$ cd dependencies'
-                        print '$ hg pull'
-                        print '$ hg update -r v%s\n' % MTS_VERSION
+                        print('\nThe dependency directory and your Mitsuba codebase have different version')
+                        print('numbers! Your copy of Mitsuba has version %s, whereas the dependencies ' % MTS_VERSION)
+                        print('have version %s. Please bring them into sync, either by running\n' % depVersion)
+                        print('$ hg update -r v%s\n' % depVersion)
+                        print('in the Mitsuba directory, or by running\n')
+                        print('$ cd dependencies')
+                        print('$ hg pull')
+                        print('$ hg update -r v%s\n' % MTS_VERSION)
                         Exit(1)
 
 env = conf.Finish()
