@@ -378,7 +378,7 @@ using namespace mitsuba;
 MTS_NAMESPACE_BEGIN
 
 NSGLDevice::NSGLDevice(NSGLSession *session)
- : Device(session), m_visible(false), m_cursor(true) {
+ : Device(session), m_window(nil), m_view(nil), m_fmt(nil), m_currentContext(nil), m_visible(false), m_cursor(true)  {
     m_title = "Mitsuba [nsgl]";
 }
 
@@ -414,6 +414,7 @@ void NSGLDevice::init(Device *other) {
         backing: NSBackingStoreBuffered defer: NO]; 
 		if (m_window == nil)
 		Log(EError, "Could not create window");
+		[m_window retain];
 
 		if (m_center)
 		[m_window center];
