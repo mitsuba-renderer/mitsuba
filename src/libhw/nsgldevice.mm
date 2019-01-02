@@ -378,7 +378,7 @@ using namespace mitsuba;
 MTS_NAMESPACE_BEGIN
 
 NSGLDevice::NSGLDevice(NSGLSession *session)
- : Device(session), m_visible(false), m_cursor(true) {
+ : Device(session), m_window(nil), m_view(nil), m_fmt(nil), m_currentContext(nil), m_visible(false), m_cursor(true)  {
     m_title = "Mitsuba [nsgl]";
 }
 
@@ -409,24 +409,26 @@ void NSGLDevice::init(Device *other) {
     m_mutex = new Mutex();
 
     /* Create the device window */
-    m_window = [[NSWindow alloc] initWithContentRect: contentRect
+    dispatch_async(dispatch_get_main_queue(), ^{ m_window = [[NSWindow alloc] initWithContentRect: contentRect
         styleMask: NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask
-        backing: NSBackingStoreBuffered defer: NO];
-    if (m_window == nil)
-        Log(EError, "Could not create window");
+        backing: NSBackingStoreBuffered defer: NO]; 
+		if (m_window == nil)
+		Log(EError, "Could not create window");
+		[m_window retain];
 
-    if (m_center)
-        [m_window center];
+		if (m_center)
+		[m_window center];
 
-    /* Create a sub-view as drawing destination and in order to catch events */
-    m_view = [[CustomView alloc] initWithFrame: contentRect];
-    if (m_view == nil)
-        Log(EError, "Could not create view");
+		/* Create a sub-view as drawing destination and in order to catch events */
+		m_view = [[CustomView alloc] initWithFrame: contentRect];
+		if (m_view == nil)
+		Log(EError, "Could not create view");
 
-    [m_view setDevice: this];
-    [[m_window contentView] addSubview: m_view];
-    [m_window setDelegate: m_view];
-    [m_window setAcceptsMouseMovedEvents: YES];
+		[m_view setDevice: this];
+		[[m_window contentView] addSubview: m_view];
+		[m_window setDelegate: m_view];
+		[m_window setAcceptsMouseMovedEvents: YES];
+        }); 
 
     /* Pixel format setup */
     AssertEx(m_redBits == m_blueBits || m_redBits == m_greenBits, "NSGL does not support individual color depths");
