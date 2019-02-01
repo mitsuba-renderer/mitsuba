@@ -98,6 +98,8 @@ public:
                 m_undefined = Spectrum(props.getFloat("undefined"));
             else
                 m_undefined = props.getSpectrum("undefined", Spectrum(0.0f));
+        } else {
+            m_undefined = Spectrum(0.0f);
         }
 
         if (SPECTRUM_SAMPLES != 3 && (m_field == EUV || m_field == EShadingNormal || m_field == EGeometricNormal

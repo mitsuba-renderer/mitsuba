@@ -668,11 +668,15 @@ public:
             Float mintDensity = lookupDensity(ray(ray.mint), ray.d) * m_scale;
             Float maxtDensity = 0.0f;
             Spectrum maxtAlbedo(0.0f);
+            Vector orientation(0.0f);
             if (ray.maxt < std::numeric_limits<Float>::infinity()) {
                 Point p = ray(ray.maxt);
                 maxtDensity = lookupDensity(p, ray.d) * m_scale;
                 maxtAlbedo = m_albedo->lookupSpectrum(p);
+                orientation = m_orientation != NULL
+                             ? m_orientation->lookupVector(p) : Vector(0.0f);
             }
+            mRec.orientation = orientation;
             mRec.transmittance = Spectrum(expVal);
             mRec.pdfFailure = expVal;
             mRec.pdfSuccess = expVal * maxtDensity;
