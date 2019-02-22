@@ -782,6 +782,21 @@ void export_render() {
         .def("usesRayDifferentials", &Texture::usesRayDifferentials)
         .def("getBitmap", &Texture::getBitmap, getBitmap_overloads()[BP_RETURN_VALUE]);
 
+    BP_CLASS(VolumeDataSource, ConfigurableObject, bp::no_init)
+        .def("lookupFloat", &VolumeDataSource::lookupFloat, BP_RETURN_VALUE)
+        .def("lookupSpectrum", &VolumeDataSource::lookupSpectrum, BP_RETURN_VALUE)
+        .def("lookupVector", &VolumeDataSource::lookupVector, BP_RETURN_VALUE)
+        .def("supportsFloatLookups", &VolumeDataSource::supportsFloatLookups, BP_RETURN_VALUE)
+        .def("supportsSpectrumLookups", &VolumeDataSource::supportsSpectrumLookups, BP_RETURN_VALUE)
+        .def("supportsVectorLookups", &VolumeDataSource::supportsVectorLookups, BP_RETURN_VALUE);
+
+    BP_CLASS(PhaseFunction, ConfigurableObject, bp::no_init)
+        .def("eval", &PhaseFunction::eval, BP_RETURN_VALUE);
+
+    BP_CLASS(Medium, ConfigurableObject, bp::no_init)
+        .def("getPhaseFunction", &Medium::getPhaseFunction, BP_RETURN_VALUE)
+        .def("eval", &Medium::eval, BP_RETURN_VALUE);
+
     bp::class_<Noise>("Noise")
         .def("perlinNoise", &Noise::perlinNoise)
         .def("turbulence", &Noise::turbulence)
