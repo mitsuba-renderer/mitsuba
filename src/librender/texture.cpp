@@ -80,15 +80,27 @@ void Texture::serialize(Stream *stream, InstanceManager *manager) const {
 
 Texture2D::Texture2D(const Properties &props) : Texture(props) {
     if (props.getString("coordinates", "uv") == "uv") {
-        m_uvOffset = Point2(
-            props.getFloat("uoffset", 0.0f),
-            props.getFloat("voffset", 0.0f)
-        );
-        Float uvscale = props.getFloat("uvscale", 1.0f);
-        m_uvScale = Vector2(
-            props.getFloat("uscale", uvscale),
-            props.getFloat("vscale", uvscale)
-        );
+		if (props.hasProperty("uvtransform")) {
+			if (props.hasProperty("uoffset") || props.hasProperty("voffset")
+				|| props.hasProperty("uscale") || props.hasProperty("vscale"))
+				SLog(EError, "Both the 'uvtransformation' parameter and uvoffset/uvscale "
+					"information were provided -- only one of them can be specified at a time!");
+
+			m_uvTransform = props.getTransform("uvtransform", Transform());	
+		} else {
+			auto uvOffset = Point2(
+				props.getFloat("uoffset", 0.0f),
+				props.getFloat("voffset", 0.0f)
+			);
+			Float uvscale = props.getFloat("uvscale", 1.0f);
+			auto uvScale = Vector2(
+				props.getFloat("uscale", uvscale),
+				props.getFloat("vscale", uvscale)
+			);
+
+			m_uvTransform = Transform(Matrix4x4(uvScale.x, 0, uvOffset.x, 0, 0, uvScale.y, uvOffset.y, 0, 0, 0, 1, 0, 0, 0, 0, 1));
+		}
+        
     } else {
         Log(EError, "Only UV coordinates are supported at the moment!");
     }
@@ -96,8 +108,7 @@ Texture2D::Texture2D(const Properties &props) : Texture(props) {
 
 Texture2D::Texture2D(Stream *stream, InstanceManager *manager)
  : Texture(stream, manager) {
-    m_uvOffset = Point2(stream);
-    m_uvScale = Vector2(stream);
+	m_uvTransform = Transform(stream);
 }
 
 Texture2D::~Texture2D() {
@@ -105,28 +116,28 @@ Texture2D::~Texture2D() {
 
 void Texture2D::serialize(Stream *stream, InstanceManager *manager) const {
     Texture::serialize(stream, manager);
-    m_uvOffset.serialize(stream);
-    m_uvScale.serialize(stream);
+	m_uvTransform.serialize(stream);
 }
 
 Spectrum Texture2D::eval(const Intersection &its, bool filter) const {
-    Point2 uv = Point2(its.uv.x * m_uvScale.x, its.uv.y * m_uvScale.y) + m_uvOffset;
+	Point2 uv = m_uvTransform.transformUVs(its.uv);
     if (its.hasUVPartials && filter) {
-        return eval(uv,
-            Vector2(its.dudx * m_uvScale.x, its.dvdx * m_uvScale.y),
-            Vector2(its.dudy * m_uvScale.x, its.dvdy * m_uvScale.y));
+		auto uv3dx = m_uvTransform.transformUVsWithoutTranslation(Point2(its.dudx, its.dvdx));
+		auto uv3dy = m_uvTransform.transformUVsWithoutTranslation(Point2(its.dudy, its.dvdy));
+		return eval(uv, uv3dx, uv3dy);
     } else {
         return eval(uv);
     }
 }
 
 void Texture2D::evalGradient(const Intersection &its, Spectrum *gradient) const {
-    Point2 uv = Point2(its.uv.x * m_uvScale.x, its.uv.y * m_uvScale.y) + m_uvOffset;
+    Point2 uv = m_uvTransform.transformUVs(its.uv);
 
     evalGradient(uv, gradient);
 
-    gradient[0] *= m_uvScale.x;
-    gradient[1] *= m_uvScale.y;
+	auto gradient0 = (gradient[0] * m_uvTransform.get(0, 0)) + (gradient[1] * m_uvTransform.get(1, 0));
+	gradient[1] = (gradient[0] * m_uvTransform.get(0, 1)) + (gradient[1] * m_uvTransform.get(1, 1));
+	gradient[0] = gradient0;
 }
 
 void Texture2D::evalGradient(const Point2 &uv, Spectrum *gradient) const {

@@ -255,6 +255,24 @@ public:
                + m_transform.m[3][2] * v.z + m_transform.m[3][3] * v.w;
     }
 
+	inline Point2 transformUVs(const Point2 &v) const {
+		Float x = m_transform.m[0][0] * v.x + m_transform.m[0][1] * v.y
+			+ m_transform.m[0][2];
+		Float y = m_transform.m[1][0] * v.x + m_transform.m[1][1] * v.y
+			+ m_transform.m[1][2];
+		return Point2(x, y);
+	}
+
+	inline Vector2 transformUVsWithoutTranslation(const Point2 &v) const {
+		Float x = m_transform.m[0][0] * v.x + m_transform.m[0][1] * v.y;
+		Float y = m_transform.m[1][0] * v.x + m_transform.m[1][1] * v.y;
+		return Vector2(x, y);
+	}
+
+	inline Float get(int x, int y) const {
+		return m_transform.m[y][x];
+	}
+
     /**
      * \brief Transform a ray. Assumes that there is no scaling (no temporaries)
      * \remark This function is not available in the Python bindings

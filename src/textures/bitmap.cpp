@@ -81,6 +81,9 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{uscale, vscale}{\Float}{
  *       Multiplicative factors that should be applied to UV lookups
  *     }
+ *     \parameter{uvtransform}{\Transform}{
+ *       Alternate parameter to uvscale/uvoffset parameters that applies a transformation to UV values before a lookup
+ *     }
  *     \parameter{channel}{\String}{
  *       Create a monochromatic texture based on one of the image channels
  *       (e.g. \texttt{r}, \texttt{g}, \texttt{b}, \texttt{a}, \texttt{x},
@@ -596,11 +599,11 @@ public:
     BitmapTextureShader(Renderer *renderer, const std::string &filename,
             const BitmapTexture::MIPMap1* mipmap1,
             const BitmapTexture::MIPMap3* mipmap3,
-            const Point2 &uvOffset, const Vector2 &uvScale,
+            const Transform &uvTransform,
             ReconstructionFilter::EBoundaryCondition wrapModeU,
             ReconstructionFilter::EBoundaryCondition wrapModeV,
             Float maxAnisotropy)
-        : Shader(renderer, ETextureShader), m_uvOffset(uvOffset), m_uvScale(uvScale) {
+        : Shader(renderer, ETextureShader), m_uvTransform(uvTransform) {
 
         ref<Bitmap> bitmap = mipmap1 ? mipmap1->toBitmap() : mipmap3->toBitmap();
         m_gpuTexture = renderer->createGPUTexture(filename, bitmap);
@@ -653,29 +656,26 @@ public:
             const std::string &evalName,
             const std::vector<std::string> &depNames) const {
         oss << "uniform sampler2D " << evalName << "_texture;" << endl
-            << "uniform vec2 " << evalName << "_uvOffset;" << endl
-            << "uniform vec2 " << evalName << "_uvScale;" << endl
-            << endl
+			<< "uniform mat4 " << evalName << "_uvTransform;" << endl
+			<< endl
             << "vec3 " << evalName << "(vec2 uv) {" << endl
             << "    return texture2D(" << evalName << "_texture, vec2(" << endl
-            << "          uv.x * " << evalName << "_uvScale.x + " << evalName << "_uvOffset.x," << endl
-            << "          uv.y * " << evalName << "_uvScale.y + " << evalName << "_uvOffset.y)).rgb;" << endl
+            << "          uv.x * " << evalName << "_uvTransform[0][0] + uv.y * " << evalName << "_uvTransform[1][0] + " << evalName << "_uvTransform[2][0]," << endl
+            << "          uv.x * " << evalName << "_uvTransform[0][1] + uv.y * " << evalName << "_uvTransform[1][1] + " << evalName << "_uvTransform[2][1])).rgb;" << endl
             << "}" << endl;
     }
 
     void resolve(const GPUProgram *program, const std::string &evalName, std::vector<int> &parameterIDs) const {
         parameterIDs.push_back(program->getParameterID(evalName + "_texture", false));
-        parameterIDs.push_back(program->getParameterID(evalName + "_uvOffset", false));
-        parameterIDs.push_back(program->getParameterID(evalName + "_uvScale", false));
-    }
+		parameterIDs.push_back(program->getParameterID(evalName + "_uvTransform", false));
+	}
 
     void bind(GPUProgram *program, const std::vector<int> &parameterIDs,
         int &textureUnitOffset) const {
         m_gpuTexture->bind(textureUnitOffset++);
         program->setParameter(parameterIDs[0], m_gpuTexture.get());
-        program->setParameter(parameterIDs[1], m_uvOffset);
-        program->setParameter(parameterIDs[2], m_uvScale);
-    }
+		program->setParameter(parameterIDs[1], m_uvTransform);
+	}
 
     void unbind() const {
         m_gpuTexture->unbind();
@@ -684,13 +684,12 @@ public:
     MTS_DECLARE_CLASS()
 private:
     ref<GPUTexture> m_gpuTexture;
-    Point2 m_uvOffset;
-    Vector2 m_uvScale;
+	Transform m_uvTransform;
 };
 
 Shader *BitmapTexture::createShader(Renderer *renderer) const {
     return new BitmapTextureShader(renderer, m_filename.filename().string(),
-            m_mipmap1.get(), m_mipmap3.get(), m_uvOffset, m_uvScale,
+            m_mipmap1.get(), m_mipmap3.get(), m_uvTransform,
             m_wrapModeU, m_wrapModeV, m_maxAnisotropy);
 }
 
