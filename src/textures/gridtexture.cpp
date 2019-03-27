@@ -149,7 +149,7 @@ class GridTextureShader : public Shader {
 public:
     GridTextureShader(Renderer *renderer, const Spectrum &color0,
         const Spectrum &color1, Float lineWidth, 
-		const Transform &uvTransform) : Shader(renderer, ETextureShader),
+        const Transform &uvTransform) : Shader(renderer, ETextureShader),
         m_color0(color0), m_color1(color1),
         m_lineWidth(lineWidth), m_uvTransform(uvTransform) {
     }
@@ -164,8 +164,8 @@ public:
             << endl
             << "vec3 " << evalName << "(vec2 uv) {" << endl
             << "    uv = vec2(" << endl
-			<< "        uv.x * " << evalName << "_uvTransform[0][0] + uv.y * " << evalName << "_uvTransform[1][0] + " << evalName << "_uvTransform[2][0]," << endl
-			<< "        uv.x * " << evalName << "_uvTransform[0][1] + uv.y * " << evalName << "_uvTransform[1][1] + " << evalName << "_uvTransform[2][1]);" << endl
+            << "        uv.x * " << evalName << "_uvTransform[0][0] + uv.y * " << evalName << "_uvTransform[1][0] + " << evalName << "_uvTransform[2][0]," << endl
+            << "        uv.x * " << evalName << "_uvTransform[0][1] + uv.y * " << evalName << "_uvTransform[1][1] + " << evalName << "_uvTransform[2][1]);" << endl
             << "    float x = uv.x - floor(uv.x);" << endl
             << "    float y = uv.y - floor(uv.y);" << endl
             << "    if (x > .5) x -= 1.0;" << endl

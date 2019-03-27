@@ -667,15 +667,15 @@ public:
 
     void resolve(const GPUProgram *program, const std::string &evalName, std::vector<int> &parameterIDs) const {
         parameterIDs.push_back(program->getParameterID(evalName + "_texture", false));
-		parameterIDs.push_back(program->getParameterID(evalName + "_uvTransform", false));
-	}
+        parameterIDs.push_back(program->getParameterID(evalName + "_uvTransform", false));
+    }
 
     void bind(GPUProgram *program, const std::vector<int> &parameterIDs,
         int &textureUnitOffset) const {
         m_gpuTexture->bind(textureUnitOffset++);
         program->setParameter(parameterIDs[0], m_gpuTexture.get());
-		program->setParameter(parameterIDs[1], m_uvTransform);
-	}
+        program->setParameter(parameterIDs[1], m_uvTransform);
+    }
 
     void unbind() const {
         m_gpuTexture->unbind();
@@ -684,7 +684,7 @@ public:
     MTS_DECLARE_CLASS()
 private:
     ref<GPUTexture> m_gpuTexture;
-	Transform m_uvTransform;
+    Transform m_uvTransform;
 };
 
 Shader *BitmapTexture::createShader(Renderer *renderer) const {

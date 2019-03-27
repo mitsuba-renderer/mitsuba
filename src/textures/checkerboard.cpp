@@ -136,7 +136,7 @@ class CheckerboardShader : public Shader {
 public:
     CheckerboardShader(Renderer *renderer, const Spectrum &color0,
         const Spectrum &color1, 
-		const Transform &uvTransform) : Shader(renderer, ETextureShader),
+        const Transform &uvTransform) : Shader(renderer, ETextureShader),
         m_color0(color0), m_color1(color1),
         m_uvTransform(uvTransform) {
     }
@@ -151,7 +151,7 @@ public:
             << "vec3 " << evalName << "(vec2 uv) {" << endl
             << "    uv = vec2(" << endl
             << "        uv.x * " << evalName << "_uvTransform[0][0] + uv.y * " << evalName << "_uvTransform[1][0] + " << evalName << "_uvTransform[2][0]," << endl
-			<< "        uv.x * " << evalName << "_uvTransform[0][1] + uv.y * " << evalName << "_uvTransform[1][1] + " << evalName << "_uvTransform[2][1]);" << endl
+            << "        uv.x * " << evalName << "_uvTransform[0][1] + uv.y * " << evalName << "_uvTransform[1][1] + " << evalName << "_uvTransform[2][1]);" << endl
             << "    float x = 2*(mod(int(uv.x*2), 2)) - 1, y = 2*(mod(int(uv.y*2), 2)) - 1;" << endl
             << "    if (x*y == 1)" << endl
             << "        return " << evalName << "_color0;" << endl
@@ -177,7 +177,7 @@ public:
 private:
     Spectrum m_color0;
     Spectrum m_color1;
-	Transform m_uvTransform;
+    Transform m_uvTransform;
 };
 
 Shader *Checkerboard::createShader(Renderer *renderer) const {
