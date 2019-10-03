@@ -1,0 +1,13 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\build",
+    "\\include",
+    "\\include\\mitsuba",
+    "\\src",
+    "\\src\\integrators",
+    "\\src\\integrators\\shadow_integrator"
+  ],
+  "SelectedNode": "\\src\\integrators\\SConscript",
+  "PreviewInSolutionExplorer": false
+}
