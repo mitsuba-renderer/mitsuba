@@ -48,4 +48,4 @@ mitsuba.*.log
 .settings
 .cproject
 .project
-data/windows/wmain_stub.obj
+dist.zip
