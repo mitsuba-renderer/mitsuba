@@ -703,7 +703,7 @@ Float InterpolatedSpectrum::eval(Float lambda) const {
               b  = m_wavelengths[idx1],
               fa = m_values[idx1-1],
               fb = m_values[idx1];
-        return math::lerp((lambda - a) / (b-a), fb, fa);
+        return math::lerp((lambda - a) / (b-a), fa, fb);
     } else if (idx2 == idx1+1) {
         /* Hit a value exactly */
         return m_values[idx1];
