@@ -377,7 +377,7 @@ bool PathEdge::pathConnect(const Scene *scene, const PathEdge *predEdge,
             /* Account for the ENull interaction */
             Vector wo = its.toLocal(ray.d);
             BSDFSamplingRecord bRec(its, -wo, wo, ERadiance);
-            bRec.component = BSDF::ENull;
+            bRec.typeMask = BSDF::ENull;
             Float nullPdf = bsdf->pdf(bRec, EDiscrete);
             if (nullPdf == 0) {
                 result.release(pool);
@@ -524,7 +524,7 @@ bool PathEdge::pathConnectAndCollapse(const Scene *scene, const PathEdge *predEd
             const BSDF *bsdf = its.getBSDF();
             Vector wo = its.toLocal(ray.d);
             BSDFSamplingRecord bRec(its, -wo, wo, ERadiance);
-            bRec.component = BSDF::ENull;
+            bRec.typeMask = BSDF::ENull;
             Float nullPdf = bsdf->pdf(bRec, EDiscrete);
             if (nullPdf == 0)
                 return false;
