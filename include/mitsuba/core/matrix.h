@@ -412,8 +412,8 @@ public:
 
     /// Compute the transpose of this matrix
     inline void transpose(Matrix<N, M, T> &target) const {
-        for (int i=0; i<M; ++i)
-            for (int j=0; j<N; ++j)
+        for (int i=0; i<N; ++i)
+            for (int j=0; j<M; ++j)
                 target.m[i][j] = m[j][i];
     }
 
