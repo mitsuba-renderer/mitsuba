@@ -1,33 +1,21 @@
-This work was packaged for Debian by:
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: mitsuba
+Source: https://mitsuba-renderer.org
 
-    Wenzel Jakob <wenzel@cs.cornell.edu> on Sun, 18 Jul 2010 00:10:35 -0400
-
-It was downloaded from:
-
-    <http://www.mitsuba-renderer.org>
-
-Copyright:
-
-    Copyright (C) 2010 Wenzel Jakob <wenzel@cs.cornell.edu>
-
-License:
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This package is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-On Debian systems, the complete text of the GNU General
-Public License version 3 can be found in `/usr/share/common-licenses/GPL-3'.
-
-The Debian packaging is:
-
-    Copyright (C) 2010 Wenzel Jakob <wenzel@cs.cornell.edu>
+Files:     *
+Copyright: 2007-20072011 Wenzel Jakob and others.
+License:   GPL-3.0
+ Mitsuba is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License Version 3
+ as published by the Free Software Foundation.
+ .
+ Mitsuba is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ .
+ You should have received a copy of the GNU General Public License
+ along with this program. If not, see <http://www.gnu.org/licenses/>.
+ .
+ On Debian systems, the complete text of the GNU General Public License
+ Version 3 can be found in `/usr/share/common-licenses/GPL-3'.
