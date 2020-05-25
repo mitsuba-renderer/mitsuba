@@ -1,3 +1,9 @@
+mitsuba (0.6.0-1) unstable; urgency=low
+
+  * Packaging updated for Debian buster
+
+ -- Matthew T Hoare <matthew.t.hoare@gmail.com>  Mon, 25 May 2020 17:29:57 +0100
+
 mitsuba (0.5.0-1) unstable; urgency=low
   * Mitsuba can now perform renderings of images with multiple channels
     (e.g. a path traced rendering plus surface normals and depth). All
