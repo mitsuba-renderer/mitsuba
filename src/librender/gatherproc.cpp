@@ -142,6 +142,10 @@ public:
         int bsdfType = its.getBSDF()->getType(), depth = depth_ - nullInteractions;
         if (!(bsdfType & BSDF::EDiffuseReflection) && !(bsdfType & BSDF::EGlossyReflection))
             return;
+        
+        /* Do not include photons in opposite side */
+        if (dot(its.geoFrame.n, its.toWorld(its.wi)) <= 0)
+            return;
 
         if ((m_type == GatherPhotonProcess::ECausticPhotons && depth > 1 && delta)
          || (m_type == GatherPhotonProcess::ESurfacePhotons && depth > 1 && !delta)
