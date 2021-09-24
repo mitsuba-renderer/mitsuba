@@ -3,10 +3,10 @@ Import('env', 'os', 'glob', 'sys', 'hasQt', 'hasCollada', 'hasBreakpad', 'mainEn
 
 # For running Uic & Moc (below)
 def recursiveDirs(root) :
-        return filter((lambda a : a.rfind(".svn") == -1), [a[0] for a in os.walk(root)])
+        return list(filter((lambda a : a.rfind(".svn") == -1), [a[0] for a in os.walk(root)]))
 
-def unique(list) :
-        return dict.fromkeys(list).keys()
+def unique(l) :
+        return list(dict.fromkeys(l).keys())
 
 def scanFiles(dir, accept=["*.cpp"], reject=[]) :
         sources = []
@@ -15,15 +15,15 @@ def scanFiles(dir, accept=["*.cpp"], reject=[]) :
                 for pattern in accept :
                         sources+=glob.glob(path + "/" + pattern)
         for pattern in reject:
-                sources = filter((lambda a : a.rfind(pattern) == -1), sources)
-        sources = map((lambda a : os.path.basename(a)), sources)
+                sources = list(filter((lambda a : a.rfind(pattern) == -1), sources))
+        sources = list(map((lambda a : os.path.basename(a)), sources))
         return unique(sources)
 
 
 if hasQt:
         qtEnv = mainEnv.Clone()
         qtEnv.Append(CPPPATH=['#src/mtsgui'])
-        if qtEnv.has_key('QTINCLUDE'):
+        if 'QTINCLUDE' in qtEnv:
                 qtEnv.Prepend(CPPPATH=qtEnv['QTINCLUDE'])
         qtEnv.EnableQt5Modules(['QtGui', 'QtWidgets', 'QtCore', 'QtOpenGL', 'QtXml', 'QtXmlPatterns', 'QtNetwork'])
 
@@ -51,9 +51,9 @@ if hasQt:
 
         if hasCollada:
                 qtSources += converter_objects
-                if env.has_key('COLLADALIBDIR'):
+                if 'COLLADALIBDIR' in env:
                         qtEnv.Prepend(LIBPATH=env['COLLADALIBDIR'])
-                if env.has_key('COLLADALIB'):
+                if 'COLLADALIB' in env:
                         qtEnv.Prepend(LIBS=env['COLLADALIB'])
 
         if sys.platform == 'darwin':
