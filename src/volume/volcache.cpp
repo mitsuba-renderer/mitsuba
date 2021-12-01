@@ -177,8 +177,8 @@ public:
         BlockCache *cache = m_cache.get();
         if (EXPECT_NOT_TAKEN(cache == NULL)) {
             cache = new BlockCache(m_blocksPerCore,
-                boost::bind(&CachingDataSource::renderBlock, this, _1),
-                boost::bind(&CachingDataSource::destroyBlock, this, _1));
+                boost::bind(&CachingDataSource::renderBlock, this, boost::placeholders::_1),
+                boost::bind(&CachingDataSource::destroyBlock, this, boost::placeholders::_1));
             m_cache.set(cache);
         }
 
