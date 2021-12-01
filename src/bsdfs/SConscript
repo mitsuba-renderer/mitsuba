@@ -28,6 +28,12 @@ plugins += env.SharedLibrary('hk', ['hk.cpp'])
 plugins += env.SharedLibrary('null', ['null.cpp'])
 plugins += env.SharedLibrary('thindielectric', ['thindielectric.cpp'])
 
+# Heitz et al. Multiple-Scattering Microfacet BSDFs with the Smith Model
+# https://drive.google.com/file/d/0BzvWIdpUpRx_S2UtbGNyZWtnV1U/view?usp=sharing&resourcekey=0-W8n6s9AkPNGET14yTrMm7A
+plugins += env.SharedLibrary('roughconductorGGX', ['roughconductorGGX.cpp'])
+plugins += env.SharedLibrary('roughdiffuseGGX', ['roughdiffuseGGX.cpp'])
+plugins += env.SharedLibrary('roughdielectricGGX', ['roughdielectricGGX.cpp'])
+
 # The Irawan-Marschner plugin uses a Boost::Spirit parser, which makes it
 # pretty heavy stuff to compile. Go easy on the compiler flags:
 irawanEnv = env.Clone()
