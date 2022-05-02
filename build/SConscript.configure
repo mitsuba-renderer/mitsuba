@@ -280,7 +280,9 @@ else:
 Export('MTS_VERSION')
 
 if needsBuildDependencies:
-        versionFilename = GetBuildPath('#dependencies/version')
+        versionFilename = GetBuildPath('#dependencies/version.txt')
+        if not os.path.exists(versionFilename):
+            versionFilename = GetBuildPath('#dependencies/version')
         versionMismatch = False
 
         if not os.path.exists(versionFilename):
