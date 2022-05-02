@@ -2,11 +2,11 @@ Import('env', 'sys', 'os')
 
 renderEnv = env.Clone()
 renderEnv.Append(CPPDEFINES = [['MTS_BUILD_MODULE', 'MTS_MODULE_RENDER']] )
-if renderEnv.has_key('XERCESINCLUDE'):
+if 'XERCESINCLUDE' in renderEnv:
         renderEnv.Prepend(CPPPATH=renderEnv['XERCESINCLUDE'])
-if renderEnv.has_key('XERCESLIBDIR'):
+if 'XERCESLIBDIR' in renderEnv:
         renderEnv.Prepend(LIBPATH=renderEnv['XERCESLIBDIR'])
-if renderEnv.has_key('XERCESLIB'):
+if 'XERCESLIB' in renderEnv:
         renderEnv.Prepend(LIBS=renderEnv['XERCESLIB'])
 
 librender = renderEnv.SharedLibrary('mitsuba-render', [

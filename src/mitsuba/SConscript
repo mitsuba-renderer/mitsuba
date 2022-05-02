@@ -2,19 +2,19 @@ Import('sys', 'env', 'hasCollada', 'stubs', 'winstubs')
 
 # Create an environment with Xerces and OpenGL
 mainEnv = env.Clone()
-if mainEnv.has_key('XERCESINCLUDE'):
+if 'XERCESINCLUDE' in mainEnv:
         mainEnv.Prepend(CPPPATH=mainEnv['XERCESINCLUDE'])
-if mainEnv.has_key('XERCESLIBDIR'):
+if 'XERCESLIBDIR' in mainEnv:
         mainEnv.Prepend(LIBPATH=mainEnv['XERCESLIBDIR'])
-if mainEnv.has_key('XERCESLIB'):
+if 'XERCESLIB' in mainEnv:
         mainEnv.Prepend(LIBS=mainEnv['XERCESLIB'])
-if mainEnv.has_key('GLLIB'):
+if 'GLLIB' in mainEnv:
         mainEnv.Prepend(LIBS=mainEnv['GLLIB'])
-if mainEnv.has_key('GLLIBDIR'):
+if 'GLLIBDIR' in mainEnv:
         mainEnv.Prepend(LIBPATH=mainEnv['GLLIBDIR'])
-if mainEnv.has_key('GLFLAGS'):
+if 'GLFLAGS' in mainEnv:
         mainEnv.Prepend(CXXFLAGS=mainEnv['GLFLAGS'])
-if mainEnv.has_key('GLINCLUDE'):
+if 'GLINCLUDE' in mainEnv:
         mainEnv.Prepend(CPPPATH=mainEnv['GLINCLUDE'])
 
 if sys.platform == 'darwin':
