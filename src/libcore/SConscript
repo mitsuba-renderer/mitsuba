@@ -2,31 +2,31 @@ Import('env', 'sys', 'os')
 
 # Core library environment with OpenEXR, libpng and libjpeg
 coreEnv = env.Clone()
-if coreEnv.has_key('OEXRLIBDIR'):
+if 'OEXRLIBDIR' in coreEnv:
         coreEnv.Prepend(LIBPATH=env['OEXRLIBDIR'])
-if coreEnv.has_key('OEXRINCLUDE'):
+if 'OEXRINCLUDE' in coreEnv:
         coreEnv.Prepend(CPPPATH=env['OEXRINCLUDE'])
-if coreEnv.has_key('OEXRFLAGS'):
+if 'OEXRFLAGS' in coreEnv:
         coreEnv.Prepend(CPPFLAGS=env['OEXRFLAGS'])
-if coreEnv.has_key('OEXRLIB'):
+if 'OEXRLIB' in coreEnv:
         coreEnv.Prepend(LIBS=env['OEXRLIB'])
-if coreEnv.has_key('PNGLIBDIR'):
+if 'PNGLIBDIR' in coreEnv:
         coreEnv.Prepend(LIBPATH=env['PNGLIBDIR'])
-if coreEnv.has_key('PNGINCLUDE'):
+if 'PNGINCLUDE' in coreEnv:
         coreEnv.Prepend(CPPPATH=env['PNGINCLUDE'])
-if coreEnv.has_key('PNGLIB'):
+if 'PNGLIB' in coreEnv:
         coreEnv.Prepend(LIBS=env['PNGLIB'])
-if coreEnv.has_key('JPEGLIBDIR'):
+if 'JPEGLIBDIR' in coreEnv:
         coreEnv.Prepend(LIBPATH=env['JPEGLIBDIR'])
-if coreEnv.has_key('JPEGINCLUDE'):
+if 'JPEGINCLUDE' in coreEnv:
         coreEnv.Prepend(CPPPATH=env['JPEGINCLUDE'])
-if coreEnv.has_key('JPEGLIB'):
+if 'JPEGLIB' in coreEnv:
         coreEnv.Prepend(LIBS=env['JPEGLIB'])
-if coreEnv.has_key('FFTWLIBDIR'):
+if 'FFTWLIBDIR' in coreEnv:
         coreEnv.Prepend(LIBPATH=env['FFTWLIBDIR'])
-if coreEnv.has_key('FFTWINCLUDE'):
+if 'FFTWINCLUDE' in coreEnv:
         coreEnv.Prepend(CPPPATH=env['FFTWINCLUDE'])
-if coreEnv.has_key('FFTWLIB'):
+if 'FFTWLIB' in coreEnv:
         coreEnv.Prepend(LIBS=env['FFTWLIB'])
 
 coreEnv.Prepend(CPPDEFINES = [['MTS_BUILD_MODULE', 'MTS_MODULE_CORE']])

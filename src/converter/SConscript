@@ -12,11 +12,11 @@ if hasCollada:
         # Build the COLLADA importer if COLLADA-DOM is vailable
         colladaEnv.Append(LIBS=['mitsuba-hw'])
         colladaEnv.Append(LIBPATH=['#src/libhw'])
-        if colladaEnv.has_key('COLLADAINCLUDE'):
+        if 'COLLADAINCLUDE' in colladaEnv:
                 colladaEnv.Prepend(CPPPATH=colladaEnv['COLLADAINCLUDE'])
-        if colladaEnv.has_key('COLLADALIBDIR'):
+        if 'COLLADALIBDIR' in colladaEnv:
                 colladaEnv.Prepend(LIBPATH=colladaEnv['COLLADALIBDIR'])
-        if colladaEnv.has_key('COLLADALIB'):
+        if 'COLLADALIB' in colladaEnv:
                 colladaEnv.Prepend(LIBS=colladaEnv['COLLADALIB'])
         converter_objects += [
                 colladaEnv.StaticObject('collada.cpp'),
