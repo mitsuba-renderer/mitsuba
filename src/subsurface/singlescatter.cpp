@@ -679,7 +679,7 @@ public:
         if (m_singleScatterShadowRays) {
             // Shadow test 1: is the outgoing point visible from the light
             // source?
-            const Ray shadow1 = Ray(Pc, omegaL, ShadowEpsilon,
+            const Ray shadow1 = Ray(Pc, omegaL, Epsilon,
                                     domegaL * (1 - ShadowEpsilon), time);
             if (scene->rayIntersect(shadow1)) {
                 return Spectrum(0.0f);
