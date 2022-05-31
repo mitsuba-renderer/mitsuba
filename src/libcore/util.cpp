@@ -590,14 +590,22 @@ Vector sphericalDirection(Float theta, Float phi) {
 }
 
 void coordinateSystem(const Vector &a, Vector &b, Vector &c) {
-    if (std::abs(a.x) > std::abs(a.y)) {
-        Float invLen = 1.0f / std::sqrt(a.x * a.x + a.z * a.z);
-        c = Vector(a.z * invLen, 0.0f, -a.x * invLen);
-    } else {
-        Float invLen = 1.0f / std::sqrt(a.y * a.y + a.z * a.z);
-        c = Vector(0.0f, a.z * invLen, -a.y * invLen);
-    }
-    b = cross(c, a);
+    // naive method
+    // if (std::abs(a.x) > std::abs(a.y)) {
+    //     Float invLen = 1.0f / std::sqrt(a.x * a.x + a.z * a.z);
+    //     c = Vector(a.z * invLen, 0.0f, -a.x * invLen);
+    // } else {
+    //     Float invLen = 1.0f / std::sqrt(a.y * a.y + a.z * a.z);
+    //     c = Vector(0.0f, a.z * invLen, -a.y * invLen);
+    // }
+    // b = cross(c, a);
+
+    // [Duff et al. 17] Building An Orthonormal Basis, Revisited. JCGT. 2017.
+    float sign = copysignf(1.0f, a.z);
+    const float u = -1.0f / (sign + a.z);
+    const float v = a.x * a.y * u;
+    b = Vector(1.0f + sign * a.x * a.x * u, sign * v, -sign * a.x);
+    c = Vector(v, sign + a.y * a.y * u, -a.y);
 }
 
 void computeShadingFrame(const Vector &n, const Vector &dpdu, Frame &frame) {
