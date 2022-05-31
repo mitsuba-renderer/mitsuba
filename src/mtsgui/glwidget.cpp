@@ -616,6 +616,8 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
      || !m_mouseDrag || rel == QPoint(0,0) || m_animation)
         return;
 
+    m_mousePos = event->pos();
+
     //  if (m_ignoreMouseEvent == rel) {
     if (m_ignoreMouseEvent != QPoint(0, 0)) {
         m_ignoreMouseEvent = QPoint(0, 0);
