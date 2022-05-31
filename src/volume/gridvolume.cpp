@@ -123,9 +123,10 @@ public:
          * the file (which had better exist if unserialization
          * occurs on a remote machine).
          */
-         m_sendData = props.getBoolean("sendData", false);
+        m_sendData = props.getBoolean("sendData", false);
 
-         loadFromFile(props.getString("filename"));
+        loadFromFile(props.getString("filename"));
+        configure();
     }
 
     GridDataSource(Stream *stream, InstanceManager *manager)
@@ -209,8 +210,9 @@ public:
             m_sinTheta[i] = std::sin(angle);
             m_densityMap[i] = i/255.0f;
         }
-        m_cosPhi[255] = m_sinPhi[255] = 0;
-        m_cosTheta[255] = m_sinTheta[255] = 0;
+        m_sinTheta[255] = m_sinPhi[255] = 0;
+        m_cosPhi[255] = 1.0f;
+        m_cosTheta[255] = -1.0f;
         m_densityMap[255] = 1.0f;
     }
 
@@ -259,9 +261,9 @@ public:
                 break;
             case EQuantizedDirections:
                 format = "qdir";
-                if (m_channels != 3)
+                if (m_channels != 2)
                     Log(EError, "Encountered an unsupported quantized direction "
-                            "volume data file (%i channels, only 3 are supported)",
+                            "volume data file (%i channels, only 2 are supported)",
                             m_channels);
                 break;
             default:
@@ -577,7 +579,7 @@ public:
 
     bool supportsFloatLookups() const { return m_channels == 1; }
     bool supportsSpectrumLookups() const { return m_channels == 3; }
-    bool supportsVectorLookups() const { return m_channels == 3; }
+    bool supportsVectorLookups() const { return (m_volumeType == EFloat32 && m_channels == 3) || (m_volumeType == EQuantizedDirections && m_channels == 2); }
     Float getStepSize() const { return m_stepSize; }
 
     Float getMaximumFloatValue() const {

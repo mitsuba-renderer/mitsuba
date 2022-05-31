@@ -1,6 +1,7 @@
 Import('env', 'plugins')
 
 plugins += env.SharedLibrary('addimages', ['addimages.cpp'])
+plugins += env.SharedLibrary('genvolume', ['genvolume.cpp'])
 plugins += env.SharedLibrary('joinrgb', ['joinrgb.cpp'])
 plugins += env.SharedLibrary('cylclip', ['cylclip.cpp'])
 plugins += env.SharedLibrary('kdbench', ['kdbench.cpp'])
