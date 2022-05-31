@@ -102,7 +102,7 @@ void MemoryStream::write(const void *ptr, size_t size) {
     size_t endPos = m_pos + size;
     if (endPos > m_size) {
         if (endPos > m_capacity)
-            resize(endPos);
+            resize(endPos * 2);
         m_size = endPos;
     }
     memcpy(m_data + m_pos, ptr, size);
