@@ -43,6 +43,9 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{uoffset, voffset}{\Float}{
  *       Numerical offset that should be applied to UV values before a lookup
  *     }
+ *     \parameter{uvtransform}{\Transform}{
+ *        Alternate parameter to uvscale/uvoffset parameters that applies a transformation to UV values before a lookup
+ *     }
  * }
  * \renderings{
  *     \rendering{Grid texture applied to the material test object}{tex_gridtexture}
@@ -145,10 +148,10 @@ protected:
 class GridTextureShader : public Shader {
 public:
     GridTextureShader(Renderer *renderer, const Spectrum &color0,
-        const Spectrum &color1, Float lineWidth, const Point2 &uvOffset,
-        const Vector2 &uvScale) : Shader(renderer, ETextureShader),
+        const Spectrum &color1, Float lineWidth, 
+        const Transform &uvTransform) : Shader(renderer, ETextureShader),
         m_color0(color0), m_color1(color1),
-        m_lineWidth(lineWidth), m_uvOffset(uvOffset), m_uvScale(uvScale) {
+        m_lineWidth(lineWidth), m_uvTransform(uvTransform) {
     }
 
     void generateCode(std::ostringstream &oss,
@@ -157,13 +160,12 @@ public:
         oss << "uniform vec3 " << evalName << "_color0;" << endl
             << "uniform vec3 " << evalName << "_color1;" << endl
             << "uniform float " << evalName << "_lineWidth;" << endl
-            << "uniform vec2 " << evalName << "_uvOffset;" << endl
-            << "uniform vec2 " << evalName << "_uvScale;" << endl
+			<< "uniform mat4 " << evalName << "_uvTransform;" << endl
             << endl
             << "vec3 " << evalName << "(vec2 uv) {" << endl
             << "    uv = vec2(" << endl
-            << "        uv.x * " << evalName << "_uvScale.x + " << evalName << "_uvOffset.x," << endl
-            << "        uv.y * " << evalName << "_uvScale.y + " << evalName << "_uvOffset.y);" << endl
+            << "        uv.x * " << evalName << "_uvTransform[0][0] + uv.y * " << evalName << "_uvTransform[1][0] + " << evalName << "_uvTransform[2][0]," << endl
+            << "        uv.x * " << evalName << "_uvTransform[0][1] + uv.y * " << evalName << "_uvTransform[1][1] + " << evalName << "_uvTransform[2][1]);" << endl
             << "    float x = uv.x - floor(uv.x);" << endl
             << "    float y = uv.y - floor(uv.y);" << endl
             << "    if (x > .5) x -= 1.0;" << endl
@@ -179,8 +181,7 @@ public:
         parameterIDs.push_back(program->getParameterID(evalName + "_color0", false));
         parameterIDs.push_back(program->getParameterID(evalName + "_color1", false));
         parameterIDs.push_back(program->getParameterID(evalName + "_lineWidth", false));
-        parameterIDs.push_back(program->getParameterID(evalName + "_uvOffset", false));
-        parameterIDs.push_back(program->getParameterID(evalName + "_uvScale", false));
+        parameterIDs.push_back(program->getParameterID(evalName + "_uvTransform", false));
     }
 
     void bind(GPUProgram *program, const std::vector<int> &parameterIDs,
@@ -188,8 +189,7 @@ public:
         program->setParameter(parameterIDs[0], m_color0);
         program->setParameter(parameterIDs[1], m_color1);
         program->setParameter(parameterIDs[2], m_lineWidth);
-        program->setParameter(parameterIDs[3], m_uvOffset);
-        program->setParameter(parameterIDs[4], m_uvScale);
+        program->setParameter(parameterIDs[3], m_uvTransform);
     }
 
     MTS_DECLARE_CLASS()
@@ -197,13 +197,12 @@ private:
     Spectrum m_color0;
     Spectrum m_color1;
     Float m_lineWidth;
-    Point2 m_uvOffset;
-    Vector2 m_uvScale;
+    Transform m_uvTransform;
 };
 
 Shader *GridTexture::createShader(Renderer *renderer) const {
     return new GridTextureShader(renderer, m_color0, m_color1,
-            m_lineWidth, m_uvOffset, m_uvScale);
+            m_lineWidth, m_uvTransform);
 }
 
 MTS_IMPLEMENT_CLASS(GridTextureShader, false, Shader)

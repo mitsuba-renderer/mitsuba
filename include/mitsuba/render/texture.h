@@ -168,8 +168,7 @@ protected:
 
     virtual ~Texture2D();
 protected:
-    Point2 m_uvOffset;
-    Vector2 m_uvScale;
+    Transform m_uvTransform;
 };
 
 MTS_NAMESPACE_END

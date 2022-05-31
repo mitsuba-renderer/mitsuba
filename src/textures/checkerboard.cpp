@@ -36,6 +36,9 @@ MTS_NAMESPACE_BEGIN
  *     \parameter{uscale, vscale}{\Float}{
  *       Multiplicative factors that should be applied to UV values before a lookup
  *     }
+ *     \parameter{uvtransform}{\Transform}{
+ *        Alternate parameter to uvscale/uvoffset parameters that applies a transformation to UV values before a lookup
+ *     }
  * }
  * \renderings{
  *     \rendering{Checkerboard applied to the material test object
@@ -132,10 +135,10 @@ protected:
 class CheckerboardShader : public Shader {
 public:
     CheckerboardShader(Renderer *renderer, const Spectrum &color0,
-        const Spectrum &color1, const Point2 &uvOffset,
-        const Vector2 &uvScale) : Shader(renderer, ETextureShader),
+        const Spectrum &color1, 
+        const Transform &uvTransform) : Shader(renderer, ETextureShader),
         m_color0(color0), m_color1(color1),
-        m_uvOffset(uvOffset), m_uvScale(uvScale) {
+        m_uvTransform(uvTransform) {
     }
 
     void generateCode(std::ostringstream &oss,
@@ -143,13 +146,12 @@ public:
             const std::vector<std::string> &depNames) const {
         oss << "uniform vec3 " << evalName << "_color0;" << endl
             << "uniform vec3 " << evalName << "_color1;" << endl
-            << "uniform vec2 " << evalName << "_uvOffset;" << endl
-            << "uniform vec2 " << evalName << "_uvScale;" << endl
+            << "uniform mat4 " << evalName << "_uvTransform;" << endl
             << endl
             << "vec3 " << evalName << "(vec2 uv) {" << endl
             << "    uv = vec2(" << endl
-            << "        uv.x * " << evalName << "_uvScale.x + " << evalName << "_uvOffset.x," << endl
-            << "        uv.y * " << evalName << "_uvScale.y + " << evalName << "_uvOffset.y);" << endl
+            << "        uv.x * " << evalName << "_uvTransform[0][0] + uv.y * " << evalName << "_uvTransform[1][0] + " << evalName << "_uvTransform[2][0]," << endl
+            << "        uv.x * " << evalName << "_uvTransform[0][1] + uv.y * " << evalName << "_uvTransform[1][1] + " << evalName << "_uvTransform[2][1]);" << endl
             << "    float x = 2*(mod(int(uv.x*2), 2)) - 1, y = 2*(mod(int(uv.y*2), 2)) - 1;" << endl
             << "    if (x*y == 1)" << endl
             << "        return " << evalName << "_color0;" << endl
@@ -161,29 +163,26 @@ public:
     void resolve(const GPUProgram *program, const std::string &evalName, std::vector<int> &parameterIDs) const {
         parameterIDs.push_back(program->getParameterID(evalName + "_color0", false));
         parameterIDs.push_back(program->getParameterID(evalName + "_color1", false));
-        parameterIDs.push_back(program->getParameterID(evalName + "_uvOffset", false));
-        parameterIDs.push_back(program->getParameterID(evalName + "_uvScale", false));
+        parameterIDs.push_back(program->getParameterID(evalName + "_uvTransform", false));
     }
 
     void bind(GPUProgram *program, const std::vector<int> &parameterIDs,
         int &textureUnitOffset) const {
         program->setParameter(parameterIDs[0], m_color0);
         program->setParameter(parameterIDs[1], m_color1);
-        program->setParameter(parameterIDs[2], m_uvOffset);
-        program->setParameter(parameterIDs[3], m_uvScale);
+        program->setParameter(parameterIDs[2], m_uvTransform);
     }
 
     MTS_DECLARE_CLASS()
 private:
     Spectrum m_color0;
     Spectrum m_color1;
-    Point2 m_uvOffset;
-    Vector2 m_uvScale;
+    Transform m_uvTransform;
 };
 
 Shader *Checkerboard::createShader(Renderer *renderer) const {
     return new CheckerboardShader(renderer, m_color0, m_color1,
-        m_uvOffset, m_uvScale);
+        m_uvTransform);
 }
 
 MTS_IMPLEMENT_CLASS(CheckerboardShader, false, Shader)
