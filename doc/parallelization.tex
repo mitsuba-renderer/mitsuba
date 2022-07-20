@@ -71,7 +71,7 @@ Hello world!
 \end{shell}
 
 Our approach for implementing distributed ROT13 will be to treat each character as an
-indpendent work unit. Since the ordering is lost when sending out work units, we must
+independent work unit. Since the ordering is lost when sending out work units, we must
 also include the position of the character in both the work units and the work results.
 
 All of the relevant interfaces are contained in \code{include/mitsuba/core/sched.h}.

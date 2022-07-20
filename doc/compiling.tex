@@ -24,7 +24,7 @@ Begin by entering the following at the command prompt (or run an equivalent comm
 \begin{shell}
 $\texttt{\$}$ git clone https://github.com/mitsuba-renderer/mitsuba
 \end{shell}
-This should dowload a full copy of the main repository.
+This should download a full copy of the main repository.
 
 \subsubsection{Build configurations}
 Common to all platforms is that a build configuration file must be selected. Several options are
@@ -136,7 +136,7 @@ The preferred way of redistributing executables on Debian or Ubuntu Linux is to 
 that you work with a pristine installation of the target operating system\footnote{Several commercial graphics
 drivers ``pollute'' the OpenGL setup so that the compiled Mitsuba binaries
 can only be used on machines using the same drivers. For this reason, it is
-better to work from a clean boostrapped install.}. This can be done as follows:
+better to work from a clean bootstrapped install.}. This can be done as follows:
 first, install \code{debootstrap} and download the most recent operating system release
 to a subdirectory. The following example is based on Ubuntu 12.04 LTS (``Precise Pangolin''),
 but the steps are almost identical for other versions of Ubuntu or Debian Linux.
@@ -174,7 +174,7 @@ made available by a HTTP server and inside it, run
 \begin{shell}
 path-to-htdocs$\text{\$}$ dpkg-scanpackages path/to/deb-directory /dev/null | gzip -9c > path/to/deb-directory/Packages.gz
 \end{shell}
-This will create a respository index file named \code{Packages.gz}.
+This will create a repository index file named \code{Packages.gz}.
 Note that you must execute this command in the root directory of the
 HTTP server's web directory and provide the relative path to the
 package files -- otherwise, the index file will specify the wrong package

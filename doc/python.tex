@@ -128,7 +128,7 @@ from mitsuba.render import SceneHandler
 # Get a reference to the thread's file resolver
 fileResolver = Thread.getThread().getFileResolver()
 
-# Register any searchs path needed to load scene resources (optional)
+# Register any search paths needed to load scene resources (optional)
 fileResolver.appendPath('<path to scene directory>')
 
 # Optional: supply parameters that can be accessed
@@ -514,7 +514,7 @@ conveniently accomplished via the Python interface. In a turntable
 video, the camera rotates around a completely static object or scene.
 The following snippet does this for the material test ball scene downloadable
 on the main website, complete with motion blur. It assumes that the
-scene and scheduler have been set up approriately using one of the previous
+scene and scheduler have been set up appropriately using one of the previous
 snippets.
 \begin{python}
 sensor = scene.getSensor()
