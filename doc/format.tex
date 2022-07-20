@@ -158,7 +158,7 @@ enforced via the \texttt{intent} XML attribute, e.g.:
 <rgb name="spectrumProperty" intent="reflectance" value="0.2, 0.8, 0.4"/>
 <rgb name="spectrumProperty" intent="illuminant" value="0.2, 0.8, 0.4"/>
 \end{xml}
-Usually this attribute is not neccessary:
+Usually this attribute is not necessary:
 Mitsuba detects when an RGB value is specified in the declaration of a light source
 and uses \texttt{intent="illuminant"} in this case and \texttt{intent="reflectance"}
 everywhere else.
@@ -310,7 +310,7 @@ The \code{up} parameter is not needed for spot lights.
 <lookat origin="10, 50, -800" target="0, 0, 0" up="0, 1, 0"/>
 \end{xml}
 \end{itemize}
-Cordinates that are zero (for \code{translate} and \code{rotate}) or one (for \code{scale})
+Coordinates that are zero (for \code{translate} and \code{rotate}) or one (for \code{scale})
 do not explicitly have to be specified.
 \newpage
 \subsection{Animated transformations}

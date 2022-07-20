@@ -39,7 +39,7 @@ One focus of Mitsuba will be to develop path-space light transport algorithms, w
 cases more gracefully.
 
 \parheader{Scalability:} Mitsuba instances can be merged into large clusters, which transparently distribute and
-jointly execute tasks assigned to them using only node-to-node communcation. It has successfully
+jointly execute tasks assigned to them using only node-to-node communication. It has successfully
 scaled to large-scale renderings that involved more than 1000 cores working on a single image.
 Most algorithms in Mitsuba  are written using a generic parallelization layer, which can tap
 into this cluster-wide parallelism. The principle is that if any component of the renderer produces
