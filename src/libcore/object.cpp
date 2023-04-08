@@ -78,8 +78,6 @@ static RefCountTracker *__ref_tracker = NULL;
 } // namespace
 #endif
 
-Class *MTS_CLASS(Object) = new Class("Object", false, "");
-
 Object::Object()
  : m_refCount(0) {
 #if DEBUG_REFCOUNTS == 1
@@ -126,10 +124,6 @@ void Object::decRef(bool autoDeallocate) const {
     }
 }
 
-const Class *Object::getClass() const {
-    return m_theClass;
-}
-
 std::string Object::toString() const {
     std::ostringstream oss;
     oss << getClass()->getName();
@@ -160,4 +154,5 @@ void Object::staticShutdown() {
 #endif
 }
 
+MTS_IMPLEMENT_CLASS(Object, false, )
 MTS_NAMESPACE_END

@@ -56,9 +56,6 @@ public:
      */
     void decRef(bool autoDeallocate = true) const;
 
-    /// Retrieve this object's class
-    virtual const Class *getClass() const;
-
     /**
      * \brief Return a human-readable string representation
      * of the object's contents.
@@ -77,13 +74,13 @@ public:
 
     /// Free the memory taken by staticInitialization()
     static void staticShutdown();
+
+    MTS_DECLARE_CLASS()
 protected:
     /** \brief Virtual private deconstructor.
      * (Will only be called by \ref ref)
      */
     virtual ~Object();
-public:
-    static Class *m_theClass; ///< Pointer to the object's class descriptor
 private:
 #if !defined(_MSC_VER)
     volatile mutable int m_refCount;
