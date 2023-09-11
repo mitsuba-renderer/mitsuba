@@ -310,7 +310,8 @@ public:
                     wr->putLightSample(samplePos, value * miWeight);
             }
         }
-        wr->putSample(initialSamplePos, sampleValue);
+        if (sensorSubpath.vertexCount() > 2)
+            wr->putSample(initialSamplePos, sampleValue);
     }
 
     ref<WorkProcessor> clone() const {
