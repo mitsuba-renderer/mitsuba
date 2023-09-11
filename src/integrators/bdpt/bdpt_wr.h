@@ -63,8 +63,8 @@ public:
     }
 #endif
 
-    inline void putSample(const Point2 &sample, const Spectrum &spec) {
-        m_block->put(sample, spec, 1.0f);
+    inline void putSample(const Point2 &sample, const Spectrum &spec, Float alpha) {
+        m_block->put(sample, spec, alpha);
     }
 
     inline void putLightSample(const Point2 &sample, const Spectrum &spec) {
